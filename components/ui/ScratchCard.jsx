@@ -117,7 +117,7 @@ export default function ScratchCard({
         await new Promise((resolve) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.src = '/logo.png';
+            img.src = '/icons/intrustLogo.png';
             img.onload = () => {
                 const logoSize = Math.min(w, h) * 0.28;
                 const logoX = w / 2 - logoSize / 2;
@@ -379,7 +379,7 @@ export default function ScratchCard({
                                 transition={{ delay: 0.3 }}
                                 className="text-[12px] font-black text-emerald-400 uppercase tracking-[0.4em] mb-2"
                             >
-                                Empire Reward
+                                InTrust Reward Coins
                             </motion.span>
 
                             <div className="flex items-center gap-2">
@@ -392,7 +392,7 @@ export default function ScratchCard({
                                 </motion.p>
                                 <div className="flex flex-col items-start justify-center pt-2">
                                     <Star size={18} className="text-amber-400 fill-amber-400 animate-pulse" />
-                                    <p className="text-[12px] font-black text-white/40 uppercase tracking-widest leading-none">Points</p>
+                                    <p className="text-[12px] font-black text-white/40 uppercase tracking-widest leading-none">Coins</p>
                                 </div>
                             </div>
                         </div>
@@ -404,7 +404,7 @@ export default function ScratchCard({
                             className="mt-8 px-6 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md flex items-center gap-2 shadow-lg"
                         >
                             <ShieldCheck size={14} className="text-emerald-400" />
-                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Added to Empire Wallet</p>
+                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Credited to InTrust Wallet</p>
                         </motion.div>
                     </motion.div>
                 )}

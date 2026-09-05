@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 import KYCStatus from '@/components/kyc/KYCStatus';
 import KYCPopup from '@/components/kyc/KYCPopup';
@@ -254,7 +254,7 @@ function CustomerProfileContent() {
                         className="flex flex-col items-center"
                     >
                         <div className="w-full text-left mb-6">
-                            <Breadcrumbs items={[{ label: 'Profile' }]} />
+                            <CustomerBreadcrumbs items={[{ label: 'Profile & Settings' }]} className="mb-3" />
                             <div className="flex items-center gap-4 mt-2">
                                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
                                     Profile

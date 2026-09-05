@@ -35,9 +35,8 @@ export default async function MerchantHubPage() {
             .single(),
         supabase
             .from('shopping_categories')
-            .select('id, name, slug, icon_url')
+            .select('*')
             .eq('is_active', true)
-            .order('sort_order', { ascending: true })
     ]);
 
     if (merchantsResult.error) {

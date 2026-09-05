@@ -25,7 +25,7 @@ const SLIDES = [
         tag: 'FAST 2-HOUR PICKUP',
         title: 'Local Store Pickups Across Bhopal',
         subtitle: 'Skip shipping delays! Reserve products online and pick up in 2 hours at verified neighborhood electronics & retail stores.',
-        badge: '100% Escrow Protected',
+        badge: '100% Buyer Protected',
         ctaText: 'Find Nearby Stores',
         ctaHref: '/shop',
         highlight: 'Zero Processing Fees',

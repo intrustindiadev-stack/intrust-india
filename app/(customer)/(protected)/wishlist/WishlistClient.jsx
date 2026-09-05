@@ -12,6 +12,7 @@ import { isPlatformProductOOS, isInventoryRowOOS } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import NotifyMeButton from '@/components/ui/NotifyMeButton';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 export default function WishlistClient({ userId, userEmail, initialItems }) {
   const [items, setItems] = useState(initialItems);
@@ -158,23 +159,17 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen pt-24 md:pt-28 px-4 pb-12 bg-[#f7f8fa]">
-        <div className="max-w-3xl mx-auto mb-4">
-          <button
-            onClick={() => router.push('/shop')}
-            className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all hover:bg-slate-100 text-slate-600 bg-white border border-slate-100 shadow-sm"
-          >
-            <ArrowLeft size={20} />
-          </button>
-        </div>
-        <div className="max-w-md mx-auto text-center py-16 px-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 bg-pink-50">
-            <Heart className="w-9 h-9 text-pink-500" />
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <CustomerBreadcrumbs items={[{ label: 'Wishlist' }]} className="mb-2" />
+        
+        <div className="max-w-md mx-auto text-center py-16 px-6 rounded-3xl bg-white dark:bg-surface-container-lowest border border-slate-200 dark:border-outline-variant/30 shadow-sm space-y-4">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-2 bg-rose-50 dark:bg-rose-500/10 text-rose-500">
+            <Heart className="w-9 h-9" />
           </div>
-          <h2 className="text-xl font-black mb-2 text-slate-900">Your wishlist is empty</h2>
-          <p className="text-sm mb-6 text-slate-500">Save items you love to buy them later.</p>
-          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3.5 bg-pink-600 hover:bg-pink-500 text-white font-black rounded-xl transition-all active:scale-95">
-            Explore Shop
+          <h2 className="text-xl font-black text-slate-900 dark:text-on-surface">Your wishlist is empty</h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-on-surface-variant">Save items you love to quickly purchase them later.</p>
+          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 text-xs">
+            Explore Shop Catalog
           </Link>
         </div>
       </div>
@@ -182,21 +177,25 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
   }
 
   return (
-    <div className="min-h-screen pt-24 md:pt-28 pb-12 px-3 sm:px-4 md:px-6 bg-[#f7f8fa] text-slate-900">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => router.push('/shop')}
-            className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all hover:bg-slate-200 text-slate-600 bg-slate-100"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-2xl font-black flex items-center gap-3 text-slate-900 m-0">
-            <Heart className="text-pink-500" size={24} fill="currentColor" />
-            My Wishlist
-            <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{items.length}</span>
-          </h1>
-        </div>
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 text-slate-900 dark:text-on-surface">
+      <CustomerBreadcrumbs items={[{ label: 'Wishlist' }]} className="mb-2" />
+      
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-outline-variant/20">
+        <h1 className="text-2xl sm:text-3xl font-black flex items-center gap-2.5 text-slate-900 dark:text-on-surface m-0 tracking-tight">
+          <Heart className="text-rose-500 fill-rose-500" size={26} />
+          <span>My Saved Items</span>
+          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-surface-container-low text-slate-600 dark:text-brand-steel border border-slate-200 dark:border-outline-variant/20">
+            {items.length}
+          </span>
+        </h1>
+
+        <Link
+          href="/shop"
+          className="text-xs font-bold text-blue-600 dark:text-primary hover:underline"
+        >
+          Continue Shopping
+        </Link>
+      </div>
 
         <div className="space-y-6">
           {grouped.map(group => (
@@ -233,9 +232,9 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: 30, height: 0 }}
                       transition={{ delay: idx * 0.04 }}
-                      className="flex gap-4 p-4 rounded-2xl mb-3 bg-white border border-slate-100 shadow-sm"
+                      className="flex gap-4 p-4 rounded-2xl mb-3 bg-white dark:bg-surface-container-lowest border border-slate-200 dark:border-outline-variant/30 shadow-sm"
                     >
-                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 border border-slate-100 relative">
+                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 relative">
                         {product?.product_images?.[0] ? (
                           <div className="relative w-full h-full">
                             <Image
@@ -255,8 +254,8 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
                       <div className={`flex-1 min-w-0 ${isOOS ? 'opacity-50' : ''}`}>
                         <p className="text-[9px] uppercase tracking-widest font-black mb-0.5 text-slate-400">{product?.category || 'General'}</p>
-                        <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-800">{product?.title}</h3>
-                        {price && <p className="text-sm font-black mt-1 text-slate-900">₹{(price / 100).toLocaleString('en-IN')}</p>}
+                        <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-900 dark:text-on-surface">{product?.title}</h3>
+                        {price && <p className="text-sm font-black mt-1 text-slate-900 dark:text-on-surface">₹{(price / 100).toLocaleString('en-IN')}</p>}
                       </div>
 
                       <div className="flex flex-col gap-2 shrink-0">
@@ -275,7 +274,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                           <button
                             onClick={() => moveToCart(item)}
                             disabled={!!movingId}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-xs"
                           >
                             {movingId === item.id ? <Loader2 size={12} className="animate-spin" /> : <ShoppingCart size={12} />}
                             Add to Cart
@@ -284,7 +283,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                         <button
                           onClick={() => removeFromWishlist(item.id)}
                           disabled={!!removingId}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50"
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 bg-slate-100 hover:bg-rose-50 dark:bg-surface-container-low dark:hover:bg-rose-500/10 text-slate-500 dark:text-brand-steel hover:text-rose-600 dark:hover:text-rose-400"
                         >
                           {removingId === item.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                           Remove
@@ -297,7 +296,6 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
             </div>
           ))}
         </div>
-      </div>
 
       <ConfirmModal
         isOpen={confirmModalOpen}

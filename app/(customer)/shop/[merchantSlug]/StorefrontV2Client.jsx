@@ -18,11 +18,12 @@ import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
 
 
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+
 const PAGE_SIZE = 24;
 const storeCache = new Map();
 
 // Lazy load below-fold and modal components
-const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboard/AdBannerCarousel'));
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
@@ -524,69 +525,60 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                 <header
                     className={`pointer-events-auto md:backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${
                         isDark 
-                            ? 'bg-[#0c0e16] md:bg-[#080a10]/85 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.3)]' 
-                            : 'bg-white md:bg-white/95 border-slate-200/80 shadow-lg'
+                            ? 'bg-[#0c0e16]/95 md:bg-[#080a10]/90 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.4)]' 
+                            : 'bg-white/95 md:bg-white/95 border-slate-200/90 shadow-md'
                     }`}
                 >
                     {/* Top Row */}
-                    <div className="flex items-center gap-3 px-4 py-3 md:px-5">
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 md:px-5 md:py-3">
                         <button
                             onClick={() => router.push('/shop')}
-                            className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${isDark ? 'hover:bg-white/5 text-white/60' : 'hover:bg-slate-100 text-slate-600'}`}
+                            aria-label="Back to shops"
+                            className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${
+                                isDark 
+                                    ? 'bg-white/5 hover:bg-white/10 text-white/80 border border-white/10' 
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 shadow-xs'
+                            }`}
                         >
-                            <ArrowLeft size={20} />
+                            <ArrowLeft size={18} strokeWidth={2.5} />
                         </button>
 
                         {/* Search - Desktop AND Mobile inline for sticky bar */}
                         <div className="flex-1 w-full relative">
-                            <Search size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
+                            <Search size={16} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
                             <input
                                 type="text"
-                                placeholder={`Search for items in ${merchant?.business_name}...`}
+                                placeholder={`Search in ${merchant?.business_name || 'store'}...`}
                                 value={searchInput}
                                 onChange={handleSearchChange}
-                                className={`w-full pl-10 pr-4 py-2 md:py-2.5 rounded-full text-sm font-medium outline-none transition-all border ${
+                                className={`w-full pl-9 sm:pl-10 pr-4 py-2 md:py-2.5 rounded-full text-xs sm:text-sm font-semibold outline-none transition-all border ${
                                     isDark 
-                                        ? 'bg-[#0a0c14]/50 text-white placeholder:text-white/30 border-white/[0.08] focus:bg-[#0a0c14] focus:border-white/20' 
-                                        : 'bg-white/50 text-slate-900 placeholder:text-slate-400 border-slate-200 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
+                                        ? 'bg-[#0a0c14]/60 text-white placeholder:text-white/35 border-white/[0.08] focus:bg-[#0a0c14] focus:border-sky-500/50' 
+                                        : 'bg-slate-100/90 text-slate-900 placeholder:text-slate-500 border-slate-200/80 hover:bg-slate-100 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 shadow-xs'
                                     }`}
                             />
                         </div>
                     </div>
 
-
-
                     {/* Animated Subcategory Pills */}
                     {merchantCategories.length > 1 && (
-                        <div className={`relative flex items-center gap-2 px-4 md:px-5 py-3 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04]' : 'border-slate-100'}`}>
+                        <div className={`relative flex items-center gap-2 px-3.5 md:px-5 py-2 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
                             {merchantCategories.map(sub => {
                                 const isActive = activeSubCategory === sub;
                                 return (
                                     <button
                                         key={sub}
                                         onClick={() => setActiveSubCategory(sub)}
-                                        className={`relative px-4 py-2 flex items-center gap-2 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-colors ${
+                                        className={`relative px-3.5 py-1.5 flex items-center gap-1.5 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-all ${
                                             isActive 
-                                                ? 'text-white' 
-                                                : isDark ? 'text-white/40 hover:text-white/80' : 'text-slate-500 hover:text-slate-900'
+                                                ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-sm shadow-sky-500/30 border border-sky-400 font-black' 
+                                                : isDark 
+                                                    ? 'bg-white/5 hover:bg-sky-950/40 hover:text-sky-300 text-slate-300 border border-white/10' 
+                                                    : 'bg-sky-50/70 hover:bg-sky-100 text-slate-700 hover:text-sky-900 border border-sky-100'
                                         }`}
                                     >
-                                        {isActive && (
-                                            <div
-                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20 md:hidden"
-                                            />
-                                        )}
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeCategoryPill"
-                                                className="absolute inset-0 bg-blue-500 rounded-full shadow-lg shadow-blue-500/20 hidden md:block"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                            />
-                                        )}
-                                        <div className="relative z-10 flex items-center gap-1.5">
-                                            <span className={isActive ? 'text-white' : ''}>{getCategoryIcon(sub)}</span>
-                                            {sub}
-                                        </div>
+                                        <span>{getCategoryIcon(sub)}</span>
+                                        <span>{sub}</span>
                                     </button>
                                 );
                             })}
@@ -596,20 +588,21 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-4 md:py-6 relative z-10">
-                {/* pb-44 on mobile gives ~176px clearance below last card, ensuring both
-                    CustomerBottomNav (~92px) and FloatingCart (~60px) cannot occlude content.
-                    Reverts to pb-8 on md+ where those fixed bars are absent. */}
-                <div className="max-w-7xl mx-auto pb-44 md:pb-8">
+            <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-3 md:py-5 relative z-10">
+                {/* pb-36 on mobile gives clearance below last card for floating cart and bottom nav */}
+                <div className="max-w-7xl mx-auto pb-36 md:pb-8 space-y-4">
                     
-                    {/* AD BANNER */}
-                    <div className="w-full relative z-10 mb-4">
-                        <Suspense fallback={<div className="w-full aspect-[16/9] md:aspect-[32/9] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />}>
-                            <AdBannerCarousel />
-                        </Suspense>
+                    {/* Standardized Customer Breadcrumbs */}
+                    <div className="px-1">
+                        <CustomerBreadcrumbs 
+                            items={[
+                                { label: 'Shop', href: '/shop' },
+                                { label: liveMerchant?.id === 'official' ? 'InTrust Official Flagship' : (liveMerchant?.business_name || 'Store') }
+                            ]}
+                        />
                     </div>
 
-                    {/* MERCHANT PROFILE HEADER (Mobile-First) */}
+                    {/* MERCHANT PROFILE HEADER */}
                     <MerchantProfileCard 
                         merchant={liveMerchant} 
                         totalItems={totalCount} 
@@ -835,7 +828,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                                 Out of Stock
                                                             </div>
                                                         ) : pCartItem ? (
-                                                            <div className="flex items-center bg-blue-600 text-white rounded-xl h-[48px] px-1 shadow-[0_8px_20px_rgb(59,130,246,0.3)] w-full overflow-hidden">
+                                                            <div className="flex items-center bg-sky-500 text-white rounded-xl h-[48px] px-1 shadow-[0_4px_16px_rgba(14,165,233,0.3)] w-full overflow-hidden">
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50); removeFromCart(pItem); }}
                                                                     className="w-12 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
@@ -853,7 +846,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                         ) : (
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); addToCart(pItem); }}
-                                                                className="w-full h-[48px] rounded-xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 dark:bg-blue-600/10 dark:text-blue-400 dark:border-blue-500/20 dark:hover:bg-blue-600/20 font-black text-[13px] uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                                                                className="w-full h-[48px] rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-black text-[13px] uppercase tracking-widest shadow-md shadow-sky-500/25 transition-all active:scale-95 flex items-center justify-center"
                                                             >
                                                                 ADD TO CART
                                                             </button>

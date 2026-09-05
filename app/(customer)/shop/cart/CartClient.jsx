@@ -36,6 +36,7 @@ import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, minOrderValuePaise = 49900 }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -688,6 +689,13 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   return (
     <div className={`min-h-screen pb-52 sm:pb-12 pt-4 sm:pt-6 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-6">
+        {/* Breadcrumb Navigation */}
+        <CustomerBreadcrumbs 
+          items={[
+            { label: 'Shop Hub', href: '/shop' }, 
+            { label: 'My Cart & Checkout' }
+          ]} 
+        />
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-5 md:mb-8">

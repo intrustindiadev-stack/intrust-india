@@ -30,7 +30,7 @@ export default function FintechWalletCard({ userData }) {
                             <h3 className="font-extrabold text-sm text-on-surface tracking-tight">InTrust Digital Wallet</h3>
                             <div className="flex items-center gap-1 text-[11px] font-semibold text-tertiary">
                                 <ShieldCheck size={12} className="text-emerald-500" />
-                                <span>RBI Compliant Escrow</span>
+                                <span>RBI Compliant Security</span>
                             </div>
                         </div>
                     </div>

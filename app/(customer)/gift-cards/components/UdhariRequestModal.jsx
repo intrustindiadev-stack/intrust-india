@@ -231,7 +231,7 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
                                                     <div className="group relative">
                                                         <Info size={14} className="text-gray-300" />
                                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center">
-                                                            A small service fee set by the merchant to maintain secure escrow.
+                                                            A small service fee set by the merchant for credit ledger maintenance.
                                                         </div>
                                                     </div>
                                                 </div>
@@ -279,7 +279,7 @@ export default function UdhariRequestModal({ isOpen, onClose, card, user }) {
 
                                         <div className="flex items-center gap-3 p-4 bg-blue-50/50 dark:bg-blue-500/5 text-blue-800 dark:text-blue-100 border border-blue-100/50 dark:border-blue-500/10 rounded-2xl">
                                             <ShieldCheck className="text-blue-600 dark:text-blue-400 shrink-0" size={20} />
-                                            <span className="text-[10px] font-bold uppercase tracking-tight leading-normal">Your request is protected by Intrust Secure Escrow. Credit is provided directly by the merchant.</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-tight leading-normal">Your request is verified by InTrust Store Credit Guarantee. Credit is extended directly by the merchant.</span>
                                         </div>
                                     </motion.div>
                                 )}

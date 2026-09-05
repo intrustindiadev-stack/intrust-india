@@ -22,25 +22,32 @@ export default function TrendingProductsGrid() {
                         title,
                         slug,
                         description,
-                        selling_price,
-                        mrp,
-                        stock_quantity,
-                        images,
-                        category,
-                        rating,
-                        merchant_id,
-                        merchants:merchants (
-                            id,
-                            business_name,
-                            slug
-                        )
+                        suggested_retail_price_paise,
+                        platform_price_paise,
+                        mrp_paise,
+                        admin_stock,
+                        product_images,
+                        category
                     `)
                     .eq('is_active', true)
                     .order('created_at', { ascending: false })
                     .limit(8);
 
                 if (!error && data && data.length > 0) {
-                    setProducts(data);
+                    const mapped = data.map(p => ({
+                        id: p.id,
+                        title: p.title,
+                        slug: p.slug,
+                        description: p.description,
+                        selling_price: Math.round(((p.platform_price_paise || p.suggested_retail_price_paise || 0) / 100)),
+                        mrp: Math.round(((p.mrp_paise || p.suggested_retail_price_paise || 0) / 100)),
+                        stock_quantity: p.admin_stock,
+                        images: p.product_images || [],
+                        category: p.category || 'General',
+                        rating: 4.8,
+                        merchants: { business_name: 'InTrust Official Flagship' }
+                    }));
+                    setProducts(mapped);
                 } else {
                     // Curated real fallback catalog if db is initially fresh
                     setProducts([
@@ -158,7 +165,7 @@ export default function TrendingProductsGrid() {
                         <span>🔥 Flash Deals &amp; Trending Products</span>
                     </h2>
                     <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
-                        Guaranteed genuine products protected by InTrust Escrow payment protection.
+                        Guaranteed genuine products protected by InTrust 100% Buyer Protection.
                     </p>
                 </div>
                 <Link

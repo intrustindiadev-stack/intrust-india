@@ -3,9 +3,10 @@ import SolarHero from '@/components/solar/customer/SolarHero';
 import SolarLeadForm from '@/components/solar/customer/SolarLeadForm';
 import SolarRequestTracker from '@/components/solar/customer/SolarRequestTracker';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { WHY_SOLAR } from '@/lib/solar/estimator'; // I need to move WHY_SOLAR to estimator or create SolarWhy component. Wait, I didn't export WHY_SOLAR. Let me just inline it or create a SolarWhy.jsx later. I will inline it for now or extract.
+import { WHY_SOLAR } from '@/lib/solar/estimator';
 import { IndianRupee, TrendingDown, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { revalidatePath } from 'next/cache';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 const WHY_SOLAR_LIST = [
     { title: 'Zero Investment', desc: 'Government subsidy covers your full down payment', icon: IndianRupee },
@@ -45,6 +46,15 @@ export default async function SolarServicePage() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#08090b] text-slate-900 dark:text-white overflow-x-hidden">
             <main className="relative z-10 pt-4 sm:pt-6 pb-28">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 mb-4">
+                    <CustomerBreadcrumbs 
+                        items={[
+                            { label: 'Services Hub', href: '/services' }, 
+                            { label: 'Rooftop Solar' }
+                        ]} 
+                        className="mb-0"
+                    />
+                </div>
                 <SolarHero />
 
                 {/* Optional tracker logic based on user session */}

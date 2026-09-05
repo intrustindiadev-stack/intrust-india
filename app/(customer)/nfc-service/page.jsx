@@ -9,6 +9,7 @@ import DetailsSection from '@/components/nfc/DetailsSection';
 import CradleSection from '@/components/nfc/CradleSection';
 import OrderSection from '@/components/nfc/OrderSection';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 export default function NFCServicePage() {
     const { theme } = useTheme();
@@ -99,6 +100,15 @@ export default function NFCServicePage() {
                     </motion.div>
                 ) : (
                     <main className="relative z-10 pt-4 sm:pt-6 pb-28">
+                        <div className="max-w-7xl mx-auto px-4 md:px-8 mb-4">
+                            <CustomerBreadcrumbs 
+                                items={[
+                                    { label: 'Services Hub', href: '/services' }, 
+                                    { label: 'Smart NFC Card' }
+                                ]} 
+                                className="mb-0"
+                            />
+                        </div>
                         {/* THE JOURNEY: Mobile First & Professional */}
                         <HeroSection />
 

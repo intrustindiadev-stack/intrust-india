@@ -34,6 +34,7 @@ import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
 import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
 import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
+import MerchantOpportunityBanner from '@/components/customer/MerchantOpportunityBanner';
 
 const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
 const RecentActivity = dynamic(() => import('@/components/customer/dashboard/RecentActivity'), { ssr: false });
@@ -173,7 +174,7 @@ export default function CustomerDashboardPage() {
                 supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
                 supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle(),
                 supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
-                supabase.from('merchants').select('id, slug, business_name, shopping_banner_url, is_open, business_address, phone').eq('status', 'approved').order('business_name', { ascending: true }).limit(6),
+                supabase.from('merchants').select('id, slug, business_name, shopping_banner_url, is_open, business_address').eq('status', 'approved').order('business_name', { ascending: true }).limit(6),
             ]);
 
             const results = await Promise.race([mainFetch, timeoutTx]);
@@ -409,18 +410,8 @@ export default function CustomerDashboardPage() {
                                 )}
                             </h1>
                             <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-1">
-                                Explore local store pickups, festive tech deals, and verified local stores across Bhopal.
+                                Explore festive tech deals, genuine essentials, and verified local stores across Bhopal.
                             </p>
-                        </div>
-
-                        <div className="flex items-center gap-3 shrink-0">
-                            <Link
-                                href="/shop"
-                                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-blue-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 active:scale-95"
-                            >
-                                <ShoppingBag size={15} />
-                                <span>Shop Now</span>
-                            </Link>
                         </div>
                     </div>
 
@@ -438,6 +429,14 @@ export default function CustomerDashboardPage() {
 
                     {/* Active Order & Logistics Tracking (No OTP) */}
                     <ActiveOrdersSnapshot userId={user?.id} />
+
+                    {/* Merchant Partner Opportunity Card */}
+                    <MerchantOpportunityBanner
+                        merchantStatus={userData.merchantStatus}
+                        subscriptionStatus={userData.subscriptionStatus}
+                        subscriptionExpiresAt={userData.subscriptionExpiry}
+                        startingPriceRupees={userData.merchantSub1mPrice}
+                    />
 
                     {/* 2-Column Section: Wallet & Services + Recent Activity */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

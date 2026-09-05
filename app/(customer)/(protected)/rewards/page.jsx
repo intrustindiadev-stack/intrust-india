@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import ScratchCard from '@/components/ui/ScratchCard';
-import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import RewardsInfoModal from '@/components/rewards/RewardsInfoModal';
 import { useRewardsRealtime } from '@/lib/contexts/RewardsRealtimeContext';
 import { useRewardsBalance } from '@/hooks/useRewardsBalance';
@@ -267,19 +267,20 @@ export default function RewardsPage() {
     return (
         <div className="w-full pb-24 overflow-x-hidden">
             <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                <Breadcrumbs items={[{ label: 'My Rewards' }]} />
+                <CustomerBreadcrumbs items={[{ label: 'InTrust Rewards & Coins' }]} />
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 px-1">
                     <div>
-                        <h1 className="text-3xl font-black text-on-surface tracking-tight">InTrust Rewards & Coins</h1>
-                        <p className="text-sm text-on-surface-variant font-medium">Earn, track and redeem your platform reward points</p>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">InTrust Rewards & Coins</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Earn, track and redeem your platform reward points</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <motion.button 
-                            onClick={() => router.push('/leaderboard')}
+                            onClick={() => router.push('/rewards/leaderboard')}
                             whileHover={{ rotate: -5, scale: 1.05 }}
-                            className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors"
+                            className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors shadow-xs"
+                            title="Leaderboard"
                         >
                             <Trophy className="text-amber-500" size={24} />
                         </motion.button>
@@ -287,6 +288,7 @@ export default function RewardsPage() {
                             onClick={() => setShowInfoModal(true)}
                             whileHover={{ rotate: 15, scale: 1.1 }}
                             className="w-14 h-14 rounded-3xl bg-gradient-to-br from-[#D4AF37] to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-white/20"
+                            title="Rewards Info"
                         >
                             <Gift className="text-white" size={28} />
                         </motion.button>
@@ -299,37 +301,37 @@ export default function RewardsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         onClick={() => router.push('/refer')}
-                        className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-3xl group transition-all hover:border-emerald-500/30"
+                        className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-[#020617] border border-slate-200 dark:border-white/10 rounded-3xl group transition-all hover:border-emerald-500/30 shadow-xs text-left"
                     >
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
                                 <Network size={16} />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Referral Program</p>
-                                <p className="text-sm font-bold text-white">Invite Friends &amp; Earn</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-[#D4AF37]/60">Referral Program</p>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">Invite Friends &amp; Earn</p>
                             </div>
                         </div>
-                        <ChevronRight size={16} className="text-white/40 group-hover:translate-x-1 transition-transform" />
+                        <ChevronRight size={16} className="text-slate-400 dark:text-white/40 group-hover:translate-x-1 transition-transform" />
                     </motion.button>
 
                     <motion.button
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        onClick={() => router.push('/leaderboard')}
-                        className="w-full flex items-center justify-between px-6 py-4 bg-[#020617] dark:bg-black border border-white/10 rounded-3xl group transition-all hover:border-amber-500/30"
+                        onClick={() => router.push('/rewards/leaderboard')}
+                        className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-[#020617] border border-slate-200 dark:border-white/10 rounded-3xl group transition-all hover:border-amber-500/30 shadow-xs text-left"
                     >
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 group-hover:scale-110 transition-transform">
                                 <Trophy size={16} />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400/60">Hall of Fame</p>
-                                <p className="text-sm font-bold text-white">Leaderboard</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400/60">Hall of Fame</p>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">Leaderboard</p>
                             </div>
                         </div>
-                        <ChevronRight size={16} className="text-white/40 group-hover:translate-x-1 transition-transform" />
+                        <ChevronRight size={16} className="text-slate-400 dark:text-white/40 group-hover:translate-x-1 transition-transform" />
                     </motion.button>
                 </div>
 
@@ -400,21 +402,21 @@ export default function RewardsPage() {
                     <div className="flex items-center justify-between mb-8 px-1">
                         <div className="flex items-center gap-3">
                             <div className="w-3 h-3 rounded-full bg-[#D4AF37] animate-ping shadow-[0_0_12px_rgba(212,175,55,0.8)]" />
-                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Daily Loot</h3>
+                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Daily Scratch Cards</h3>
                         </div>
                         <div className="flex items-center gap-3">
                             {dailyLoot.length > 1 && (
                                 <button
                                     onClick={handleRevealAll}
                                     disabled={isProcessingReveal}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-amber-600 hover:bg-[#D4AF37]/20 transition-all disabled:opacity-40"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 hover:bg-amber-200 dark:bg-[#D4AF37]/20 dark:hover:bg-[#D4AF37]/30 border border-amber-300 dark:border-[#D4AF37]/30 text-amber-950 dark:text-amber-300 font-extrabold text-xs transition-all disabled:opacity-40 shadow-xs"
                                 >
                                     <Layers size={14} />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Reveal All</span>
                                 </button>
                             )}
                             {storedCards.length > 0 && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600">
+                                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 font-bold text-xs">
                                     <Archive size={14} />
                                     <span className="text-[10px] font-black uppercase tracking-widest">{storedCards.length} Stored</span>
                                 </div>
@@ -468,7 +470,7 @@ export default function RewardsPage() {
                                                 <div className="text-center relative z-10">
                                                     <Sparkles className={`mx-auto mb-2 ${card.classes.sparkle} group-hover:animate-bounce`} size={24} />
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tap to</p>
-                                                    <p className={`text-sm font-black ${card.classes.unbox} uppercase tracking-[0.2em]`}>Unbox</p>
+                                                    <p className={`text-sm font-black ${card.classes.unbox} uppercase tracking-[0.2em]`}>Scratch</p>
                                                 </div>
                                             )}
                                         </div>
@@ -482,8 +484,8 @@ export default function RewardsPage() {
                                 <div className="w-16 h-16 bg-white dark:bg-black/20 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
                                     <Clock size={32} />
                                 </div>
-                                <h4 className="font-black text-slate-400 uppercase tracking-widest text-sm">All Loot Claimed</h4>
-                                <p className="text-[10px] font-bold text-slate-500 mt-1">Check back tomorrow for fresh rewards!</p>
+                                <h4 className="font-black text-slate-400 uppercase tracking-widest text-sm">All Scratch Cards Claimed</h4>
+                                <p className="text-[10px] font-bold text-slate-500 mt-1">Check back tomorrow or complete new shopping orders for fresh rewards!</p>
                             </div>
                         )}
                     </div>
@@ -627,26 +629,26 @@ export default function RewardsPage() {
                             initial={{ scale: 0.8, y: 50, rotateX: 20 }}
                             animate={{ scale: 1, y: 0, rotateX: 0 }}
                             exit={{ scale: 0.8, y: 50, rotateX: 20 }}
-                            className="relative w-full max-w-md bg-gradient-to-b from-[#0F172A] to-black rounded-[3rem] p-1 shadow-2xl border border-white/10 overflow-hidden"
+                            className="relative w-full max-w-md bg-white dark:bg-gradient-to-b dark:from-[#0F172A] dark:to-black rounded-[3rem] p-1 shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden"
                         >
-                            <div className="relative bg-black/40 rounded-[2.9rem] p-8 overflow-hidden">
+                            <div className="relative bg-slate-50 dark:bg-black/40 rounded-[2.9rem] p-6 sm:p-8 overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
                                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
 
                                 <button 
                                     onClick={() => !isProcessingReveal && setSelectedCard(null)}
-                                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors border border-white/10 z-20 disabled:opacity-50"
+                                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-slate-200/80 dark:bg-white/10 flex items-center justify-center text-slate-600 dark:text-white/60 hover:text-slate-950 dark:hover:text-white transition-colors border border-slate-300/60 dark:border-white/10 z-20 disabled:opacity-50"
                                     disabled={isProcessingReveal}
                                 >
                                     <X size={20} />
                                 </button>
 
-                                <div className="text-center mb-10 relative z-10 pt-4">
-                                    <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">InTrust Reward Box</h3>
-                                    <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">Scratch to Reveal Prize</p>
+                                <div className="text-center mb-8 relative z-10 pt-2">
+                                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1 tracking-tight">InTrust Scratch Card</h3>
+                                    <p className="text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-[0.25em] text-[11px]">Scratch to Reveal Prize</p>
                                 </div>
 
-                                <div className="relative h-72 sm:h-80 w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl ring-4 ring-emerald-500/5">
+                                <div className="relative h-72 sm:h-80 w-full rounded-[2.5rem] overflow-hidden border border-slate-200 dark:border-white/10 shadow-2xl ring-4 ring-emerald-500/10">
                                     <ScratchCard 
                                         id={selectedCard.id}
                                         prizePoints={selectedCard.prize}
@@ -655,11 +657,11 @@ export default function RewardsPage() {
                                     />
                                 </div>
 
-                                <div className="mt-10 text-center relative z-10">
-                                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] mb-6 italic">Verified Rewards System</p>
-                                    <div className="flex items-center justify-center gap-3">
+                                <div className="mt-8 text-center relative z-10">
+                                    <p className="text-slate-400 dark:text-white/40 text-[10px] font-black uppercase tracking-[0.3em] mb-4">100% Guaranteed Reward</p>
+                                    <div className="flex items-center justify-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                                        <p className="text-emerald-400 text-sm font-black uppercase tracking-widest">Live Settlement</p>
+                                        <p className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest">Instant InTrust Wallet Credit</p>
                                     </div>
                                 </div>
                             </div>

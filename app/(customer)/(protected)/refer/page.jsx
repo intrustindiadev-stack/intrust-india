@@ -13,7 +13,7 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
-import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const POINTS_PER_RUPEE = 100;
@@ -360,14 +360,14 @@ export default function ReferAndEarnPage() {
     return (
         <div className="w-full pb-24 overflow-x-hidden">
             <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                <Breadcrumbs items={[{ label: 'Referral' }]} />
+                <CustomerBreadcrumbs items={[{ label: 'Refer & Earn' }]} />
 
                 {/* Cross-navigation to Rewards */}
                 <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => router.push('/rewards')}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30"
+                    className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30 shadow-xs"
                 >
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
@@ -451,7 +451,7 @@ export default function ReferAndEarnPage() {
                         <div className="flex gap-2 sm:gap-3 w-full">
                             <button
                                 onClick={handleCopy}
-                                className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-white text-blue-600 py-3.5 sm:py-4 rounded-[1.5rem] sm:rounded-[2rem] font-black text-xs sm:text-sm shadow-xl hover:bg-blue-50 active:scale-95 transition-all"
+                                className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-950 text-white py-3.5 sm:py-4 rounded-[1.5rem] sm:rounded-[2rem] font-black text-xs sm:text-sm shadow-xl hover:bg-slate-900 active:scale-95 transition-all"
                             >
                                 {copied ? <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Copy size={16} className="sm:w-[18px] sm:h-[18px]" />}
                                 {copied ? 'Copied' : 'Copy Code'}
@@ -465,7 +465,7 @@ export default function ReferAndEarnPage() {
                             </button>
                             <button
                                 onClick={handleShare}
-                                className="p-3.5 sm:p-4 rounded-[1.5rem] sm:rounded-2xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center"
+                                className="p-3.5 sm:p-4 rounded-[1.5rem] sm:rounded-2xl bg-white/20 border border-white/30 text-slate-950 hover:bg-white/30 transition-all active:scale-95 flex items-center justify-center"
                             >
                                 <Share2 size={20} className="sm:w-6 sm:h-6" />
                             </button>
@@ -478,7 +478,7 @@ export default function ReferAndEarnPage() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-[#020617] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-sm mb-10"
+                        className="bg-white dark:bg-[#020617] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 border border-slate-200 dark:border-white/10 shadow-xs mb-10"
                     >
                         <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Enter Invite Code</h3>
                         <p className="text-xs text-slate-500 mb-6">Have an invite code from a friend? Enter it here to link your account and earn bonus points.</p>
@@ -488,12 +488,12 @@ export default function ReferAndEarnPage() {
                                 value={enterCode}
                                 onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
                                 placeholder="ENTER CODE"
-                                className="w-full sm:flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase"
+                                className="w-full sm:flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase text-slate-900 dark:text-white"
                             />
                             <button
                                 onClick={handleApplyCode}
                                 disabled={applyingCode}
-                                className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
+                                className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center active:scale-95"
                             >
                                 {applyingCode ? <RefreshCw className="animate-spin" size={18} /> : 'Connect'}
                             </button>

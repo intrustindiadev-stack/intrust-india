@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Crown, Medal, Award, ChevronLeft, Star, ChevronRight, Sparkles, TrendingUp, Target, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 export default function LeaderboardPage() {
     const router = useRouter();
@@ -90,43 +89,33 @@ export default function LeaderboardPage() {
             <div className="absolute top-1/4 left-0 w-96 h-96 bg-[#ff477e]/10 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute top-1/3 right-0 w-96 h-96 bg-[#ff7096]/10 blur-[120px] rounded-full pointer-events-none" />
 
-            {/* Header */}
-            <div className="sticky top-0 z-50 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 px-4 py-4 flex items-center justify-between">
-                <button 
-                    onClick={() => router.back()}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-2xl transition-colors"
-                >
-                    <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-                </button>
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff477e] to-[#ff7096] flex items-center justify-center shadow-lg shadow-[#ff477e]/20">
-                        <Trophy size={18} className="text-white" />
-                    </div>
-                    <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
-                        InTrust <span className="text-[#ff477e]">Top 10</span>
-                    </h1>
+            <div className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 relative z-10">
+                <div className="flex items-center justify-between gap-4 mb-6">
+                    <CustomerBreadcrumbs items={[{ label: 'InTrust Rewards', href: '/rewards' }, { label: 'Leaderboard' }]} className="mb-0" />
+                    <button 
+                        onClick={() => router.push('/rewards')}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors shadow-xs"
+                    >
+                        <ChevronLeft size={14} />
+                        <span>Back to Rewards</span>
+                    </button>
                 </div>
-                <div className="w-10" />
-            </div>
-
-            <div className="max-w-4xl mx-auto px-4 mt-8 sm:mt-12 relative z-10">
-                <Breadcrumbs items={[{ label: 'Rewards', href: '/rewards' }, { label: 'Leaderboard' }]} />
 
                 {/* Intro Text */}
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-16 mt-8"
+                    className="text-center mb-12 sm:mb-16 mt-4"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ff477e]/10 border border-[#ff477e]/20 text-[#ff477e] mb-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#ff477e]/10 border border-[#ff477e]/20 text-[#ff477e] mb-4">
                         <Sparkles size={14} className="animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Global Ascension Feed</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">InTrust Community Champions</span>
                     </div>
-                    <h2 className="text-4xl md:text-7xl font-black mb-4 tracking-tighter text-slate-900 dark:text-white leading-none">
-                        The <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#ff477e] to-[#ff7096]">Champion's</span> Circle
+                    <h2 className="text-3xl sm:text-5xl md:text-6xl font-black mb-3 tracking-tighter text-slate-900 dark:text-white leading-none">
+                        Top Reward <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#ff477e] to-[#ff7096]">Earners</span>
                     </h2>
-                    <p className="text-slate-500 dark:text-gray-400 text-sm md:text-lg max-w-xl mx-auto font-bold uppercase tracking-widest opacity-60">
-                        Ranked by total unspent reward points
+                    <p className="text-slate-500 dark:text-gray-400 text-xs sm:text-sm max-w-xl mx-auto font-bold uppercase tracking-wider opacity-80">
+                        Ranked by active InTrust Coins and shopping loyalty points
                     </p>
                 </motion.div>
 

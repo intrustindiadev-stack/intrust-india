@@ -26,6 +26,42 @@ import { PayerContactError, usePayment } from '@/hooks/usePayment';
 import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
 import PayerContactRecoveryPanel from '@/components/payment/PayerContactRecoveryPanel';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+
+function AnimatedCounter({ value, duration = 900 }) {
+    const [displayValue, setDisplayValue] = useState(0);
+
+    useEffect(() => {
+        let startTimestamp = null;
+        const startValue = 0;
+        const endValue = Number(value) || 0;
+
+        let animationFrameId;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            // Smooth easeOutExpo
+            const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+            const current = startValue + (endValue - startValue) * easeProgress;
+            setDisplayValue(current);
+            if (progress < 1) {
+                animationFrameId = window.requestAnimationFrame(step);
+            }
+        };
+
+        animationFrameId = window.requestAnimationFrame(step);
+        return () => window.cancelAnimationFrame(animationFrameId);
+    }, [value, duration]);
+
+    return (
+        <span>
+            ₹{displayValue.toLocaleString('en-IN', {
+                minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+                maximumFractionDigits: 2,
+            })}
+        </span>
+    );
+}
 
 export default function CustomerWalletPage() {
     const { user, profile } = useAuth();
@@ -37,7 +73,7 @@ export default function CustomerWalletPage() {
     const [loading, setLoading] = useState(true);
     const [addAmount, setAddAmount] = useState('');
     const [isAddingMoney, setIsAddingMoney] = useState(false);
-    const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+    const [isBalanceVisible, setIsBalanceVisible] = useState(false);
     const [serverContactError, setServerContactError] = useState(null);
 
     const firstInvalidField = Object.keys(payerContact.validation.errors).filter(k => k !== 'phone')[0] || null;
@@ -199,6 +235,8 @@ export default function CustomerWalletPage() {
 
     return (
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+            <CustomerBreadcrumbs items={[{ label: 'InTrust Wallet' }]} className="mb-2" />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -213,7 +251,7 @@ export default function CustomerWalletPage() {
                 <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
                         <ShieldCheck size={14} />
-                        <span>RBI Compliant Escrow</span>
+                        <span>100% Safe &amp; RBI Compliant</span>
                     </span>
                 </div>
             </div>
@@ -242,9 +280,9 @@ export default function CustomerWalletPage() {
                                 type="button"
                                 onClick={() => setIsBalanceVisible(!isBalanceVisible)}
                                 className="w-8 h-8 rounded-full bg-surface-container-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors"
-                                title={isBalanceVisible ? 'Hide Balance' : 'Show Balance'}
+                                title={isBalanceVisible ? 'Hide Balance' : 'Reveal Balance'}
                             >
-                                {isBalanceVisible ? <Eye size={15} /> : <EyeOff size={15} />}
+                                {isBalanceVisible ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
                         </div>
 
@@ -253,12 +291,36 @@ export default function CustomerWalletPage() {
                             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                                 Total Digital Cash
                             </span>
-                            <div className="flex items-baseline gap-2 mt-1">
-                                <h3 className="text-4xl sm:text-5xl font-black text-on-surface tracking-tight tabular-nums">
-                                    {isBalanceVisible
-                                        ? `₹${balance.toLocaleString('en-IN', { minimumFractionDigits: balance % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`
-                                        : '••••••'}
-                                </h3>
+                            <div className="flex items-baseline gap-2 mt-1 min-h-[48px] sm:min-h-[56px]">
+                                {isBalanceVisible ? (
+                                    <motion.h3 
+                                        key="visible"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.25 }}
+                                        className="text-4xl sm:text-5xl font-black text-on-surface tracking-tight tabular-nums"
+                                    >
+                                        <AnimatedCounter value={balance} duration={900} />
+                                    </motion.h3>
+                                ) : (
+                                    <motion.button
+                                        key="hidden"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        type="button"
+                                        onClick={() => setIsBalanceVisible(true)}
+                                        className="flex items-center gap-3 group cursor-pointer focus:outline-none"
+                                        title="Tap to reveal balance"
+                                    >
+                                        <h3 className="text-3xl sm:text-4xl font-mono tracking-[0.25em] text-on-surface-variant/70 group-hover:text-primary transition-colors">
+                                            ••••••
+                                        </h3>
+                                        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-xs flex items-center gap-1">
+                                            <Eye size={12} />
+                                            <span>Tap to reveal</span>
+                                        </span>
+                                    </motion.button>
+                                )}
                             </div>
                         </div>
 

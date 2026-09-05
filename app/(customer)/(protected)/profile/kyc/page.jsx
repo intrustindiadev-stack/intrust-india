@@ -139,7 +139,7 @@ export default function ProfileKYCPage() {
                             Identity Verification (KYC)
                         </h1>
                         <p className="text-xs sm:text-sm text-on-surface-variant font-medium">
-                            Verify your identity to unlock higher limits and instant escrow payouts
+                            Verify your identity to unlock higher limits and instant secure payouts
                         </p>
                     </div>
                 </div>
@@ -178,7 +178,7 @@ export default function ProfileKYCPage() {
                     <div>
                         <h3 className="font-extrabold text-on-surface text-base mb-1">Government ID Verification</h3>
                         <p className="text-on-surface-variant text-xs leading-relaxed">
-                            You have not completed KYC verification yet. Provide your legal identity details below to enable bank-grade escrow protection and higher transaction tiers.
+                            You have not completed KYC verification yet. Provide your legal identity details below to enable bank-grade security protection and higher transaction tiers.
                         </p>
                     </div>
                 </motion.div>
@@ -288,7 +288,7 @@ function StatusBanner({ status, rejectionReason }) {
             bg: 'bg-emerald-500/10 border-emerald-500/30',
             icon: <CheckCircle size={20} className="text-emerald-500" />,
             title: 'KYC Verified Instantly ✓',
-            description: 'Your identity has been verified. You have unrestricted access to all platform features and escrow rails.',
+            description: 'Your identity has been verified. You have unrestricted access to all platform features and secure payment rails.',
         },
         rejected: {
             bg: 'bg-rose-500/10 border-rose-500/30',

@@ -24,7 +24,7 @@ export default function ActiveOrdersSnapshot({ userId }) {
                         payment_status,
                         fulfillment_status,
                         created_at,
-                        coupons:coupons!orders_giftcard_id_fkey (
+                        coupons (
                             id, title, brand
                         )
                     `)

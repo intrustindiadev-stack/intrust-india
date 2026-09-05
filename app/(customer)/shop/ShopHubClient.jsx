@@ -26,27 +26,24 @@ import {
     Shirt,
     Home,
     ShoppingBasket,
-    Sun
+    Sun,
+    Zap
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
-
-const CATEGORY_ITEMS = [
-    { label: 'All Categories', slug: '' },
-    { label: 'Electronics & Audio', slug: 'electronics', icon: Headphones },
-    { label: 'Mobiles & Tablets', slug: 'mobiles', icon: Smartphone },
-    { label: 'Fashion & Wear', slug: 'fashion', icon: Shirt },
-    { label: 'Home & Kitchen', slug: 'home', icon: Home },
-    { label: 'Local Groceries', slug: 'groceries', icon: ShoppingBasket },
-    { label: 'Solar & NFC', slug: 'solar', icon: Sun },
-];
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import { getCategorySlug, getCategoryIcon, getCategoryImage, FALLBACK_CATEGORIES } from '@/lib/shopping/categories';
 
 export default function ShopHubClient({ merchants = [], ratingsMap = {}, categories = [] }) {
+    const searchParams = useSearchParams();
+    const urlCategory = searchParams?.get('category') || '';
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [pickupMode, setPickupMode] = useState('all'); // 'all' or 'fast_2hr'
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [pickupMode, setPickupMode] = useState('all');
+    const [selectedCategory, setSelectedCategory] = useState(urlCategory);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterOnlyOpen, setFilterOnlyOpen] = useState(false);
     const [filterMinRating, setFilterMinRating] = useState(0);
@@ -54,7 +51,14 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     const [productsLoading, setProductsLoading] = useState(true);
     const [addedProductId, setAddedProductId] = useState(null);
 
-    // Fetch real products from shopping_products table
+    // Sync selectedCategory if URL parameter changes
+    useEffect(() => {
+        if (urlCategory) {
+            setSelectedCategory(urlCategory);
+        }
+    }, [urlCategory]);
+
+    // Fetch real products from shopping_products table using valid schema columns
     useEffect(() => {
         const fetchProducts = async () => {
             try {
@@ -65,26 +69,36 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         title,
                         slug,
                         description,
-                        selling_price,
-                        mrp,
-                        stock_quantity,
-                        images,
+                        suggested_retail_price_paise,
+                        platform_price_paise,
+                        mrp_paise,
+                        admin_stock,
+                        product_images,
                         category,
-                        rating,
-                        merchant_id,
-                        merchants:merchants (
-                            id,
-                            business_name,
-                            slug
-                        )
+                        is_active
                     `)
                     .eq('is_active', true)
                     .order('created_at', { ascending: false });
 
                 if (!error && data && data.length > 0) {
-                    setProducts(data);
+                    const mapped = data.map((p, idx) => ({
+                        id: p.id,
+                        title: p.title,
+                        slug: p.slug,
+                        description: p.description,
+                        selling_price: Math.round(((p.platform_price_paise || p.suggested_retail_price_paise || 0) / 100)),
+                        mrp: Math.round(((p.mrp_paise || p.suggested_retail_price_paise || 0) / 100)),
+                        stock_quantity: p.admin_stock,
+                        images: Array.isArray(p.product_images) && p.product_images.length > 0 
+                            ? p.product_images 
+                            : ['https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80'],
+                        category: p.category || 'all',
+                        rating: 4.8,
+                        merchants: merchants[idx % (merchants.length || 1)] || { business_name: 'InTrust Official Flagship', slug: 'official' }
+                    }));
+                    setProducts(mapped);
                 } else {
-                    // Seed initial catalog if database is fresh
+                    // Fallback catalog if table is empty
                     setProducts([
                         {
                             id: 'prod-1',
@@ -140,7 +154,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         };
 
         fetchProducts();
-    }, []);
+    }, [merchants]);
 
     // Filter merchants based on search, open status, rating
     const filteredMerchants = useMemo(() => {
@@ -156,6 +170,42 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         });
     }, [merchants, searchQuery, filterOnlyOpen, filterMinRating, ratingsMap]);
 
+    // Compute dynamic categories based on shopping_categories and active products
+    const dynamicCategoryList = useMemo(() => {
+        const list = [{ label: 'All Categories', slug: '', icon: Sparkles, image: '' }];
+        
+        const baseCategories = (categories && categories.length > 0)
+            ? categories
+            : FALLBACK_CATEGORIES;
+
+        baseCategories.forEach(cat => {
+            const slug = getCategorySlug(cat);
+            const label = cat.name || cat.label || slug;
+            const Icon = getCategoryIcon(label);
+            const image = cat.image_url || getCategoryImage(cat);
+            list.push({ label, slug, icon: Icon, image });
+        });
+
+        // Add any categories present in products not already in the list
+        const existingSlugs = new Set(list.map(c => c.slug));
+        products.forEach(p => {
+            if (p.category) {
+                const slug = getCategorySlug(p.category);
+                if (slug && !existingSlugs.has(slug)) {
+                    existingSlugs.add(slug);
+                    list.push({ 
+                        label: p.category, 
+                        slug, 
+                        icon: getCategoryIcon(p.category),
+                        image: getCategoryImage(p.category)
+                    });
+                }
+            }
+        });
+
+        return list;
+    }, [categories, products]);
+
     // Filter products based on search & category
     const filteredProducts = useMemo(() => {
         return products.filter((p) => {
@@ -164,8 +214,12 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 const matchDesc = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
                 if (!matchTitle && !matchDesc) return false;
             }
-            if (selectedCategory && p.category?.toLowerCase() !== selectedCategory.toLowerCase()) {
-                return false;
+            if (selectedCategory) {
+                const prodCatSlug = getCategorySlug(p.category);
+                const selCatSlug = getCategorySlug(selectedCategory);
+                if (prodCatSlug !== selCatSlug && !(p.category || '').toLowerCase().includes(selCatSlug)) {
+                    return false;
+                }
             }
             return true;
         });
@@ -209,7 +263,10 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     };
 
     return (
-        <div className="w-full space-y-8 font-body-md text-on-surface">
+        <div className="w-full space-y-6 font-body-md text-slate-900 dark:text-on-surface">
+            {/* Top Breadcrumbs */}
+            <CustomerBreadcrumbs items={[{ label: 'Shop & Local Stores' }]} className="mb-2" />
+
             {/* ── EDITORIAL HEADER SECTION (Stitch Screen #30703825561c4f3c9ce69d33b63f890a) ── */}
             <div className="relative overflow-hidden rounded-3xl bg-surface-container-lowest p-6 sm:p-8 border border-outline-variant/30 shadow-sm">
                 <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
@@ -224,42 +281,38 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                     Bhopal Hub Central
                                 </span>
                                 <span className="text-on-surface-variant text-xs">•</span>
-                                <span className="flex items-center gap-1 text-[#D4AF37] text-xs font-bold">
-                                    <ShieldCheck size={14} /> Escrow Protected
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                    <ShieldCheck size={14} /> 100% Buyer Protection
                                 </span>
                             </div>
                             <h1 className="text-2xl sm:text-4xl font-black text-on-surface tracking-tight leading-tight">
                                 Explore Shop &amp; Local Bhopal Stores
                             </h1>
                             <p className="text-xs sm:text-sm text-on-surface-variant mt-2 max-w-2xl font-medium leading-relaxed">
-                                Browse verified merchant inventory, top brand electronics, and local store pickups protected by InTrust safe escrow payment protection.
+                                Browse verified Bhopal merchant inventory, top brand electronics, and genuine local store selections backed by InTrust Buyer Guarantee.
                             </p>
                         </div>
 
-                        {/* Pickup Mode Switcher */}
+                        {/* Store Mode Switcher */}
                         <div className="p-1.5 rounded-2xl bg-surface-container-low flex items-center gap-1 self-start md:self-auto shrink-0 border border-outline-variant/20">
                             <button
-                                onClick={() => setPickupMode('all')}
+                                onClick={() => { setPickupMode('all'); setSelectedCategory('all'); }}
                                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                    pickupMode === 'all'
+                                    pickupMode === 'all' && selectedCategory !== 'official'
                                         ? 'bg-surface-container-lowest text-primary shadow-sm'
                                         : 'text-on-surface-variant hover:text-on-surface'
                                 }`}
                             >
                                 <ShoppingBag size={14} />
-                                <span>All Items</span>
+                                <span>All Stores</span>
                             </button>
-                            <button
-                                onClick={() => setPickupMode('fast_2hr')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                    pickupMode === 'fast_2hr'
-                                        ? 'bg-surface-container-lowest text-[#D4AF37] shadow-sm'
-                                        : 'text-on-surface-variant hover:text-on-surface'
-                                }`}
+                            <Link
+                                href="/shop/official"
+                                className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest"
                             >
-                                <Bolt size={14} className="text-[#D4AF37]" />
-                                <span>Fast Local Pickup (2 Hrs)</span>
-                            </button>
+                                <Sparkles size={14} className="text-blue-500" />
+                                <span>InTrust Official</span>
+                            </Link>
                         </div>
                     </div>
 
@@ -285,23 +338,24 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             )}
                         </div>
 
-                        {/* Horizontal Category Chips */}
+                        {/* Horizontal Dynamic Category Chips */}
                         <div className="lg:col-span-8 flex items-center gap-2 overflow-x-auto pb-1.5 lg:pb-0 scrollbar-none">
-                            {CATEGORY_ITEMS.map((cat, idx) => {
+                            {dynamicCategoryList.map((cat, idx) => {
                                 const Icon = cat.icon;
-                                const isActive = selectedCategory === cat.slug;
+                                const isActive = (selectedCategory === '' && cat.slug === '') || 
+                                    (cat.slug !== '' && (selectedCategory === cat.slug || selectedCategory.toLowerCase() === cat.label.toLowerCase()));
 
                                 return (
                                     <button
-                                        key={idx}
+                                        key={cat.slug || idx}
                                         onClick={() => setSelectedCategory(cat.slug)}
-                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm ${
+                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-xs active:scale-95 ${
                                             isActive
-                                                ? 'bg-primary text-white shadow-md'
-                                                : 'bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-950 dark:bg-surface-container-low dark:hover:bg-surface-container-high dark:text-on-surface-variant dark:hover:text-on-surface border border-slate-200 dark:border-outline-variant/20'
                                         }`}
                                     >
-                                        {Icon && <Icon size={14} className={isActive ? 'text-white' : 'text-primary'} />}
+                                        {Icon && <Icon size={14} className={isActive ? 'text-white' : 'text-blue-600 dark:text-primary'} />}
                                         <span>{cat.label}</span>
                                     </button>
                                 );
@@ -314,25 +368,26 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
             {/* ── DUAL PROMOTIONAL EDITORIAL BANNERS ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Promo 1: Festive Electronics Bonanza */}
-                <div className="lg:col-span-7 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg group border border-white/10 bg-slate-950">
-                    <div 
-                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 opacity-40"
-                        style={{ backgroundImage: `url('/banners/festive_tech_sale.jpg')` }}
+                <div className="lg:col-span-7 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg group border border-blue-500/30 bg-slate-950 min-h-[300px]">
+                    {/* Real Commercial Photography Background */}
+                    <img 
+                        src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=1400" 
+                        alt="Tech & Electronics" 
+                        className="absolute inset-0 w-full h-full object-cover object-center opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-blue-950/50" />
-                    <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-blue-500/20 rounded-full blur-2xl pointer-events-none group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-transparent pointer-events-none" />
                     
                     <div className="relative z-10 flex flex-col gap-3">
                         <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 rounded-full bg-slate-900/80 text-[#D4AF37] text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-amber-500/30 backdrop-blur-md">
-                                <Sparkles size={11} /> FESTIVE ELECTRONICS BONANZA
+                            <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-blue-400/30 backdrop-blur-md">
+                                <Sparkles size={11} className="text-amber-400" /> TECH & ELECTRONICS BONANZA
                             </span>
                             <span className="px-2.5 py-1 rounded-full bg-white/10 text-white/90 text-[10px] font-bold backdrop-blur-md border border-white/10">
-                                Bhopal Exclusives
+                                Bhopal Exclusive Deals
                             </span>
                         </div>
                         <div className="max-w-md">
-                            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight drop-shadow-sm">
                                 Up to 60% Off on Top Tech Brands
                             </h2>
                             <p className="text-xs sm:text-sm text-slate-200 mt-2 font-medium leading-relaxed">
@@ -341,9 +396,9 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         </div>
                     </div>
 
-                    <div className="relative z-10 pt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 mt-6">
+                    <div className="relative z-10 pt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 mt-6">
                         <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/10">
+                            <div className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15">
                                 <Sparkles size={20} className="text-[#D4AF37]" />
                             </div>
                             <div>
@@ -353,7 +408,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         </div>
                         <button
                             onClick={() => setSelectedCategory('electronics')}
-                            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all active:scale-95"
+                            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center gap-2 shadow-md transition-all active:scale-95"
                         >
                             <span>Shop Tech Deals</span>
                             <ArrowRight size={14} />
@@ -361,38 +416,117 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                     </div>
                 </div>
 
-                {/* Promo 2: Instant Store Credit (Udhari) */}
-                <div className="lg:col-span-5 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg border border-white/10 bg-slate-950 group">
-                    <div 
-                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 opacity-35"
-                        style={{ backgroundImage: `url('/banners/local_fast_delivery.jpg')` }}
+                {/* Promo 2: InTrust Official Flagship & Express Delivery */}
+                <div className="lg:col-span-5 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg border border-emerald-500/30 bg-emerald-950 group min-h-[300px]">
+                    {/* Real Commercial Photography Background */}
+                    <img 
+                        src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=1200" 
+                        alt="InTrust Official Flagship Express" 
+                        className="absolute inset-0 w-full h-full object-cover object-center opacity-35 group-hover:scale-105 transition-transform duration-700 pointer-events-none" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-emerald-950/40" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/85 to-transparent pointer-events-none" />
 
                     <div className="relative z-10">
-                        <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30 backdrop-blur-md">
-                            Pre-Approved Udhari Credit
-                        </span>
-                        <h3 className="text-xl sm:text-2xl font-black text-white mt-3 leading-tight">
-                            Shop Today, Settle on Payday
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30 backdrop-blur-md flex items-center gap-1">
+                                <Zap size={12} className="fill-emerald-400 text-emerald-400" />
+                                Express Dispatch
+                            </span>
+                            <span className="px-2.5 py-1 rounded-full bg-white/10 text-white text-[10px] font-bold backdrop-blur-md border border-white/15">
+                                Official Hub
+                            </span>
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-black text-white leading-tight drop-shadow-sm">
+                            InTrust Official Flagship
                         </h3>
                         <p className="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
-                            Up to ₹25,000 instant store credit line at 0% interest for 15 days at all verified Bhopal partner merchants.
+                            Order genuine essentials and verified gadgets directly from the company flagship hub with live order tracking and verified fulfillment.
                         </p>
                     </div>
 
-                    <div className="relative z-10 pt-6 mt-6 border-t border-white/10 flex items-center justify-between">
+                    <div className="relative z-10 pt-6 mt-6 border-t border-white/15 flex items-center justify-between">
                         <div className="flex flex-col">
-                            <span className="text-[10px] text-slate-300 uppercase font-bold">Credit Approval</span>
-                            <span className="text-sm font-black text-emerald-400">Instant in 60 Sec</span>
+                            <span className="text-[10px] text-slate-300 uppercase font-bold">Buyer Protection</span>
+                            <span className="text-sm font-black text-emerald-400">100% InTrust Guarantee</span>
                         </div>
                         <Link
-                            href="/store-credits"
-                            className="px-4 py-2.5 rounded-xl bg-white text-slate-900 font-bold text-xs hover:bg-slate-100 transition-all shadow-md active:scale-95"
+                            href="/shop/official"
+                            className="px-5 py-2.5 rounded-xl bg-white text-emerald-950 hover:bg-slate-100 font-black text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
                         >
-                            Activate Credit
+                            <span>Visit Flagship</span>
+                            <ArrowRight size={13} />
                         </Link>
                     </div>
+                </div>
+            </div>
+
+            {/* ── SHOP BY CATEGORY • INTRUST OFFICIAL ── */}
+            <div className="w-full space-y-4 pt-1">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider border border-blue-500/20">
+                                InTrust Official
+                            </span>
+                            <span className="text-[11px] text-slate-500 dark:text-brand-steel font-semibold">
+                                Certified Direct Hub
+                            </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight">
+                            Shop by Category • Official
+                        </h2>
+                    </div>
+                    <Link
+                        href="/shop/official"
+                        className="text-xs font-bold text-blue-600 dark:text-primary hover:underline flex items-center gap-1 group"
+                    >
+                        <span>View Official Flagship</span>
+                        <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                    {dynamicCategoryList
+                        .filter((c) => c.slug !== '')
+                        .map((cat) => {
+                            const Icon = cat.icon;
+                            return (
+                                <Link
+                                    key={cat.slug}
+                                    href={`/shop/category/${cat.slug}`}
+                                    className="group relative overflow-hidden p-3 sm:p-4 rounded-2xl bg-surface-container-lowest border border-slate-200/80 dark:border-outline-variant/25 hover:border-blue-500/40 dark:hover:border-primary/40 transition-all hover:shadow-md hover:-translate-y-0.5 flex flex-col items-center text-center justify-between min-h-[130px] sm:min-h-[140px]"
+                                >
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-50 dark:bg-black/20 p-1 flex items-center justify-center relative shadow-xs transition-transform duration-300 group-hover:scale-105">
+                                        {cat.image ? (
+                                            <img
+                                                src={cat.image}
+                                                alt={cat.label}
+                                                className="w-full h-full object-cover rounded-xl"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                    const fallbackEl = e.currentTarget.nextSibling;
+                                                    if (fallbackEl) fallbackEl.style.display = 'flex';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div 
+                                            className="w-full h-full items-center justify-center text-primary"
+                                            style={{ display: cat.image ? 'none' : 'flex' }}
+                                        >
+                                            <Icon size={24} strokeWidth={2.2} />
+                                        </div>
+                                    </div>
+                                    <div className="w-full mt-2 min-h-[30px] flex flex-col items-center justify-center">
+                                        <span className="text-xs font-bold text-on-surface group-hover:text-blue-600 dark:group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                                            {cat.label}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-slate-400 dark:text-brand-steel mt-0.5">
+                                            Official Hub
+                                        </span>
+                                    </div>
+                                </Link>
+                            );
+                        })}
                 </div>
             </div>
 

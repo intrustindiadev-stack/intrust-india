@@ -7,6 +7,7 @@ import { Clock, CheckCircle, Search, Filter, TrendingUp, TrendingDown, Wallet, G
 import { motion, AnimatePresence } from 'framer-motion';
 import { CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import Link from 'next/link';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 function TransactionsSkeleton() {
     return (
@@ -176,6 +177,14 @@ export default function TransactionsPage() {
 
     return (
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+            <CustomerBreadcrumbs 
+                items={[
+                    { label: 'InTrust Wallet', href: '/wallet' }, 
+                    { label: 'Passbook & Activity' }
+                ]} 
+                className="mb-2"
+            />
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
