@@ -358,7 +358,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             </div>
 
             {/* ====== MAIN CONTENT ====== */}
-            <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-8 pt-24 md:pt-28 pb-28 sm:pb-32 relative z-10">
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-8 pt-4 sm:pt-6 md:pt-8 pb-32 relative z-10">
 
                 {/* Back Button */}
                 <button

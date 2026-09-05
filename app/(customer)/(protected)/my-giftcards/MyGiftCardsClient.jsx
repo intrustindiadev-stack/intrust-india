@@ -321,8 +321,7 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pe
         });
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950">
-            <div className="pt-[15vh] pb-32 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
                 {/* ── Header ───────────────────────────────────────────────── */}
                 <motion.div
@@ -436,8 +435,6 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pe
                         <EmptyState key="empty" />
                     )}
                 </AnimatePresence>
-
             </div>
-        </div>
-    );
-}
+        );
+    }

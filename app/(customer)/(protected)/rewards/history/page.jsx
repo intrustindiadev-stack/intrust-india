@@ -9,8 +9,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import Navbar from '@/components/layout/Navbar';
-
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
 export default function RewardsHistoryPage() {
@@ -66,10 +64,8 @@ export default function RewardsHistoryPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] pb-24 overflow-x-hidden">
-            <Navbar />
-
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-[12vh]">
+        <div className="w-full pb-24 overflow-x-hidden">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
                 <Breadcrumbs items={[
                     { label: 'Rewards', href: '/rewards' },
                     { label: 'Timeline' }

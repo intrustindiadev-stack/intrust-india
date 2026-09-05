@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import WishlistClient from './WishlistClient';
 import { redirect } from 'next/navigation';
-import Navbar from '@/components/layout/Navbar';
 
 export const metadata = { title: 'My Wishlist — InTrust' };
 
@@ -24,10 +23,8 @@ export default async function WishlistPage() {
   if (error) console.error('Wishlist fetch error:', error);
 
   return (
-    <main className="min-h-screen pb-20 md:pb-0 bg-[#f7f8fa]">
-      <Navbar />
+    <main className="w-full pb-20 md:pb-0">
       <WishlistClient userId={user.id} userEmail={user.email} initialItems={wishlistItems || []} />
-      
     </main>
   );
 }

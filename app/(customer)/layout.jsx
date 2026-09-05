@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import CustomerBottomNav from '@/components/layout/customer/CustomerBottomNav';
+import CustomerAppShell from '@/components/layout/customer/CustomerAppShell';
 
 // Lightweight branded loading skeleton — avoids importing heavy components
 // that would inflate the customer layout bundle for every page.
@@ -93,9 +93,8 @@ export default function CustomerLayout({ children }) {
     }
 
     return (
-        <>
+        <CustomerAppShell>
             {children}
-            <CustomerBottomNav />
-        </>
+        </CustomerAppShell>
     );
 }

@@ -1,7 +1,5 @@
 import { createStaticSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { ShoppingBag } from 'lucide-react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 
 import ShopHubClient from './ShopHubClient';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
@@ -59,11 +57,9 @@ export default async function MerchantHubPage() {
         profilesResult,
         ratingsResult
     ] = await Promise.all([
-        // Avatar profiles for all merchant users (requires service role / adminClient to bypass RLS)
         userIds.length > 0
             ? adminClient.from('user_profiles').select('id, avatar_url, full_name').in('id', userIds)
             : Promise.resolve({ data: [] }),
-        // Filtered ratings stats (static client)
         merchantIds.length > 0
             ? supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings').in('merchant_id', merchantIds)
             : Promise.resolve({ data: [] })
@@ -88,7 +84,6 @@ export default async function MerchantHubPage() {
         console.error('Error parsing platform status in shop:', e);
     }
 
-    // Merge avatar profiles into merchants
     if (userIds.length > 0) {
         const profileMap = Object.fromEntries((profilesResult.data || []).map(p => [p.id, p]));
         merchants = merchants.map(m => ({
@@ -116,45 +111,8 @@ export default async function MerchantHubPage() {
     const categories = categoriesResult?.data || [];
 
     return (
-        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32 transition-colors">
-            <Navbar />
-
-            <main className="pt-[88px] md:pt-[104px]">
-
-                {/* ── Top Header Bar ── */}
-                <div className="px-4 md:px-8 max-w-7xl mx-auto w-full mb-6">
-                    <div className="bg-white dark:bg-[#0c0e16] md:bg-white/95 md:dark:bg-[#0c0e16]/95 md:backdrop-blur-2xl rounded-2xl md:rounded-[2rem] border border-slate-200/80 dark:border-white/[0.08] shadow-lg py-3 px-4 md:px-5 flex items-center justify-between gap-3 transition-shadow hover:shadow-xl">
-
-                        {/* Title */}
-                        <div className="flex items-center gap-2.5">
-                            <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-md shadow-indigo-500/25 shrink-0">
-                                <ShoppingBag size={16} className="text-white" />
-                            </span>
-                            <div>
-                                <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                                    Intrust Mart
-                                </h1>
-                                <p className="text-[10px] md:text-xs text-slate-500 dark:text-white/40 font-bold leading-none mt-1">
-                                    {allMerchants.length} stores near you
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <UserShopHeaderActions />
-                    </div>
-                </div>
-
-                {/* ── Main Content ── */}
-                <div className="max-w-7xl mx-auto px-4 md:px-8 pt-4 pb-8">
-                    <Breadcrumbs items={[{ label: 'Intrust Mart' }]} />
-                    <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} categories={categories} />
-                </div>
-
-            </main>
-
-            <Footer />
-            
+        <div className="w-full space-y-6">
+            <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} categories={categories} />
         </div>
     );
 }

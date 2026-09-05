@@ -8,9 +8,6 @@ import HeroSection from '@/components/nfc/HeroSection';
 import DetailsSection from '@/components/nfc/DetailsSection';
 import CradleSection from '@/components/nfc/CradleSection';
 import OrderSection from '@/components/nfc/OrderSection';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 export default function NFCServicePage() {
@@ -33,11 +30,8 @@ export default function NFCServicePage() {
 
     if (!isMounted) return (
         <div className={`relative min-h-screen overflow-hidden ${isDark ? 'bg-[#08090b]' : 'bg-white'}`}>
-            {/* Navbar skeleton */}
-            <div className={`fixed top-0 left-0 right-0 z-[120] h-16 border-b animate-pulse ${isDark ? 'bg-[#0d0e10] border-white/5' : 'bg-slate-100 border-black/5'}`} />
-
             {/* Hero skeleton */}
-            <div className="pt-16 min-h-screen flex flex-col lg:flex-row items-center justify-center gap-12 px-6">
+            <div className="pt-6 min-h-screen flex flex-col lg:flex-row items-center justify-center gap-12 px-6">
                 {/* Text block */}
                 <div className="flex flex-col items-center lg:items-start gap-4 max-w-xl w-full">
                     <div className={`h-5 w-36 rounded-full animate-pulse ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
@@ -64,10 +58,6 @@ export default function NFCServicePage() {
                 <div className="absolute inset-x-0 top-0 h-screen bg-gradient-to-b from-blue-600/[0.03] to-transparent" />
             </div>
 
-            <div className="fixed top-0 left-0 right-0 z-[120]">
-                <Navbar />
-            </div>
-
             <AnimatePresence mode="wait">
                 {isSuccess ? (
                     <motion.div
@@ -88,12 +78,12 @@ export default function NFCServicePage() {
                             </motion.div>
                             <h2 className="text-4xl sm:text-5xl font-black mb-4 uppercase tracking-tighter italic leading-none">ORDER PLACED</h2>
                             <p className="text-white/40 font-bold uppercase text-[10px] sm:text-[11px] tracking-[0.4em] mb-12 max-w-[280px] mx-auto">
-                                Your digital identity is being physically forged. Welcome to the elite.
+                                Your custom InTrust NFC Card order has been placed. You will receive real-time dispatch updates via SMS.
                             </p>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <Link
-                                    href="/customer/dashboard"
+                                    href="/dashboard"
                                     className="w-full sm:w-auto px-10 py-5 rounded-full bg-white text-black font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3"
                                 >
                                     <Home size={16} /> DASHBOARD
@@ -108,7 +98,7 @@ export default function NFCServicePage() {
                         </div>
                     </motion.div>
                 ) : (
-                    <main className="relative z-10 pt-20">
+                    <main className="relative z-10 pt-4 sm:pt-6 pb-28">
                         {/* THE JOURNEY: Mobile First & Professional */}
                         <HeroSection />
 
@@ -119,17 +109,9 @@ export default function NFCServicePage() {
 
                         {/* Order Section with full preview integration */}
                         <OrderSection setIsSuccess={setIsSuccess} />
-
-                        <Footer />
                     </main>
                 )}
             </AnimatePresence>
-
-            {isMobile && (
-                <div className="fixed bottom-0 left-0 right-0 z-[120]">
-                    
-                </div>
-            )}
 
             <style jsx global>{`
                 ::-webkit-scrollbar { width: 6px; }

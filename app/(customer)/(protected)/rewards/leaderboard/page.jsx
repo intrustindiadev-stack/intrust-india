@@ -103,7 +103,7 @@ export default function LeaderboardPage() {
                         <Trophy size={18} className="text-white" />
                     </div>
                     <h1 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
-                        Empire <span className="text-[#ff477e]">Top 10</span>
+                        InTrust <span className="text-[#ff477e]">Top 10</span>
                     </h1>
                 </div>
                 <div className="w-10" />
@@ -265,12 +265,12 @@ export default function LeaderboardPage() {
                             <Award size={40} />
                         </div>
                         <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">No Champions Yet</h3>
-                        <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-xs opacity-60">The throne remains unclaimed.</p>
+                        <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-xs opacity-60">Be the first to claim a rank on the leaderboard.</p>
                     </div>
                 )}
 
                 <div className="mt-20 text-center">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-gray-600 uppercase tracking-[0.5em] italic">Empire Rewards Governance</p>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-gray-600 uppercase tracking-[0.5em] italic">InTrust Community Leaderboard</p>
                 </div>
             </div>
         </div>

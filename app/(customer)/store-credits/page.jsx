@@ -5,8 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import Navbar from '@/components/layout/Navbar';
-
 import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock, Smartphone, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -175,9 +173,7 @@ export default function StoreCreditsPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-outfit">
-            <Navbar />
-
-            <div className="flex-1 pt-24 pb-28 px-4 sm:px-6 max-w-4xl mx-auto w-full">
+            <div className="flex-1 pt-4 sm:pt-6 pb-28 px-4 sm:px-6 max-w-4xl mx-auto w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-200">

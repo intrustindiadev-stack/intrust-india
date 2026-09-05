@@ -13,8 +13,6 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
-import Navbar from '@/components/layout/Navbar';
-
 import ScratchCard from '@/components/ui/ScratchCard';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import RewardsInfoModal from '@/components/rewards/RewardsInfoModal';
@@ -267,17 +265,15 @@ export default function RewardsPage() {
     const storedCards = dailyLoot.filter(c => c.isStored);
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] pb-24 overflow-x-hidden">
-            <Navbar />
-
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-[12vh]">
+        <div className="w-full pb-24 overflow-x-hidden">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
                 <Breadcrumbs items={[{ label: 'My Rewards' }]} />
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 px-1">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Empire Rewards</h1>
-                        <p className="text-sm text-slate-500 dark:text-gray-400 font-medium">Earn, track and redeem your benefits</p>
+                        <h1 className="text-3xl font-black text-on-surface tracking-tight">InTrust Rewards & Coins</h1>
+                        <p className="text-sm text-on-surface-variant font-medium">Earn, track and redeem your platform reward points</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <motion.button 
@@ -310,8 +306,8 @@ export default function RewardsPage() {
                                 <Network size={16} />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Empire Builder</p>
-                                <p className="text-sm font-bold text-white">Referral Empire</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Referral Program</p>
+                                <p className="text-sm font-bold text-white">Invite Friends &amp; Earn</p>
                             </div>
                         </div>
                         <ChevronRight size={16} className="text-white/40 group-hover:translate-x-1 transition-transform" />
@@ -646,7 +642,7 @@ export default function RewardsPage() {
                                 </button>
 
                                 <div className="text-center mb-10 relative z-10 pt-4">
-                                    <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">Empire Loot Box</h3>
+                                    <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">InTrust Reward Box</h3>
                                     <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">Scratch to Reveal Prize</p>
                                 </div>
 

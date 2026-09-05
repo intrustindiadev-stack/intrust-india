@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Search, AlertCircle, Store } from 'lucide-react';
-import Navbar from '../../../components/layout/Navbar';
+import { TrendingUp, Search, AlertCircle, Store, Gift } from 'lucide-react';
+import Link from 'next/link';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 import Breadcrumbs from './components/Breadcrumbs';
 import SearchBar from './components/SearchBar';
 import CategoryFilter from './components/CategoryFilter';
@@ -12,11 +13,7 @@ import GiftCardSkeleton from './components/GiftCardSkeleton';
 import AdvancedFilters from './components/AdvancedFilters';
 import HeroSection from './components/HeroSection';
 import TrustBadges from './components/TrustBadges';
-import Link from 'next/link';
-import { Gift } from 'lucide-react';
-import { useTheme } from '@/lib/contexts/ThemeContext';
 import StatsBar from './components/StatsBar';
-import Footer from '../../../components/layout/Footer';
 
 // Transform Supabase data to match UI expectations
 const transformCouponData = (coupon) => {
@@ -181,9 +178,7 @@ export default function GiftCardsClient({ initialCoupons }) {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-            <Navbar />
-
-            <div style={{ paddingTop: '15vh' }} className="pb-24 px-4 sm:px-6">
+            <div className="pt-4 sm:pt-6 pb-28 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                         <Breadcrumbs items={[{ label: 'Gift Cards' }]} />
@@ -351,8 +346,6 @@ export default function GiftCardsClient({ initialCoupons }) {
                     )}
                 </div>
             </div>
-            <Footer />
-            
         </div>
     );
 }

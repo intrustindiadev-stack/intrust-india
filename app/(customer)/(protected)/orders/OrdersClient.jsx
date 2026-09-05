@@ -455,7 +455,7 @@ const OrdersClient = ({ userId }) => {
                   <X size={20} />
                 </button>
                 <div className="text-center mb-10 relative z-10 pt-4">
-                  <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">Empire Loot Box</h3>
+                  <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">InTrust Reward Box</h3>
                   <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">Scratch to Reveal Prize</p>
                 </div>
                 <div className="relative h-72 sm:h-80 w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl ring-4 ring-emerald-500/5">

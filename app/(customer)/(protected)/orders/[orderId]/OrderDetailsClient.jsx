@@ -102,7 +102,7 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
         const monogram = (coupon.brand || 'GC').slice(0, 2).toUpperCase();
 
         return (
-            <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+            <div className={`min-h-screen pb-28 pt-4 sm:pt-6 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
                 <div className="max-w-3xl mx-auto px-4">
                     {/* Header */}
                     <div className="flex items-center gap-3 mb-6">
@@ -202,7 +202,7 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
         const isSolarCancelled = order.status === 'lost';
         
         return (
-            <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+            <div className={`min-h-screen pb-28 pt-4 sm:pt-6 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
                 <div className="max-w-3xl mx-auto px-4">
                     {/* Header */}
                     <div className="flex items-center gap-3 mb-6">
@@ -306,7 +306,7 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
     }
 
     return (
-        <div className={`min-h-screen pb-24 pt-[12vh] sm:pt-[15vh] ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+        <div className={`min-h-screen pb-24 pt-4 sm:pt-6 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
             <div className="max-w-3xl mx-auto px-4">
 
                 {/* Header */}
@@ -786,6 +786,40 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                             </p>
                         </div>
                     )}
+
+                    {/* Support & Contact Card (No OTP system, direct merchant phone and Company Toll-Free) */}
+                    <div className={`mt-6 p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${isDark ? 'bg-white/[0.02] border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                                <Phone size={18} />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-wider text-slate-400">Order & Delivery Assistance</p>
+                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
+                                    Direct helpline with verified merchant & InTrust support
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            {order.shopping_order_items?.[0]?.merchants?.business_phone && (
+                                <a
+                                    href={`tel:${order.shopping_order_items[0].merchants.business_phone}`}
+                                    className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                                >
+                                    <Phone size={13} />
+                                    <span>Call Merchant</span>
+                                </a>
+                            )}
+                            <a
+                                href="tel:18008890199"
+                                className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                            >
+                                <Phone size={13} />
+                                <span>Toll-Free 1800-889-0199</span>
+                            </a>
+                        </div>
+                    </div>
 
                     <div className="mt-8 flex gap-3">
                         <button

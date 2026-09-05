@@ -1,15 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
-
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import FeatureAdvertiser from '@/components/ui/FeatureAdvertiser';
 import {
     ShoppingBag, Smartphone,
-    Gift, ChevronRight, Sun
+    Gift, ChevronRight, Sun,
+    Store, Zap, ArrowRight, ShieldCheck
 } from 'lucide-react';
 
 export default function ServicesPage() {
@@ -17,77 +15,87 @@ export default function ServicesPage() {
 
     const serviceSections = [
         {
-            title: "Explore Intrust",
+            title: "Core Platform Offerings",
             items: [
-                { id: 'store', title: "Intrust Shop", icon: ShoppingBag, href: "/shop", color: "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400", badge: "New" },
-                { id: 'gift', title: "Gift Cards", icon: Gift, href: "/gift-cards", color: "bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" },
-                { id: 'nfc', title: "Smart Card", icon: Smartphone, href: "/nfc-service", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-                { id: 'solar', title: "Solar Power", icon: Sun, href: "/solar", color: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" },
+                { id: 'store', title: "InTrust Shopping Hub", description: "Order groceries, electronics, and essentials with fast 2-hr local pickup.", icon: ShoppingBag, href: "/shop", badge: "Live" },
+                { id: 'gift', title: "Digital Gift Cards", description: "Buy instant vouchers from top brands with guaranteed cashback savings.", icon: Gift, href: "/gift-cards" },
+                { id: 'nfc', title: "Smart NFC Business Card", description: "1-Tap digital networking card with instant UPI and contact sharing.", icon: Smartphone, href: "/nfc-service" },
+                { id: 'solar', title: "Rooftop Solar Solutions", description: "Subsidized clean energy installations with customized quote calculator.", icon: Sun, href: "/solar" },
             ]
         }
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50/80 dark:bg-gray-950 font-[family-name:var(--font-outfit)] pb-28">
-            <Navbar theme="light" />
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 sm:py-8 space-y-6">
+            {/* Header Section */}
+            <div>
+                <nav className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant mb-3">
+                    <button onClick={() => router.push('/dashboard')} className="hover:text-primary transition-colors">Dashboard</button>
+                    <ChevronRight size={14} />
+                    <span className="text-on-surface font-bold">Services</span>
+                </nav>
 
-            <div className="pt-24 px-4 md:px-8 max-w-7xl mx-auto">
-
-                {/* Header Section */}
-                <div className="mb-6">
-                    <nav className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">
-                        <button onClick={() => router.push('/dashboard')} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Dashboard</button>
-                        <ChevronRight size={14} />
-                        <span className="text-gray-900 dark:text-white font-bold">Services</span>
-                    </nav>
-
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                        All Services
-                    </h1>
-                </div>
-
-                {/* Ad Banner */}
-                <div className="mb-8">
-                    <FeatureAdvertiser />
-                </div>
-
-                {/* Categorized Sections */}
-                <div className="space-y-6">
-                    {serviceSections.map((section, idx) => (
-                        <motion.div
-                            key={section.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="bg-white dark:bg-gray-900 rounded-3xl p-5 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 dark:border-gray-800"
-                        >
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 tracking-tight">{section.title}</h2>
-                            
-                            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-y-6 gap-x-2">
-                                {section.items.map(item => (
-                                    <Link key={item.id} href={item.href} className="group flex flex-col items-center text-center focus-visible:outline-none">
-                                        <div className="relative mb-2">
-                                            <div className={`w-14 h-14 md:w-16 md:h-16 rounded-[1.25rem] md:rounded-3xl flex items-center justify-center ${item.color} group-hover:scale-105 group-active:scale-95 transition-transform shadow-sm`}>
-                                                <item.icon className="w-6 h-6 md:w-7 md:h-7" strokeWidth={1.5} />
-                                            </div>
-                                            {item.badge && (
-                                                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-sm border border-white dark:border-gray-900 z-10">
-                                                    {item.badge}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className="text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors px-1 leading-tight max-w-[80px]">
-                                            {item.title}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
+                    InTrust Services & Utilities
+                </h1>
+                <p className="text-xs sm:text-sm text-on-surface-variant mt-1">
+                    Explore verified local retail, digital gift vouchers, smart hardware, and green energy solutions
+                </p>
             </div>
 
-            
+            {/* Ad Banner */}
+            <div>
+                <FeatureAdvertiser />
+            </div>
+
+            {/* Categorized Sections */}
+            <div className="space-y-6">
+                {serviceSections.map((section, idx) => (
+                    <div key={section.title} className="space-y-4">
+                        <h2 className="text-base font-extrabold text-on-surface">
+                            {section.title}
+                        </h2>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {section.items.map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                    <Link
+                                        key={item.id}
+                                        href={item.href}
+                                        className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col justify-between group relative overflow-hidden"
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                                                    <Icon size={22} />
+                                                </div>
+                                                {item.badge && (
+                                                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <h3 className="text-base font-extrabold text-on-surface mb-1.5 group-hover:text-primary transition-colors">
+                                                {item.title}
+                                            </h3>
+                                            <p className="text-xs text-on-surface-variant line-clamp-3 leading-relaxed">
+                                                {item.description}
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-5 pt-3 border-t border-outline-variant/15 flex items-center justify-between text-xs font-bold text-primary">
+                                            <span>Access Service</span>
+                                            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * KYC Profile Page — Light Theme
+ * KYC Profile Page
  *
  * Allows users to view and manage their KYC verification status.
  * Users can submit KYC for the first time or update pending/rejected applications.
@@ -101,169 +101,135 @@ export default function ProfileKYCPage() {
             }
         } catch (error) {
             console.error('Error fetching KYC record:', error);
-            toast.error('Failed to load KYC information');
+            toast.error('Failed to load KYC status');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleKYCSuccess = (data) => {
-        // Refresh KYC record in the background — do NOT navigate away.
-        // Set the KYC record but do NOT call setShowForm(false) here,
-        // so that the SuccessScreen overlay remains visible.
-        if (data) {
-            setKycRecord(data);
-        } else {
-            fetchKYCRecordSilent();
-        }
-        if (refreshProfile) refreshProfile();
+    const handleKYCSuccess = async () => {
+        toast.success('KYC Submitted Successfully!');
+        await refreshProfile();
+        await fetchKYCRecord();
     };
 
-    const fetchKYCRecordSilent = async () => {
-        try {
-            const result = await getKYCRecord();
-            if (result.data) {
-                setKycRecord(result.data);
-            }
-        } catch (error) {
-            console.error('Silent fetch failed:', error);
-        }
-    };
-
-    if (loading) {
+    if (authLoading || loading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="w-12 h-12 text-electric animate-spin mx-auto mb-4" />
-                    <p className="text-slate-500 font-medium">Loading KYC information...</p>
-                </div>
+            <div className="w-full max-w-2xl mx-auto px-4 py-16 flex flex-col items-center justify-center">
+                <Loader2 size={36} className="animate-spin text-primary mb-4" />
+                <p className="text-on-surface-variant text-sm font-semibold">Checking KYC status...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
             {/* Header */}
-            <div className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => router.push('/profile')}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                                <ArrowLeft size={20} className="text-slate-500" />
-                            </button>
-                            <div>
-                                <h1
-                                    className="text-2xl font-bold text-slate-900"
-                                    style={{ fontFamily: 'var(--font-sora)' }}
-                                >
-                                    KYC Verification
-                                </h1>
-                                <p className="text-sm text-slate-500 font-medium">Know Your Customer process</p>
-                            </div>
-                        </div>
-                        {kycRecord && kycRecord.verification_status === 'pending' && (
-                            <button
-                                onClick={fetchKYCRecord}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-electric hover:bg-electric/10 rounded-lg transition-colors"
-                            >
-                                <RefreshCw size={16} />
-                                Refresh
-                            </button>
-                        )}
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => router.push('/profile')}
+                        className="p-2 hover:bg-surface-container rounded-xl text-on-surface-variant hover:text-on-surface transition-colors"
+                        title="Back to Profile"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-extrabold text-on-surface tracking-tight">
+                            Identity Verification (KYC)
+                        </h1>
+                        <p className="text-xs sm:text-sm text-on-surface-variant font-medium">
+                            Verify your identity to unlock higher limits and instant escrow payouts
+                        </p>
                     </div>
                 </div>
+
+                {kycRecord && kycRecord.verification_status === 'pending' && (
+                    <button
+                        onClick={fetchKYCRecord}
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors"
+                    >
+                        <RefreshCw size={14} />
+                        Refresh
+                    </button>
+                )}
             </div>
 
-            {/* Main Content */}
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-                {/* Status Banner */}
-                {kycRecord && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-8"
-                    >
-                        <StatusBanner
-                            status={/** @type {string} */ (kycRecord.verification_status)}
-                            rejectionReason={/** @type {string | undefined} */ (kycRecord.rejection_reason)}
-                        />
-                    </motion.div>
-                )}
+            {/* Status Banner */}
+            {kycRecord && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                    <StatusBanner
+                        status={/** @type {string} */ (kycRecord.verification_status)}
+                        rejectionReason={/** @type {string | undefined} */ (kycRecord.rejection_reason)}
+                    />
+                </motion.div>
+            )}
 
-                {/* No KYC Record */}
-                {!kycRecord && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white border-l-4 border-l-[#1A56DB] shadow-sm rounded-xl p-5 mb-8 flex items-start gap-4"
-                    >
-                        <div className="bg-[#1A56DB]/10 p-2.5 rounded-full mt-0.5">
-                            <Shield size={24} className="text-[#1A56DB]" />
-                        </div>
-                        <div className="flex-1">
-                            <h3 className="font-bold text-slate-900 text-base mb-1">Secure Your Account</h3>
-                            <p className="text-[#475569] text-[13px] leading-relaxed">
-                                You haven&apos;t completed your KYC verification yet. Please provide the required details below to unlock full platform access.
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* KYC Details (Verified) */}
-                {kycRecord && kycRecord.verification_status === 'verified' && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 mb-8"
-                    >
-                        <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <Shield size={20} className="text-green-500" />
-                            Your KYC Information
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InfoField label="Full Name" value={/** @type {string} */ (kycRecord.full_legal_name)} />
-                            <InfoField label="Phone Number" value={/** @type {string} */ (kycRecord.phone_number)} />
-                            <InfoField
-                                label="Date of Birth"
-                                value={kycRecord.date_of_birth ? new Date(kycRecord.date_of_birth + 'T00:00:00').toLocaleDateString('en-IN') : 'N/A'}
-                            />
-                            <InfoField
-                                label="PAN Number"
-                                value={kycRecord.pan_number ? maskPAN(/** @type {string} */(kycRecord.pan_number)) : 'N/A'}
-                            />
-                            <InfoField label="Address" value={/** @type {string} */ (kycRecord.full_address)} fullWidth />
-                            <InfoField
-                                label="Bank-Grade Security"
-                                value={kycRecord.bank_grade_security ? 'Enabled' : 'Not Enabled'}
-                            />
-                        </div>
-                        {kycRecord.verified_at && (
-                            <p className="mt-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
-                                Verified on {new Date(/** @type {string} */(kycRecord.verified_at)).toLocaleString()}
-                            </p>
-                        )}
-                    </motion.div>
-                )}
-
-                {/* Polling indicator */}
-                {isPolling && (
-                    <div className="flex items-center justify-center py-2">
-                        <div className="flex items-center gap-2 text-sm text-electric font-medium">
-                            <Loader2 size={16} className="animate-spin" />
-                            Processing verification...
-                        </div>
+            {/* No KYC Record */}
+            {!kycRecord && (
+                <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm rounded-3xl p-6 flex items-start gap-4"
+                >
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                        <Shield size={24} />
                     </div>
-                )}
+                    <div>
+                        <h3 className="font-extrabold text-on-surface text-base mb-1">Government ID Verification</h3>
+                        <p className="text-on-surface-variant text-xs leading-relaxed">
+                            You have not completed KYC verification yet. Provide your legal identity details below to enable bank-grade escrow protection and higher transaction tiers.
+                        </p>
+                    </div>
+                </motion.div>
+            )}
 
-                {/* KYC Form */}
-                {showForm && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                    >
+            {/* KYC Details (Verified) */}
+            {kycRecord && kycRecord.verification_status === 'verified' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm rounded-3xl p-6 space-y-4"
+                >
+                    <h3 className="font-extrabold text-on-surface flex items-center gap-2 text-base">
+                        <Shield size={18} className="text-emerald-500" />
+                        Verified Government Records
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InfoField label="Full Legal Name" value={/** @type {string} */ (kycRecord.full_legal_name)} />
+                        <InfoField label="Phone Number" value={/** @type {string} */ (kycRecord.phone_number)} />
+                        <InfoField
+                            label="Date of Birth"
+                            value={kycRecord.date_of_birth ? new Date(kycRecord.date_of_birth + 'T00:00:00').toLocaleDateString('en-IN') : 'N/A'}
+                        />
+                        <InfoField
+                            label="PAN Number"
+                            value={kycRecord.pan_number ? maskPAN(/** @type {string} */(kycRecord.pan_number)) : 'N/A'}
+                        />
+                        <InfoField label="Permanent Address" value={/** @type {string} */ (kycRecord.full_address)} fullWidth />
+                    </div>
+                    {kycRecord.verified_at && (
+                        <p className="text-xs text-on-surface-variant/70 border-t border-outline-variant/15 pt-3">
+                            Verified via SprintVerify on {new Date(/** @type {string} */(kycRecord.verified_at)).toLocaleString('en-IN')}
+                        </p>
+                    )}
+                </motion.div>
+            )}
+
+            {/* Polling indicator */}
+            {isPolling && (
+                <div className="flex items-center justify-center py-2">
+                    <div className="flex items-center gap-2 text-xs text-primary font-bold">
+                        <Loader2 size={16} className="animate-spin" />
+                        Verifying details with government database...
+                    </div>
+                </div>
+            )}
+
+            {/* KYC Form */}
+            {showForm && (
+                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+                    <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-sm">
                         <KYCForm
                             initialData={kycRecord ? {
                                 fullName: kycRecord.full_legal_name,
@@ -278,82 +244,71 @@ export default function ProfileKYCPage() {
                                 console.error('KYC submission error:', error);
                             }}
                         />
-                    </motion.div>
-                )}
-
-                {/* Help Section */}
-                {kycRecord && kycRecord.verification_status === 'pending' && (
-                    <div className="mt-8 bg-white border border-slate-200 shadow-sm rounded-xl p-6">
-                        <h3 className="font-bold text-slate-900 mb-3">What happens next?</h3>
-                        <ul className="space-y-2 text-sm text-slate-600">
-                            <li className="flex items-start gap-2">
-                                <CheckCircle size={16} className="text-green-500 mt-0.5 shrink-0" />
-                                <span>Your KYC is being verified automatically via SprintVerify</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <CheckCircle size={16} className="text-green-400 mt-0.5 shrink-0" />
-                                <span>Verification usually completes within a few seconds</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <CheckCircle size={16} className="text-green-400 mt-0.5 shrink-0" />
-                                <span>You&apos;ll see the result instantly on this page</span>
-                            </li>
-                        </ul>
                     </div>
-                )}
-            </div>
+                </motion.div>
+            )}
+
+            {/* Help Section */}
+            {kycRecord && kycRecord.verification_status === 'pending' && (
+                <div className="bg-surface-container-lowest border border-outline-variant/30 shadow-sm rounded-3xl p-6">
+                    <h3 className="font-extrabold text-on-surface mb-3 text-sm">What happens next?</h3>
+                    <ul className="space-y-2 text-xs text-on-surface-variant">
+                        <li className="flex items-start gap-2">
+                            <CheckCircle size={15} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <span>Your KYC is verified in real-time via SprintVerify registry</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckCircle size={15} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <span>Verification usually finishes within 30 to 60 seconds</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckCircle size={15} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <span>Your status will update automatically right on this page</span>
+                        </li>
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
 
-/**
- * Status Banner — Dark glass theme
- * @param {{ status: string, rejectionReason?: string }} props
- */
 function StatusBanner({ status, rejectionReason }) {
     const isManualReview = status === 'pending' && !!rejectionReason;
 
-    /** @type {Record<string, { bg: string, border: string, icon: JSX.Element, iconBg: string, title: string, description: string }>} */
     const statusConfig = {
         pending: {
-            bg: isManualReview ? 'bg-amber-50' : 'bg-yellow-50',
-            border: isManualReview ? 'border-amber-200' : 'border-yellow-200',
-            icon: <Clock size={24} className={isManualReview ? 'text-amber-600' : 'text-yellow-600'} />,
-            iconBg: isManualReview ? 'bg-amber-100' : 'bg-yellow-100',
+            bg: 'bg-amber-500/10 border-amber-500/30',
+            icon: <Clock size={20} className="text-amber-500" />,
             title: isManualReview ? 'KYC Under Review' : 'KYC Verification in Progress',
             description: isManualReview
-                ? 'Your KYC application is currently under manual review by our team. This usually takes 24-48 hours.'
-                : 'Your KYC is being processed automatically via SprintVerify. This usually takes just a few seconds.',
+                ? 'Your KYC application is currently under manual review by compliance. This usually takes 24 hours.'
+                : 'Your KYC is being verified automatically. This usually takes just a few seconds.',
         },
         verified: {
-            bg: 'bg-green-50',
-            border: 'border-green-200',
-            icon: <CheckCircle size={24} className="text-green-600" />,
-            iconBg: 'bg-green-100',
+            bg: 'bg-emerald-500/10 border-emerald-500/30',
+            icon: <CheckCircle size={20} className="text-emerald-500" />,
             title: 'KYC Verified Instantly ✓',
-            description: 'Your identity has been verified automatically via SprintVerify. You have full access to all platform features.',
+            description: 'Your identity has been verified. You have unrestricted access to all platform features and escrow rails.',
         },
         rejected: {
-            bg: 'bg-red-50',
-            border: 'border-red-200',
-            icon: <XCircle size={24} className="text-red-600" />,
-            iconBg: 'bg-red-100',
+            bg: 'bg-rose-500/10 border-rose-500/30',
+            icon: <XCircle size={20} className="text-rose-500" />,
             title: 'KYC Verification Rejected',
-            description: rejectionReason || 'Your KYC verification was rejected. Please update your information and resubmit.',
+            description: rejectionReason || 'Your KYC verification was rejected. Please review your details and resubmit.',
         },
     };
 
     const config = statusConfig[status] || statusConfig.pending;
 
     return (
-        <div className={`${config.bg} border ${config.border} rounded-2xl p-6`}>
-            <div className="flex items-start gap-4">
-                <div className={`${config.iconBg} p-3 rounded-full shrink-0`}>
+        <div className={`${config.bg} border rounded-2xl p-5`}>
+            <div className="flex items-start gap-3.5">
+                <div className="p-2 rounded-xl bg-surface-container-lowest shrink-0">
                     {config.icon}
                 </div>
-                <div className="flex-1">
-                    <h3 className="font-bold text-slate-900 mb-2">{config.title}</h3>
-                    <p className="text-slate-600 text-sm leading-relaxed">
+                <div>
+                    <h3 className="font-extrabold text-on-surface text-sm mb-1">{config.title}</h3>
+                    <p className="text-on-surface-variant text-xs leading-relaxed">
                         {config.description}
                     </p>
                 </div>
@@ -362,15 +317,11 @@ function StatusBanner({ status, rejectionReason }) {
     );
 }
 
-/**
- * Info Field — Light theme
- * @param {{ label: string, value: unknown, fullWidth?: boolean }} props
- */
 function InfoField({ label, value, fullWidth = false }) {
     return (
         <div className={fullWidth ? 'col-span-full' : ''}>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">{label}</label>
-            <p className="text-sm font-medium text-slate-900 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">{label}</label>
+            <p className="text-xs font-semibold text-on-surface bg-surface-container-low border border-outline-variant/30 px-3 py-2.5 rounded-xl">
                 {typeof value === 'string' || typeof value === 'number' ? value : 'N/A'}
             </p>
         </div>

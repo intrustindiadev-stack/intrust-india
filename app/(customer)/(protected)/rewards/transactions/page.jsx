@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ChevronLeft, History, TrendingUp, Wallet, Filter, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
 
 const eventTypeLabels = {
     signup: 'Signup Bonus',
@@ -72,16 +71,8 @@ export default function TransactionsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] pb-24">
-            <Navbar />
-
-            <div className="pt-[10vh] px-4 sm:hidden">
-                <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-sm">
-                    <ChevronLeft size={20} className="text-gray-700 dark:text-gray-300" />
-                </button>
-            </div>
-
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-[15vh]">
+        <div className="w-full pb-24">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

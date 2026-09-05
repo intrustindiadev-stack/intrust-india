@@ -5,8 +5,6 @@ import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-// ── Layout & UI ──
-import Navbar from '@/components/layout/Navbar';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 
 import KYCStatus from '@/components/kyc/KYCStatus';
@@ -34,9 +32,7 @@ const supabase = createClient();
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function ProfileSkeleton() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 text-gray-900 dark:text-white">
-            <Navbar />
-            <div style={{ paddingTop: '15vh' }} className="pb-12 px-6">
+        <div className="w-full max-w-6xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
                 <div className="max-w-6xl mx-auto animate-pulse">
                     <div className="h-4 w-32 bg-gray-200 dark:bg-white/5 rounded-full mb-8" />
                     <div className="h-10 w-48 bg-gray-200 dark:bg-white/5 rounded-2xl mb-12" />
@@ -52,7 +48,6 @@ function ProfileSkeleton() {
                     </div>
                 </div>
             </div>
-        </div>
     );
 }
 
@@ -88,7 +83,7 @@ function CustomerProfileContent() {
             refreshUser();
             router.replace('/profile', { scroll: false });
         } else if (error === 'already_linked') {
-            showToast('Identity already associated with another elite node.', 'error');
+            showToast('This account is already linked to another profile.', 'error');
             router.replace('/profile', { scroll: false });
         }
     }, [searchParams, router, showToast, refreshUser]);
@@ -235,9 +230,8 @@ function CustomerProfileContent() {
     const isGold = !!profile?.is_gold_verified;
 
     return (
-        <div className="min-h-screen relative bg-gray-50 dark:bg-gray-950 transition-colors duration-700 selection:bg-blue-500/20">
+        <div className="w-full relative selection:bg-primary/20">
             <ParticleBackground />
-            <Navbar />
 
             {/* KYC auto-popup */}
             <KYCPopup
@@ -249,12 +243,7 @@ function CustomerProfileContent() {
                 }}
             />
 
-            {/* Header Shade */}
-            <div className="absolute top-0 left-0 right-0 h-[40vh] overflow-hidden pointer-events-none z-0">
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent opacity-50 dark:opacity-30" />
-            </div>
-
-            <main style={{ paddingTop: '15vh' }} className="relative z-10 pb-32 px-4 sm:px-8">
+            <main className="relative z-10 py-6 sm:py-8 px-4 sm:px-8">
                 <div className="max-w-5xl mx-auto space-y-8">
                     
                     {/* ══ HEADER & IDENTITY ══════════════════════════════════════ */}
