@@ -25,6 +25,7 @@ function validateRow(row, idx, categories) {
     else if (categories && !categories.find(c => c.name.toLowerCase() === row.category.trim().toLowerCase())) {
         errors.push(`category "${row.category}" does not match any active category`);
     }
+    if (!row.sub_category?.trim()) errors.push('sub_category is required');
 
     const wholesalePrice = num(row.wholesale_price, 'wholesale_price');
     const sellingPrice   = num(row.selling_price,   'selling_price');
@@ -46,7 +47,7 @@ function validateRow(row, idx, categories) {
             title:                        row.title.trim(),
             description:                  row.description.trim(),
             category:                     row.category.trim(),
-            sub_category:                 row.category.trim() === 'Fashion' ? (row.sub_category?.trim() || null) : null,
+            sub_category:                 row.sub_category?.trim() || null,
             wholesale_price_paise:        Math.round(wholesalePrice * 100),
             suggested_retail_price_paise: Math.round(sellingPrice * 100),
             mrp_paise:                    Math.round(mrp * 100),

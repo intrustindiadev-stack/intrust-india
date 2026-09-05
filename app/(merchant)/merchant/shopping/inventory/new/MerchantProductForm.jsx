@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Info, DollarSign, Upload, Save, Loader2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from '@/app/(admin)/admin/shopping/upload-product-image';
+import { getSubCategories } from '@/lib/constants/categories';
 
 export default function MerchantProductForm({ merchantId, editMode = false, existingProduct = null }) {
     const router = useRouter();
@@ -72,6 +73,9 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
         const { name, value } = e.target;
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
+            if (name === 'category') {
+                newData.sub_category = '';
+            }
             return newData;
         });
     };
@@ -96,7 +100,7 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                     title: formData.title,
                     description: formData.description,
                     category: formData.category,
-                    sub_category: formData.category === 'Fashion' ? formData.sub_category : null,
+                    sub_category: formData.sub_category || null,
                     category_id: selectedCategory ? selectedCategory.id : null,
                     product_images: formData.product_images,
                     wholesale_price_paise: wholesalePricePaise,
@@ -175,9 +179,11 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                                 </select>
                             </div>
 
-                            {formData.category === 'Fashion' && (
+                            {getSubCategories(formData.category).length > 0 && (
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">Department</label>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 px-1">
+                                        {formData.category === 'Fashion' ? 'Department' : 'Sub-Category'}
+                                    </label>
                                     <select
                                         name="sub_category"
                                         value={formData.sub_category}
@@ -185,10 +191,10 @@ export default function MerchantProductForm({ merchantId, editMode = false, exis
                                         required
                                         className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold appearance-none"
                                     >
-                                        <option value="" disabled>Select department</option>
-                                        <option value="Men">Men</option>
-                                        <option value="Women">Women</option>
-                                        <option value="Kids">Kids</option>
+                                        <option value="" disabled>Select {formData.category === 'Fashion' ? 'department' : 'sub-category'}</option>
+                                        {getSubCategories(formData.category).map(sub => (
+                                            <option key={sub} value={sub}>{sub}</option>
+                                        ))}
                                     </select>
                                 </div>
                             )}

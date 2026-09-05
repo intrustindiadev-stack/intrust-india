@@ -28,6 +28,13 @@ export async function POST(request) {
             sub_category
         } = body;
 
+        if (!category || typeof category !== 'string' || !category.trim()) {
+            return NextResponse.json({ error: 'Category is required' }, { status: 400 });
+        }
+        if (!sub_category || typeof sub_category !== 'string' || !sub_category.trim()) {
+            return NextResponse.json({ error: 'Sub-category is required' }, { status: 400 });
+        }
+
         if (body.merchant_id) {
             const { createAdminClient } = await import('@/lib/supabaseServer');
             const adminClient = createAdminClient();

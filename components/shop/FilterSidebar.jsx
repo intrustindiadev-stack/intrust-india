@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { STOREFRONT_FILTERS } from '@/lib/shop/filterTypes';
+import { getSubCategories } from '@/lib/constants/categories';
 import FilterGroup from './filters/FilterGroup';
 import FilterCheckbox from './filters/FilterCheckbox';
 import ColorSwatch from './filters/ColorSwatch';
@@ -87,18 +88,25 @@ export default function FilterSidebar({ categories = [] }) {
         return null;
     };
 
+    const activeCategory = searchParams.get('category');
+    const availableSubCategories = getSubCategories(activeCategory);
+
     return (
         <div className="space-y-2 h-full pb-10">
-            {/* Department Filter (Only for Fashion) */}
-            {searchParams.get('category') === 'Fashion' && (
-                <FilterGroup key="sub_category" title="Department" defaultExpanded={true}>
+            {/* Dynamic Sub-Category Filter */}
+            {availableSubCategories.length > 0 && (
+                <FilterGroup 
+                    key="sub_category" 
+                    title={activeCategory ? `Shop ${activeCategory}` : 'Department'} 
+                    defaultExpanded={true}
+                >
                     <div className="space-y-1">
-                        {['Men', 'Women', 'Kids'].map(dept => (
+                        {availableSubCategories.map(sub => (
                             <FilterCheckbox
-                                key={dept}
-                                label={dept}
-                                isChecked={(searchParams.get('sub_category') || '').split(',').includes(dept)}
-                                onChange={() => handleFilterToggle('sub_category', dept)}
+                                key={sub}
+                                label={sub}
+                                isChecked={(searchParams.get('sub_category') || '').split(',').includes(sub)}
+                                onChange={() => handleFilterToggle('sub_category', sub)}
                             />
                         ))}
                     </div>

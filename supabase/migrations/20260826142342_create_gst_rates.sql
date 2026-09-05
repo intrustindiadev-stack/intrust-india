@@ -20,7 +20,11 @@ CREATE POLICY "Public can view gst rates" ON public.gst_rates
 CREATE POLICY "Admins can manage gst rates" ON public.gst_rates
     FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
--- Seed data
+-- Add unique constraint on item_name to prevent duplicate entries
+ALTER TABLE public.gst_rates DROP CONSTRAINT IF EXISTS gst_rates_item_name_unique;
+ALTER TABLE public.gst_rates ADD CONSTRAINT gst_rates_item_name_unique UNIQUE (item_name);
+
+-- Seed data (ON CONFLICT DO NOTHING makes this idempotent — safe to re-run)
 INSERT INTO public.gst_rates (item_name, gst_rate, code_type, code, notes) VALUES
 ('Fresh fruits & vegetables', 0, 'HSN', '07/08', ''),
 ('Milk, curd, lassi, buttermilk', 0, 'HSN', '0401-0403', ''),
@@ -114,4 +118,6 @@ INSERT INTO public.gst_rates (item_name, gst_rate, code_type, code, notes) VALUE
 ('Paints, enamels (premium)', 28, 'HSN', '3208', ''),
 ('Caffeinated beverages', 28, 'HSN', '2202', ''),
 ('Aircraftfor private use', 28, 'HSN', '8802', ''),
-('Yachts, pleasure boats', 28, 'HSN', '8903', '');
+('Yachts, pleasure boats', 28, 'HSN', '8903', '')
+ON CONFLICT (item_name) DO NOTHING;
+

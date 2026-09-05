@@ -40,6 +40,13 @@ export async function POST(request) {
             }
         }
 
+        if (!formData?.category || typeof formData.category !== 'string' || !formData.category.trim()) {
+            return NextResponse.json({ error: 'Category is required' }, { status: 400 });
+        }
+        if (!formData?.sub_category || typeof formData.sub_category !== 'string' || !formData.sub_category.trim()) {
+            return NextResponse.json({ error: 'Sub-category is required' }, { status: 400 });
+        }
+
         let savedProduct;
 
         if (editMode && productId) {

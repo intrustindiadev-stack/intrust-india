@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Plus, ArrowRight, Package, Upload, Save, Trash2 } from 'lucide-react';
 import MultiImageUploader from '@/components/shared/MultiImageUploader';
 import { uploadProductImage } from './upload-product-image';
+import { getSubCategories } from '@/lib/constants/categories';
 
 export default function ProductForm({ initialData = null, merchantId = null }) {
     const router = useRouter();
@@ -67,8 +68,8 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
                 ...prev,
                 [name]: type === 'checkbox' ? checked : value
             };
-            if (name === 'category' && value) {
-                // Removed legacy HSN autofill from category to prevent overriding GST selection
+            if (name === 'category') {
+                newData.sub_category = '';
             }
             return newData;
         });
@@ -85,7 +86,7 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
 
             const payload = {
                 ...formData,
-                sub_category: formData.category === 'Fashion' ? formData.sub_category : null,
+                sub_category: formData.sub_category || null,
                 wholesale_price_paise: Math.round(parseFloat(formData.wholesale_price_paise) * 100),
                 suggested_retail_price_paise: Math.round(parseFloat(formData.suggested_retail_price_paise) * 100),
                 mrp_paise: Math.round(parseFloat(formData.mrp_paise) * 100),
@@ -185,9 +186,11 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
                             </select>
                         </div>
 
-                        {formData.category === 'Fashion' && (
+                        {getSubCategories(formData.category).length > 0 && (
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Department (Sub Category)</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                                    {formData.category === 'Fashion' ? 'Department' : 'Sub-Category'}
+                                </label>
                                 <select
                                     name="sub_category"
                                     value={formData.sub_category}
@@ -195,10 +198,10 @@ export default function ProductForm({ initialData = null, merchantId = null }) {
                                     required
                                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none bg-white"
                                 >
-                                    <option value="" disabled>Select department</option>
-                                    <option value="Men">Men</option>
-                                    <option value="Women">Women</option>
-                                    <option value="Kids">Kids</option>
+                                    <option value="" disabled>Select {formData.category === 'Fashion' ? 'department' : 'sub-category'}</option>
+                                    {getSubCategories(formData.category).map(sub => (
+                                        <option key={sub} value={sub}>{sub}</option>
+                                    ))}
                                 </select>
                             </div>
                         )}

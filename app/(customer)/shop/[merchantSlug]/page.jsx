@@ -207,6 +207,9 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
         delete preservedParamsObj.sub_category;
         delete preservedParamsObj.size;
         delete preservedParamsObj.color;
+        delete preservedParamsObj.brand;
+        delete preservedParamsObj.min_price;
+        delete preservedParamsObj.max_price;
         const preservedParams = new URLSearchParams(preservedParamsObj).toString();
 
         return (
@@ -235,6 +238,9 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
     delete preservedParamsObj.sub_category;
     delete preservedParamsObj.size;
     delete preservedParamsObj.color;
+    delete preservedParamsObj.brand;
+    delete preservedParamsObj.min_price;
+    delete preservedParamsObj.max_price;
     const preservedParams = new URLSearchParams(preservedParamsObj).toString();
 
     return (

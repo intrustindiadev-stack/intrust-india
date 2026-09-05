@@ -8,7 +8,7 @@ const CANONICAL_FIELDS = {
     title: { label: 'Product Name', aliases: ['product name', 'name', 'title', 'product'] },
     description: { label: 'Description', aliases: ['description', 'desc'] },
     category: { label: 'Category', aliases: ['category', 'cat'] },
-    sub_category: { label: 'Department', aliases: ['department', 'sub category', 'sub_category'] },
+    sub_category: { label: 'Sub-Category', aliases: ['sub category', 'sub_category', 'department', 'sub-category'] },
     retail_price_paise: { label: 'Selling Price (₹)', aliases: ['selling price', 'sellingprice', 'price', 'retail', 'mrp selling'] },
     mrp_paise: { label: 'MRP (₹)', aliases: ['mrp', 'maximum retail price'] },
     wholesale_price_paise: { label: 'Cost Price (₹)', aliases: ['cost price', 'cost', 'wholesale', 'buy price'] },
@@ -37,7 +37,7 @@ function mapToProduct(row, headers, columnMap) {
         title: get('title'),
         description: get('description'),
         category: get('category'),
-        sub_category: get('category')?.toLowerCase() === 'fashion' ? get('sub_category') : null,
+        sub_category: get('sub_category') || null,
         retail_price_paise,
         mrp_paise,
         wholesale_price_paise,
@@ -49,8 +49,8 @@ function mapToProduct(row, headers, columnMap) {
 }
 
 function downloadTemplate(categories) {
-    const headers = ['Product Name', 'Description', 'Category', 'Department', 'Selling Price (₹)', 'MRP (₹)', 'Cost Price (₹)', 'GST %', 'HSN Code', 'Initial Stock'];
-    const example1 = ['Local Organic Honey', 'Premium raw pure organic mountain honey', categories[0] || 'Food', '', '299', '349', '180', '0', '9971', '50'];
+    const headers = ['Product Name', 'Description', 'Category', 'Sub-Category', 'Selling Price (₹)', 'MRP (₹)', 'Cost Price (₹)', 'GST %', 'HSN Code', 'Initial Stock'];
+    const example1 = ['Local Organic Honey', 'Premium raw pure organic mountain honey', categories[0] || 'Groceries', 'Packaged Food', '299', '349', '180', '0', '9971', '50'];
     const example2 = ['Cotton Kurta - Blue', 'Elegant blue handloom cotton kurta for daily wear', 'Fashion', 'Men', '599', '799', '350', '5', '9971', '30'];
     const csv = [headers, example1, example2].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });

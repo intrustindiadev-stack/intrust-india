@@ -17,6 +17,7 @@ import { usePayerContact } from '@/hooks/usePayerContact';
 import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
 import Pagination from '@/components/search/Pagination';
+import { getSubCategories } from '@/lib/constants/categories';
 
 const PARTNERS = [
     { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/logos/ajio.svg', desc: 'Fashion Hub', tag: 'Top Tier' },
@@ -697,27 +698,29 @@ export default function WholesaleClient({
                         </div>
                     )}
 
-                    {/* Department Sub-Category Filter — shown only when Fashion is selected */}
-                    {selectedCategory === 'Fashion' && (
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">Department</span>
-                            {['Men', 'Women', 'Kids'].map(dept => (
+                    {/* Dynamic Sub-Category Filter */}
+                    {getSubCategories(selectedCategory).length > 0 && (
+                        <div className="flex items-center gap-2 mt-1 overflow-x-auto pb-1 scrollbar-none">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">
+                                {selectedCategory === 'Fashion' ? 'Department' : 'Sub-Category'}
+                            </span>
+                            {getSubCategories(selectedCategory).map(sub => (
                                 <button
-                                    key={dept}
-                                    onClick={() => handleSubCategoryChange(dept)}
+                                    key={sub}
+                                    onClick={() => handleSubCategoryChange(sub)}
                                     className={`whitespace-nowrap px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex-shrink-0 ${
-                                        selectedSubCategory === dept
+                                        selectedSubCategory === sub
                                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
                                             : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:border-blue-300 hover:text-blue-600'
                                     }`}
                                 >
-                                    {dept === 'Men' ? '👔' : dept === 'Women' ? '👗' : '🧒'} {dept}
+                                    {sub === 'Men' ? '👔 ' : sub === 'Women' ? '👗 ' : sub === 'Kids' ? '🧒 ' : ''}{sub}
                                 </button>
                             ))}
                             {selectedSubCategory && (
                                 <button
                                     onClick={() => handleSubCategoryChange(selectedSubCategory)}
-                                    className="text-[10px] font-black text-slate-400 hover:text-red-500 transition-colors ml-1 uppercase tracking-widest"
+                                    className="text-[10px] font-black text-slate-400 hover:text-red-500 transition-colors ml-1 uppercase tracking-widest shrink-0"
                                 >
                                     ✕ Clear
                                 </button>
