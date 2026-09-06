@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
 import { fulfillTransaction } from '@/lib/sabpaisa/fulfillment';
+import { sendInvoiceNotification } from '@/lib/notifications/invoiceNotificationService';
 
 const ALLOWED_IPS = (process.env.SABPAISA_ALLOWED_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
 
@@ -183,6 +184,24 @@ export async function POST(request) {
                 });
             } catch (updateErr) {
                 console.error(`[Webhook] Failed to update transaction ${clientTxnId}:`, updateErr.message);
+            }
+
+            // 8b. INVOICE_PAY terminal failure notification (non-blocking, idempotent)
+            if (existingTxn && existingTxn.udf1 === 'INVOICE_PAY' && (internalStatus === 'failed' || internalStatus === 'aborted')) {
+                try {
+                    await sendInvoiceNotification({
+                        supabaseAdmin,
+                        invoiceId: existingTxn.udf2,
+                        notificationType: 'PAYMENT_FAILED',
+                        channel: 'EMAIL',
+                        metadata: {
+                            client_txn_id: clientTxnId,
+                            sabpaisa_txn_id: sabpaisaTxnId || null
+                        }
+                    });
+                } catch (failNotifErr) {
+                    console.error('[Webhook] Failed to dispatch invoice payment failure notification:', failNotifErr.message);
+                }
             }
         }
 

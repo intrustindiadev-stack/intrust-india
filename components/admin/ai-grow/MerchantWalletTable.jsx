@@ -191,13 +191,15 @@ export default function MerchantWalletTable({ wallets = [], onAdjust, onHistory 
                                     {/* Actions */}
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => onAdjust(wallet)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm hover:shadow"
-                                            >
-                                                <PenSquare size={13} />
-                                                Adjust
-                                            </button>
+                                            {onAdjust && (
+                                                <button
+                                                    onClick={() => onAdjust(wallet)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm hover:shadow"
+                                                >
+                                                    <PenSquare size={13} />
+                                                    Adjust
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => onHistory(wallet)}
                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors"

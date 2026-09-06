@@ -24,10 +24,9 @@ export async function POST(request) {
         }
 
         // ── 2. ADMIN AUTHORIZATION ────────────────────────────────────────────
-        const allowedRoles = ['admin', 'super_admin'];
-        if (!profile || !allowedRoles.includes(profile.role)) {
+        if (!profile || profile.role !== 'super_admin') {
             return NextResponse.json(
-                { error: 'Access denied. Admin role required.' },
+                { error: 'Access denied. Super admin role required.' },
                 { status: 403 }
             );
         }

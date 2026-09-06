@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { updateTransaction, logTransactionEvent, getTransactionByClientTxnId } from '@/lib/supabase/queries';
 import { mapStatusToInternal } from '@/lib/sabpaisa/utils';
 import { fulfillTransaction } from '@/lib/sabpaisa/fulfillment';
+import { sendInvoiceNotification } from '@/lib/notifications/invoiceNotificationService';
 import crypto from 'crypto';
 
 const ALLOWED_IPS = (process.env.SABPAISA_ALLOWED_IPS || '').split(',').map(ip => ip.trim()).filter(Boolean);
@@ -317,6 +318,28 @@ export async function POST(request) {
             internalStatus = 'failed';
             if (!result.transMsg || result.transMsg === status) {
                 result.transMsg = 'Fulfillment error. Payment cannot be fulfilled automatically. Manual verification required. Contact support.';
+            }
+        }
+
+        // 7c. INVOICE_PAY terminal failure notification (non-blocking, idempotent)
+        if (existingTxn && existingTxn.udf1 === 'INVOICE_PAY' && (internalStatus === 'failed' || internalStatus === 'aborted')) {
+            try {
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                );
+                await sendInvoiceNotification({
+                    supabaseAdmin,
+                    invoiceId: existingTxn.udf2,
+                    notificationType: 'PAYMENT_FAILED',
+                    channel: 'EMAIL',
+                    metadata: {
+                        client_txn_id: clientTxnId,
+                        sabpaisa_txn_id: sabpaisaTxnId || null
+                    }
+                });
+            } catch (failNotifErr) {
+                console.error('[Callback] Failed to dispatch invoice payment failure notification:', failNotifErr.message);
             }
         }
 

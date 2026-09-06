@@ -71,7 +71,7 @@ const navigationGroups = [
             { name: 'Store Status', href: '/admin/store-status', icon: Activity },
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
             { name: 'AI Grow', href: '/admin/investments', icon: TrendingUp },
-            { name: 'AI Grow Wallets', href: '/admin/ai-grow/wallets', icon: Wallet },
+            { name: 'AI Grow Wallets', href: '/admin/ai-grow/wallets', icon: Wallet, superAdminOnly: true },
             { name: 'Lockin', href: '/admin/lockin', icon: ShieldCheck },
         ]
     },
@@ -259,10 +259,12 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
 
                     <nav className="flex-1 py-4 px-4 space-y-2 overflow-y-auto hide-scrollbar">
                         {navigationGroups.map((group, groupIdx) => {
-                            const isGroupActive = group.items.some(item => checkIsActive(item, pathname));
+                            const visibleItems = group.items.filter(item => !item.superAdminOnly || isSuperAdmin);
+                            if (visibleItems.length === 0) return null;
+                            const isGroupActive = visibleItems.some(item => checkIsActive(item, pathname));
                             return (
                                 <SidebarGroup key={groupIdx} id={`group-${groupIdx}`} label={group.title} defaultOpen={isGroupActive}>
-                                    {group.items.map((item) => {
+                                    {visibleItems.map((item) => {
                                         const Icon = item.icon;
                                         const isActive = checkIsActive(item, pathname);
                                         return (

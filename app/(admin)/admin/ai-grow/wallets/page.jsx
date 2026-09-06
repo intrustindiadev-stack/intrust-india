@@ -16,6 +16,7 @@ export default function AIGrowWalletsPage() {
     const [wallets, setWallets] = useState([]);
     const [totalAdjustments30d, setTotalAdjustments30d] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     // Modal / Drawer state
     const [adjustTarget, setAdjustTarget] = useState(null);  // wallet object
@@ -29,6 +30,15 @@ export default function AIGrowWalletsPage() {
                 toast.error('Session expired. Please log in again.');
                 return;
             }
+
+            // Check super_admin role
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+
+            setIsSuperAdmin(profile?.role === 'super_admin');
 
             // Fetch wallets with merchant details
             const { data: walletsData, error: walletsErr } = await supabase
@@ -131,18 +141,20 @@ export default function AIGrowWalletsPage() {
             ) : (
                 <MerchantWalletTable
                     wallets={wallets}
-                    onAdjust={(wallet) => setAdjustTarget(wallet)}
+                    onAdjust={isSuperAdmin ? (wallet) => setAdjustTarget(wallet) : null}
                     onHistory={(wallet) => setHistoryTarget(wallet)}
                 />
             )}
 
             {/* Adjust Balance Modal */}
-            <AdjustBalanceModal
-                isOpen={!!adjustTarget}
-                merchant={adjustTarget}
-                onClose={() => setAdjustTarget(null)}
-                onSuccess={handleAdjustSuccess}
-            />
+            {isSuperAdmin && (
+                <AdjustBalanceModal
+                    isOpen={!!adjustTarget}
+                    merchant={adjustTarget}
+                    onClose={() => setAdjustTarget(null)}
+                    onSuccess={handleAdjustSuccess}
+                />
+            )}
 
             {/* Audit Trail Drawer */}
             <WalletAuditDrawer
