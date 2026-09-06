@@ -35,9 +35,42 @@ export default function CustomerSettingsPage() {
     const { theme, toggleTheme } = useTheme();
     const supabase = createClient();
 
-    const [whatsappAlerts, setWhatsappAlerts] = useState(true);
-    const [orderSmsAlerts, setOrderSmsAlerts] = useState(true);
-    const [promoNotifications, setPromoNotifications] = useState(false);
+    const [whatsappAlerts, setWhatsappAlerts] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        try {
+            const saved = localStorage.getItem('intrust_notification_preferences');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed.whatsappAlerts === 'boolean') return parsed.whatsappAlerts;
+            }
+        } catch {}
+        return true;
+    });
+
+    const [orderSmsAlerts, setOrderSmsAlerts] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        try {
+            const saved = localStorage.getItem('intrust_notification_preferences');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed.orderSmsAlerts === 'boolean') return parsed.orderSmsAlerts;
+            }
+        } catch {}
+        return true;
+    });
+
+    const [promoNotifications, setPromoNotifications] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        try {
+            const saved = localStorage.getItem('intrust_notification_preferences');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed.promoNotifications === 'boolean') return parsed.promoNotifications;
+            }
+        } catch {}
+        return false;
+    });
+
     const [kycStatus, setKycStatus] = useState('pending');
     const [savingSettings, setSavingSettings] = useState(false);
 
@@ -63,21 +96,32 @@ export default function CustomerSettingsPage() {
         loadSettings();
     }, [user, supabase]);
 
+    const savePreferences = (updated) => {
+        try {
+            localStorage.setItem('intrust_notification_preferences', JSON.stringify(updated));
+        } catch (e) {
+            console.error('Failed to save notification preferences:', e);
+        }
+    };
+
     const handleToggleWhatsapp = async () => {
         const nextVal = !whatsappAlerts;
         setWhatsappAlerts(nextVal);
+        savePreferences({ whatsappAlerts: nextVal, orderSmsAlerts, promoNotifications });
         toast.success(nextVal ? 'WhatsApp order updates enabled' : 'WhatsApp updates muted');
     };
 
     const handleToggleOrderSms = async () => {
         const nextVal = !orderSmsAlerts;
         setOrderSmsAlerts(nextVal);
+        savePreferences({ whatsappAlerts, orderSmsAlerts: nextVal, promoNotifications });
         toast.success(nextVal ? 'SMS delivery alerts enabled' : 'SMS alerts disabled');
     };
 
     const handleTogglePromo = async () => {
         const nextVal = !promoNotifications;
         setPromoNotifications(nextVal);
+        savePreferences({ whatsappAlerts, orderSmsAlerts, promoNotifications: nextVal });
         toast.success(nextVal ? 'Deal alerts enabled' : 'Deal alerts disabled');
     };
 

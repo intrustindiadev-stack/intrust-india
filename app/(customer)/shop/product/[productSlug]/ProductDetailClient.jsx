@@ -38,11 +38,14 @@ import Image from 'next/image';
 import { isPdpProductOOS, isInventoryRowOOS, OOS_LABEL, isPlatformProductOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
+import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
+import NotifyMeButton from '@/components/ui/NotifyMeButton';
+import RecentlyViewed, { recordRecentlyViewed } from '@/components/commerce/RecentlyViewed';
 
 // Lazy-load modal — only needed on rare cart-conflict path, keep it out of the initial bundle
 const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function ProductDetailClient({ product, inventory, customer, recommendedProducts = [], initialPlatformStatus }) {
+export default function ProductDetailClient({ product, inventory, customer, variants = [], recommendedProducts = [], initialPlatformStatus }) {
     const router = useRouter();
     const { theme } = useTheme();
     const { user: authUser, profile: authProfile } = useAuth();
@@ -63,6 +66,66 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [isClosedAnimation, setIsClosedAnimation] = useState(false);
     const [cartCount, setCartCount] = useState(0);
     const [activeDetailTab, setActiveDetailTab] = useState('highlights');
+
+    // Record recently viewed
+    useEffect(() => {
+        if (product?.id) {
+            recordRecentlyViewed({
+                id: product.id,
+                title: product.title,
+                category: product.category || 'General',
+                price_paise: product.platform_price_paise || product.suggested_retail_price_paise || 0,
+                compare_at_price_paise: product.mrp_paise || null,
+                image: product.product_images?.[0] || null,
+                slug: product.slug,
+                is_fashion: variants && variants.length > 0
+            });
+        }
+    }, [product.id, product.title, product.category, product.platform_price_paise, product.suggested_retail_price_paise, product.mrp_paise, product.product_images, product.slug, variants]);
+
+    // Variant extraction & management
+    const hasVariants = variants && variants.length > 0;
+    const colors = useMemo(() => {
+        return Array.from(new Set(variants.filter(v => v.color).map(v => v.color)));
+    }, [variants]);
+
+    const sizes = useMemo(() => {
+        return Array.from(new Set(variants.filter(v => v.size).map(v => v.size)));
+    }, [variants]);
+
+    const [selectedColor, setSelectedColor] = useState(colors[0] || '');
+    const [selectedSize, setSelectedSize] = useState(sizes[0] || '');
+
+    useEffect(() => {
+        if (colors.length > 0 && !colors.includes(selectedColor)) {
+            setSelectedColor(colors[0]);
+        }
+    }, [colors, selectedColor]);
+
+    useEffect(() => {
+        if (sizes.length > 0 && !sizes.includes(selectedSize)) {
+            setSelectedSize(sizes[0]);
+        }
+    }, [sizes, selectedSize]);
+
+    const selectedVariant = useMemo(() => {
+        if (!hasVariants) return null;
+        const match = variants.find(v =>
+            (!selectedColor || v.color === selectedColor) &&
+            (!selectedSize || v.size === selectedSize)
+        );
+        return match || variants.find(v => !selectedColor || v.color === selectedColor) || variants[0] || null;
+    }, [hasVariants, variants, selectedColor, selectedSize]);
+
+    const variantStock = selectedVariant ? (selectedVariant.inventory_quantity ?? 0) : null;
+    const variantIsOOS = hasVariants && variantStock !== null && variantStock <= 0;
+
+    // Reset image index when variant changes
+    useEffect(() => {
+        if (selectedVariant?.id) {
+            setSelectedImageIndex(0);
+        }
+    }, [selectedVariant?.id]);
 
     // Memoized supabase client — prevents a new instance on every render
     const supabase = useMemo(() => createClient(), []);
@@ -231,7 +294,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
         allOffers.find(o => (o.is_platform_direct ? selectedOfferId === 'platform' : o.id === selectedOfferId)) || defaultOffer
     , [allOffers, selectedOfferId, defaultOffer]);
     const selectedOfferIsOOS = useMemo(() => isOfferOOS(selectedOffer), [isOfferOOS, selectedOffer]);
-    const isOutOfStock = productIsOOS || selectedOfferIsOOS;
+    const isOutOfStock = hasVariants ? variantIsOOS : (productIsOOS || selectedOfferIsOOS);
 
     const isStoreOpen = useMemo(() =>
         selectedOffer.is_platform_direct
@@ -245,7 +308,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     }, []);
 
     const addToCart = async () => {
-        if (productIsOOS || selectedOfferIsOOS) {
+        if (isOutOfStock) {
             toast.error('This item is currently out of stock');
             return;
         }
@@ -265,6 +328,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 p_customer_id: activeCustomer.id,
                 p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
                 p_product_id: product.id,
+                p_variant_id: selectedVariant?.id || null,
                 p_quantity: quantity,
                 p_is_platform: selectedOffer.is_platform_direct
             });
@@ -289,7 +353,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     };
 
     const buyNow = async () => {
-        if (productIsOOS || selectedOfferIsOOS) {
+        if (isOutOfStock) {
             toast.error('This item is currently out of stock');
             return;
         }
@@ -308,6 +372,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 p_customer_id: activeCustomer.id,
                 p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
                 p_product_id: product.id,
+                p_variant_id: selectedVariant?.id || null,
                 p_quantity: quantity,
                 p_is_platform: selectedOffer.is_platform_direct
             });
@@ -319,6 +384,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                     p_customer_id: activeCustomer.id,
                     p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
                     p_product_id: product.id,
+                    p_variant_id: selectedVariant?.id || null,
                     p_quantity: quantity,
                     p_is_platform: selectedOffer.is_platform_direct
                 });
@@ -349,10 +415,14 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const primaryColor = '#3b82f6';
     const secondaryColor = '#60a5fa';
 
-    // Memoized pricing — only recalculate when offer or product changes
+    // Memoized pricing — variant price takes precedence for fashion items
     const { sellingPrice, finalMrp, savings, savingsPercent } = useMemo(() => {
-        const sp = selectedOffer.retail_price_paise;
-        const mrp = product.mrp_paise || product.suggested_retail_price_paise || sp;
+        const sp = (hasVariants && selectedVariant?.price_paise != null)
+            ? selectedVariant.price_paise
+            : selectedOffer.retail_price_paise;
+        const mrp = (hasVariants && selectedVariant?.compare_at_price_paise != null)
+            ? selectedVariant.compare_at_price_paise
+            : (product.mrp_paise || product.suggested_retail_price_paise || sp);
         const fm = mrp > sp ? mrp : sp;
         const sav = fm - sp;
         return {
@@ -361,7 +431,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             savings: sav,
             savingsPercent: fm > 0 ? Math.round((sav / fm) * 100) : 0
         };
-    }, [selectedOffer.retail_price_paise, product.mrp_paise, product.suggested_retail_price_paise]);
+    }, [selectedOffer.retail_price_paise, product.mrp_paise, product.suggested_retail_price_paise, hasVariants, selectedVariant]);
     const categoryName = product.shopping_categories?.name || 'Category';
 
     return (
@@ -437,10 +507,14 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             )}
 
                             {(() => {
-                                const allImages = product.product_images?.length
-                                    ? product.product_images
-                                    : [];
-                                const displayUrl = allImages[selectedImageIndex] || null;
+                                const variantImages = (selectedVariant?.fashion_variant_media || [])
+                                    .map(m => m.image_url)
+                                    .filter(Boolean);
+                                const baseImages = product.product_images?.length ? product.product_images : [];
+                                const allImages = variantImages.length > 0
+                                    ? [...variantImages, ...baseImages.filter(img => !variantImages.includes(img))]
+                                    : baseImages;
+                                const displayUrl = allImages[selectedImageIndex] || allImages[0] || null;
                                 return displayUrl ? (
                                     <Image
                                         src={displayUrl}
@@ -495,13 +569,15 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                 }
                             </button>
                         </div>
-
-                        {/* Thumbnail strip — shown only when multiple images exist */}
                         {(() => {
-                            const allImages = product.product_images?.length > 1
-                                ? product.product_images
-                                : null;
-                            if (!allImages) return null;
+                            const variantImages = (selectedVariant?.fashion_variant_media || [])
+                                .map(m => m.image_url)
+                                .filter(Boolean);
+                            const baseImages = product.product_images?.length ? product.product_images : [];
+                            const allImages = variantImages.length > 0
+                                ? [...variantImages, ...baseImages.filter(img => !variantImages.includes(img))]
+                                : baseImages;
+                            if (allImages.length <= 1) return null;
                             return (
                                 <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">
                                     {allImages.map((url, idx) => (
@@ -524,9 +600,7 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                                 alt={`View ${idx + 1}`}
                                                 width={56}
                                                 height={56}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                                quality={65}
+                                                className={`w-full h-full object-contain p-1 ${isDark ? '' : 'mix-blend-multiply'}`}
                                             />
                                         </button>
                                     ))}
@@ -615,7 +689,123 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                         <AlertCircle size={12}/> This option is currently unavailable
                                     </p>
                                 )}
-                                {/* TODO: extend per-attribute when product_variants table lands */}
+                            </div>
+                        )}
+
+                        {/* ====== FASHION VARIANT SELECTOR ====== */}
+                        {hasVariants && (
+                            <div className="mb-6 space-y-4 pt-4 border-t border-slate-200/60 dark:border-white/10">
+                                {/* Color Options */}
+                                {colors.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
+                                                Color: <span className="text-sky-500 font-bold">{selectedColor || 'Select color'}</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {colors.map(color => {
+                                                const isSelected = selectedColor === color;
+                                                return (
+                                                    <button
+                                                        key={color}
+                                                        type="button"
+                                                        onClick={() => setSelectedColor(color)}
+                                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border ${
+                                                            isSelected
+                                                                ? 'bg-sky-500 text-white border-sky-400 shadow-sm shadow-sky-500/25 scale-[1.02]'
+                                                                : isDark
+                                                                    ? 'bg-white/5 border-white/10 text-white/70 hover:border-white/20'
+                                                                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                                                        }`}
+                                                    >
+                                                        {color}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Size Options */}
+                                {sizes.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
+                                                Size: <span className="text-sky-500 font-bold">{selectedSize || 'Select size'}</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {sizes.map(size => {
+                                                const isSelected = selectedSize === size;
+                                                const matchVar = variants.find(v =>
+                                                    (!selectedColor || v.color === selectedColor) && v.size === size
+                                                );
+                                                const isSizeOOS = matchVar ? (matchVar.inventory_quantity ?? 0) <= 0 : false;
+
+                                                return (
+                                                    <button
+                                                        key={size}
+                                                        type="button"
+                                                        onClick={() => setSelectedSize(size)}
+                                                        className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all border ${
+                                                            isSelected
+                                                                ? 'bg-sky-500 text-white border-sky-400 shadow-sm shadow-sky-500/25 scale-[1.02]'
+                                                                : isSizeOOS
+                                                                    ? isDark
+                                                                        ? 'bg-white/[0.02] border-white/5 text-white/25 line-through'
+                                                                        : 'bg-slate-100/50 border-slate-200/50 text-slate-400 line-through'
+                                                                    : isDark
+                                                                        ? 'bg-white/5 border-white/10 text-white/70 hover:border-white/20'
+                                                                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                                                        }`}
+                                                    >
+                                                        {size}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Variant Attributes: Fit, Fabric, SKU & Stock */}
+                                {selectedVariant && (
+                                    <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                                        {selectedVariant.fit && (
+                                            <span className={`px-2.5 py-1 rounded-lg font-bold border ${isDark ? 'bg-white/5 border-white/10 text-white/60' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                                                Fit: {selectedVariant.fit}
+                                            </span>
+                                        )}
+                                        {selectedVariant.fabric && (
+                                            <span className={`px-2.5 py-1 rounded-lg font-bold border ${isDark ? 'bg-white/5 border-white/10 text-white/60' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                                                Fabric: {selectedVariant.fabric}
+                                            </span>
+                                        )}
+                                        {selectedVariant.sku && (
+                                            <span className={`px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold border ${isDark ? 'bg-white/5 border-white/10 text-white/40' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                                                SKU: {selectedVariant.sku}
+                                            </span>
+                                        )}
+                                        {variantIsOOS ? (
+                                            <span className="px-2.5 py-1 rounded-lg font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                                Variant Out of Stock
+                                            </span>
+                                        ) : (
+                                            <span className="px-2.5 py-1 rounded-lg font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                {variantStock} available in stock
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
+                                {variantIsOOS && (
+                                    <div className="pt-2">
+                                        <OutOfStockBanner count={1} />
+                                        <div className="mt-2 max-w-xs">
+                                            <NotifyMeButton productId={product.id} email={activeEmail} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -1001,6 +1191,9 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         </div>
                     </div>
                 )}
+
+                {/* ====== RECENTLY VIEWED ====== */}
+                <RecentlyViewed currentProductId={product.id} />
             </div>
 
             {/* ====== MOBILE STICKY ADD TO CART BAR ====== */}

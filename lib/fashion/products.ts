@@ -18,6 +18,7 @@ export type ProductSummary = {
   id: string;
   title: string;
   description: string;
+  slug?: string | null;
   variants: ProductVariant[];
   base_price_paise: number;
 };
@@ -36,7 +37,7 @@ export async function getProductsForCategory(
   let rpcQuery = supabase
     .from('shopping_products')
     .select(`
-      id, title, description, suggested_retail_price_paise,
+      id, title, slug, description, suggested_retail_price_paise,
       fashion_product_categories!inner (
         fashion_categories!inner ( path )
       ),
@@ -58,7 +59,8 @@ export async function getProductsForCategory(
     rpcQuery = rpcQuery.in('fashion_variants.size', sizes);
   }
   if (query.fit) {
-    rpcQuery = rpcQuery.in('fashion_variants.fit', query.fit.split(','));
+    const fits = query.fit.split(',');
+    rpcQuery = rpcQuery.in('fashion_variants.fit', fits);
   }
   if (query.fabric) {
     rpcQuery = rpcQuery.in('fashion_variants.fabric', query.fabric.split(','));
@@ -69,13 +71,11 @@ export async function getProductsForCategory(
     if (max) rpcQuery = rpcQuery.lte('fashion_variants.price_paise', parseInt(max) * 100);
   }
 
-  // Sorting
+  // Sort
   if (query.sort === 'price-asc') {
-    // Note: sorting by related table field in Supabase is limited without RPC.
-    // For MVP, we'll order by the base product price.
-    rpcQuery = rpcQuery.order('suggested_retail_price_paise', { ascending: true });
+    rpcQuery = rpcQuery.order('fashion_variants(price_paise)', { ascending: true });
   } else if (query.sort === 'price-desc') {
-    rpcQuery = rpcQuery.order('suggested_retail_price_paise', { ascending: false });
+    rpcQuery = rpcQuery.order('fashion_variants(price_paise)', { ascending: false });
   } else {
     rpcQuery = rpcQuery.order('created_at', { ascending: false });
   }
@@ -94,6 +94,7 @@ export async function getProductsForCategory(
     return {
       id: item.id,
       title: item.title,
+      slug: item.slug,
       description: item.description,
       base_price_paise: item.suggested_retail_price_paise,
       variants: (item.fashion_variants || []).map((v: any) => ({

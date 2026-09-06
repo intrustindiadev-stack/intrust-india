@@ -49,9 +49,11 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
   }, []);
 
   const moveToCart = useCallback(async (item) => {
-    const isOOS = item.is_platform_item 
-      ? isPlatformProductOOS(item.shopping_products)
-      : isInventoryRowOOS(item.merchant_inventory);
+    const isOOS = item.variant_id && item.fashion_variants
+      ? (item.fashion_variants.inventory_quantity ?? 0) <= 0
+      : item.is_platform_item 
+        ? isPlatformProductOOS(item.shopping_products)
+        : isInventoryRowOOS(item.merchant_inventory);
 
     if (isOOS) {
       toast.error('This item is out of stock and cannot be added to cart');
@@ -64,6 +66,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
         p_customer_id: userId,
         p_inventory_id: item.is_platform_item ? null : item.inventory_id,
         p_product_id: item.shopping_products.id,
+        p_variant_id: item.variant_id || null,
         p_quantity: 1,
         p_is_platform: item.is_platform_item
       });
@@ -88,6 +91,9 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
 
   const addAllToCart = useCallback(async (group) => {
     const availableItems = group.items.filter(item => {
+      if (item.variant_id && item.fashion_variants) {
+        return (item.fashion_variants.inventory_quantity ?? 0) > 0;
+      }
       return item.is_platform_item 
         ? !isPlatformProductOOS(item.shopping_products)
         : !isInventoryRowOOS(item.merchant_inventory);
@@ -105,6 +111,7 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
         p_customer_id: userId,
         p_inventory_id: first.is_platform_item ? null : first.inventory_id,
         p_product_id: first.shopping_products.id,
+        p_variant_id: first.variant_id || null,
         p_quantity: 1,
         p_is_platform: first.is_platform_item
       });
@@ -216,13 +223,19 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
               <AnimatePresence mode="popLayout">
                 {group.items.map((item, idx) => {
                   const product = item.shopping_products;
-                  const price = item.is_platform_item 
-                    ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
-                    : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise);
+                  const price = (item.variant_id && item.fashion_variants?.price_paise != null)
+                    ? item.fashion_variants.price_paise
+                    : item.is_platform_item 
+                      ? (product?.platform_price_paise ?? product?.suggested_retail_price_paise)
+                      : (item.merchant_inventory?.retail_price_paise || product?.suggested_retail_price_paise);
                   
-                  const isOOS = item.is_platform_item 
-                    ? isPlatformProductOOS(product)
-                    : isInventoryRowOOS(item.merchant_inventory);
+                  const isOOS = item.variant_id && item.fashion_variants
+                    ? (item.fashion_variants.inventory_quantity ?? 0) <= 0
+                    : item.is_platform_item 
+                      ? isPlatformProductOOS(product)
+                      : isInventoryRowOOS(item.merchant_inventory);
+
+                  const displayImg = item.fashion_variants?.fashion_variant_media?.[0]?.image_url || product?.product_images?.[0];
 
                   return (
                     <motion.div
@@ -234,12 +247,12 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                       transition={{ delay: idx * 0.04 }}
                       className="flex gap-4 p-4 rounded-2xl mb-3 bg-white dark:bg-surface-container-lowest border border-slate-200 dark:border-outline-variant/30 shadow-sm"
                     >
-                      <Link href={`/shop/product/${product?.slug}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 relative">
-                        {product?.product_images?.[0] ? (
+                      <Link href={`/shop/product/${product?.slug || product?.id}`} className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 relative">
+                        {displayImg ? (
                           <div className="relative w-full h-full">
                             <Image
-                              src={product.product_images[0]}
-                              alt={product.title}
+                              src={displayImg}
+                              alt={product?.title || 'Product'}
                               fill
                               sizes="(max-width: 640px) 20vw, 64px"
                               className="object-contain"
@@ -255,6 +268,13 @@ export default function WishlistClient({ userId, userEmail, initialItems }) {
                       <div className={`flex-1 min-w-0 ${isOOS ? 'opacity-50' : ''}`}>
                         <p className="text-[9px] uppercase tracking-widest font-black mb-0.5 text-slate-400">{product?.category || 'General'}</p>
                         <h3 className="text-sm font-bold line-clamp-2 leading-tight text-slate-900 dark:text-on-surface">{product?.title}</h3>
+                        {item.variant_id && item.fashion_variants && (
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-bold text-slate-500 dark:text-brand-steel">
+                            {item.fashion_variants.color && <span>{item.fashion_variants.color}</span>}
+                            {item.fashion_variants.color && item.fashion_variants.size && <span>•</span>}
+                            {item.fashion_variants.size && <span>Size {item.fashion_variants.size}</span>}
+                          </div>
+                        )}
                         {price && <p className="text-sm font-black mt-1 text-slate-900 dark:text-on-surface">₹{(price / 100).toLocaleString('en-IN')}</p>}
                       </div>
 

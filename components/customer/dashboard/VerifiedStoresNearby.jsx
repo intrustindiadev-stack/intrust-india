@@ -32,7 +32,9 @@ export default function VerifiedStoresNearby({ merchants = [] }) {
                 {merchants.map((merchant) => {
                     const fallbackBanner = `https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80`;
                     const banner = merchant.shopping_banner_url || fallbackBanner;
-                    const merchantPhone = merchant.phone || merchant.business_phone || '+91 755 492 8840';
+                    const merchantPhone = merchant.phone || merchant.business_phone;
+                    const isOpen = merchant.is_open !== false;
+                    const ratingVal = merchant.avg_rating || merchant.rating?.avg_rating;
 
                     return (
                         <div
@@ -49,28 +51,38 @@ export default function VerifiedStoresNearby({ merchants = [] }) {
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                                    {/* Open / 2-Hr Pickup badge */}
+                                    {/* Open / Direct Order badge */}
                                     <div className="absolute top-3 left-3 flex items-center gap-2">
-                                        <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                            Open Now
-                                        </span>
+                                        {isOpen ? (
+                                            <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                                Open Now
+                                            </span>
+                                        ) : (
+                                            <span className="px-2.5 py-1 rounded-full bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                                                Closed
+                                            </span>
+                                        )}
                                         <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[10px] font-bold">
-                                            2-Hr Pickup
+                                            Direct Order
                                         </span>
                                     </div>
 
-                                    {/* Rating */}
-                                    <div className="absolute top-3 right-3 px-2 py-1 rounded-xl bg-white/95 backdrop-blur-md text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm">
-                                        <Star size={12} className="text-amber-500 fill-amber-500" />
-                                        <span>4.8</span>
-                                    </div>
+                                    {/* Rating if present */}
+                                    {ratingVal != null && (
+                                        <div className="absolute top-3 right-3 px-2 py-1 rounded-xl bg-white/95 backdrop-blur-md text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm">
+                                            <Star size={12} className="text-amber-500 fill-amber-500" />
+                                            <span>{Number(ratingVal).toFixed(1)}</span>
+                                        </div>
+                                    )}
 
-                                    {/* Distance */}
-                                    <div className="absolute bottom-3 left-3 flex items-center gap-1 text-white text-xs font-semibold">
-                                        <MapPin size={13} className="text-[#D4AF37]" />
-                                        <span>0.8 km • MP Nagar, Bhopal</span>
-                                    </div>
+                                    {/* Real Location */}
+                                    {merchant.business_address && (
+                                        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-1 text-white text-xs font-semibold truncate">
+                                            <MapPin size={13} className="text-[#D4AF37] shrink-0" />
+                                            <span className="truncate">{merchant.business_address}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Store Title & Verified Badge */}
@@ -81,21 +93,25 @@ export default function VerifiedStoresNearby({ merchants = [] }) {
                                     <ShieldCheck size={16} className="text-[#D4AF37] shrink-0" title="Verified Merchant" />
                                 </div>
 
-                                <p className="text-xs text-on-surface-variant font-medium line-clamp-1 mb-3">
-                                    {merchant.business_address || 'Electronics, Mobiles, Soundbars & Home Audio'}
-                                </p>
+                                {merchant.business_address && (
+                                    <p className="text-xs text-on-surface-variant font-medium line-clamp-1 mb-3">
+                                        {merchant.business_address}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Store Action Bar with Merchant Phone */}
                             <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between gap-3">
-                                <a
-                                    href={`tel:${merchantPhone}`}
-                                    className="px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-outline-variant/20 transition-colors"
-                                    title="Call Store"
-                                >
-                                    <Phone size={13} className="text-emerald-600" />
-                                    <span>Call</span>
-                                </a>
+                                {merchantPhone && (
+                                    <a
+                                        href={`tel:${merchantPhone}`}
+                                        className="px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-outline-variant/20 transition-colors"
+                                        title="Call Store"
+                                    >
+                                        <Phone size={13} className="text-emerald-600" />
+                                        <span>Call</span>
+                                    </a>
+                                )}
 
                                 <Link
                                     href={`/shop/${merchant.slug || merchant.id}`}

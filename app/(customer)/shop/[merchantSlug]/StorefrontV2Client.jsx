@@ -27,7 +27,7 @@ const storeCache = new Map();
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories }) {
+export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, initialFilters = {}, currentPage = 1 }) {
     const router = useRouter();
     const { theme } = useTheme();
     const { user: authUser, profile: authProfile } = useAuth();
@@ -36,9 +36,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [isLoading, setIsLoading] = useState(true);
-    const [activeSubCategory, setActiveSubCategory] = useState('All');
-    const [searchInput, setSearchInput] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [activeSubCategory, setActiveSubCategory] = useState(initialFilters.category || initialFilters.sub_category || 'All');
+    const [searchInput, setSearchInput] = useState(initialFilters.search || '');
+    const [searchQuery, setSearchQuery] = useState(initialFilters.search || '');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [selectedProductItem, setSelectedProductItem] = useState(null);
@@ -46,7 +46,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [liveInventory, setLiveInventory] = useState(initialInventory);
     const debounceRef = useRef(null);
 
-    const [page, setPage] = useState(1);
+    const [page, setPage] = useState(currentPage || 1);
     const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
     const [loading, setLoading] = useState(false);
     const isFirstRender = useRef(true);
@@ -54,12 +54,12 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
     useEffect(() => {
         setLiveInventory(initialInventory);
-        setPage(1);
+        setPage(currentPage || 1);
         setTotalCount(initialTotalCount ?? 0);
         setPageLastIds({ 1: null });
         setLoading(false);
         isFirstRender.current = true;
-    }, [initialInventory, initialTotalCount]);
+    }, [initialInventory, initialTotalCount, currentPage]);
 
     // Open-at-top fix: scrolls to top on mount and whenever merchant slug changes
     useEffect(() => {
@@ -84,6 +84,24 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         }
         if (catVal && catVal !== 'All') {
             queryParams.append('category', catVal);
+        }
+        if (initialFilters?.sub_category) {
+            queryParams.append('sub_category', initialFilters.sub_category);
+        }
+        if (initialFilters?.min_price != null) {
+            queryParams.append('min_price', initialFilters.min_price.toString());
+        }
+        if (initialFilters?.max_price != null) {
+            queryParams.append('max_price', initialFilters.max_price.toString());
+        }
+        if (initialFilters?.brand) {
+            queryParams.append('brand', initialFilters.brand);
+        }
+        if (initialFilters?.size) {
+            queryParams.append('size', initialFilters.size);
+        }
+        if (initialFilters?.color) {
+            queryParams.append('color', initialFilters.color);
         }
         if (lastIdVal) {
             queryParams.append('lastId', lastIdVal);
@@ -171,11 +189,20 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         return () => observer.disconnect();
     }, [loading, liveInventory.length, totalCount]);
 
-    // Search and Category resets page to 1
+    // Search and Category resets page to 1 and synchronizes URL query params
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
             return;
+        }
+        if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            if (searchQuery) url.searchParams.set('search', searchQuery);
+            else url.searchParams.delete('search');
+            if (activeSubCategory && activeSubCategory !== 'All') url.searchParams.set('category', activeSubCategory);
+            else url.searchParams.delete('category');
+            url.searchParams.delete('page');
+            window.history.replaceState({}, '', url.toString());
         }
         setPageLastIds({ 1: null });
         if (page !== 1) {
@@ -609,7 +636,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                         <CustomerBreadcrumbs 
                             items={[
                                 { label: 'Shop', href: '/shop' },
-                                { label: liveMerchant?.id === 'official' ? 'InTrust Official Flagship' : (liveMerchant?.business_name || 'Store') }
+                                { label: liveMerchant?.id === 'official' ? 'InTrust Official' : (liveMerchant?.business_name || 'Store') }
                             ]}
                         />
                     </div>

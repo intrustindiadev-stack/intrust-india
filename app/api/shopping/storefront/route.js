@@ -9,6 +9,12 @@ export async function GET(request) {
         const limit = parseInt(searchParams.get('limit') || '24', 10);
         const search = searchParams.get('search') || '';
         const category = searchParams.get('category') || '';
+        const subCategory = searchParams.get('sub_category') || null;
+        const minPrice = searchParams.get('min_price') ? parseInt(searchParams.get('min_price'), 10) : null;
+        const maxPrice = searchParams.get('max_price') ? parseInt(searchParams.get('max_price'), 10) : null;
+        const brand = searchParams.get('brand') || '';
+        const size = searchParams.get('size') || '';
+        const color = searchParams.get('color') || '';
         const lastId = searchParams.get('lastId') || null;
 
         if (!merchantSlug) {
@@ -24,7 +30,13 @@ export async function GET(request) {
             p_limit: limit,
             p_search: search,
             p_category: category,
-            p_last_id: lastId || null
+            p_last_id: lastId || null,
+            p_price_min: minPrice,
+            p_price_max: maxPrice,
+            p_brand: brand,
+            p_size: size,
+            p_color: color,
+            p_sub_category: subCategory
         });
 
         if (error) {

@@ -547,7 +547,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
 
                                 const qty = cartQuantities[prod.id] || cartQuantities[prod.product_id] || (prod.inventory_id ? cartQuantities[prod.inventory_id] : 0) || 0;
                                 const isOfficial = (prod.merchants?.business_name || '').toLowerCase().includes('official');
-                                const merchantName = prod.merchants?.business_name || 'InTrust Official Flagship';
+                                const merchantName = prod.merchants?.business_name || 'InTrust Official';
 
                                 return (
                                     <div

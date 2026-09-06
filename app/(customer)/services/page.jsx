@@ -40,7 +40,7 @@ export default function ServicesPage() {
             badgeColor: 'bg-blue-500/10 text-blue-600 dark:text-primary border-blue-500/20',
             href: '/shop',
             accent: 'from-blue-600 to-indigo-600',
-            highlights: ['Verified local store inventory', 'InTrust Official Flagship Store', '100% Genuine brand warranty']
+            highlights: ['Verified local store inventory', 'InTrust Official', '100% Genuine brand warranty']
         },
         {
             id: 'gift-cards',

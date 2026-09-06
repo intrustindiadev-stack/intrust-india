@@ -111,7 +111,7 @@ export default function ProductCard({ product, viewMode = 'grid', onQuickAdd }: 
     >
       {/* Image Container */}
       <div className="relative w-full aspect-[3/4] bg-slate-100 dark:bg-slate-900 overflow-hidden rounded-none sm:rounded-md mb-3">
-        <Link href={`/shop/fashion/product/${product.id}`} className="block w-full h-full cursor-pointer">
+        <Link href={`/shop/product/${product.slug || product.id}`} className="block w-full h-full cursor-pointer">
           <Image
             src={mainImage}
             alt={product.title}
@@ -173,7 +173,7 @@ export default function ProductCard({ product, viewMode = 'grid', onQuickAdd }: 
 
       {/* Details Container */}
       <div className="flex flex-col flex-1 px-1">
-        <Link href={`/shop/fashion/product/${product.id}`} className="group-hover:opacity-80 transition-opacity">
+        <Link href={`/shop/product/${product.slug || product.id}`} className="group-hover:opacity-80 transition-opacity">
           <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-tight mb-1 line-clamp-1">
             {product.title}
           </h3>

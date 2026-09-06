@@ -2,12 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Star, ShieldCheck, Plus, Check, ArrowRight, Zap, Store } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function TrendingProductsGrid() {
+    const router = useRouter();
+    const { user, profile } = useAuth();
+    const activeCustomer = profile || user;
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [addedId, setAddedId] = useState(null);
@@ -45,60 +50,15 @@ export default function TrendingProductsGrid() {
                         images: p.product_images || [],
                         category: p.category || 'General',
                         rating: 4.8,
-                        merchants: { business_name: 'InTrust Official Flagship' }
+                        merchants: { business_name: 'InTrust Official' }
                     }));
                     setProducts(mapped);
                 } else {
-                    // Curated real fallback catalog if db is initially fresh
-                    setProducts([
-                        {
-                            id: 'prod-1',
-                            title: 'boAt Airdopes 141 ANC Earbuds',
-                            slug: 'boat-airdopes-141-anc',
-                            category: 'Electronics',
-                            selling_price: 999,
-                            mrp: 4490,
-                            rating: 4.8,
-                            images: ['https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'Sharma Digital Store', slug: 'sharma-digital' }
-                        },
-                        {
-                            id: 'prod-2',
-                            title: 'Fire-Boltt Ninja Pro Max Smartwatch',
-                            slug: 'fire-boltt-ninja-pro-max',
-                            category: 'Electronics',
-                            selling_price: 1299,
-                            mrp: 5999,
-                            rating: 4.6,
-                            images: ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'InTrust Direct Tech', slug: 'intrust-direct' }
-                        },
-                        {
-                            id: 'prod-3',
-                            title: 'Samsung Galaxy Buds Live ANC',
-                            slug: 'samsung-galaxy-buds-live',
-                            category: 'Audio',
-                            selling_price: 4999,
-                            mrp: 15990,
-                            rating: 4.9,
-                            images: ['https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'Bhopal Electronics Hub', slug: 'bhopal-electronics' }
-                        },
-                        {
-                            id: 'prod-4',
-                            title: 'Havells Instant Dry Iron 1000W',
-                            slug: 'havells-instant-dry-iron',
-                            category: 'Home Appliances',
-                            selling_price: 1099,
-                            mrp: 1899,
-                            rating: 4.7,
-                            images: ['https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'Gupta Electric & Retail', slug: 'gupta-electric' }
-                        }
-                    ]);
+                    setProducts([]);
                 }
             } catch (err) {
                 console.error('Failed to fetch trending products:', err);
+                setProducts([]);
             } finally {
                 setLoading(false);
             }
@@ -107,42 +67,49 @@ export default function TrendingProductsGrid() {
         fetchTrending();
     }, []);
 
-    const handleAddToCart = (e, product) => {
+    const handleAddToCart = async (e, product) => {
         e.preventDefault();
         e.stopPropagation();
 
-        try {
-            const rawCart = localStorage.getItem('intrust_cart');
-            const cart = rawCart ? JSON.parse(rawCart) : [];
-            const existingIdx = cart.findIndex((i) => i.id === product.id);
+        if (!activeCustomer?.id) {
+            toast.error('Please sign in to add items to your cart');
+            router.push('/login?next=/dashboard');
+            return;
+        }
 
-            if (existingIdx >= 0) {
-                cart[existingIdx].quantity = (cart[existingIdx].quantity || 1) + 1;
-            } else {
-                cart.push({
-                    id: product.id,
-                    title: product.title,
-                    price: product.selling_price,
-                    mrp: product.mrp,
-                    image: product.images?.[0] || '',
-                    merchantName: product.merchants?.business_name || 'InTrust Merchant',
-                    quantity: 1
-                });
+        try {
+            const { data, error } = await supabase.rpc('add_to_shopping_cart', {
+                p_customer_id: activeCustomer.id,
+                p_inventory_id: null,
+                p_product_id: product.id,
+                p_variant_id: null,
+                p_quantity: 1,
+                p_is_platform: true
+            });
+
+            if (error) throw error;
+
+            if (data?.message === 'MIXED_SELLER_ERROR') {
+                toast.error('Your cart has items from another seller. Please check out or clear your cart first.');
+                return;
             }
 
-            localStorage.setItem('intrust_cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('cartUpdated'));
-
             setAddedId(product.id);
-            toast.success(`Added ${product.title} to your cart!`);
+            toast.success(`Added ${product.title} to your cart! 🛒`);
 
             setTimeout(() => {
                 setAddedId(null);
             }, 2000);
         } catch (err) {
             console.error('Add to cart error:', err);
+            toast.error(err.message || 'Failed to add item to cart');
         }
     };
+
+    if (!loading && products.length === 0) {
+        return null;
+    }
 
     if (loading) {
         return (

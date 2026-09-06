@@ -16,43 +16,44 @@ export default function ActiveOrdersSnapshot({ userId }) {
         const fetchActiveOrders = async () => {
             try {
                 const { data, error } = await supabase
-                    .from('orders')
+                    .from('shopping_order_groups')
                     .select(`
                         id,
-                        order_number,
-                        amount,
-                        payment_status,
-                        fulfillment_status,
+                        order_group_id,
+                        total_amount_paise,
+                        status,
+                        delivery_status,
+                        is_platform_order,
                         created_at,
-                        coupons (
-                            id, title, brand
+                        shopping_order_items (
+                            id,
+                            quantity,
+                            selling_price_paise,
+                            shopping_products (
+                                title,
+                                product_images
+                            )
+                        ),
+                        merchants (
+                            business_name,
+                            business_phone
                         )
                     `)
-                    .eq('user_id', userId)
+                    .eq('customer_id', userId)
+                    .in('status', ['completed', 'pending'])
+                    .neq('delivery_status', 'delivered')
+                    .neq('delivery_status', 'cancelled')
                     .order('created_at', { ascending: false })
                     .limit(2);
 
                 if (!error && data && data.length > 0) {
                     setOrders(data);
                 } else {
-                    // Fallback sample in-transit shipment for demonstration
-                    setOrders([
-                        {
-                            id: 'ord-89320',
-                            order_number: 'IT-12345678',
-                            amount: 999,
-                            fulfillment_status: 'dispatched',
-                            created_at: new Date().toISOString(),
-                            item_title: 'boAt Airdopes 141 ANC Earbuds',
-                            merchant_name: 'Sharma Digital Store',
-                            merchant_phone: '+91 755 492 8840',
-                            estimated_delivery: 'Today by 6:00 PM',
-                            stage: 2 // 1: Placed, 2: Dispatched, 3: Out for delivery, 4: Delivered
-                        }
-                    ]);
+                    setOrders([]);
                 }
             } catch (err) {
                 console.error('Failed to fetch orders snapshot:', err);
+                setOrders([]);
             } finally {
                 setLoading(false);
             }
@@ -64,9 +65,10 @@ export default function ActiveOrdersSnapshot({ userId }) {
     if (loading || orders.length === 0) return null;
 
     const order = orders[0];
-    const itemTitle = order.item_title || order.coupons?.title || `InTrust Order #${order.order_number || order.id?.slice(0, 8)}`;
-    const merchantName = order.merchant_name || 'Sharma Digital Store (Bhopal)';
-    const merchantPhone = order.merchant_phone || '+91 755 492 8840';
+    const firstItem = order.shopping_order_items?.[0];
+    const itemTitle = firstItem?.shopping_products?.title || `InTrust Order #${order.order_group_id || order.id?.slice(0, 8)}`;
+    const merchantName = order.merchants?.business_name || (order.is_platform_order ? 'InTrust Official' : 'Local Merchant');
+    const merchantPhone = order.merchants?.business_phone || null;
 
     return (
         <div className="w-full bg-surface-container-lowest rounded-3xl p-5 sm:p-6 border border-outline-variant/30 shadow-md">
@@ -139,16 +141,18 @@ export default function ActiveOrdersSnapshot({ userId }) {
                     </p>
                 </div>
 
-                {/* Direct Contact & Help (No OTP - User feedback compliant) */}
+                {/* Direct Contact & Help */}
                 <div className="flex items-center gap-2 shrink-0">
-                    <a
-                        href={`tel:${merchantPhone}`}
-                        className="px-3 py-2 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high border border-outline-variant/20 text-on-surface text-xs font-bold flex items-center gap-1.5 transition-colors"
-                        title="Call Store Merchant"
-                    >
-                        <Phone size={13} className="text-emerald-600" />
-                        <span>Call Store</span>
-                    </a>
+                    {merchantPhone && (
+                        <a
+                            href={`tel:${merchantPhone}`}
+                            className="px-3 py-2 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high border border-outline-variant/20 text-on-surface text-xs font-bold flex items-center gap-1.5 transition-colors"
+                            title="Call Store Merchant"
+                        >
+                            <Phone size={13} className="text-emerald-600" />
+                            <span>Call Store</span>
+                        </a>
+                    )}
 
                     <a
                         href="tel:18008890199"

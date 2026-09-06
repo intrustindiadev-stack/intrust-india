@@ -1,4 +1,5 @@
 import { createStaticSupabaseClient } from '@/lib/supabaseServer';
+import { notFound } from 'next/navigation';
 import { 
     ShoppingBag, 
     ArrowLeft, 
@@ -50,7 +51,8 @@ export default async function CategoryPage({ params }) {
                 mrp_paise,
                 admin_stock,
                 product_images,
-                category
+                category,
+                sub_category
             `)
             .eq('is_active', true)
             .limit(60),
@@ -76,7 +78,8 @@ export default async function CategoryPage({ params }) {
                     suggested_retail_price_paise,
                     mrp_paise,
                     product_images,
-                    category
+                    category,
+                    sub_category
                 )
             `)
             .eq('is_active', true)
@@ -99,11 +102,6 @@ export default async function CategoryPage({ params }) {
                categoryName.toLowerCase().includes(p.category.toLowerCase());
     });
 
-    // If none specifically matched category, take top active items
-    if (matchedPlatformProducts.length === 0) {
-        matchedPlatformProducts = rawProducts.slice(0, 12);
-    }
-
     // Map platform products (Fulfilled by InTrust Official)
     const platformItems = matchedPlatformProducts.map(p => {
         const sPrice = Math.round(((p.platform_price_paise || p.suggested_retail_price_paise || 0) / 100));
@@ -121,10 +119,11 @@ export default async function CategoryPage({ params }) {
             stock_quantity: p.admin_stock,
             images: p.product_images || [],
             category: p.category || formattedCategoryTitle,
+            sub_category: p.sub_category || null,
             rating: 4.9,
             is_platform: true,
             merchants: { 
-                business_name: 'InTrust Official Flagship',
+                business_name: 'InTrust Official',
                 slug: 'official',
                 is_open: true
             }
@@ -157,6 +156,7 @@ export default async function CategoryPage({ params }) {
                 stock_quantity: item.stock_quantity,
                 images: sp.product_images || [],
                 category: sp.category || formattedCategoryTitle,
+                sub_category: sp.sub_category || null,
                 rating: 4.8,
                 is_platform: false,
                 merchants: {
@@ -167,42 +167,18 @@ export default async function CategoryPage({ params }) {
             };
         });
 
+    // Check category validity: if not in taxonomy and has zero matching products, 404
+    const matchedCategory = dbCategories.find(c => {
+        const s = getCategorySlug(c);
+        return s === slug || s === slug.toLowerCase();
+    });
+
+    if (!matchedCategory && platformItems.length === 0 && merchantItems.length === 0) {
+        return notFound();
+    }
+
     // Combine both: InTrust official first, then local merchant offerings
     let products = [...platformItems, ...merchantItems];
-
-    // Fallback items if catalog is empty
-    if (products.length === 0) {
-        products = [
-            {
-                id: 'cat-prod-1',
-                product_id: 'cat-prod-1',
-                title: `${formattedCategoryTitle} Premium Pack`,
-                slug: `${slug}-premium-pack`,
-                selling_price: 1499,
-                sale_price: 1499,
-                price: 1499,
-                mrp: 2999,
-                rating: 4.8,
-                stock_quantity: 10,
-                images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=80'],
-                merchants: { business_name: 'InTrust Official Flagship', slug: 'official' }
-            },
-            {
-                id: 'cat-prod-2',
-                product_id: 'cat-prod-2',
-                title: `${formattedCategoryTitle} Pro Series`,
-                slug: `${slug}-pro-series`,
-                selling_price: 2499,
-                sale_price: 2499,
-                price: 2499,
-                mrp: 4999,
-                rating: 4.7,
-                stock_quantity: 5,
-                images: ['https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=500&auto=format&fit=crop&q=80'],
-                merchants: { business_name: 'Sharma Digital Store', slug: 'sharma-digital' }
-            }
-        ];
-    }
 
     return (
         <div className="w-full space-y-8 font-body-md text-slate-900 dark:text-on-surface pb-16">

@@ -21,7 +21,7 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
         : (merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null));
 
     const businessName = isOfficial
-        ? 'InTrust Official Flagship Store'
+        ? 'InTrust Official'
         : (merchant?.business_name || 'Intrust Partner Store');
 
     const handleShare = async () => {

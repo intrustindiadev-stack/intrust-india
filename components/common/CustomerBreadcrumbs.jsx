@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -11,9 +12,16 @@ import { motion } from 'framer-motion';
  * 
  * @param {Array<{ label: string, href?: string }>} items - List of breadcrumb items
  * @param {string} className - Optional container styling
+ * @param {string} rootHref - Optional custom root destination (defaults to /shop on /shop/* routes, /dashboard otherwise)
+ * @param {string} rootLabel - Optional custom root label
  */
-export default function CustomerBreadcrumbs({ items = [], className = '' }) {
+export default function CustomerBreadcrumbs({ items = [], className = '', rootHref, rootLabel }) {
+    const pathname = usePathname();
     if (!items || items.length === 0) return null;
+
+    const defaultRootHref = pathname?.startsWith('/shop') ? '/shop' : '/dashboard';
+    const effectiveRootHref = rootHref || defaultRootHref;
+    const effectiveRootLabel = rootLabel || (effectiveRootHref === '/shop' ? 'Shop' : 'Dashboard');
 
     return (
         <motion.nav 
@@ -26,12 +34,12 @@ export default function CustomerBreadcrumbs({ items = [], className = '' }) {
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low/90 dark:bg-surface-container-low/70 border border-outline-variant/30 dark:border-white/10 shadow-xs backdrop-blur-sm max-w-full overflow-hidden">
                 {/* Home Anchor */}
                 <Link
-                    href="/dashboard"
-                    title="Dashboard"
+                    href={effectiveRootHref}
+                    title={effectiveRootLabel}
                     className="flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors p-0.5 rounded-md focus-visible:ring-2 focus-visible:ring-primary outline-none shrink-0"
                 >
                     <Home size={14} className="stroke-[2.2]" />
-                    <span className="sr-only">Home</span>
+                    <span className="sr-only">{effectiveRootLabel}</span>
                 </Link>
 
                 {items.map((item, index) => {

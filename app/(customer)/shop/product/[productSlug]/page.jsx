@@ -70,6 +70,7 @@ export default async function ProductDetailPage({ params }) {
     const [
         inventoryResult,
         platformSettingsResult,
+        variantsResult
     ] = await Promise.all([
         // 2. Fetch Inventory Info
         supabase
@@ -87,9 +88,33 @@ export default async function ProductDetailPage({ params }) {
             .select('value')
             .eq('key', 'platform_store')
             .maybeSingle(),
+
+        // 4. Fetch Fashion Variants
+        supabase
+            .from('fashion_variants')
+            .select(`
+                id,
+                sku,
+                size,
+                color,
+                fit,
+                fabric,
+                price_paise,
+                compare_at_price_paise,
+                inventory_quantity,
+                is_active,
+                fashion_variant_media (
+                    image_url,
+                    is_primary
+                )
+            `)
+            .eq('product_id', product.id)
+            .eq('is_active', true)
+            .order('id', { ascending: true }),
     ]);
 
     const inventory = inventoryResult.data || [];
+    const variants = variantsResult.data || [];
 
     let platformStatus = { is_open: true };
     if (platformSettingsResult.data?.value) {
@@ -188,6 +213,7 @@ export default async function ProductDetailPage({ params }) {
                 <ProductDetailClient
                     product={product}
                     inventory={inventory}
+                    variants={variants}
                     customer={customerProfile}
                     recommendedProducts={recommendedProducts}
                     initialPlatformStatus={platformStatus}

@@ -31,9 +31,11 @@ import {
     Sparkles,
     Receipt,
     History,
-    Crown
+    Crown,
+    LogOut
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 
@@ -79,35 +81,23 @@ const NAV_GROUPS = [
 export default function CustomerAppShell({ children }) {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, profile } = useAuth();
+    const { user, profile, signOut } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [walletBalance, setWalletBalance] = useState(0);
     const [cartCount, setCartCount] = useState(0);
-    const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // Synchronize theme on mount
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('intrust_theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-            setIsDarkMode(true);
-            document.documentElement.classList.add('dark');
-        } else {
-            setIsDarkMode(false);
-            document.documentElement.classList.remove('dark');
-        }
-    }, []);
+    const isDarkMode = theme === 'dark';
+    const isGuest = !user;
+    const isCartPage = pathname === '/shop/cart';
 
-    const toggleTheme = () => {
-        if (isDarkMode) {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('intrust_theme', 'light');
-            setIsDarkMode(false);
-        } else {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('intrust_theme', 'dark');
-            setIsDarkMode(true);
+    const handleSignOut = async () => {
+        try {
+            await signOut();
+            router.push('/login');
+        } catch (e) {
+            console.error('Sign out error:', e);
         }
     };
 
@@ -178,9 +168,13 @@ export default function CustomerAppShell({ children }) {
     }, [user]);
 
     // Close mobile drawer on route change
-    useEffect(() => {
-        setMobileMenuOpen(false);
-    }, [pathname]);
+    const [prevPathname, setPrevPathname] = useState(pathname);
+    if (prevPathname !== pathname) {
+        setPrevPathname(pathname);
+        if (mobileMenuOpen) {
+            setMobileMenuOpen(false);
+        }
+    }
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -199,33 +193,61 @@ export default function CustomerAppShell({ children }) {
                 <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar">
                     {/* Brand Header */}
                     <div className="h-20 px-6 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-outline-variant/20 shrink-0">
-                        <Link href="/dashboard" className="flex items-center gap-3 group">
+                        <Link href={isGuest ? "/shop" : "/dashboard"} className="flex items-center gap-3 group">
                             <div className="relative w-10 h-10 rounded-2xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
                                 <Image src="/icons/intrustLogo.png" alt="InTrust Logo" width={32} height={32} className="object-contain" priority />
                             </div>
                             <div className="flex flex-col">
                                 <span className="font-black text-xl tracking-tight text-slate-900 dark:text-on-surface">InTrust</span>
-                                <span className="text-[10px] font-bold text-slate-500 dark:text-brand-steel uppercase tracking-widest">Customer Portal</span>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-brand-steel uppercase tracking-widest">{isGuest ? 'Unified Commerce' : 'Customer Portal'}</span>
                             </div>
                         </Link>
                     </div>
 
-                    {/* Member Tier Card */}
+                    {/* Member Tier Card / Guest Welcome */}
                     <div className="px-5 py-3.5">
-                        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex items-center justify-between shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#D4AF37]">
-                                    <ShieldCheck size={18} />
+                        {isGuest ? (
+                            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex flex-col gap-2 shadow-xs">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-primary">
+                                        <User size={16} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-black text-slate-400 dark:text-brand-steel uppercase tracking-wider">Welcome Guest</span>
+                                        <span className="text-xs font-bold text-slate-700 dark:text-on-surface">Explore Local Stores</span>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-slate-400 dark:text-brand-steel uppercase tracking-wider">Tier Status</span>
-                                    <span className="text-xs font-bold text-amber-600 dark:text-[#D4AF37]">Gold Elite Member</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Link
+                                        href={`/login?next=${encodeURIComponent(pathname)}`}
+                                        className="flex-1 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold text-center transition-colors shadow-xs"
+                                    >
+                                        Sign In
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-[11px] font-bold text-center transition-colors border border-slate-200 dark:border-outline-variant/20"
+                                    >
+                                        Sign Up
+                                    </Link>
                                 </div>
                             </div>
-                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-[#D4AF37] border border-amber-500/30">
-                                VIP
-                            </span>
-                        </div>
+                        ) : (
+                            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex items-center justify-between shadow-xs">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#D4AF37]">
+                                        <ShieldCheck size={18} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-black text-slate-400 dark:text-brand-steel uppercase tracking-wider">Tier Status</span>
+                                        <span className="text-xs font-bold text-amber-600 dark:text-[#D4AF37]">Verified Member</span>
+                                    </div>
+                                </div>
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-[#D4AF37] border border-amber-500/30">
+                                    Active
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Structured Navigation Groups */}
@@ -237,12 +259,15 @@ export default function CustomerAppShell({ children }) {
                                 </div>
                                 {group.items.map((item) => {
                                     const Icon = item.icon;
-                                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                                    const destHref = isGuest && item.href !== '/shop' && item.href !== '/shop/cart'
+                                        ? `/login?next=${encodeURIComponent(item.href)}`
+                                        : item.href;
+                                    const isActive = pathname === item.href || (item.href !== '/dashboard' && item.href !== '/shop' && pathname.startsWith(item.href));
 
                                     return (
                                         <Link
                                             key={item.href}
-                                            href={item.href}
+                                            href={destHref}
                                             className={`flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                                                 isActive
                                                     ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/20'
@@ -298,6 +323,15 @@ export default function CustomerAppShell({ children }) {
                         >
                             Register Store
                         </Link>
+                        {!isGuest && (
+                            <button
+                                onClick={handleSignOut}
+                                className="w-full py-1.5 px-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/40 dark:border-red-900/30"
+                            >
+                                <LogOut size={13} />
+                                <span>Sign Out</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </aside>
@@ -345,21 +379,23 @@ export default function CustomerAppShell({ children }) {
                             <span>Bhopal, MP</span>
                         </div>
 
-                        {/* Wallet Balance Pill */}
-                        <Link
-                            href="/wallet"
-                            className="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high border border-slate-200 dark:border-outline-variant/20 transition-all group"
-                        >
-                            <div className="flex flex-col text-left">
-                                <span className="text-[9px] font-extrabold uppercase text-slate-500 dark:text-brand-steel tracking-wider">InTrust Wallet</span>
-                                <span className="text-xs font-black text-slate-900 dark:text-on-surface tabular-nums">
-                                    ₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {/* Wallet Balance Pill (Only for Authenticated Users) */}
+                        {!isGuest && (
+                            <Link
+                                href="/wallet"
+                                className="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high border border-slate-200 dark:border-outline-variant/20 transition-all group"
+                            >
+                                <div className="flex flex-col text-left">
+                                    <span className="text-[9px] font-extrabold uppercase text-slate-500 dark:text-brand-steel tracking-wider">InTrust Wallet</span>
+                                    <span className="text-xs font-black text-slate-900 dark:text-on-surface tabular-nums">
+                                        ₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <span className="p-1.5 rounded-lg bg-blue-600 dark:bg-primary text-white group-hover:scale-105 transition-transform">
+                                    <Plus size={13} />
                                 </span>
-                            </div>
-                            <span className="p-1.5 rounded-lg bg-blue-600 dark:bg-primary text-white group-hover:scale-105 transition-transform">
-                                <Plus size={13} />
-                            </span>
-                        </Link>
+                            </Link>
+                        )}
 
                         {/* Theme Toggle Button */}
                         <button
@@ -370,32 +406,60 @@ export default function CustomerAppShell({ children }) {
                             {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-700" />}
                         </button>
 
-                        {/* Notification Bell */}
-                        <button 
-                            className="relative w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-slate-950 dark:hover:text-on-surface flex items-center justify-center transition-all border border-slate-200/50 dark:border-outline-variant/10"
-                            title="Notifications"
-                        >
-                            <Bell size={18} />
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500" />
-                        </button>
+                        {/* Notification Bell (Only for Authenticated Users) */}
+                        {!isGuest && (
+                            <button 
+                                className="relative w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-slate-950 dark:hover:text-on-surface flex items-center justify-center transition-all border border-slate-200/50 dark:border-outline-variant/10"
+                                title="Notifications"
+                            >
+                                <Bell size={18} />
+                                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500" />
+                            </button>
+                        )}
 
-                        {/* User Profile Mini Dropdown */}
-                        <Link
-                            href="/profile"
-                            className="flex items-center gap-2.5 pl-1.5 group cursor-pointer"
-                        >
-                            <div className="w-9 h-9 rounded-full ring-2 ring-blue-500/20 group-hover:ring-blue-500 overflow-hidden flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface font-black text-xs transition-all">
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span>{userName[0]?.toUpperCase() || 'U'}</span>
-                                )}
+                        {/* User Profile / Guest Sign In Action */}
+                        {isGuest ? (
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href={`/login?next=${encodeURIComponent(pathname)}`}
+                                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-high transition-colors"
+                                >
+                                    Sign In
+                                </Link>
+                                <Link
+                                    href="/register"
+                                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
+                                >
+                                    Sign Up
+                                </Link>
                             </div>
-                            <div className="flex flex-col text-left">
-                                <span className="text-xs font-bold text-slate-800 dark:text-on-surface group-hover:text-blue-600 dark:group-hover:text-primary transition-colors leading-tight">{userName}</span>
-                                <span className="text-[10px] font-semibold text-slate-500 dark:text-brand-steel">Verified Account</span>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href="/profile"
+                                    className="flex items-center gap-2.5 pl-1.5 group cursor-pointer"
+                                >
+                                    <div className="w-9 h-9 rounded-full ring-2 ring-blue-500/20 group-hover:ring-blue-500 overflow-hidden flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface font-black text-xs transition-all">
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{userName[0]?.toUpperCase() || 'U'}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-xs font-bold text-slate-800 dark:text-on-surface group-hover:text-blue-600 dark:group-hover:text-primary transition-colors leading-tight">{userName}</span>
+                                        <span className="text-[10px] font-semibold text-slate-500 dark:text-brand-steel">Verified Account</span>
+                                    </div>
+                                </Link>
+                                <button
+                                    onClick={handleSignOut}
+                                    title="Sign Out"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors ml-1"
+                                >
+                                    <LogOut size={16} />
+                                </button>
                             </div>
-                        </Link>
+                        )}
                     </div>
                 </header>
 
@@ -438,23 +502,32 @@ export default function CustomerAppShell({ children }) {
                             {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
                         </button>
 
-                        {/* Mini Wallet */}
-                        <Link
-                            href="/wallet"
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 text-xs font-bold text-slate-800 dark:text-on-surface"
-                        >
-                            <Wallet size={13} className="text-blue-600 dark:text-primary" />
-                            <span>₹{Math.floor(walletBalance).toLocaleString('en-IN')}</span>
-                        </Link>
-
-                        {/* Profile Avatar */}
-                        <Link href="/profile" className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-blue-500/20 flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-xs font-bold text-slate-800 dark:text-on-surface">
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
-                            ) : (
-                                <span>{userName[0]?.toUpperCase() || 'U'}</span>
-                            )}
-                        </Link>
+                        {/* Mobile Auth / Profile */}
+                        {!isGuest ? (
+                            <>
+                                <Link
+                                    href="/wallet"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 text-xs font-bold text-slate-800 dark:text-on-surface"
+                                >
+                                    <Wallet size={13} className="text-blue-600 dark:text-primary" />
+                                    <span>₹{Math.floor(walletBalance).toLocaleString('en-IN')}</span>
+                                </Link>
+                                <Link href="/profile" className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-blue-500/20 flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-xs font-bold text-slate-800 dark:text-on-surface">
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span>{userName[0]?.toUpperCase() || 'U'}</span>
+                                    )}
+                                </Link>
+                            </>
+                        ) : (
+                            <Link
+                                href={`/login?next=${encodeURIComponent(pathname)}`}
+                                className="px-2.5 py-1 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-xs"
+                            >
+                                Sign In
+                            </Link>
+                        )}
                     </div>
                 </header>
 
@@ -495,17 +568,45 @@ export default function CustomerAppShell({ children }) {
                                         </button>
                                     </div>
 
-                                    {/* Member info */}
-                                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-primary font-bold flex items-center justify-center overflow-hidden">
-                                                {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : userName[0]?.toUpperCase()}
+                                    {/* User Mini Card */}
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 mb-6">
+                                        {isGuest ? (
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-primary flex items-center justify-center">
+                                                        <User size={16} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm text-slate-900 dark:text-on-surface">Welcome Guest</p>
+                                                        <p className="text-[11px] text-slate-500 dark:text-brand-steel font-medium">Sign in to unlock all features</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Link
+                                                        href={`/login?next=${encodeURIComponent(pathname)}`}
+                                                        className="flex-1 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold text-center"
+                                                    >
+                                                        Sign In
+                                                    </Link>
+                                                    <Link
+                                                        href="/register"
+                                                        className="flex-1 py-1.5 rounded-xl bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-xs font-bold text-center"
+                                                    >
+                                                        Sign Up
+                                                    </Link>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-sm text-slate-900 dark:text-on-surface">{userName}</p>
-                                                <p className="text-xs text-amber-600 dark:text-[#D4AF37] font-semibold">Gold Elite Member</p>
+                                        ) : (
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-primary font-bold flex items-center justify-center overflow-hidden">
+                                                    {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : userName[0]?.toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-slate-900 dark:text-on-surface">{userName}</p>
+                                                    <p className="text-xs text-amber-600 dark:text-[#D4AF37] font-semibold">Verified Member</p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     {/* Grouped Nav Items */}
@@ -556,7 +657,7 @@ export default function CustomerAppShell({ children }) {
                                     </nav>
                                 </div>
 
-                                <div className="pt-4 border-t border-slate-200 dark:border-outline-variant/20 mt-4">
+                                <div className="pt-4 border-t border-slate-200 dark:border-outline-variant/20 mt-4 space-y-2">
                                     <Link
                                         href="/merchant-apply"
                                         className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-on-surface dark:text-surface text-xs font-bold flex items-center justify-center gap-2 shadow-xs"
@@ -564,6 +665,15 @@ export default function CustomerAppShell({ children }) {
                                         <Store size={15} />
                                         <span>Become an InTrust Merchant</span>
                                     </Link>
+                                    {!isGuest && (
+                                        <button
+                                            onClick={handleSignOut}
+                                            className="w-full py-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/40 dark:border-red-900/30"
+                                        >
+                                            <LogOut size={14} />
+                                            <span>Sign Out</span>
+                                        </button>
+                                    )}
                                 </div>
                             </motion.div>
                         </>
@@ -576,41 +686,43 @@ export default function CustomerAppShell({ children }) {
                 </main>
 
                 {/* ── MOBILE STICKY BOTTOM NAVIGATION BAR ── */}
-                <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[72px] bg-white/95 dark:bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200 dark:border-outline-variant/20 z-40 px-3 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                    {[
-                        { label: 'Home', href: '/dashboard', icon: LayoutGrid },
-                        { label: 'Shop', href: '/shop', icon: ShoppingBag },
-                        { label: 'Orders', href: '/orders', icon: Package },
-                        { label: 'Wallet', href: '/wallet', icon: Wallet },
-                        { label: 'Profile', href: '/profile', icon: User },
-                    ].map((item) => {
-                        const Icon = item.icon;
-                        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                {!isCartPage && (
+                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[68px] bg-white/95 dark:bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200 dark:border-outline-variant/20 z-40 px-3 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                        {[
+                            { label: isGuest ? 'Explore' : 'Home', href: isGuest ? '/shop' : '/dashboard', icon: LayoutGrid },
+                            { label: 'Shop', href: '/shop', icon: ShoppingBag },
+                            { label: 'Orders', href: isGuest ? '/login?next=/orders' : '/orders', icon: Package },
+                            { label: 'Wallet', href: isGuest ? '/login?next=/wallet' : '/wallet', icon: Wallet },
+                            { label: isGuest ? 'Account' : 'Profile', href: isGuest ? '/login?next=/profile' : '/profile', icon: User },
+                        ].map((item) => {
+                            const Icon = item.icon;
+                            const isActive = pathname === item.href || (item.href !== '/dashboard' && item.href !== '/shop' && pathname.startsWith(item.href));
 
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`flex flex-col items-center justify-center w-14 h-full relative transition-all ${
-                                    isActive ? 'text-blue-600 dark:text-primary' : 'text-slate-400 dark:text-brand-steel hover:text-slate-700 dark:hover:text-on-surface'
-                                }`}
-                            >
-                                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50 dark:bg-primary/10 scale-110' : ''}`}>
-                                    <Icon size={19} strokeWidth={isActive ? 2.5 : 2} />
-                                </div>
-                                <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? 'font-black' : 'font-semibold'}`}>
-                                    {item.label}
-                                </span>
-                                {isActive && (
-                                    <motion.div
-                                        layoutId="bottomNavDot"
-                                        className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-primary"
-                                    />
-                                )}
-                            </Link>
-                        );
-                    })}
-                </nav>
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`flex flex-col items-center justify-center w-14 h-full relative transition-all ${
+                                        isActive ? 'text-blue-600 dark:text-primary' : 'text-slate-400 dark:text-brand-steel hover:text-slate-700 dark:hover:text-on-surface'
+                                    }`}
+                                >
+                                    <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50 dark:bg-primary/10 scale-110' : ''}`}>
+                                        <Icon size={19} strokeWidth={isActive ? 2.5 : 2} />
+                                    </div>
+                                    <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? 'font-black' : 'font-semibold'}`}>
+                                        {item.label}
+                                    </span>
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="bottomNavDot"
+                                            className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-primary"
+                                        />
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                )}
             </div>
         </div>
     );

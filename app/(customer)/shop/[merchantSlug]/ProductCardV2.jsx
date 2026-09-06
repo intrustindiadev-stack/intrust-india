@@ -43,6 +43,8 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, onSelect, primaryColor
     const savings = mrp > sellingPrice ? mrp - sellingPrice : 0;
     const discountPct = mrp > 0 ? Math.round((savings / mrp) * 100) : 0;
 
+    const productSlugOrId = product?.slug || product?.id;
+
     return (
         <div
             className={`group relative flex flex-col h-full rounded-3xl p-3 sm:p-4 transition-all duration-300 ${isDark
@@ -52,7 +54,7 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, onSelect, primaryColor
         >
             {/* Product Image */}
             <div
-                onClick={() => onSelect ? onSelect() : (product?.slug && router.push(`/shop/product/${product.slug}`))}
+                onClick={() => onSelect ? onSelect() : (productSlugOrId && router.push(`/shop/product/${productSlugOrId}`))}
                 className={`relative w-full aspect-square shrink-0 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer mb-3 p-2 ${isDark ? 'bg-gray-800' : 'bg-slate-50 border border-slate-100'}`}
             >
                 {product.product_images?.[0] ? (
@@ -72,8 +74,8 @@ function ProductCardV2({ item, cartItem, onAdd, onRemove, onSelect, primaryColor
 
             {/* Product Details */}
             <div
-                onClick={() => onSelect ? onSelect() : (product?.slug && router.push(`/shop/product/${product.slug}`))}
-                className={`flex flex-col flex-1 w-full justify-between ${product?.slug ? 'cursor-pointer' : 'cursor-default'} ${oos ? 'opacity-50' : ''}`}
+                onClick={() => onSelect ? onSelect() : (productSlugOrId && router.push(`/shop/product/${productSlugOrId}`))}
+                className={`flex flex-col flex-1 w-full justify-between ${productSlugOrId ? 'cursor-pointer' : 'cursor-default'} ${oos ? 'opacity-50' : ''}`}
             >
                 <div>
                     <h3 className={`text-[13px] sm:text-[14px] font-bold leading-tight line-clamp-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>

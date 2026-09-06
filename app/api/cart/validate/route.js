@@ -55,12 +55,15 @@ export async function POST(request) {
 
         const platformProductIds = [];
         const inventoryIds = [];
+        const variantIds = [];
 
         for (const item of items) {
             if (!item.product_id || item.quantity == null) {
                 return NextResponse.json({ error: 'Invalid item: missing product_id or quantity' }, { status: 400 });
             }
-            if (item.is_platform_item) {
+            if (item.variant_id) {
+                variantIds.push(item.variant_id);
+            } else if (item.is_platform_item) {
                 platformProductIds.push(item.product_id);
             } else if (item.inventory_id) {
                 inventoryIds.push(item.inventory_id);
@@ -70,22 +73,33 @@ export async function POST(request) {
         // 3. Batched Queries
         const adminSupabase = createAdminClient();
 
-        const [platformStockRes, merchantStockRes] = await Promise.all([
+        const [platformStockRes, merchantStockRes, variantStockRes] = await Promise.all([
             platformProductIds.length > 0
                 ? adminSupabase.from('shopping_products').select('id, admin_stock').in('id', platformProductIds)
                 : Promise.resolve({ data: [] }),
             inventoryIds.length > 0
                 ? adminSupabase.from('merchant_inventory').select('id, stock_quantity, is_active').in('id', inventoryIds)
+                : Promise.resolve({ data: [] }),
+            variantIds.length > 0
+                ? adminSupabase.from('fashion_variants').select('id, inventory_quantity, is_active').in('id', variantIds)
                 : Promise.resolve({ data: [] })
         ]);
 
         const platformMap = new Map((platformStockRes.data || []).map(p => [p.id, p.admin_stock || 0]));
         const inventoryMap = new Map((merchantStockRes.data || []).map(m => [m.id, { stock_quantity: m.stock_quantity || 0, is_active: m.is_active }]));
+        const variantMap = new Map((variantStockRes.data || []).map(v => [v.id, { inventory_quantity: v.inventory_quantity || 0, is_active: v.is_active }]));
 
         // 4. Response assembly
         const results = items.map(item => {
             let available = 0;
-            if (item.is_platform_item) {
+            if (item.variant_id) {
+                if (variantMap.has(item.variant_id)) {
+                    const vRow = variantMap.get(item.variant_id);
+                    available = vRow.is_active === false ? 0 : (vRow.inventory_quantity ?? 0);
+                } else {
+                    available = 0; // Variant missing or deactivated
+                }
+            } else if (item.is_platform_item) {
                 available = platformMap.get(item.product_id) ?? 0;
             } else {
                 if (item.inventory_id && inventoryMap.has(item.inventory_id)) {
@@ -106,6 +120,7 @@ export async function POST(request) {
             return {
                 product_id: item.product_id,
                 inventory_id: item.inventory_id,
+                variant_id: item.variant_id || null,
                 requested: item.quantity,
                 available,
                 status

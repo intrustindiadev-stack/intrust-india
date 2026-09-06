@@ -37,6 +37,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import toast from 'react-hot-toast';
+import { deliveryAddressSchema, sanitizeAndNormalizePhone } from '@/lib/customer/addressValidation';
 
 const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, minOrderValuePaise = 49900 }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -59,8 +61,9 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   const [creditRequestSent, setCreditRequestSent] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
+  const [modalError, setModalError] = useState(null);
   const [addressForm, setAddressForm] = useState({
-    address: "", city: "", state: "", pincode: "", phone: ""
+    fullName: "", address: "", city: "", state: "", pincode: "", phone: ""
   });
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -76,7 +79,20 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           id,
           quantity,
           inventory_id,
+          variant_id,
           is_platform_item,
+          fashion_variants (
+            id,
+            sku,
+            color,
+            size,
+            fit,
+            fabric,
+            price_paise,
+            compare_at_price_paise,
+            inventory_quantity,
+            fashion_variant_media (image_url)
+          ),
           merchant_inventory (
             retail_price_paise,
             custom_title,
@@ -113,6 +129,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
               items: cart.map(i => ({
                 product_id: i.shopping_products?.id,
                 inventory_id: i.inventory_id ?? null,
+                variant_id: i.variant_id ?? null,
                 is_platform_item: i.is_platform_item,
                 quantity: i.quantity
               }))
@@ -206,9 +223,10 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       if (userProfile) {
         const p = (userProfile.address || "").split(',').map(s => s.trim());
         setAddressForm({
+          fullName: userProfile.full_name || "",
           address: p[0] || "",
-          city: p[1] || "",
-          state: p[2] || "",
+          city: userProfile.city || p[1] || "",
+          state: userProfile.state || p[2] || "",
           pincode: p[3] || "",
           phone: userProfile.phone || ""
         });
@@ -337,30 +355,54 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     setSavingAddress(true);
+    setModalError(null);
+    setError(null);
     try {
-      const combinedAddress = [addressForm.address, addressForm.city, addressForm.state, addressForm.pincode]
-        .filter(Boolean)
-        .join(', ');
+      // 1. Client-side Zod validation
+      const validation = deliveryAddressSchema.safeParse(addressForm);
+      if (!validation.success) {
+        const firstIssue = validation.error.issues[0];
+        const msg = firstIssue ? firstIssue.message : 'Please check the delivery details entered.';
+        setModalError(msg);
+        toast.error(msg);
+        setSavingAddress(false);
+        return;
+      }
 
-      let finalPhone = (addressForm.phone || '').replace(/[^\d+]/g, '');
-      if (/^\d{10}$/.test(finalPhone)) finalPhone = '+91' + finalPhone;
+      // 2. Call dedicated customer address API route
+      const res = await fetch('/api/customer/address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addressForm)
+      });
 
-      const { error } = await supabase.from('user_profiles').update({
-        address: combinedAddress,
-        phone: finalPhone || null
-      }).eq('id', userId);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save delivery address');
+      }
 
-      if (error) throw error;
+      // 3. Update local state with confirmed profile
+      const updated = data.profile || {};
+      const combinedAddress = updated.address || [addressForm.address, addressForm.city, addressForm.state, addressForm.pincode].filter(Boolean).join(', ');
+      const savedPhone = updated.phone || sanitizeAndNormalizePhone(addressForm.phone);
 
       setProfile(prev => ({
         ...prev,
+        full_name: addressForm.fullName.trim(),
         address: combinedAddress,
-        phone: addressForm.phone
+        city: addressForm.city.trim(),
+        state: addressForm.state.trim(),
+        phone: savedPhone
       }));
+
+      toast.success('Delivery address saved successfully');
       setIsAddressModalOpen(false);
     } catch (err) {
       console.error('Save address error:', err);
-      setError('Failed to save delivery address');
+      const errMsg = err.message || 'Failed to save delivery address';
+      setModalError(errMsg);
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setSavingAddress(false);
     }
@@ -495,11 +537,15 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
   // Bill
   const billDetails = cartItems.reduce((acc, item) => {
-    const sellingPrice = item.is_platform_item
-      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
-      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+    const sellingPrice = item.variant_id && item.fashion_variants?.price_paise
+      ? item.fashion_variants.price_paise
+      : item.is_platform_item
+        ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
+        : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
 
-    const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
+    const mrp = item.variant_id && item.fashion_variants?.compare_at_price_paise
+      ? item.fashion_variants.compare_at_price_paise
+      : (item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice);
     const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
     const gstRate = item.shopping_products?.gst_percentage || 0;
     const gstAmount = Math.round(sellingPrice * item.quantity * gstRate / 100);
@@ -577,7 +623,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             transition={{ delay: 0.8 }}
             className={`text-sm font-medium mb-8 ${isDark ? 'text-white/40' : 'text-slate-500'}`}
           >
-            Your order is pending merchant approval. You'll be notified once approved. Redirecting to Store Credits...
+            Your order is pending merchant approval. You&apos;ll be notified once approved. Redirecting to Store Credits...
           </motion.p>
 
           <motion.div className={`w-full h-1 rounded-full overflow-hidden ${isDark ? 'bg-white/[0.06]' : 'bg-slate-100'}`}>
@@ -794,7 +840,10 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsAddressModalOpen(true)}
+                  onClick={() => {
+                    setModalError(null);
+                    setIsAddressModalOpen(true);
+                  }}
                   className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-all active:scale-95 ${
                     !hasValidAddress
                       ? 'bg-amber-500 text-white shadow-sm hover:bg-amber-600'
@@ -831,10 +880,14 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
               <AnimatePresence mode="popLayout">
                 {cartItems.map((item, idx) => {
-                  const sellingPrice = item.is_platform_item
-                    ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
-                    : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
-                  const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
+                  const sellingPrice = item.variant_id && item.fashion_variants?.price_paise
+                    ? item.fashion_variants.price_paise
+                    : item.is_platform_item
+                      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
+                      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+                  const mrp = item.variant_id && item.fashion_variants?.compare_at_price_paise
+                    ? item.fashion_variants.compare_at_price_paise
+                    : (item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice);
                   const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
                   const savings = finalMrp - sellingPrice;
                   const merchantName = item.is_platform_item ? "InTrust Official" : (item.merchant_inventory?.merchants?.business_name || "Merchant");
@@ -843,6 +896,14 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
                   const merchantId = item.merchant_inventory?.merchants?.id;
                   const isItemStoreOpen = item.is_platform_item ? isPlatformOpen : (merchantStatuses.get(merchantId) ?? true);
+
+                  const itemUrl = item.variant_id
+                    ? `/shop/product/${item.shopping_products?.id}`
+                    : `/shop/product/${item.shopping_products?.slug || item.shopping_products?.id}`;
+
+                  const itemImage = item.fashion_variants?.fashion_variant_media?.[0]?.image_url
+                    || item.shopping_products?.product_images?.[0]
+                    || null;
 
                   return (
                     <motion.div
@@ -855,13 +916,13 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                       className={`flex gap-3 pb-4 mb-4 border-b last:border-b-0 last:pb-0 last:mb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}
                     >
                       <Link
-                        href={`/shop/product/${item.shopping_products?.slug}`}
+                        href={itemUrl}
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
-                        {item.shopping_products?.product_images?.[0] ? (
+                        {itemImage ? (
                           <div className="relative w-full h-full">
                             <Image
-                              src={item.shopping_products.product_images[0]}
+                              src={itemImage}
                               alt="product"
                               fill
                               sizes="(max-width: 640px) 20vw, 80px"
@@ -886,6 +947,23 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                             <h3 className={`text-xs sm:text-sm font-bold leading-tight line-clamp-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
                               {item.merchant_inventory?.custom_title || item.shopping_products?.title}
                             </h3>
+                            {item.variant_id && item.fashion_variants && (
+                              <div className="mt-0.5 flex items-center gap-1.5">
+                                {item.fashion_variants.color && (
+                                  <span className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
+                                    {item.fashion_variants.color}
+                                  </span>
+                                )}
+                                {item.fashion_variants.color && item.fashion_variants.size && (
+                                  <span className={`text-[10px] ${isDark ? 'text-white/30' : 'text-slate-300'}`}>•</span>
+                                )}
+                                {item.fashion_variants.size && (
+                                  <span className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
+                                    Size {item.fashion_variants.size}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             {!isItemStoreOpen && (
                               <div className="mt-1 flex gap-1.5 flex-wrap">
                                 <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-red-500 text-white flex items-center gap-1`}>
@@ -1199,7 +1277,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className={`fixed bottom-[72px] left-0 w-full p-3 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/95 border-white/[0.08]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
+      <div className={`fixed bottom-0 left-0 w-full p-3 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/95 border-white/[0.08]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
         {error && (
           <div className={`flex items-center gap-2 p-2 rounded-lg mb-2 ${isDark ? 'bg-red-900/20 border border-red-800/20' : 'bg-red-50'}`}>
             <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -1231,6 +1309,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             onClick={() => {
               // If no address — open the delivery info modal directly
               if (!hasValidAddress) {
+                setModalError(null);
                 setIsAddressModalOpen(true);
                 return;
               }
@@ -1288,29 +1367,102 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                 </button>
               </div>
 
+              {/* Inline Modal Error */}
+              {modalError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold flex items-center gap-2 mb-3.5">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span className="leading-tight">{modalError}</span>
+                </div>
+              )}
+
               <form onSubmit={handleSaveAddress} className="space-y-3.5">
                 <div>
+                  <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Full Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={addressForm.fullName}
+                    onChange={e => {
+                      setModalError(null);
+                      setAddressForm(f => ({ ...f, fullName: e.target.value }));
+                    }}
+                    className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
+                    placeholder="Recipient Full Name"
+                  />
+                </div>
+                <div>
                   <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Street Address</label>
-                  <input required type="text" value={addressForm.address} onChange={e => setAddressForm(f => ({ ...f, address: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="House no, Street area" />
+                  <input
+                    required
+                    type="text"
+                    value={addressForm.address}
+                    onChange={e => {
+                      setModalError(null);
+                      setAddressForm(f => ({ ...f, address: e.target.value }));
+                    }}
+                    className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
+                    placeholder="House no, Street area"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>City</label>
-                    <input required type="text" value={addressForm.city} onChange={e => setAddressForm(f => ({ ...f, city: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="City" />
+                    <input
+                      required
+                      type="text"
+                      value={addressForm.city}
+                      onChange={e => {
+                        setModalError(null);
+                        setAddressForm(f => ({ ...f, city: e.target.value }));
+                      }}
+                      className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
+                      placeholder="City"
+                    />
                   </div>
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Pincode</label>
-                    <input required type="text" value={addressForm.pincode} onChange={e => setAddressForm(f => ({ ...f, pincode: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="123456" />
+                    <input
+                      required
+                      type="text"
+                      maxLength={6}
+                      value={addressForm.pincode}
+                      onChange={e => {
+                        setModalError(null);
+                        setAddressForm(f => ({ ...f, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }));
+                      }}
+                      className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
+                      placeholder="123456"
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 pb-2">
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>State</label>
-                    <input required type="text" value={addressForm.state} onChange={e => setAddressForm(f => ({ ...f, state: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="State" />
+                    <input
+                      required
+                      type="text"
+                      value={addressForm.state}
+                      onChange={e => {
+                        setModalError(null);
+                        setAddressForm(f => ({ ...f, state: e.target.value }));
+                      }}
+                      className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
+                      placeholder="State"
+                    />
                   </div>
                   <div>
                     <label className={`block text-[10px] font-black uppercase tracking-wider mb-1.5 ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Phone</label>
-                    <input required type="tel" value={addressForm.phone} onChange={e => setAddressForm(f => ({ ...f, phone: e.target.value }))} className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`} placeholder="9876543210" />
+                    <input
+                      required
+                      type="tel"
+                      value={addressForm.phone}
+                      onChange={e => {
+                        setModalError(null);
+                        setAddressForm(f => ({ ...f, phone: e.target.value }));
+                      }}
+                      className={`w-full px-3.5 py-3 rounded-xl text-sm font-semibold outline-none transition-all ${isDark ? 'bg-[#0c0e14] border border-white/[0.06] text-white focus:bg-transparent focus:border-blue-500/50' : 'bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
+                      placeholder="e.g. 9876543210 or +91 98765 43210"
+                    />
                   </div>
                 </div>
 

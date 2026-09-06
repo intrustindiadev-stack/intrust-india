@@ -30,14 +30,18 @@ import {
     Zap
 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import { getCategorySlug, getCategoryIcon, getCategoryImage, FALLBACK_CATEGORIES } from '@/lib/shopping/categories';
 
 export default function ShopHubClient({ merchants = [], ratingsMap = {}, categories = [] }) {
+    const router = useRouter();
+    const { user, profile } = useAuth();
+    const activeCustomer = profile || user;
     const searchParams = useSearchParams();
     const urlCategory = searchParams?.get('category') || '';
 
@@ -94,60 +98,15 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             : ['https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80'],
                         category: p.category || 'all',
                         rating: 4.8,
-                        merchants: merchants[idx % (merchants.length || 1)] || { business_name: 'InTrust Official Flagship', slug: 'official' }
+                        merchants: merchants[idx % (merchants.length || 1)] || { business_name: 'InTrust Official', slug: 'official' }
                     }));
                     setProducts(mapped);
                 } else {
-                    // Fallback catalog if table is empty
-                    setProducts([
-                        {
-                            id: 'prod-1',
-                            title: 'boAt Airdopes 141 ANC Earbuds',
-                            slug: 'boat-airdopes-141-anc',
-                            category: 'electronics',
-                            selling_price: 999,
-                            mrp: 4490,
-                            rating: 4.8,
-                            images: ['https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'Sharma Digital Store', slug: 'sharma-digital' }
-                        },
-                        {
-                            id: 'prod-2',
-                            title: 'Fire-Boltt Ninja Pro Max Smartwatch',
-                            slug: 'fire-boltt-ninja-pro-max',
-                            category: 'electronics',
-                            selling_price: 1299,
-                            mrp: 5999,
-                            rating: 4.6,
-                            images: ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'InTrust Direct Tech', slug: 'intrust-direct' }
-                        },
-                        {
-                            id: 'prod-3',
-                            title: 'Samsung Galaxy Buds Live ANC',
-                            slug: 'samsung-galaxy-buds-live',
-                            category: 'electronics',
-                            selling_price: 4999,
-                            mrp: 15990,
-                            rating: 4.9,
-                            images: ['https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'Bhopal Electronics Hub', slug: 'bhopal-electronics' }
-                        },
-                        {
-                            id: 'prod-4',
-                            title: 'Havells Instant Dry Iron 1000W',
-                            slug: 'havells-instant-dry-iron',
-                            category: 'home',
-                            selling_price: 1099,
-                            mrp: 1899,
-                            rating: 4.7,
-                            images: ['https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=600&auto=format&fit=crop&q=80'],
-                            merchants: { business_name: 'Gupta Electric & Retail', slug: 'gupta-electric' }
-                        }
-                    ]);
+                    setProducts([]);
                 }
             } catch (err) {
                 console.error('Failed to load shopping products:', err);
+                setProducts([]);
             } finally {
                 setProductsLoading(false);
             }
@@ -214,7 +173,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 const matchDesc = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
                 if (!matchTitle && !matchDesc) return false;
             }
-            if (selectedCategory) {
+            if (selectedCategory && selectedCategory !== 'all') {
                 const prodCatSlug = getCategorySlug(p.category);
                 const selCatSlug = getCategorySlug(selectedCategory);
                 if (prodCatSlug !== selCatSlug && !(p.category || '').toLowerCase().includes(selCatSlug)) {
@@ -225,40 +184,43 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         });
     }, [products, searchQuery, selectedCategory]);
 
-    const handleAddToCart = (e, product) => {
+    const handleAddToCart = async (e, product) => {
         e.preventDefault();
         e.stopPropagation();
 
-        try {
-            const rawCart = localStorage.getItem('intrust_cart');
-            const cart = rawCart ? JSON.parse(rawCart) : [];
-            const existingIdx = cart.findIndex((i) => i.id === product.id);
+        if (!activeCustomer?.id) {
+            toast.error('Please sign in to add items to your cart');
+            router.push('/login?next=/shop');
+            return;
+        }
 
-            if (existingIdx >= 0) {
-                cart[existingIdx].quantity = (cart[existingIdx].quantity || 1) + 1;
-            } else {
-                cart.push({
-                    id: product.id,
-                    title: product.title,
-                    price: product.selling_price,
-                    mrp: product.mrp,
-                    image: product.images?.[0] || '',
-                    merchantName: product.merchants?.business_name || 'InTrust Store',
-                    quantity: 1
-                });
+        try {
+            const { data, error } = await supabase.rpc('add_to_shopping_cart', {
+                p_customer_id: activeCustomer.id,
+                p_inventory_id: null,
+                p_product_id: product.id,
+                p_variant_id: null,
+                p_quantity: 1,
+                p_is_platform: true
+            });
+
+            if (error) throw error;
+
+            if (data?.message === 'MIXED_SELLER_ERROR') {
+                toast.error('Your cart has items from another seller. Please check out or clear your cart first.');
+                return;
             }
 
-            localStorage.setItem('intrust_cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('cartUpdated'));
-
             setAddedProductId(product.id);
-            toast.success(`Added ${product.title} to cart!`);
+            toast.success(`Added ${product.title} to cart! 🛒`);
 
             setTimeout(() => {
                 setAddedProductId(null);
             }, 2000);
         } catch (err) {
             console.error('Add to cart error:', err);
+            toast.error(err.message || 'Failed to add item to cart');
         }
     };
 
@@ -296,7 +258,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         {/* Store Mode Switcher */}
                         <div className="p-1.5 rounded-2xl bg-surface-container-low flex items-center gap-1 self-start md:self-auto shrink-0 border border-outline-variant/20">
                             <button
-                                onClick={() => { setPickupMode('all'); setSelectedCategory('all'); }}
+                                onClick={() => { setPickupMode('all'); setSelectedCategory(''); }}
                                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                                     pickupMode === 'all' && selectedCategory !== 'official'
                                         ? 'bg-surface-container-lowest text-primary shadow-sm'
@@ -391,7 +353,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                 Up to 60% Off on Top Tech Brands
                             </h2>
                             <p className="text-xs sm:text-sm text-slate-200 mt-2 font-medium leading-relaxed">
-                                Unmatched deals on boAt, Fire-Boltt, and Samsung with guaranteed 5% direct cash deposit straight back into your InTrust Wallet.
+                                Unmatched deals on trending electronics and essentials with guaranteed 5% direct cash deposit straight back into your InTrust Wallet.
                             </p>
                         </div>
                     </div>
@@ -416,12 +378,12 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                     </div>
                 </div>
 
-                {/* Promo 2: InTrust Official Flagship & Express Delivery */}
+                {/* Promo 2: InTrust Official & Express Delivery */}
                 <div className="lg:col-span-5 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg border border-emerald-500/30 bg-emerald-950 group min-h-[300px]">
                     {/* Real Commercial Photography Background */}
                     <img 
                         src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=1200" 
-                        alt="InTrust Official Flagship Express" 
+                        alt="InTrust Official Express" 
                         className="absolute inset-0 w-full h-full object-cover object-center opacity-35 group-hover:scale-105 transition-transform duration-700 pointer-events-none" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/85 to-transparent pointer-events-none" />
@@ -437,7 +399,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             </span>
                         </div>
                         <h3 className="text-xl sm:text-2xl font-black text-white leading-tight drop-shadow-sm">
-                            InTrust Official Flagship
+                            InTrust Official
                         </h3>
                         <p className="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
                             Order genuine essentials and verified gadgets directly from the company flagship hub with live order tracking and verified fulfillment.
@@ -687,7 +649,9 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         {filteredMerchants.map((merchant) => {
                             const banner = merchant.shopping_banner_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80';
-                            const merchantPhone = merchant.phone || '+91 755 492 8840';
+                            const merchantPhone = merchant.phone || merchant.business_phone;
+                            const isOpen = merchant.is_open !== false;
+                            const ratingVal = ratingsMap[merchant.id]?.avg_rating;
 
                             return (
                                 <div
@@ -704,24 +668,34 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                                             <div className="absolute top-3 left-3 flex items-center gap-2">
-                                                <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                                    Open Now
-                                                </span>
+                                                {isOpen ? (
+                                                    <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                                        Open Now
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2.5 py-1 rounded-full bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                                                        Closed
+                                                    </span>
+                                                )}
                                                 <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[10px] font-bold">
-                                                    2-Hr Pickup
+                                                    Direct Order
                                                 </span>
                                             </div>
 
-                                            <div className="absolute top-3 right-3 px-2 py-1 rounded-xl bg-white/95 backdrop-blur-md text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm">
-                                                <Star size={12} className="text-amber-500 fill-amber-500" />
-                                                <span>4.8</span>
-                                            </div>
+                                            {ratingVal != null && (
+                                                <div className="absolute top-3 right-3 px-2 py-1 rounded-xl bg-white/95 backdrop-blur-md text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm">
+                                                    <Star size={12} className="text-amber-500 fill-amber-500" />
+                                                    <span>{Number(ratingVal).toFixed(1)}</span>
+                                                </div>
+                                            )}
 
-                                            <div className="absolute bottom-3 left-3 flex items-center gap-1 text-white text-xs font-semibold">
-                                                <MapPin size={13} className="text-[#D4AF37]" />
-                                                <span>0.8 km • MP Nagar, Bhopal</span>
-                                            </div>
+                                            {merchant.business_address && (
+                                                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-1 text-white text-xs font-semibold truncate">
+                                                    <MapPin size={13} className="text-[#D4AF37] shrink-0" />
+                                                    <span className="truncate">{merchant.business_address}</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-2 mb-1">
@@ -731,20 +705,24 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                             <ShieldCheck size={16} className="text-[#D4AF37] shrink-0" title="Verified Merchant" />
                                         </div>
 
-                                        <p className="text-xs text-on-surface-variant font-medium line-clamp-1 mb-3">
-                                            {merchant.business_address || 'Electronics, Mobiles, Soundbars & Retail'}
-                                        </p>
+                                        {merchant.business_address && (
+                                            <p className="text-xs text-on-surface-variant font-medium line-clamp-1 mb-3">
+                                                {merchant.business_address}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between gap-3">
-                                        <a
-                                            href={`tel:${merchantPhone}`}
-                                            className="px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-outline-variant/20 transition-colors"
-                                            title="Call Store Merchant"
-                                        >
-                                            <Phone size={13} className="text-emerald-600" />
-                                            <span>Call</span>
-                                        </a>
+                                        {merchantPhone && (
+                                            <a
+                                                href={`tel:${merchantPhone}`}
+                                                className="px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-outline-variant/20 transition-colors"
+                                                title="Call Store Merchant"
+                                            >
+                                                <Phone size={13} className="text-emerald-600" />
+                                                <span>Call</span>
+                                            </a>
+                                        )}
 
                                         <Link
                                             href={`/shop/${merchant.slug || merchant.id}`}

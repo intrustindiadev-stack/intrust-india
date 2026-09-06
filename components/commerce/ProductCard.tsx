@@ -130,11 +130,7 @@ export default function ProductCard({
   }
 
   // 8. Resolve Route
-  const productUrl = product.url || (
-    isFashion
-      ? `/shop/fashion/product/${product.id}`
-      : `/shop/product/${product.slug || product.id}`
-  );
+  const productUrl = product.url || `/shop/product/${product.slug || product.id}`;
 
   // 9. Sync Wishlist State
   useEffect(() => {

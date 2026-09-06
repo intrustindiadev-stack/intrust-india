@@ -174,7 +174,13 @@ export default function CustomerDashboardPage() {
                 supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
                 supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle(),
                 supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
-                supabase.from('merchants').select('id, slug, business_name, shopping_banner_url, is_open, business_address').eq('status', 'approved').order('business_name', { ascending: true }).limit(6),
+                supabase.from('merchants')
+                    .select('id, slug, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at, phone, business_phone')
+                    .eq('status', 'approved')
+                    .eq('subscription_status', 'active')
+                    .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${new Date().toISOString()}`)
+                    .order('business_name', { ascending: true })
+                    .limit(6),
             ]);
 
             const results = await Promise.race([mainFetch, timeoutTx]);

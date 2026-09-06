@@ -10,7 +10,7 @@ const SLIDES = [
         id: 1,
         tag: 'FESTIVE TECH BONANZA',
         title: 'Up to 60% Off on Top Electronics',
-        subtitle: 'Shop boAt, Fire-Boltt, and Samsung with guaranteed 5% direct cash deposit straight back into your InTrust Wallet.',
+        subtitle: 'Shop top electronics and gadgets with guaranteed 5% direct cash deposit straight back into your InTrust Wallet.',
         badge: 'Bhopal Exclusives',
         ctaText: 'Shop Tech Deals',
         ctaHref: '/shop?category=electronics',
