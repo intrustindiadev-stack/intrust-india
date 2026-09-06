@@ -30,6 +30,7 @@ import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import { useRouter, usePathname } from 'next/navigation';
 import { getCategorySlug, getCategoryIcon, getCategoryImage, FALLBACK_CATEGORIES } from '@/lib/shopping/categories';
+import { getSubCategories } from '@/lib/constants/categories';
 
 export default function CategoryProductsClient({ initialProducts = [], categoryName = '', categories = [] }) {
     const router = useRouter();
@@ -38,6 +39,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
 
     const [selectedFilter, setSelectedFilter] = useState('all'); // 'all', 'under_500', 'under_1500', 'discount_20', 'in_stock'
     const [selectedMerchantFilter, setSelectedMerchantFilter] = useState('all'); // 'all', 'official', 'local'
+    const [selectedSubCategory, setSelectedSubCategory] = useState('all'); // 'all' or a valid sub-category name
     const [sortBy, setSortBy] = useState('popular'); // 'popular', 'price_asc', 'price_desc', 'rating'
     const [cartQuantities, setCartQuantities] = useState({}); // { [productId]: quantity }
     const [justAddedProduct, setJustAddedProduct] = useState(null);
@@ -68,6 +70,9 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
         fetchExistingCart();
     }, [user?.id]);
 
+    // Compute available sub-categories for the current category
+    const availableSubCategories = useMemo(() => getSubCategories(categoryName), [categoryName]);
+
     const filteredAndSortedProducts = useMemo(() => {
         let list = [...initialProducts];
 
@@ -76,6 +81,16 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
             list = list.filter(p => (p.merchants?.business_name || '').toLowerCase().includes('official'));
         } else if (selectedMerchantFilter === 'local') {
             list = list.filter(p => !(p.merchants?.business_name || '').toLowerCase().includes('official'));
+        }
+
+        // Sub-Category Filter
+        if (selectedSubCategory !== 'all') {
+            list = list.filter(p => {
+                const pSub = (p.sub_category || '').toLowerCase();
+                const pCat = (p.category || '').toLowerCase();
+                const target = selectedSubCategory.toLowerCase();
+                return pSub === target || pCat.includes(target) || target.includes(pCat);
+            });
         }
 
         // Price / Stock / Discount Filtering
@@ -103,7 +118,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
         }
 
         return list;
-    }, [initialProducts, selectedFilter, selectedMerchantFilter, sortBy]);
+    }, [initialProducts, selectedFilter, selectedMerchantFilter, selectedSubCategory, sortBy]);
 
     const totalCartItems = useMemo(() => {
         return Object.values(cartQuantities).reduce((acc, q) => acc + q, 0);
@@ -399,6 +414,40 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                                 );
                             })}
                         </div>
+
+                        {/* Sub-Category Filter Pills — shown only when sub-categories exist for this category */}
+                        {availableSubCategories.length > 0 && (
+                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-white/5 pt-2.5">
+                                <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0">Dept:</span>
+                                <button
+                                    key="sub-all"
+                                    onClick={() => setSelectedSubCategory('all')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                                        selectedSubCategory === 'all'
+                                            ? 'bg-violet-600 text-white shadow-xs font-black'
+                                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300'
+                                    }`}
+                                >
+                                    All
+                                </button>
+                                {availableSubCategories.map((sub) => {
+                                    const active = selectedSubCategory === sub;
+                                    return (
+                                        <button
+                                            key={sub}
+                                            onClick={() => setSelectedSubCategory(sub)}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                                                active
+                                                    ? 'bg-violet-600 text-white shadow-xs font-black'
+                                                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            {sub}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Products Grid — Blinkit Style */}
@@ -408,7 +457,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                             <h3 className="text-base font-black text-slate-800 dark:text-white">No products match your filter</h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400">Try resetting filters to explore the full catalog.</p>
                             <button
-                                onClick={() => { setSelectedFilter('all'); setSelectedMerchantFilter('all'); }}
+                                onClick={() => { setSelectedFilter('all'); setSelectedMerchantFilter('all'); setSelectedSubCategory('all'); }}
                                 className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 transition-colors"
                             >
                                 Reset All Filters
