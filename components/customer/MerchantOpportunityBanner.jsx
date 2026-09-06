@@ -1,170 +1,194 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, ArrowRight, Sparkles } from 'lucide-react';
+import {
+    Store,
+    ArrowRight,
+    CheckCircle2,
+    Clock,
+    AlertCircle,
+    ShieldCheck,
+    ShieldAlert,
+    Zap,
+    MapPin,
+    ExternalLink,
+    Building2
+} from 'lucide-react';
 import Link from 'next/link';
-import { Loader2, CheckCircle, AlertCircle, ShieldAlert, RefreshCw } from 'lucide-react';
 import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
-export default function MerchantOpportunityBanner({ merchantStatus, subscriptionStatus, subscriptionExpiresAt, startingPriceRupees }) {
-    // Use admin-set live price when available; fall back to constant so the
-    // banner always renders something sensible even if the fetch failed.
-    const startingPrice = `₹${startingPriceRupees ?? MERCHANT_SUBSCRIPTION_PLANS[0].price}`;
+export default function MerchantOpportunityBanner({
+    merchantStatus,
+    subscriptionStatus,
+    subscriptionExpiresAt,
+    startingPriceRupees
+}) {
+    const startingPrice = `₹${startingPriceRupees ?? MERCHANT_SUBSCRIPTION_PLANS[0]?.price ?? 499}`;
     const isPending = merchantStatus === 'pending';
     const isRejected = merchantStatus === 'rejected';
     const isSuspended = merchantStatus === 'suspended';
     const isApprovedAndPaid = merchantStatus === 'approved' && subscriptionStatus === 'active';
     const isApprovedButUnpaid = merchantStatus === 'approved' && subscriptionStatus !== 'active';
 
-    // Check expiry states for active subscriptions
+    // Expiry verification
     const expiresAt = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const isExpired = expiresAt && expiresAt < now;
     const isExpiringSoon = expiresAt && !isExpired && expiresAt < sevenDaysFromNow;
-    
+
     const expiryFormatted = expiresAt
         ? expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
         : null;
 
-    // Treat expired as same as unpaid for gating purposes
     const isEffectivelyBlocked = isApprovedButUnpaid || isExpired;
 
-    const getBannerStyles = () => {
-        if (isPending) return "from-amber-500 via-orange-500 to-yellow-500";
-        if (isRejected || isSuspended) return "from-rose-500 via-red-500 to-orange-500";
-        if (isEffectivelyBlocked) return "from-rose-500 via-red-500 to-orange-500";
-        if (isExpiringSoon) return "from-amber-500 via-orange-500 to-yellow-500";
-        return "from-green-500 via-emerald-500 to-teal-500";
+    // Badges and status configs
+    const getStatusConfig = () => {
+        if (isPending) {
+            return {
+                badgeIcon: <Clock size={14} className="text-amber-500 animate-spin" />,
+                badgeText: 'Application In Review',
+                badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                title: 'Merchant Application Under Verification',
+                description: "We are verifying your store details and business KYC. Verification is typically completed within 24 to 48 hours.",
+                ctaText: 'Verification In Progress',
+                ctaHref: '#',
+                disabled: true
+            };
+        }
+        if (isApprovedAndPaid && !isExpired) {
+            return {
+                badgeIcon: <ShieldCheck size={14} className="text-emerald-500" />,
+                badgeText: 'Verified InTrust Partner',
+                badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                title: 'Your Merchant Store is Live',
+                description: `Manage your Bhopal retail catalog, fulfill 2-hour pickup orders, and review store earnings. Next cycle: ${expiryFormatted || 'Active'}.`,
+                ctaText: 'Merchant Dashboard',
+                ctaHref: '/merchant/dashboard',
+                disabled: false
+            };
+        }
+        if (isEffectivelyBlocked) {
+            return {
+                badgeIcon: <AlertCircle size={14} className="text-rose-500" />,
+                badgeText: isExpired ? 'Subscription Expired' : 'Action Required',
+                badgeClass: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                title: isExpired ? 'Merchant Subscription Expired' : 'Activate Your Merchant Store',
+                description: `Choose a subscription plan starting at ${startingPrice}/month to unlock your live storefront and merchant tools.`,
+                ctaText: isExpired ? 'Renew Storefront' : 'Choose Plan & Activate',
+                ctaHref: '/merchant-subscribe',
+                disabled: false
+            };
+        }
+        if (isExpiringSoon) {
+            return {
+                badgeIcon: <Clock size={14} className="text-amber-500" />,
+                badgeText: 'Renewal Due Soon',
+                badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                title: 'Store Subscription Renews Soon',
+                description: `Your storefront subscription expires on ${expiryFormatted}. Renew early starting at ${startingPrice}/month to avoid interruption.`,
+                ctaText: 'Renew Subscription',
+                ctaHref: '/merchant-subscribe',
+                disabled: false
+            };
+        }
+        if (isRejected || isSuspended) {
+            return {
+                badgeIcon: <ShieldAlert size={14} className="text-rose-500" />,
+                badgeText: isRejected ? 'Application Not Approved' : 'Store Suspended',
+                badgeClass: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                title: isRejected ? 'Merchant Application Update' : 'Account Temporarily On Hold',
+                description: 'Please reach out to InTrust partner operations support to review the required documentation.',
+                ctaText: 'Contact Support',
+                ctaHref: 'mailto:support@intrustindia.com',
+                disabled: false
+            };
+        }
+
+        // Default: Clean Opportunity Banner for Customer Dashboard
+        return {
+            badgeIcon: <Store size={14} className="text-primary" />,
+            badgeText: 'Merchant Partner Program • Bhopal',
+            badgeClass: 'bg-blue-500/10 text-primary border-blue-500/20',
+            title: 'Own a Shop in Bhopal? Partner With InTrust',
+            description: 'List your retail products, accept direct digital payments, and connect with verified local customers with 2-hour store pickups.',
+            ctaText: 'Register Your Shop',
+            ctaHref: '/merchant-apply',
+            disabled: false
+        };
     };
 
-    const getBgStyles = () => {
-        if (isPending || isExpiringSoon) return "from-amber-600 to-orange-600";
-        if (isRejected || isSuspended || isEffectivelyBlocked) return "from-rose-600 to-red-600";
-        return "from-green-600 to-emerald-600";
-    };
-
-    const getIcon = () => {
-        if (isPending) return <Loader2 size={36} className="text-white animate-spin" />;
-        if (isExpired || isEffectivelyBlocked) return <AlertCircle size={36} className="text-white" />;
-        if (isExpiringSoon) return <RefreshCw size={36} className="text-white" />;
-        if (isApprovedAndPaid) return <CheckCircle size={36} className="text-white" />;
-        if (isRejected || isSuspended) return <ShieldAlert size={36} className="text-white" />;
-        return <TrendingUp size={36} className="text-white" />;
-    };
-
-    const getLabel = () => {
-        if (isPending) return "Application Status";
-        if (isExpired) return "Subscription Expired";
-        if (isEffectivelyBlocked) return "Action Required";
-        if (isExpiringSoon) return "Renewal Due Soon";
-        if (isApprovedAndPaid) return "Merchant Account";
-        if (isRejected) return "Application Rejected";
-        if (isSuspended) return "Account Suspended";
-        return "Earning Opportunity";
-    };
-
-    const getHeading = () => {
-        if (isPending) return "Application Under Review";
-        if (isExpired) return "Subscription Expired";
-        if (isEffectivelyBlocked) return "Payment Required";
-        if (isExpiringSoon) return "Renew Before It Expires";
-        if (isApprovedAndPaid) return "Merchant Dashboard Ready";
-        if (isRejected) return "Application Not Approved";
-        if (isSuspended) return "Account Temporarily Suspended";
-        return "Become a Merchant & Start Earning";
-    };
-
-    const getBody = () => {
-        if (isPending) return "We are currently reviewing your merchant application. This usually takes 24-48 hours. We'll notify you once processed!";
-        if (isExpired) return `Your monthly subscription expired on ${expiryFormatted}. Renew with plans from ${startingPrice}/month to restore full access to your Merchant Dashboard.`;
-        if (isEffectivelyBlocked) return `Your application has been approved! Choose a subscription plan (starting ${startingPrice}/month) to activate your merchant panel.`;
-        if (isExpiringSoon) return `Your monthly subscription expires on ${expiryFormatted}. Renew with plans from ${startingPrice}/month to keep your store live without interruption.`;
-        if (isApprovedAndPaid) return `Welcome aboard! Your merchant account is active. Next renewal due: ${expiryFormatted}.`;
-        if (isRejected) return "Unfortunately, your application was not approved at this time. Please contact support to understand the requirements.";
-        if (isSuspended) return "Your merchant account is temporarily suspended. Please check your email or contact support for more information.";
-        return "Join 500+ merchants earning ₹50,000+ monthly by reselling gift cards. Get instant approval with verified KYC!";
-    };
-
-    const getCtaText = () => {
-        if (isPending) return "Review in Progress";
-        if (isExpired || isEffectivelyBlocked) return "Pay Now";
-        if (isExpiringSoon) return "Renew Now";
-        if (isApprovedAndPaid) return "Go to Dashboard";
-        if (isRejected) return "Application Rejected";
-        if (isSuspended) return "Contact Support";
-        return "Apply Now";
-    };
-
-    const getCtaHref = () => {
-        if (isApprovedAndPaid && !isExpired) return "/merchant/dashboard";
-        if (isEffectivelyBlocked || isExpired || isExpiringSoon) return "/merchant-subscribe";
-        if (isRejected || isSuspended || isPending) return "#";
-        return "/merchant-apply";
-    };
-
-    const isCtaDisabled = isPending || isRejected || isSuspended;
+    const config = getStatusConfig();
+    const isDefaultOpportunity = !merchantStatus && !subscriptionStatus;
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${getBannerStyles()} p-1 shadow-xl`}
+            transition={{ duration: 0.35 }}
+            className="w-full bg-surface-container-lowest border border-outline-variant/30 dark:border-white/[0.08] rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-md transition-all relative overflow-hidden"
         >
-            <div className={`absolute inset-0 bg-gradient-to-r ${getBannerStyles()}/20 animate-pulse`} />
+            {/* Ambient Minimal Glow */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-primary/[0.03] dark:bg-primary/[0.07] rounded-full blur-3xl pointer-events-none" />
 
-            <div className={`relative bg-gradient-to-br ${getBgStyles()} rounded-xl p-6 sm:p-8`}>
-                <div className="flex flex-col lg:flex-row items-center gap-6">
-                    {/* Icon */}
-                    <div className="flex-shrink-0 mb-4 lg:mb-0">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center">
-                            {getIcon()}
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                {/* Left Side: Details & Highlights */}
+                <div className="space-y-3 max-w-2xl">
+                    {/* Status Pill Badge */}
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border tracking-wide select-none">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${config.badgeClass}`}>
+                            {config.badgeIcon}
+                            <span>{config.badgeText}</span>
+                        </span>
+                    </div>
+
+                    {/* Headline */}
+                    <h3 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight leading-snug">
+                        {config.title}
+                    </h3>
+
+                    {/* Subtitle / Description */}
+                    <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                        {config.description}
+                    </p>
+
+                    {/* 3 Clean Highlights (Shown for default merchant invitation) */}
+                    {isDefaultOpportunity && (
+                        <div className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-on-surface">
+                            <div className="flex items-center gap-1.5">
+                                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                                <span>Zero Onboarding Fees</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Zap size={14} className="text-blue-500 shrink-0" />
+                                <span>2-Hour Local Pickup Network</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <MapPin size={14} className="text-amber-500 shrink-0" />
+                                <span>Bhopal-wide Storefront</span>
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 text-center lg:text-left">
-                        <div className="flex items-center gap-2 justify-center lg:justify-start mb-2">
-                            <Sparkles size={20} className="text-yellow-300" />
-                            <span className="text-yellow-300 font-bold text-sm uppercase tracking-wide">
-                                {getLabel()}
-                            </span>
-                        </div>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                            {getHeading()}
-                        </h3>
-                        <p className="text-white/90 text-sm sm:text-base max-w-2xl mx-auto lg:mx-0">
-                            {getBody()}
-                        </p>
-                    </div>
-
-                    {/* CTA */}
-                    <div className="flex-shrink-0 mt-6 lg:mt-0 w-full lg:w-auto flex justify-center lg:justify-end">
-                        <Link
-                            href={getCtaHref()}
-                            className={`group inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white hover:bg-gray-100 font-bold rounded-xl transition-all shadow-lg hover:shadow-2xl hover:scale-105 w-full sm:w-auto ${isCtaDisabled ? 'opacity-70 cursor-not-allowed pointer-events-none' : ''} ${isPending ? 'text-amber-600' : (isRejected || isSuspended) ? 'text-rose-600' : 'text-green-600'}`}
-                        >
-                            {getCtaText()}
-                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                    </div>
+                    )}
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/20">
-                    <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-white">500+</div>
-                        <div className="text-xs sm:text-sm text-green-100">Active Merchants</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-white">₹50K+</div>
-                        <div className="text-xs sm:text-sm text-green-100">Avg. Monthly Earning</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl sm:text-3xl font-bold text-white">{startingPrice}</div>
-                        <div className="text-xs sm:text-sm text-green-100">Starting/Month</div>
-                    </div>
+                {/* Right Side: CTA Button */}
+                <div className="shrink-0 flex items-center lg:justify-end">
+                    {config.disabled ? (
+                        <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-surface-container text-on-surface-variant font-bold text-xs border border-outline-variant/30 select-none">
+                            <Clock size={15} className="animate-spin text-amber-500" />
+                            <span>{config.ctaText}</span>
+                        </div>
+                    ) : (
+                        <Link
+                            href={config.ctaHref}
+                            className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-primary hover:bg-blue-700 active:bg-blue-800 text-white font-black text-xs shadow-md shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            <span>{config.ctaText}</span>
+                            <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                    )}
                 </div>
             </div>
         </motion.div>

@@ -352,7 +352,7 @@ export default function CustomerWalletPage() {
                         <div className="mt-6 pt-4 border-t border-outline-variant/20 flex items-center gap-3">
                             <button
                                 onClick={() => setIsAddingMoney(true)}
-                                className="flex-1 py-3.5 px-4 rounded-2xl bg-primary hover:bg-primary/95 text-on-primary font-bold text-sm flex items-center justify-center gap-2 shadow-sm shadow-primary/20 active:scale-95 transition-all"
+                                className="flex-1 py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all"
                             >
                                 <Plus size={18} strokeWidth={2.5} />
                                 <span>Add Money</span>
@@ -394,10 +394,10 @@ export default function CustomerWalletPage() {
                                         key={amt}
                                         type="button"
                                         onClick={() => setAddAmount(amt.toString())}
-                                        className={`py-3 px-3 rounded-2xl font-extrabold text-sm border transition-all active:scale-95 text-center ${
+                                        className={`py-3 px-3 rounded-2xl font-black text-sm border transition-all active:scale-95 text-center ${
                                             addAmount === amt.toString()
-                                                ? 'bg-primary text-on-primary border-primary shadow-sm'
-                                                : 'bg-surface-container-low hover:bg-surface-container text-on-surface border-outline-variant/30'
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/25'
+                                                : 'bg-surface-container-low hover:bg-blue-50 dark:hover:bg-blue-950/30 text-on-surface hover:text-blue-600 border-outline-variant/30 hover:border-blue-500/40'
                                         }`}
                                     >
                                         +₹{amt.toLocaleString('en-IN')}
@@ -414,7 +414,7 @@ export default function CustomerWalletPage() {
                                     value={addAmount}
                                     onChange={(e) => setAddAmount(e.target.value)}
                                     placeholder="Enter custom amount"
-                                    className="w-full pl-9 pr-4 py-3.5 bg-surface-container-low border border-outline-variant/30 rounded-2xl text-base font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all placeholder:text-on-surface-variant/40"
+                                    className="w-full pl-9 pr-4 py-3.5 bg-surface-container-low border border-outline-variant/30 rounded-2xl text-base font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all placeholder:text-on-surface-variant/40"
                                 />
                             </div>
                         </div>
@@ -423,7 +423,7 @@ export default function CustomerWalletPage() {
                             type="button"
                             disabled={paymentLoading || !addAmount || Number(addAmount) < 1}
                             onClick={() => handleTopUpSubmit()}
-                            className="w-full py-3.5 bg-primary hover:bg-primary/95 text-on-primary font-bold text-sm rounded-2xl shadow-sm shadow-primary/20 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-sm rounded-2xl shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                         >
                             {paymentLoading ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -476,19 +476,23 @@ export default function CustomerWalletPage() {
                                 const isPending = tx.status === 'initiated';
 
                                 return (
-                                    <div key={tx.id} className="p-4 sm:p-5 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors">
-                                        <div className="flex items-center gap-3.5">
-                                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                                    <Link
+                                        key={tx.id}
+                                        href={'/transactions/' + tx.id}
+                                        className="p-4 sm:p-5 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                                                 isFailed
                                                     ? 'bg-rose-500/10 text-rose-500'
                                                     : isDebit
-                                                        ? 'bg-primary/10 text-primary'
+                                                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                                         : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                             }`}>
                                                 {isDebit ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
                                             </div>
-                                            <div>
-                                                <p className={`font-bold text-sm ${isFailed ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
+                                            <div className="min-w-0">
+                                                <p className={`font-bold text-sm truncate group-hover:text-blue-600 transition-colors ${isFailed ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
                                                     {tx.description || (isDebit ? 'Order Payment' : 'Wallet Recharge')}
                                                 </p>
                                                 <p className="text-xs text-on-surface-variant mt-0.5">
@@ -497,27 +501,30 @@ export default function CustomerWalletPage() {
                                             </div>
                                         </div>
 
-                                        <div className="text-right">
-                                            <p className={`font-extrabold text-sm tabular-nums ${
-                                                isFailed
-                                                    ? 'text-on-surface-variant line-through'
-                                                    : isDebit
-                                                        ? 'text-on-surface'
-                                                        : 'text-emerald-600 dark:text-emerald-400'
-                                            }`}>
-                                                {isDebit && !isFailed ? '-' : '+'} ₹{Number.isInteger(tx.amount_paise / 100) ? (tx.amount_paise / 100) : (tx.amount_paise / 100).toFixed(2)}
-                                            </p>
-                                            <span className={`text-[10px] uppercase font-bold tracking-wider ${
-                                                isFailed
-                                                    ? 'text-rose-500'
-                                                    : isPending
-                                                        ? 'text-amber-500'
-                                                        : 'text-on-surface-variant/70'
-                                            }`}>
-                                                {tx.status || 'SUCCESS'}
-                                            </span>
+                                        <div className="flex items-center gap-2 shrink-0 pl-3">
+                                            <div className="text-right">
+                                                <p className={`font-extrabold text-sm tabular-nums ${
+                                                    isFailed
+                                                        ? 'text-on-surface-variant line-through'
+                                                        : isDebit
+                                                            ? 'text-on-surface'
+                                                            : 'text-emerald-600 dark:text-emerald-400'
+                                                }`}>
+                                                    {isDebit && !isFailed ? '-' : '+'} ₹{Number.isInteger(tx.amount_paise / 100) ? (tx.amount_paise / 100) : (tx.amount_paise / 100).toFixed(2)}
+                                                </p>
+                                                <span className={`text-[10px] uppercase font-bold tracking-wider ${
+                                                    isFailed
+                                                        ? 'text-rose-500'
+                                                        : isPending
+                                                            ? 'text-amber-500'
+                                                            : 'text-on-surface-variant/70'
+                                                }`}>
+                                                    {tx.status || 'SUCCESS'}
+                                                </span>
+                                            </div>
+                                            <ChevronRight size={16} className="text-on-surface-variant/30 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all ml-1" />
                                         </div>
-                                    </div>
+                                    </Link>
                                 );
                             })}
                         </div>
@@ -584,7 +591,11 @@ export default function CustomerWalletPage() {
                                         key={amt}
                                         type="button"
                                         onClick={() => setAddAmount(amt.toString())}
-                                        className="py-2.5 bg-surface-container-low hover:bg-surface-container rounded-xl text-xs font-bold text-on-surface transition-all active:scale-95 border border-outline-variant/20"
+                                        className={`py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border ${
+                                            addAmount === amt.toString()
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/25'
+                                                : 'bg-surface-container-low hover:bg-blue-50 dark:hover:bg-blue-950/30 text-on-surface hover:text-blue-600 border-outline-variant/30 hover:border-blue-500/40'
+                                        }`}
                                     >
                                         +₹{amt}
                                     </button>
@@ -594,7 +605,7 @@ export default function CustomerWalletPage() {
                             <button
                                 type="button"
                                 disabled={paymentLoading || payerContact.loading || hasContactIssue || !addAmount || Number(addAmount) < 1}
-                                className="w-full py-4 bg-primary hover:bg-primary/95 text-on-primary font-extrabold rounded-2xl shadow-sm shadow-primary/20 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black rounded-2xl shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                                 onClick={() => handleTopUpSubmit()}
                             >
                                 {paymentLoading ? (

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Crown, Medal, Award, ChevronLeft, Star, ChevronRight, Sparkles, TrendingUp, Target, Zap } from 'lucide-react';
+import { Trophy, Crown, Medal, Award, ChevronLeft, Star, ChevronRight, Sparkles, TrendingUp, Target, Zap, Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 export default function LeaderboardPage() {
@@ -35,36 +36,37 @@ export default function LeaderboardPage() {
     // Helper for rendering tier badges
     const getTierColor = (tier) => {
         switch (tier?.toLowerCase()) {
-            case 'diamond': return 'bg-sky-500/10 text-sky-500 border-sky-500/20';
-            case 'platinum': return 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
-            case 'gold': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-            case 'silver': return 'bg-slate-400/10 text-slate-400 border-slate-400/20';
-            default: return 'bg-orange-500/10 text-orange-500 border-orange-500/20'; // Bronze
+            case 'diamond': return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20';
+            case 'platinum': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20';
+            case 'gold': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+            case 'silver': return 'bg-slate-400/10 text-slate-600 dark:text-slate-300 border-slate-400/20';
+            default: return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'; // Bronze
         }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] flex flex-col items-center justify-center">
+            <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
                 <motion.div 
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-12 h-12 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center"
                 >
-                    <Trophy className="w-12 h-12 text-yellow-500" />
+                    <Trophy className="w-6 h-6" />
                 </motion.div>
-                <p className="mt-4 text-gray-500 dark:text-gray-400 animate-pulse">Loading Champions...</p>
+                <p className="text-xs font-bold text-on-surface-variant animate-pulse">Loading Leaderboard...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] flex flex-col items-center justify-center p-6">
-                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 p-6 rounded-2xl text-center max-w-md">
-                    <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+            <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-surface-container-lowest border border-outline-variant/30 p-8 rounded-3xl max-w-md shadow-sm space-y-4">
+                    <p className="text-sm font-bold text-red-600 dark:text-red-400">{error}</p>
                     <button 
                         onClick={() => window.location.reload()}
-                        className="px-6 py-2 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-700 dark:text-red-300 rounded-full transition-colors font-semibold"
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-2xl text-xs font-black shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all"
                     >
                         Try Again
                     </button>
@@ -83,45 +85,50 @@ export default function LeaderboardPage() {
         : topThree;
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-gray-900 dark:text-white pb-20 relative overflow-hidden font-[family-name:var(--font-outfit)]">
-            {/* Background effects */}
-            <div className="absolute top-0 inset-x-0 h-[800px] bg-gradient-to-b from-[#ff477e]/10 via-[#ff7096]/5 to-transparent pointer-events-none" />
-            <div className="absolute top-1/4 left-0 w-96 h-96 bg-[#ff477e]/10 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute top-1/3 right-0 w-96 h-96 bg-[#ff7096]/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="w-full pb-20 relative overflow-hidden">
+            {/* Subtle background glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[400px] bg-gradient-to-b from-blue-500/10 via-blue-600/5 to-transparent blur-3xl pointer-events-none" />
 
-            <div className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6 relative z-10">
-                <div className="flex items-center justify-between gap-4 mb-6">
-                    <CustomerBreadcrumbs items={[{ label: 'InTrust Rewards', href: '/rewards' }, { label: 'Leaderboard' }]} className="mb-0" />
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 relative z-10 space-y-8">
+                {/* Header & Breadcrumbs */}
+                <div className="flex items-center justify-between gap-4">
+                    <CustomerBreadcrumbs 
+                        items={[
+                            { label: 'InTrust Rewards', href: '/rewards' }, 
+                            { label: 'Champions Leaderboard' }
+                        ]} 
+                        className="mb-0" 
+                    />
                     <button 
                         onClick={() => router.push('/rewards')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors shadow-xs"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-lowest hover:bg-surface-container text-xs font-bold text-on-surface border border-outline-variant/30 transition-all active:scale-95 shadow-xs"
                     >
                         <ChevronLeft size={14} />
                         <span>Back to Rewards</span>
                     </button>
                 </div>
 
-                {/* Intro Text */}
+                {/* Intro Title */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-12 sm:mb-16 mt-4"
+                    className="text-center space-y-2 pt-2"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#ff477e]/10 border border-[#ff477e]/20 text-[#ff477e] mb-4">
-                        <Sparkles size={14} className="animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">InTrust Community Champions</span>
+                    <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                        <Sparkles size={13} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">InTrust Community Champions</span>
                     </div>
-                    <h2 className="text-3xl sm:text-5xl md:text-6xl font-black mb-3 tracking-tighter text-slate-900 dark:text-white leading-none">
-                        Top Reward <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#ff477e] to-[#ff7096]">Earners</span>
-                    </h2>
-                    <p className="text-slate-500 dark:text-gray-400 text-xs sm:text-sm max-w-xl mx-auto font-bold uppercase tracking-wider opacity-80">
-                        Ranked by active InTrust Coins and shopping loyalty points
+                    <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-on-surface">
+                        Top Rewards <span className="text-blue-600 dark:text-blue-400">Leaderboard</span>
+                    </h1>
+                    <p className="text-xs sm:text-sm text-on-surface-variant max-w-lg mx-auto font-medium">
+                        Ranked by active InTrust Coins, shopping purchases, and loyalty milestones
                     </p>
                 </motion.div>
 
                 {/* Podium Section for Top 3 */}
                 {topThree.length > 0 && (
-                    <div className="flex items-end justify-center gap-3 md:gap-8 mb-20 h-[350px]">
+                    <div className="flex items-end justify-center gap-3 sm:gap-6 pt-6 pb-2 min-h-[320px]">
                         {podiumOrder.map((user, idx) => {
                             if (!user) return null;
                             
@@ -129,65 +136,71 @@ export default function LeaderboardPage() {
                             const isSecond = user.rank === 2;
                             const isThird = user.rank === 3;
                             
-                            const height = isFirst ? 'h-[240px]' : isSecond ? 'h-[190px]' : 'h-[150px]';
-                            const badgeColor = isFirst ? 'text-white bg-[#ff477e] border-[#ff7096] shadow-[0_0_20px_rgba(255,71,126,0.5)]' : 
-                                               isSecond ? 'text-white bg-slate-500 border-slate-400 shadow-[0_0_15px_rgba(100,116,139,0.3)]' : 
-                                               'text-white bg-orange-600 border-orange-500 shadow-[0_0_15px_rgba(234,88,12,0.3)]';
+                            const height = isFirst ? 'h-[210px] sm:h-[230px]' : isSecond ? 'h-[160px] sm:h-[180px]' : 'h-[130px] sm:h-[150px]';
+                            const badgeBg = isFirst 
+                                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 shadow-md shadow-amber-500/30' 
+                                : isSecond 
+                                ? 'bg-slate-400 text-white shadow-md' 
+                                : 'bg-amber-700 text-white shadow-md';
                             
-                            const borderGlow = isFirst ? 'shadow-[0_0_40px_rgba(255,71,126,0.4)] border-[#ff7096]/50' :
-                                               isSecond ? 'shadow-[0_0_25px_rgba(100,116,139,0.2)] border-slate-400/30' :
-                                               'shadow-[0_0_20px_rgba(234,88,12,0.2)] border-orange-500/30';
+                            const borderStyle = isFirst 
+                                ? 'border-2 border-blue-600/40 shadow-xl shadow-blue-500/10' 
+                                : 'border border-outline-variant/30';
 
                             return (
                                 <motion.div 
-                                    key={user.userId}
-                                    initial={{ opacity: 0, y: 50 }}
+                                    key={user.userId || user.id || idx}
+                                    initial={{ opacity: 0, y: 30 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.15 + 0.2, type: 'spring', bounce: 0.4 }}
-                                    className="flex flex-col items-center relative w-1/3 max-w-[160px]"
+                                    transition={{ delay: idx * 0.12 + 0.1, type: 'spring', bounce: 0.3 }}
+                                    className="flex flex-col items-center relative w-1/3 max-w-[170px]"
                                 >
                                     {/* Avatar & Crown */}
-                                    <div className="relative z-10 mb-[-30px] flex flex-col items-center">
+                                    <div className="relative z-10 mb-[-24px] flex flex-col items-center">
                                         {isFirst && (
                                             <motion.div 
-                                                initial={{ scale: 0, y: 10, rotate: -15 }}
+                                                initial={{ scale: 0, y: 10, rotate: -10 }}
                                                 animate={{ scale: 1, y: 0, rotate: 0 }}
-                                                transition={{ delay: 0.8, type: 'spring' }}
-                                                className="absolute -top-12 z-20"
+                                                transition={{ delay: 0.6, type: 'spring' }}
+                                                className="absolute -top-10 z-20"
                                             >
-                                                <Crown className="w-12 h-12 text-[#ff477e] fill-[#ff477e]/20 drop-shadow-[0_0_10px_rgba(255,71,126,0.5)]" />
+                                                <Crown className="w-10 h-10 text-amber-400 fill-amber-400/20 drop-shadow-md" />
                                             </motion.div>
                                         )}
-                                        <div className={`rounded-full p-1.5 border-2 ${isFirst ? 'border-[#ff477e] bg-white/10 backdrop-blur-xl' : 'border-transparent'}`}>
-                                            <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#020617] border-2 ${borderGlow} flex items-center justify-center overflow-hidden relative shadow-2xl`}>
+                                        <div className={`rounded-full p-1 ${isFirst ? 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg' : 'bg-surface-container-high'}`}>
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-surface-container-lowest flex items-center justify-center overflow-hidden relative border-2 border-surface-container-lowest">
                                                 {user.avatarUrl ? (
                                                     <Image src={user.avatarUrl} alt={user.name} fill className="object-cover" />
                                                 ) : (
-                                                    <span className="text-3xl font-black text-slate-700">{user.name.charAt(0)}</span>
+                                                    <span className="text-xl sm:text-2xl font-black text-on-surface">{user.name?.charAt(0) || 'U'}</span>
                                                 )}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                                             </div>
                                         </div>
                                         {/* Rank Badge */}
-                                        <div className={`absolute -bottom-4 w-10 h-10 rounded-2xl flex items-center justify-center font-black border-2 border-white dark:border-[#020617] text-lg ${badgeColor} italic`}>
-                                            {user.rank}
+                                        <div className={`absolute -bottom-3 w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center font-black text-xs sm:text-sm ${badgeBg} border-2 border-surface-container-lowest`}>
+                                            #{user.rank}
                                         </div>
                                     </div>
 
-                                    {/* Podium Block */}
-                                    <div className={`w-full ${height} bg-white dark:bg-white/[0.03] backdrop-blur-3xl rounded-t-[2.5rem] border border-gray-200 dark:border-white/10 flex flex-col items-center pt-12 px-3 text-center relative overflow-hidden shadow-2xl group`}>
-                                        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-[#ff477e]/50 to-transparent" />
-                                        
-                                        <p className="font-black text-sm md:text-base text-slate-900 dark:text-white line-clamp-1 italic tracking-tight">{user.name}</p>
-                                        
-                                        <div className="mt-3 flex items-center gap-1.5 text-[#ff477e]">
-                                            <TrendingUp size={16} />
-                                            <span className="font-black text-lg md:text-2xl tracking-tighter italic">{user.points.toLocaleString()}</span>
+                                    {/* Podium Column */}
+                                    <div className={`w-full ${height} bg-surface-container-lowest rounded-t-3xl ${borderStyle} flex flex-col items-center justify-between pt-9 pb-4 px-2 text-center relative overflow-hidden shadow-xs group`}>
+                                        <div className="w-full px-1 min-w-0">
+                                            <p className="font-extrabold text-xs sm:text-sm text-on-surface truncate leading-tight">
+                                                {user.name}
+                                            </p>
+                                            <span className={`inline-block mt-1 text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border ${getTierColor(user.tier)}`}>
+                                                {user.tier || 'Member'}
+                                            </span>
                                         </div>
 
-                                        <span className={`mt-3 text-[9px] px-2.5 py-1 rounded-lg border ${getTierColor(user.tier)} uppercase tracking-[0.2em] font-black italic`}>
-                                            {user.tier} Elite
-                                        </span>
+                                        <div className="w-full border-t border-outline-variant/15 pt-2">
+                                            <p className="text-xs sm:text-sm font-black text-blue-600 dark:text-blue-400 tabular-nums">
+                                                {Number(user.points || 0).toLocaleString()}
+                                            </p>
+                                            <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
+                                                Coins
+                                            </p>
+                                        </div>
                                     </div>
                                 </motion.div>
                             );
@@ -195,71 +208,62 @@ export default function LeaderboardPage() {
                     </div>
                 )}
 
-                {/* List Section for Ranks 4-10 */}
-                {rest.length > 0 && (
-                    <div className="flex flex-col gap-4 max-w-2xl mx-auto">
-                        <div className="flex items-center gap-3 mb-4 px-2 opacity-40">
-                            <Zap size={14} className="text-[#ff477e]" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em]">Rising Contenders</span>
-                            <div className="flex-1 h-[1px] bg-gradient-to-r from-[#ff477e]/50 to-transparent" />
-                        </div>
-                        {rest.map((user, idx) => (
-                            <motion.div
-                                key={user.userId}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 * Math.min(idx, 10) }}
-                                className="bg-white/80 dark:bg-white/[0.03] hover:bg-white dark:hover:bg-white/[0.06] border border-gray-100 dark:border-white/10 rounded-[2rem] p-5 flex items-center gap-5 transition-all hover:shadow-2xl hover:-translate-y-1 backdrop-blur-3xl group"
-                            >
-                                {/* Rank */}
-                                <div className="w-10 flex justify-center">
-                                    <span className="text-slate-400 dark:text-gray-600 font-black text-2xl group-hover:text-[#ff477e] transition-colors italic">#{user.rank}</span>
+                {/* Remaining Ranks List (4-10) */}
+                <div className="space-y-2.5 pt-4">
+                    <h2 className="text-sm font-extrabold uppercase tracking-wider text-on-surface-variant px-1">
+                        Rankings (4–10)
+                    </h2>
+
+                    {rest.map((user, index) => (
+                        <motion.div
+                            key={user.userId || user.id || index}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 + 0.3 }}
+                            className="p-3.5 sm:p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 hover:border-blue-500/30 transition-all flex items-center justify-between gap-3 sm:gap-4 shadow-xs hover:shadow-md"
+                        >
+                            {/* Left: Rank & Avatar */}
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                <div className="w-8 flex items-center justify-center shrink-0">
+                                    <span className="font-black text-sm text-on-surface-variant">
+                                        #{user.rank}
+                                    </span>
                                 </div>
 
-                                {/* Avatar */}
-                                <div className="w-14 h-14 rounded-2xl bg-[#020617] border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden relative shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-surface-container-low border border-outline-variant/20 flex items-center justify-center overflow-hidden relative shrink-0">
                                     {user.avatarUrl ? (
                                         <Image src={user.avatarUrl} alt={user.name} fill className="object-cover" />
                                     ) : (
-                                        <span className="text-slate-700 font-black text-xl">{user.name.charAt(0)}</span>
+                                        <span className="text-sm font-black text-on-surface">
+                                            {user.name?.charAt(0) || 'U'}
+                                        </span>
                                     )}
                                 </div>
 
-                                {/* Details */}
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-black text-lg text-slate-900 dark:text-white truncate italic tracking-tight">{user.name}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-[9px] px-2 py-0.5 rounded-md border ${getTierColor(user.tier)} uppercase tracking-widest font-black italic`}>
-                                            {user.tier}
-                                        </span>
-                                    </div>
+                                <div className="min-w-0">
+                                    <p className="font-extrabold text-xs sm:text-sm text-on-surface truncate">
+                                        {user.name}
+                                    </p>
+                                    <span className={`inline-block text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border mt-0.5 ${getTierColor(user.tier)}`}>
+                                        {user.tier || 'Member'}
+                                    </span>
                                 </div>
+                            </div>
 
-                                {/* Points */}
-                                <div className="text-right">
-                                    <div className="flex items-center justify-end gap-2 text-[#ff477e]">
-                                        <Target size={18} className="opacity-50" />
-                                        <span className="font-black text-2xl tracking-tighter italic">{user.points.toLocaleString()}</span>
-                                    </div>
-                                    <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.3em] mt-0.5">Points</p>
+                            {/* Right: Points */}
+                            <div className="text-right shrink-0">
+                                <div className="flex items-center justify-end gap-1.5 text-blue-600 dark:text-blue-400">
+                                    <Coins size={14} className="text-amber-500" />
+                                    <span className="font-black text-sm sm:text-base tabular-nums">
+                                        {Number(user.points || 0).toLocaleString()}
+                                    </span>
                                 </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                )}
-                
-                {leaderboard.length === 0 && !loading && (
-                    <div className="text-center py-24 bg-white/50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-[3rem] backdrop-blur-3xl">
-                        <div className="w-20 h-20 bg-[#ff477e]/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-[#ff477e] border border-[#ff477e]/20">
-                            <Award size={40} />
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">No Champions Yet</h3>
-                        <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-xs opacity-60">Be the first to claim a rank on the leaderboard.</p>
-                    </div>
-                )}
-
-                <div className="mt-20 text-center">
-                    <p className="text-[10px] font-black text-slate-400 dark:text-gray-600 uppercase tracking-[0.5em] italic">InTrust Community Leaderboard</p>
+                                <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
+                                    Coins
+                                </p>
+                            </div>
+                        </motion.div>
+                    ))}
                 </div>
             </div>
         </div>

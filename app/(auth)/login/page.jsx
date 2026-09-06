@@ -368,27 +368,27 @@ function LoginContent() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
-            <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[var(--border-color)] p-8">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#06080e] p-4">
+            <div className="w-full max-w-md bg-white dark:bg-[#0c0e16] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/10 p-6 sm:p-8 backdrop-blur-xl">
 
                 {/* ── EMAIL (default login) ── */}
                 {step === 'email' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
-                        <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Login</h1>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Enter your details to login.</p>
+                        <h1 className="text-2xl font-black text-slate-900 dark:text-white text-center mt-2">Welcome Back</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1 mb-6">Enter your credentials to continue.</p>
 
                         {/* ── CALLBACK / LOGIN REQUIRED NOTE ── */}
                         {postLoginRedirect && (
-                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
-                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
-                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                            <div className="mb-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600" />
+                                <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <span>Sign in Required</span>
                                 </div>
-                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                                     {postLoginRedirect.includes('/career') 
                                         ? "Please log in to your account to continue with your job application and save your progress."
                                         : "Please log in to your account to securely access your requested page."}
@@ -396,23 +396,23 @@ function LoginContent() {
                             </div>
                         )}
 
-                        <form onSubmit={handleEmailSignIn} className="space-y-5">
+                        <form onSubmit={handleEmailSignIn} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Email</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
                                 <input
                                     type="email"
                                     value={emailAddress}
                                     onChange={(e) => setEmailAddress(e.target.value)}
-                                    placeholder="Enter your Email"
-                                    className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                    placeholder="name@example.com"
+                                    className="w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium"
                                     required
                                 />
                             </div>
 
                             <div>
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <label className="block text-sm font-medium text-[var(--text-primary)]">Password</label>
-                                    <Link href="/forgot-password" className="text-xs text-[#92BCEA] hover:underline font-medium">
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Password</label>
+                                    <Link href="/forgot-password" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-bold">
                                         Forgot password?
                                     </Link>
                                 </div>
@@ -422,13 +422,13 @@ function LoginContent() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Enter your password"
-                                        className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all pr-12"
+                                        className="w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-12 text-sm font-medium"
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
@@ -471,9 +471,9 @@ function LoginContent() {
                             <button
                                 type="submit"
                                 disabled={loading || !emailAddress || !password}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex justify-center text-sm"
                             >
-                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login to InTrust'}
                             </button>
                         </form>
 
@@ -603,16 +603,16 @@ function LoginContent() {
                             <button
                                 onClick={(e) => { if (canResend) handleEmailOTPSend(e); }}
                                 disabled={loading || !canResend}
-                                className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all disabled:opacity-50"
+                                className="w-full py-3.5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-center gap-3 text-slate-700 dark:text-white font-medium hover:bg-slate-50 dark:hover:bg-white/5 transition-all disabled:opacity-50"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : canResend ? 'Resend code' : `Resend in ${timer}s`}
                             </button>
                             <button
                                 onClick={handleVerifyOTP}
                                 disabled={loading || otp.length !== 6}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify'}
+                                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify & Continue'}
                             </button>
                         </div>
                     </div>
@@ -621,25 +621,25 @@ function LoginContent() {
                 {/* ── PHONE ── */}
                 {step === 'phone' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
-                            <button onClick={() => { setStep('email'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
+                            <button onClick={() => { setStep('email'); }} className="absolute -left-2 top-0 bottom-0 text-slate-400 hover:text-blue-600 transition-colors p-2">
                                 <ArrowRight size={20} className="rotate-180" />
                             </button>
-                            <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Phone Login</h2>
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-white w-full text-center">Phone Login</h2>
                         </div>
 
                         {/* ── CALLBACK / LOGIN REQUIRED NOTE ── */}
                         {postLoginRedirect && (
-                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
-                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
-                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                            <div className="mb-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600" />
+                                <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <span>Sign in Required</span>
                                 </div>
-                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                                     {postLoginRedirect.includes('/career') 
                                         ? "Please log in to your account to continue with your job application and save your progress."
                                         : "Please log in to your account to securely access your requested page."}
@@ -649,35 +649,35 @@ function LoginContent() {
 
                         <form onSubmit={(e) => handleSendOTP(e, 'sms')} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Phone Number</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Phone Number</label>
                                 <div className="relative">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={20} />
+                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
                                         type="tel"
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value)}
                                         placeholder="9876543210"
-                                        className="w-full pl-12 pr-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                        className="w-full pl-12 pr-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm"
                                         required pattern="[0-9]{10}" maxLength={10}
                                     />
                                 </div>
-                                <p className="text-xs text-[var(--text-secondary)] mt-2">We&apos;ll send you a verification code</p>
+                                <p className="text-xs text-slate-500 mt-1.5">We&apos;ll send you a 6-digit OTP code</p>
                             </div>
 
                             <div className="space-y-3">
                                 <button
                                     type="submit"
                                     disabled={loading || whatsappLoading || phone.length !== 10}
-                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                 >
-                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Send code via SMS <ArrowRight size={18} /></>}
+                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Send code via SMS <ArrowRight size={16} /></>}
                                 </button>
 
                                 <button
                                     type="button"
                                     onClick={(e) => handleSendOTP(e, 'whatsapp')}
                                     disabled={loading || whatsappLoading || phone.length !== 10}
-                                    className="w-full py-3.5 border border-[#25D366]/30 rounded-xl flex items-center justify-center gap-2 text-[#25D366] font-medium hover:bg-[#25D366]/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3.5 border border-[#25D366]/40 rounded-xl flex items-center justify-center gap-2 text-[#25D366] font-bold hover:bg-[#25D366]/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                 >
                                     {whatsappLoading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <><MessageCircle size={18} /> Get code on WhatsApp</>}
                                 </button>
@@ -689,22 +689,22 @@ function LoginContent() {
                 {/* ── PHONE OTP ── */}
                 {step === 'otp' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
-                        <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Enter OTP</h2>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-1">
-                            Sent to <span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white text-center mt-2">Enter OTP</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1 mb-1">
+                            Sent to <span className="font-semibold text-slate-900 dark:text-white">+91 {phone}</span>
                         </p>
                         {/* Channel badge */}
                         <p className="text-xs text-center mb-2">
                             {otpChannel === 'whatsapp'
                                 ? <span className="inline-flex items-center gap-1 text-[#25D366] font-medium"><MessageCircle size={13} /> via WhatsApp</span>
-                                : <span className="inline-flex items-center gap-1 text-[var(--text-secondary)] font-medium"><Phone size={13} /> via SMS</span>
+                                : <span className="inline-flex items-center gap-1 text-slate-500 font-medium"><Phone size={13} /> via SMS</span>
                             }
                         </p>
                         <div className="text-center mb-6">
-                            <button type="button" onClick={() => { setStep('phone'); }} className="text-[#92BCEA] text-sm hover:underline font-medium">
+                            <button type="button" onClick={() => { setStep('phone'); }} className="text-blue-600 dark:text-blue-400 text-sm hover:underline font-semibold">
                                 Change number
                             </button>
                         </div>
@@ -720,7 +720,7 @@ function LoginContent() {
                             <button
                                 onClick={handleVerifyOTP}
                                 disabled={loading || otp.length !== 6}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
                                 {loading ? <><Loader2 className="animate-spin" size={20} /> Verifying...</> : <>Verify &amp; Login <ShieldCheck size={18} /></>}
                             </button>
@@ -730,7 +730,7 @@ function LoginContent() {
                                 type="button"
                                 onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }}
                                 disabled={loading || !canResend}
-                                className="w-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors disabled:opacity-50"
+                                className="w-full text-slate-500 hover:text-slate-800 dark:hover:text-white text-sm transition-colors disabled:opacity-50"
                             >
                                 Didn&apos;t receive OTP? <span className="underline font-semibold">{canResend ? 'Resend' : `Resend in ${timer}s`}</span>
                             </button>
@@ -742,7 +742,7 @@ function LoginContent() {
                                     onClick={(e) => handleSendOTP(e, otpChannel === 'whatsapp' ? 'sms' : 'whatsapp')}
                                     disabled={loading || whatsappLoading}
                                     className="w-full text-sm font-medium transition-colors disabled:opacity-50"
-                                    style={{ color: otpChannel === 'whatsapp' ? 'var(--text-secondary)' : '#25D366' }}
+                                    style={{ color: otpChannel === 'whatsapp' ? '#64748b' : '#25D366' }}
                                 >
                                     {otpChannel === 'whatsapp'
                                         ? <>Resend via SMS instead</>
@@ -754,28 +754,27 @@ function LoginContent() {
                     </div>
                 )}
 
-
                 {/* ── NO ACCOUNT ── */}
                 {step === 'no-account' && (
                     <div className="animate-fadeIn text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
-                        <h2 className="text-2xl font-bold text-[var(--text-primary)] mt-2">Let&apos;s get you set up</h2>
-                        <p className="text-sm text-[var(--text-secondary)] mt-2 mb-8">
-                            Looks like you don&apos;t have an account with <span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span> yet.
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-2">Let&apos;s get you set up</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 mb-8">
+                            Looks like you don&apos;t have an account with <span className="font-semibold text-slate-900 dark:text-white">+91 {phone}</span> yet.
                         </p>
                         
                         <div className="space-y-4">
                             <button
                                 onClick={() => router.push(`/signup?phone=${phone}${postLoginRedirect ? `&callbackUrl=${encodeURIComponent(postLoginRedirect)}` : ''}`)}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all text-sm"
                             >
                                 Create my account
                             </button>
                             <button
                                 onClick={() => setStep('phone')}
-                                className="w-full py-3.5 border border-[var(--border-color)] text-[var(--text-primary)] font-semibold rounded-xl hover:bg-[var(--bg-secondary)] transition-all"
+                                className="w-full py-3.5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm"
                             >
                                 Use a different number
                             </button>

@@ -14,7 +14,6 @@ import MobileNav from './MobileNav';
 import GoldBadge from '@/components/ui/GoldBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import GlobalSearch from '@/components/search/GlobalSearch';
 import toast from 'react-hot-toast';
 
 export default function Navbar() {
@@ -170,9 +169,6 @@ export default function Navbar() {
                                     </Link>
                                 ))}
                             </div>
-                            <div className="w-full max-w-lg">
-                                {pathname !== '/' && <GlobalSearch />}
-                            </div>
                         </div>
 
                         {/* Actions - Right */}
@@ -195,18 +191,14 @@ export default function Navbar() {
                                 <ShoppingBag size={20} />
                             </Link>
 
-                            {/* Notifications - desktop only, mobile uses sidebar */}
+                            {/* Notifications */}
                             {isAuthenticated && (
-                                <div
-                                    className="hidden lg:flex"
-                                >
-                                    <NotificationBell apiPath="/api/notifications" variant="navbar" />
-                                </div>
+                                <NotificationBell apiPath="/api/notifications" variant="navbar" />
                             )}
                             {/* Theme Toggle */}
                             <button
-                                onClick={toggleTheme}
-                                className="hidden lg:flex p-2.5 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                onClick={(e) => toggleTheme(e)}
+                                className="p-2.5 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                                 aria-label="Toggle Theme"
                             >
                                 {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
@@ -250,35 +242,14 @@ export default function Navbar() {
                                     <button
                                         onClick={handleLogout}
                                         className="
-                      px-6 py-2 rounded-full font-semibold text-[15px]
-                      bg-gray-100 text-gray-600 hover:bg-gray-200
-                      dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700
-                      transition-all duration-300 hover:scale-105 active:scale-95
-                    "
+                       px-6 py-2 rounded-full font-semibold text-[15px]
+                       bg-gray-100 text-gray-600 hover:bg-gray-200
+                       dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700
+                       transition-all duration-300 hover:scale-105 active:scale-95
+                     "
                                     >
                                         Sign Out
                                     </button>
-                                    {/* Mobile/Tablet Profile Icon */}
-                                    <Link href="/profile" className="lg:hidden">
-                                        <div
-                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] cursor-pointer active:scale-95 transition-transform"
-                                        >
-                                            <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                {hasImage ? (
-                                                    <img
-                                                        src={profile.avatar_url}
-                                                        alt="Profile"
-                                                        className="w-full h-full object-cover rounded-full"
-                                                        onError={() => setAvatarError(true)}
-                                                    />
-                                                ) : (
-                                                    <span className="font-bold text-[#7A93AC] text-sm">
-                                                        {displayInitial(profile, user)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </Link>
                                 </div>
                             ) : (
                                 <div className="hidden lg:flex items-center gap-2">

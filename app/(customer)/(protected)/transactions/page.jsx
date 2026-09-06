@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Clock, CheckCircle, Search, Filter, TrendingUp, TrendingDown, Wallet, Gift, ArrowDownLeft, ArrowUpRight, ArrowLeft } from 'lucide-react';
+import { Clock, CheckCircle, Search, Filter, TrendingUp, TrendingDown, Wallet, Gift, ArrowDownLeft, ArrowUpRight, ArrowLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import Link from 'next/link';
@@ -284,7 +284,7 @@ export default function TransactionsPage() {
                         placeholder="Search by store, description, or amount..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl py-3 pl-10 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-sm"
+                        className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-2xl py-3 pl-10 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 shadow-sm"
                     />
                 </div>
 
@@ -295,8 +295,8 @@ export default function TransactionsPage() {
                             onClick={() => setFilter(f)}
                             className={`whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                                 filter === f
-                                    ? 'bg-primary text-on-primary shadow-sm'
-                                    : 'text-on-surface-variant hover:text-on-surface'
+                                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                                    : 'text-on-surface-variant hover:text-blue-600 dark:hover:text-blue-400'
                             }`}
                         >
                             {f === 'ALL' ? 'All' : f === 'PURCHASES' ? 'Purchases' : f === 'CASHBACK' ? 'Cashback' : f === 'WALLET' ? 'Wallet' : f === 'UDHARI' ? 'Credit' : 'Admin'}
@@ -326,45 +326,51 @@ export default function TransactionsPage() {
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: Math.min(idx * 0.03, 0.3) }}
-                                    className="p-4 sm:p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/25 hover:border-outline-variant/50 transition-all flex items-center justify-between gap-4 shadow-sm"
                                 >
-                                    <div className="flex items-center gap-3.5 min-w-0">
-                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
-                                            isPositive
-                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                                : 'bg-primary/10 text-primary'
-                                        }`}>
-                                            {tx.logo}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="font-extrabold text-sm text-on-surface truncate">
-                                                {tx.brand}
-                                            </p>
-                                            <p className="text-xs text-on-surface-variant truncate max-w-xs sm:max-w-md">
-                                                {tx.description}
-                                            </p>
-                                            <p className="text-[11px] text-on-surface-variant/70 mt-0.5 sm:hidden">
-                                                {tx.displayDate}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-6 shrink-0 text-right">
-                                        <div className="hidden sm:block">
-                                            <p className="text-xs font-semibold text-on-surface-variant">{tx.displayDate}</p>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                                                {tx.status}
-                                            </span>
+                                    <Link
+                                        href={`/transactions/${tx.id}`}
+                                        className="group p-4 sm:p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/25 hover:border-blue-500/40 hover:shadow-md transition-all flex items-center justify-between gap-4 shadow-sm active:scale-[0.99] cursor-pointer block"
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                                                isPositive
+                                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                    : 'bg-blue-600/10 text-blue-600 dark:text-blue-400'
+                                            }`}>
+                                                {tx.logo}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-extrabold text-sm text-on-surface group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                                                    {tx.brand}
+                                                </p>
+                                                <p className="text-xs text-on-surface-variant truncate max-w-xs sm:max-w-md">
+                                                    {tx.description}
+                                                </p>
+                                                <p className="text-[11px] text-on-surface-variant/70 mt-0.5 sm:hidden">
+                                                    {tx.displayDate}
+                                                </p>
+                                            </div>
                                         </div>
 
-                                        <p className={`text-base sm:text-lg font-black tabular-nums ${
-                                            isPositive
-                                                ? 'text-emerald-600 dark:text-emerald-400'
-                                                : 'text-on-surface'
-                                        }`}>
-                                            {isPositive ? '+' : '-'}₹{tx.amount.toFixed(2)}
-                                        </p>
-                                    </div>
+                                        <div className="flex items-center gap-3 sm:gap-6 shrink-0 text-right">
+                                            <div className="hidden sm:block">
+                                                <p className="text-xs font-semibold text-on-surface-variant">{tx.displayDate}</p>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                                    {tx.status}
+                                                </span>
+                                            </div>
+
+                                            <p className={`text-base sm:text-lg font-black tabular-nums ${
+                                                isPositive
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : 'text-on-surface'
+                                            }`}>
+                                                {isPositive ? '+' : '-'}₹{tx.amount.toFixed(2)}
+                                            </p>
+
+                                            <ChevronRight size={16} className="text-on-surface-variant/30 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                                        </div>
+                                    </Link>
                                 </motion.div>
                             );
                         })

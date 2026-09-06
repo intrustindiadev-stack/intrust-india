@@ -28,18 +28,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { getCategorySlug, getCategoryIcon, getCategoryImage, FALLBACK_CATEGORIES } from '@/lib/shopping/categories';
 import { getSubCategories } from '@/lib/constants/categories';
 
 export default function CategoryProductsClient({ initialProducts = [], categoryName = '', categories = [] }) {
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { user } = useAuth();
 
     const [selectedFilter, setSelectedFilter] = useState('all'); // 'all', 'under_500', 'under_1500', 'discount_20', 'in_stock'
     const [selectedMerchantFilter, setSelectedMerchantFilter] = useState('all'); // 'all', 'official', 'local'
-    const [selectedSubCategory, setSelectedSubCategory] = useState('all'); // 'all' or a valid sub-category name
+    const [selectedSubCategory, setSelectedSubCategory] = useState(searchParams?.get('sub_category') || 'all'); // 'all' or a valid sub-category name
     const [sortBy, setSortBy] = useState('popular'); // 'popular', 'price_asc', 'price_desc', 'rating'
     const [cartQuantities, setCartQuantities] = useState({}); // { [productId]: quantity }
     const [cartItemDetails, setCartItemDetails] = useState({}); // { [productId]: { price, mrp } }
@@ -103,8 +104,17 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
         fetchExistingCart();
     }, [user?.id]);
 
-    // Compute available sub-categories for the current category
-    const availableSubCategories = useMemo(() => getSubCategories(categoryName), [categoryName]);
+    // Compute available sub-categories for the current category (canonical + dynamic from products)
+    const availableSubCategories = useMemo(() => {
+        const canonical = getSubCategories(categoryName);
+        const dynamic = new Set();
+        initialProducts.forEach(p => {
+            if (p.sub_category && p.sub_category !== 'General') {
+                dynamic.add(p.sub_category);
+            }
+        });
+        return Array.from(new Set([...canonical, ...Array.from(dynamic)]));
+    }, [categoryName, initialProducts]);
 
     const filteredAndSortedProducts = useMemo(() => {
         let list = [...initialProducts];
@@ -210,7 +220,8 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
 
         if (!user) {
             toast.error('Please login to add items to your cart');
-            router.push('/login');
+            const returnUrl = pathname + (typeof window !== 'undefined' ? window.location.search : '');
+            router.push(`/login?next=${encodeURIComponent(returnUrl)}`);
             return;
         }
 
@@ -344,6 +355,22 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
         });
     }, [categories]);
 
+    const handleSubCategorySelect = useCallback((sub) => {
+        setSelectedSubCategory(sub);
+        try {
+            const currentParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+            if (sub === 'all') {
+                currentParams.delete('sub_category');
+            } else {
+                currentParams.set('sub_category', sub);
+            }
+            const qs = currentParams.toString();
+            router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+        } catch (e) {
+            console.error('URL replace error:', e);
+        }
+    }, [pathname, router]);
+
     return (
         <div className="space-y-4">
             {/* Express Delivery Promise Banner */}
@@ -358,12 +385,40 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                 </div>
             </div>
 
+            {/* ====== MOBILE TOP SIBLING CATEGORY CAROUSEL (< 640px) ====== */}
+            <div className="sm:hidden w-full overflow-x-auto no-scrollbar py-1 flex items-center gap-2">
+                {dynamicSiblingCategories.map((cat) => {
+                    const isCurrent = activeSlug === cat.slug || categoryName.toLowerCase().includes(cat.slug);
+                    const Icon = cat.icon;
+                    return (
+                        <Link
+                            key={cat.slug}
+                            href={`/shop/category/${cat.slug}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-2xl shrink-0 transition-all ${
+                                isCurrent
+                                    ? 'bg-blue-600 text-white font-black shadow-xs'
+                                    : 'bg-white dark:bg-[#0c0e16] border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 font-bold'
+                            }`}
+                        >
+                            <div className="w-5 h-5 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                                {cat.image ? (
+                                    <img src={cat.image} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <Icon size={14} />
+                                )}
+                            </div>
+                            <span className="text-xs whitespace-nowrap">{cat.label}</span>
+                        </Link>
+                    );
+                })}
+            </div>
+
             {/* ====== BLINKIT 2-COLUMN RAIL LAYOUT ====== */}
             <div className="flex gap-3 sm:gap-6 items-start">
                 
-                {/* ── Left Category Rail (Blinkit Style) ── */}
-                <aside className="w-[84px] sm:w-[110px] md:w-[140px] shrink-0 sticky top-[80px] self-start bg-white dark:bg-[#0c0e16] rounded-3xl p-1.5 sm:p-2 border border-slate-200/90 dark:border-white/[0.08] shadow-xs flex flex-col gap-1.5 z-20">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-2 pt-1.5 pb-1 hidden sm:block">
+                {/* ── Left Category Rail for Tablet/Desktop (≥ 640px) ── */}
+                <aside className="hidden sm:flex w-[110px] md:w-[140px] shrink-0 sticky top-[80px] self-start bg-white dark:bg-[#0c0e16] rounded-3xl p-1.5 sm:p-2 border border-slate-200/90 dark:border-white/[0.08] shadow-xs flex-col gap-1.5 z-20">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-2 pt-1.5 pb-1">
                         Categories
                     </div>
 
@@ -494,7 +549,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-white/5 pt-2.5">
                                 <button
                                     key="sub-all"
-                                    onClick={() => setSelectedSubCategory('all')}
+                                    onClick={() => handleSubCategorySelect('all')}
                                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                                         selectedSubCategory === 'all'
                                             ? 'bg-violet-600 text-white shadow-xs font-black'
@@ -508,7 +563,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                                     return (
                                         <button
                                             key={sub}
-                                            onClick={() => setSelectedSubCategory(sub)}
+                                            onClick={() => handleSubCategorySelect(sub)}
                                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                                                 active
                                                     ? 'bg-violet-600 text-white shadow-xs font-black'
@@ -595,10 +650,16 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                                                 {prod.title}
                                             </h3>
 
-                                            {/* Merchant / Seller Tag */}
+                                            {/* Merchant / Seller Tag & Sub-Category */}
                                             <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-1.5 truncate">
                                                 <Store size={11} className={isOfficial ? "text-blue-600 dark:text-sky-400 shrink-0" : "text-sky-600 dark:text-sky-400 shrink-0"} />
                                                 <span className="truncate">{merchantName}</span>
+                                                {prod.sub_category && prod.sub_category !== 'General' && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 truncate">{prod.sub_category}</span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 

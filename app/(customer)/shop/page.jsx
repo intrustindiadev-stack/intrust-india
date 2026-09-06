@@ -107,12 +107,67 @@ export default async function MerchantHubPage() {
         ...merchants
     ];
 
+    // Fetch real inventory for active merchants so store cards showcase THEIR products only
+    let merchantProductsMap = {};
+    if (merchantIds.length > 0) {
+        try {
+            const { data: inventoryItems } = await supabase
+                .from('merchant_inventory')
+                .select(`
+                    id,
+                    merchant_id,
+                    product_id,
+                    retail_price_paise,
+                    stock_quantity,
+                    custom_title,
+                    shopping_products (
+                        id,
+                        title,
+                        slug,
+                        product_images,
+                        category,
+                        suggested_retail_price_paise
+                    )
+                `)
+                .in('merchant_id', merchantIds)
+                .eq('is_active', true)
+                .gt('stock_quantity', 0)
+                .limit(80);
+
+            if (inventoryItems) {
+                inventoryItems.forEach(item => {
+                    if (!merchantProductsMap[item.merchant_id]) {
+                        merchantProductsMap[item.merchant_id] = [];
+                    }
+                    if (merchantProductsMap[item.merchant_id].length < 4) {
+                        merchantProductsMap[item.merchant_id].push({
+                            id: item.product_id || item.id,
+                            title: item.custom_title || item.shopping_products?.title || 'Product',
+                            slug: item.shopping_products?.slug || item.product_id,
+                            selling_price: Math.round((item.retail_price_paise || 0) / 100),
+                            images: item.shopping_products?.product_images || [],
+                            category: item.shopping_products?.category || 'General'
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Could not fetch merchant inventory items:', e);
+        }
+    }
+
     const categories = categoriesResult?.data || [];
 
     return (
         <div className="w-full space-y-6">
-            <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} categories={categories} />
+            <ShopHubClient 
+                merchants={allMerchants} 
+                ratingsMap={ratingsMap} 
+                categories={categories} 
+                merchantProductsMap={merchantProductsMap}
+            />
         </div>
     );
 }
+
 

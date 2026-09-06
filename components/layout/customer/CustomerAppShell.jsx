@@ -15,7 +15,6 @@ import {
     Heart, 
     Layers, 
     Settings, 
-    Search, 
     MapPin, 
     Wallet, 
     Plus, 
@@ -32,12 +31,17 @@ import {
     Receipt,
     History,
     Crown,
-    LogOut
+    LogOut,
+    LogIn,
+    BadgeCheck,
+    Check
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import NotificationBell from '@/components/notifications/NotificationBell';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const NAV_GROUPS = [
     {
@@ -78,26 +82,41 @@ const NAV_GROUPS = [
     }
 ];
 
+const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items);
+
 export default function CustomerAppShell({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const { user, profile, signOut } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [walletBalance, setWalletBalance] = useState(0);
     const [cartCount, setCartCount] = useState(0);
 
     const isDarkMode = theme === 'dark';
     const isGuest = !user;
     const isCartPage = pathname === '/shop/cart';
+    const isPDP = pathname.startsWith('/shop/product');
+    const hideBottomNav = isCartPage || isPDP;
 
-    const handleSignOut = async () => {
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isSigningOut, setIsSigningOut] = useState(false);
+
+    const triggerLogoutConfirm = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmSignOut = async () => {
         try {
+            setIsSigningOut(true);
             await signOut();
             router.push('/login');
         } catch (e) {
             console.error('Sign out error:', e);
+            router.push('/login');
+        } finally {
+            setIsSigningOut(false);
+            setShowLogoutModal(false);
         }
     };
 
@@ -176,21 +195,15 @@ export default function CustomerAppShell({ children }) {
         }
     }
 
-    const handleSearchSubmit = (e) => {
-        e.preventDefault();
-        if (searchQuery.trim()) {
-            router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
-        }
-    };
-
+    const isKycVerified = profile?.kyc_status === 'verified' || profile?.kyc_status === 'approved';
     const userName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
     const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-surface text-slate-900 dark:text-on-surface flex relative antialiased selection:bg-primary/20">
             {/* ── DESKTOP SIDEBAR DRAWER ── */}
-            <aside className="hidden lg:flex fixed left-0 top-0 h-full w-72 bg-white dark:bg-surface-container-lowest border-r border-slate-200 dark:border-outline-variant/30 z-50 flex-col justify-between shadow-[0_2px_16px_rgba(0,0,0,0.03)]">
-                <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar">
+            <aside className="hidden lg:flex fixed left-0 top-0 h-full w-72 bg-white dark:bg-surface-container-lowest border-r border-slate-200 dark:border-outline-variant/30 z-50 flex-col justify-between shadow-[0_2px_16px_rgba(0,0,0,0.03)] overflow-hidden">
+                <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {/* Brand Header */}
                     <div className="h-20 px-6 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-outline-variant/20 shrink-0">
                         <Link href={isGuest ? "/shop" : "/dashboard"} className="flex items-center gap-3 group">
@@ -234,18 +247,39 @@ export default function CustomerAppShell({ children }) {
                             </div>
                         ) : (
                             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex items-center justify-between shadow-xs">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#D4AF37]">
-                                        <ShieldCheck size={18} />
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center font-black text-blue-600 text-xs overflow-hidden shrink-0">
+                                        {avatarUrl ? (
+                                            <Image src={avatarUrl} alt={userName} fill className="object-cover" />
+                                        ) : (
+                                            userName.charAt(0).toUpperCase()
+                                        )}
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] font-black text-slate-400 dark:text-brand-steel uppercase tracking-wider">Tier Status</span>
-                                        <span className="text-xs font-bold text-amber-600 dark:text-[#D4AF37]">Verified Member</span>
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="text-xs font-black text-slate-900 dark:text-on-surface truncate">{userName}</span>
+                                            {isKycVerified && (
+                                                <span title="KYC Verified" className="inline-flex shrink-0">
+                                                    <svg className="w-4 h-4 text-blue-600 fill-blue-600 shrink-0" viewBox="0 0 24 24">
+                                                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                                    </svg>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] font-bold truncate ${isKycVerified ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-brand-steel'}`}>
+                                            {isKycVerified ? 'Verified Member' : 'KYC Pending'}
+                                        </span>
                                     </div>
                                 </div>
-                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-[#D4AF37] border border-amber-500/30">
-                                    Active
-                                </span>
+                                {isKycVerified ? (
+                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs shrink-0 flex items-center gap-0.5">
+                                        <Check size={10} strokeWidth={3} /> Verified
+                                    </span>
+                                ) : (
+                                    <Link href="/profile" className="text-[9px] font-bold text-amber-600 dark:text-amber-400 hover:underline shrink-0">
+                                        Verify
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </div>
@@ -305,8 +339,8 @@ export default function CustomerAppShell({ children }) {
                     </nav>
                 </div>
 
-                {/* Bottom Merchant Banner */}
-                <div className="p-4 border-t border-slate-200 dark:border-outline-variant/20 shrink-0">
+                {/* Bottom Merchant Banner & Logout */}
+                <div className="p-4 border-t border-slate-200 dark:border-outline-variant/20 shrink-0 space-y-2.5">
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex flex-col gap-2.5">
                         <div className="flex items-start gap-2.5">
                             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-primary flex items-center justify-center shrink-0 mt-0.5">
@@ -319,20 +353,21 @@ export default function CustomerAppShell({ children }) {
                         </div>
                         <Link
                             href="/merchant-apply"
-                            className="w-full py-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-on-surface dark:text-surface text-xs font-bold text-center transition-all shadow-xs"
+                            className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-on-surface dark:text-surface text-xs font-bold text-center transition-all shadow-xs"
                         >
                             Register Store
                         </Link>
-                        {!isGuest && (
-                            <button
-                                onClick={handleSignOut}
-                                className="w-full py-1.5 px-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/40 dark:border-red-900/30"
-                            >
-                                <LogOut size={13} />
-                                <span>Sign Out</span>
-                            </button>
-                        )}
                     </div>
+
+                    {!isGuest && (
+                        <button
+                            onClick={triggerLogoutConfirm}
+                            className="w-full py-2.5 px-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/60 dark:border-red-900/30 active:scale-[0.98]"
+                        >
+                            <LogOut size={15} />
+                            <span>Sign Out</span>
+                        </button>
+                    )}
                 </div>
             </aside>
 
@@ -340,22 +375,18 @@ export default function CustomerAppShell({ children }) {
             <div className="flex-1 flex flex-col min-h-screen lg:pl-72 w-full">
                 {/* ── DESKTOP HEADER ── */}
                 <header className="hidden lg:flex fixed top-0 left-72 right-0 h-20 bg-white/80 dark:bg-surface-container-lowest/80 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-40 px-8 items-center justify-between gap-6 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
-                    {/* Omnibox Search */}
-                    <form onSubmit={handleSearchSubmit} className="flex-1 max-w-lg">
-                        <div className="relative flex items-center w-full">
-                            <Search size={17} className="absolute left-4 text-slate-400 dark:text-brand-steel pointer-events-none" />
-                            <input
-                                type="text"
-                                placeholder="Search products, verified stores, electronics, brands..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full h-11 pl-11 pr-14 rounded-2xl bg-slate-100/80 dark:bg-surface-container-low text-slate-900 dark:text-on-surface text-sm placeholder:text-slate-400 dark:placeholder:text-brand-steel border border-slate-200/60 dark:border-transparent focus:border-blue-500 dark:focus:border-primary focus:bg-white dark:focus:bg-surface-container-lowest outline-none transition-all shadow-inner"
-                            />
-                            <div className="absolute right-3 px-2 py-0.5 rounded-lg bg-slate-200/70 dark:bg-surface-container-high/60 text-slate-500 dark:text-brand-steel text-[11px] font-semibold pointer-events-none">
-                                ⌘K
-                            </div>
+                    {/* Header Title / Breadcrumb */}
+                    <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+                        <div>
+                            <h2 className="text-sm font-black text-slate-900 dark:text-on-surface tracking-tight leading-none">
+                                {ALL_NAV_ITEMS.find(n => n.href === pathname)?.label || 'Customer Panel'}
+                            </h2>
+                            <p className="text-[11px] text-slate-400 dark:text-brand-steel font-bold mt-0.5">
+                                InTrust India • Verified Commerce Platform
+                            </p>
                         </div>
-                    </form>
+                    </div>
 
                     {/* Right Controls */}
                     <div className="flex items-center gap-3.5 shrink-0">
@@ -399,7 +430,7 @@ export default function CustomerAppShell({ children }) {
 
                         {/* Theme Toggle Button */}
                         <button
-                            onClick={toggleTheme}
+                            onClick={(e) => toggleTheme(e)}
                             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                             className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-slate-950 dark:hover:text-on-surface flex items-center justify-center transition-all border border-slate-200/50 dark:border-outline-variant/10 active:scale-95"
                         >
@@ -408,27 +439,22 @@ export default function CustomerAppShell({ children }) {
 
                         {/* Notification Bell (Only for Authenticated Users) */}
                         {!isGuest && (
-                            <button 
-                                className="relative w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-slate-950 dark:hover:text-on-surface flex items-center justify-center transition-all border border-slate-200/50 dark:border-outline-variant/10"
-                                title="Notifications"
-                            >
-                                <Bell size={18} />
-                                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500" />
-                            </button>
+                            <NotificationBell apiPath="/api/notifications" variant="navbar" />
                         )}
 
-                        {/* User Profile / Guest Sign In Action */}
+                        {/* User Profile / Guest Login Action */}
                         {isGuest ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5">
                                 <Link
                                     href={`/login?next=${encodeURIComponent(pathname)}`}
-                                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-high transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-all shadow-md shadow-blue-500/20 active:scale-95"
                                 >
-                                    Sign In
+                                    <LogIn size={15} />
+                                    <span>Login</span>
                                 </Link>
                                 <Link
                                     href="/register"
-                                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
+                                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-xs font-bold transition-all border border-slate-200/60 dark:border-outline-variant/20"
                                 >
                                     Sign Up
                                 </Link>
@@ -452,7 +478,7 @@ export default function CustomerAppShell({ children }) {
                                     </div>
                                 </Link>
                                 <button
-                                    onClick={handleSignOut}
+                                    onClick={triggerLogoutConfirm}
                                     title="Sign Out"
                                     className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors ml-1"
                                 >
@@ -464,71 +490,83 @@ export default function CustomerAppShell({ children }) {
                 </header>
 
                 {/* ── MOBILE HEADER ── */}
-                <header className="lg:hidden sticky top-0 h-16 bg-white/95 dark:bg-surface-container-lowest/90 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-40 px-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setMobileMenuOpen(true)}
-                            className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-800 dark:text-on-surface"
-                        >
-                            <Menu size={19} />
-                        </button>
-                        <Link href="/dashboard" className="flex items-center gap-2">
-                            <div className="relative w-8 h-8 rounded-xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-xs overflow-hidden">
-                                <Image src="/icons/intrustLogo.png" alt="InTrust" width={24} height={24} className="object-contain" priority />
-                            </div>
-                            <span className="font-black text-base tracking-tight text-slate-900 dark:text-on-surface">InTrust</span>
-                        </Link>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        {/* Cart */}
-                        <Link
-                            href="/shop/cart"
-                            className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
-                        >
-                            <ShoppingCart size={16} />
-                            {cartCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center">
-                                    {cartCount}
-                                </span>
-                            )}
-                        </Link>
-
-                        {/* Theme Toggle */}
-                        <button
-                            onClick={toggleTheme}
-                            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-800 dark:text-on-surface"
-                        >
-                            {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
-                        </button>
-
-                        {/* Mobile Auth / Profile */}
-                        {!isGuest ? (
-                            <>
-                                <Link
-                                    href="/wallet"
-                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 text-xs font-bold text-slate-800 dark:text-on-surface"
-                                >
-                                    <Wallet size={13} className="text-blue-600 dark:text-primary" />
-                                    <span>₹{Math.floor(walletBalance).toLocaleString('en-IN')}</span>
-                                </Link>
-                                <Link href="/profile" className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-blue-500/20 flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-xs font-bold text-slate-800 dark:text-on-surface">
-                                    {avatarUrl ? (
-                                        <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span>{userName[0]?.toUpperCase() || 'U'}</span>
-                                    )}
-                                </Link>
-                            </>
-                        ) : (
-                            <Link
-                                href={`/login?next=${encodeURIComponent(pathname)}`}
-                                className="px-2.5 py-1 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-xs"
+                <header className="lg:hidden sticky top-0 bg-white/95 dark:bg-surface-container-lowest/90 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-40">
+                    <div className="h-16 px-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setMobileMenuOpen(true)}
+                                aria-label="Open Navigation Menu"
+                                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-800 dark:text-on-surface active:scale-95"
                             >
-                                Sign In
+                                <Menu size={19} />
+                            </button>
+                            <Link href={isGuest ? "/shop" : "/dashboard"} className="flex items-center gap-2">
+                                <div className="relative w-8 h-8 rounded-xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-xs overflow-hidden">
+                                    <Image src="/icons/intrustLogo.png" alt="InTrust" width={24} height={24} className="object-contain" priority />
+                                </div>
+                                <span className="font-black text-base tracking-tight text-slate-900 dark:text-on-surface">InTrust</span>
                             </Link>
-                        )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+
+                            {/* Cart */}
+                            <Link
+                                href="/shop/cart"
+                                aria-label="Shopping Cart"
+                                className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
+                            >
+                                <ShoppingCart size={16} />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center">
+                                        {cartCount}
+                                    </span>
+                                )}
+                            </Link>
+
+                            {/* Notification Bell on Mobile */}
+                            {!isGuest && (
+                                <Link
+                                    href="/notifications"
+                                    aria-label="Notifications"
+                                    className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
+                                >
+                                    <Bell size={16} />
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-1 ring-white dark:ring-surface-container-lowest" />
+                                </Link>
+                            )}
+
+                            {/* Theme Toggle */}
+                            <button
+                                onClick={(e) => toggleTheme(e)}
+                                aria-label="Toggle Theme"
+                                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-800 dark:text-on-surface"
+                            >
+                                {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
+                            </button>
+
+                            {/* Mobile Auth / Profile / Login Button */}
+                            {!isGuest ? (
+                                <Link href="/profile" className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-blue-500/20 flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-xs font-bold text-slate-800 dark:text-on-surface">
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{userName[0]?.toUpperCase() || 'U'}</span>
+                                        )}
+                                    </Link>
+                            ) : (
+                                <Link
+                                    href={`/login?next=${encodeURIComponent(pathname)}`}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-xs transition-all active:scale-95"
+                                >
+                                    <LogIn size={13} />
+                                    <span>Login</span>
+                                </Link>
+                            )}
+                        </div>
                     </div>
+
+
                 </header>
 
                 {/* ── MOBILE DRAWER OVERLAY ── */}
@@ -547,7 +585,7 @@ export default function CustomerAppShell({ children }) {
                                 animate={{ x: 0 }}
                                 exit={{ x: '-100%' }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface-container-lowest z-[80] flex flex-col justify-between shadow-2xl p-5 overflow-y-auto"
+                                className="lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface-container-lowest z-[80] flex flex-col justify-between shadow-2xl p-5 overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                             >
                                 <div>
                                     <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-outline-variant/20 mb-4">
@@ -597,14 +635,36 @@ export default function CustomerAppShell({ children }) {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-primary font-bold flex items-center justify-center overflow-hidden">
-                                                    {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : userName[0]?.toUpperCase()}
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-primary font-black flex items-center justify-center overflow-hidden border border-blue-500/20 shrink-0">
+                                                        {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : userName[0]?.toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1 min-w-0">
+                                                            <p className="font-extrabold text-sm text-slate-900 dark:text-on-surface truncate">{userName}</p>
+                                                            {isKycVerified && (
+                                                                <span title="KYC Verified" className="inline-flex shrink-0">
+                                                                    <svg className="w-4 h-4 text-blue-600 fill-blue-600 shrink-0" viewBox="0 0 24 24">
+                                                                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-[11px] font-bold ${isKycVerified ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-brand-steel'}`}>
+                                                            {isKycVerified ? 'Verified Member' : 'KYC Pending'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-sm text-slate-900 dark:text-on-surface">{userName}</p>
-                                                    <p className="text-xs text-amber-600 dark:text-[#D4AF37] font-semibold">Verified Member</p>
-                                                </div>
+                                                {isKycVerified ? (
+                                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0 flex items-center gap-0.5">
+                                                        <Check size={10} strokeWidth={3} /> Verified
+                                                    </span>
+                                                ) : (
+                                                    <Link href="/profile" className="text-[9px] font-bold text-amber-600 dark:text-amber-400 hover:underline shrink-0">
+                                                        Verify
+                                                    </Link>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -667,8 +727,8 @@ export default function CustomerAppShell({ children }) {
                                     </Link>
                                     {!isGuest && (
                                         <button
-                                            onClick={handleSignOut}
-                                            className="w-full py-2 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/40 dark:border-red-900/30"
+                                            onClick={triggerLogoutConfirm}
+                                            className="w-full py-2.5 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/60 dark:border-red-900/30 active:scale-[0.98]"
                                         >
                                             <LogOut size={14} />
                                             <span>Sign Out</span>
@@ -681,26 +741,26 @@ export default function CustomerAppShell({ children }) {
                 </AnimatePresence>
 
                 {/* ── PAGE VIEWPORT CONTENT ── */}
-                <main className="flex-1 w-full pt-4 lg:pt-24 px-4 lg:px-8 pb-28 lg:pb-16 max-w-7xl mx-auto">
+                <main className="flex-1 w-full pt-4 lg:pt-24 px-4 lg:px-8 pb-[calc(84px+env(safe-area-inset-bottom,0px))] lg:pb-16 max-w-7xl mx-auto">
                     {children}
                 </main>
 
                 {/* ── MOBILE STICKY BOTTOM NAVIGATION BAR ── */}
-                {!isCartPage && (
-                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[68px] bg-white/95 dark:bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200 dark:border-outline-variant/20 z-40 px-3 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                {!hideBottomNav && (
+                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[calc(68px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,4px)] bg-white/95 dark:bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200 dark:border-outline-variant/20 z-40 px-3 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                         {[
                             { label: isGuest ? 'Explore' : 'Home', href: isGuest ? '/shop' : '/dashboard', icon: LayoutGrid },
                             { label: 'Shop', href: '/shop', icon: ShoppingBag },
-                            { label: 'Orders', href: isGuest ? '/login?next=/orders' : '/orders', icon: Package },
-                            { label: 'Wallet', href: isGuest ? '/login?next=/wallet' : '/wallet', icon: Wallet },
-                            { label: isGuest ? 'Account' : 'Profile', href: isGuest ? '/login?next=/profile' : '/profile', icon: User },
+                            { label: 'Orders', href: isGuest ? `/login?next=${encodeURIComponent('/orders')}` : '/orders', icon: Package },
+                            { label: 'Wallet', href: isGuest ? `/login?next=${encodeURIComponent('/wallet')}` : '/wallet', icon: Wallet },
+                            { label: isGuest ? 'Login' : 'Profile', href: isGuest ? `/login?next=${encodeURIComponent(pathname)}` : '/profile', icon: isGuest ? LogIn : User },
                         ].map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href || (item.href !== '/dashboard' && item.href !== '/shop' && pathname.startsWith(item.href));
 
                             return (
                                 <Link
-                                    key={item.href}
+                                    key={item.label}
                                     href={item.href}
                                     className={`flex flex-col items-center justify-center w-14 h-full relative transition-all ${
                                         isActive ? 'text-blue-600 dark:text-primary' : 'text-slate-400 dark:text-brand-steel hover:text-slate-700 dark:hover:text-on-surface'
@@ -724,6 +784,18 @@ export default function CustomerAppShell({ children }) {
                     </nav>
                 )}
             </div>
+
+            {/* Sign Out Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                title="Sign Out Confirmation"
+                message="Are you sure you want to log out of InTrust India? You can always log back in anytime."
+                confirmLabel={isSigningOut ? "Signing Out..." : "Yes, Sign Out"}
+                cancelLabel="Stay Logged In"
+                onConfirm={confirmSignOut}
+                onCancel={() => setShowLogoutModal(false)}
+                isDestructive={true}
+            />
         </div>
     );
 }

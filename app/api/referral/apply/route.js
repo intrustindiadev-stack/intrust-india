@@ -15,7 +15,7 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { referral_code_entered } = body;
+        const referral_code_entered = body.referral_code_entered || body.code;
 
         if (!referral_code_entered) {
             return NextResponse.json({ error: 'Referral code is required' }, { status: 400 });

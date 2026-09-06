@@ -151,6 +151,10 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
     };
 
     const handleOpen = () => {
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+            router.push('/notifications');
+            return;
+        }
         if (!open && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
             setPos({
