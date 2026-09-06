@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse }               from 'next/server';
 import { createRequestLogger }        from '@/lib/logger';
 import { checkRateLimit }             from '@/lib/rateLimit';
@@ -71,10 +71,13 @@ export async function POST(request) {
             );
         }
 
+        // ── Privileged Admin Client for DB update ─────────────────────────────
+        const adminSupabase = createAdminClient();
+
         // ── Single UPDATE … IN (ids) ─────────────────────────────────────────
         // The extra .eq('user_id') + .eq('is_scratched', false) guards ensure
         // only unscratched cards owned by this user are touched.
-        const { data: scratched, error: updateError } = await supabase
+        const { data: scratched, error: updateError } = await adminSupabase
             .from('reward_transactions')
             .update({ is_scratched: true })
             .in('id', ids)
@@ -83,7 +86,7 @@ export async function POST(request) {
             .select('id, points');
 
         if (updateError) {
-            logger.error('bulk_update_failed', { code: updateError.code });
+            logger.error('bulk_update_failed', { code: updateError.code, message: updateError.message });
             return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
         }
 
@@ -92,11 +95,15 @@ export async function POST(request) {
         const scratchedCount  = scratchedList.length;
 
         // ── Re-fetch authoritative balance ────────────────────────────────────
-        const { data: bal } = await supabase
+        const { data: bal, error: balError } = await adminSupabase
             .from('reward_points_balance')
             .select('current_balance, tier')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
+
+        if (balError) {
+            logger.error('bulk_balance_fetch_failed', { code: balError.code });
+        }
 
         return NextResponse.json({
             success:        true,
@@ -108,7 +115,7 @@ export async function POST(request) {
         });
 
     } catch (err) {
-        createRequestLogger('scratch_bulk').error('unexpected', { type: err?.constructor?.name });
+        logger.error('unexpected', { message: err?.message, type: err?.constructor?.name });
         return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
     }
 }

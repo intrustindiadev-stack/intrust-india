@@ -6,6 +6,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabaseClient';
 
 /**
+ * Calculates real-time reason validation feedback.
+ * @param {string} reason
+ * @returns {{ message: string, isValid: boolean, remaining: number }}
+ */
+export function getReasonFeedback(reason = '') {
+    const len = reason ? reason.length : 0;
+    if (len === 0) {
+        return { message: 'Minimum 10 characters required', isValid: false, remaining: 10 };
+    }
+    if (len < 10) {
+        const remaining = 10 - len;
+        return { message: `${remaining} more characters needed`, isValid: false, remaining };
+    }
+    return { message: '✓ Reason valid', isValid: true, remaining: 0 };
+}
+
+/**
+ * Pure form validation helper for wallet adjustment.
+ */
+export function validateAdjustmentForm({ amount, operation, currentBalance, reason, maxAmount = 100_000 }) {
+    const parsedAmount = Number(amount) || 0;
+    const amountValid = parsedAmount > 0 && parsedAmount <= maxAmount;
+    const debitValid = operation !== 'debit' || parsedAmount <= currentBalance;
+    const reasonValid = (reason?.length || 0) >= 10 && (reason?.length || 0) <= 500;
+    const formValid = amountValid && debitValid && reasonValid;
+    return { parsedAmount, amountValid, debitValid, reasonValid, formValid };
+}
+
+/**
  * WalletAdjustModal — modern reusable modal for admin wallet adjustments.
  */
 export default function WalletAdjustModal({ userId, walletType, currentBalance, onClose, adminPermissions = [] }) {
@@ -33,6 +62,7 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
     const debitValid = operation !== 'debit' || parsedAmount <= currentBalance;
     const reasonValid = reason.length >= 10 && reason.length <= 500;
     const formValid = amountValid && debitValid && reasonValid;
+    const reasonFeedback = getReasonFeedback(reason);
 
     const handleSubmit = useCallback(async () => {
         if (!formValid) return;
@@ -389,19 +419,30 @@ export default function WalletAdjustModal({ userId, walletType, currentBalance, 
                             </div>
 
                             {/* Intelligent Multi-line Textarea */}
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Auditable Reason</label>
                                 <div className="relative">
                                     <textarea
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
-                                        placeholder="Explain the reason for this adjustment..."
+                                        placeholder="Provide an auditable reason (minimum 10 characters)..."
                                         rows={2}
                                         className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:border-slate-800 focus:shadow-xl outline-none transition-all resize-none shadow-sm"
                                     />
                                     <div className={`absolute bottom-3 right-3 text-[9px] font-black px-2 py-1 rounded bg-slate-50 transition-colors ${reason.length < 10 ? 'text-red-400' : 'text-slate-400'}`}>
                                         {reason.length}/500
                                     </div>
+                                </div>
+                                <div className="flex justify-between items-center px-1">
+                                    <p className={`text-[11px] font-bold transition-colors ${
+                                        reason.length === 0
+                                            ? 'text-slate-400'
+                                            : reason.length < 10
+                                            ? 'text-amber-600'
+                                            : 'text-emerald-600'
+                                    }`}>
+                                        {reasonFeedback.message}
+                                    </p>
                                 </div>
                             </div>
 

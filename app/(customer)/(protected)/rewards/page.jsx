@@ -156,7 +156,14 @@ export default function RewardsPage() {
             }, 2500);
 
         } catch (err) {
-            toast.error(err.message || 'Failed to claim reward. Please try again.');
+            const friendlyMessages = {
+                not_found: 'Reward card not found or already claimed.',
+                rate_limited: 'Please wait a moment before revealing another card.',
+                server_error: "We couldn't reveal your reward right now. Please try again.",
+                unauthorized: 'Please sign in to reveal your reward.',
+                bad_request: 'Invalid reward card request.',
+            };
+            toast.error(friendlyMessages[err.message] || err.message || 'Failed to claim reward. Please try again.');
             setIsProcessingReveal(false);
         }
     }, [isProcessingReveal, applyServerBalance, markScratched]);
@@ -200,7 +207,14 @@ export default function RewardsPage() {
             }
         } catch (err) {
             toast.dismiss(loadingToast);
-            toast.error(err.message || "Some rewards couldn't be revealed.");
+            const friendlyMessages = {
+                not_found: 'Some reward cards were not found or already claimed.',
+                rate_limited: 'Please wait a moment before revealing cards.',
+                server_error: "We couldn't reveal your rewards right now. Please try again.",
+                unauthorized: 'Please sign in to reveal your rewards.',
+                bad_request: 'Invalid reward cards request.',
+            };
+            toast.error(friendlyMessages[err.message] || err.message || "Some rewards couldn't be revealed.");
             setIsProcessingReveal(false);
         }
     }, [dailyLoot, revealedCardIds, isProcessingReveal, applyServerBalance, markScratched]);
@@ -783,7 +797,7 @@ export default function RewardsPage() {
                                 </div>
                                 <div className="h-px bg-gray-200 dark:bg-white/10 my-3" />
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wide">You'll receive</span>
+                                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wide">You&apos;ll receive</span>
                                     <span className="text-2xl font-black text-emerald-600">₹{Math.floor(redeemPoints / 100)}</span>
                                 </div>
                             </div>

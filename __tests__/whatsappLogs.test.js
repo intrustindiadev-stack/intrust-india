@@ -115,20 +115,35 @@ describe('WhatsApp Error Logging for Merchant Dispatcher', () => {
   });
 });
 
-describe('Customer Marketing Consent Gate', () => {
+import { broadcastMorningGreeting } from '../lib/notifications/userWhatsapp';
+import {
+  SYSTEM_BROADCAST_PHONE_HASH,
+  FALLBACK_DAILY_QUOTES,
+  getFallbackDailyQuote,
+} from '../lib/notifications/whatsappConstants';
+
+describe('Customer Marketing Consent Gate and Morning Broadcast', () => {
   let mockSupabase;
   let mockEq;
+  let mockIn;
+  let mockInsert;
+  let mockUpdate;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     mockEq = jest.fn().mockReturnThis();
+    mockIn = jest.fn().mockReturnThis();
+    mockInsert = jest.fn().mockResolvedValue({ error: null });
+    mockUpdate = jest.fn().mockReturnThis();
 
     const chain = {
       select: jest.fn().mockReturnThis(),
       eq: mockEq,
-      in: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockResolvedValue({ error: null }),
+      in: mockIn,
+      insert: mockInsert,
+      update: mockUpdate,
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
       then: jest.fn().mockImplementation((cb) => cb({ data: [], error: null }))
     };
 
@@ -139,12 +154,54 @@ describe('Customer Marketing Consent Gate', () => {
     createAdminClient.mockReturnValue(mockSupabase);
   });
 
-  it('should query for both whatsapp_opt_in and whatsapp_marketing_opt_in during broadcast', async () => {
+  it('should query for both whatsapp_opt_in and whatsapp_marketing_opt_in with audience in customer/merchant', async () => {
     await broadcastMorningGreeting();
-    
-    // We expect .eq to have been called with whatsapp_marketing_opt_in, true
+
     expect(mockEq).toHaveBeenCalledWith('whatsapp_opt_in', true);
     expect(mockEq).toHaveBeenCalledWith('whatsapp_marketing_opt_in', true);
-    expect(mockEq).toHaveBeenCalledWith('audience', 'customer');
+    expect(mockIn).toHaveBeenCalledWith('audience', ['customer', 'merchant']);
+  });
+
+  it('should use approved fallback quote and record SYSTEM_BROADCAST_PHONE_HASH when no quote is scheduled', async () => {
+    const result = await broadcastMorningGreeting();
+
+    expect(result.quote_id).toBe('fallback');
+    // Verify system audit row inserted with sentinel phone_hash
+    expect(mockInsert).toHaveBeenCalled();
+    const auditCalls = mockInsert.mock.calls.filter(call =>
+      call[0]?.phone_hash === SYSTEM_BROADCAST_PHONE_HASH
+    );
+    expect(auditCalls.length).toBeGreaterThan(0);
+    expect(auditCalls[0][0].phone_hash).toBe(SYSTEM_BROADCAST_PHONE_HASH);
+    expect(auditCalls[0][0].user_id).toBeNull();
+  });
+
+  it('should use scheduled quote and mark it as sent when scheduled quote is found', async () => {
+    const scheduledQuote = {
+      id: 'quote-uuid-123',
+      quote_text: 'The best way to predict the future is to create it.',
+    };
+
+    const chain = {
+      select: jest.fn().mockReturnThis(),
+      eq: mockEq,
+      in: mockIn,
+      insert: mockInsert,
+      update: mockUpdate,
+      maybeSingle: jest.fn().mockResolvedValue({ data: scheduledQuote, error: null }),
+      then: jest.fn().mockImplementation((cb) => cb({ data: [], error: null }))
+    };
+    mockSupabase.from = jest.fn().mockReturnValue(chain);
+
+    const result = await broadcastMorningGreeting();
+
+    expect(result.quote_id).toBe('quote-uuid-123');
+  });
+
+  it('should provide deterministic fallback quotes for a given date', () => {
+    const quote1 = getFallbackDailyQuote('2026-09-07');
+    const quote2 = getFallbackDailyQuote('2026-09-07');
+    expect(quote1).toBe(quote2);
+    expect(FALLBACK_DAILY_QUOTES).toContain(quote1);
   });
 });

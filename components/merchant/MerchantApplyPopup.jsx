@@ -8,8 +8,12 @@ import BottomSheet from '@/components/ui/BottomSheet';
 
 export default function MerchantApplyPopup({ isOpen, onClose }) {
     const router = useRouter();
+    const handleClose = () => {
+        if (typeof onClose === 'function') onClose();
+    };
+
     const handleApply = () => {
-        onClose();
+        handleClose();
         router.push('/merchant-apply');
     };
 
@@ -22,7 +26,7 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
     return (
         <BottomSheet
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             noPadding
             className="md:max-w-[440px] md:w-full bg-white dark:bg-[#0f111a]"
         >
@@ -53,8 +57,10 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
 
                             {/* Close Button */}
                             <button
-                                onClick={onClose}
-                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/40 transition-colors z-20"
+                                type="button"
+                                onClick={handleClose}
+                                aria-label="Close dialog"
+                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/40 transition-colors z-20 cursor-pointer"
                             >
                                 <X size={16} />
                             </button>

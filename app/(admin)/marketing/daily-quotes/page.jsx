@@ -109,7 +109,7 @@ function AddQuoteForm({ onSuccess }) {
         <div>
           <h2 className="text-base font-semibold text-slate-800">Schedule a Quote</h2>
           <p className="text-sm text-slate-500">
-            Sent at <strong>8:00 AM IST</strong> on the selected date via WhatsApp.
+            Sent at <strong>5:00 AM IST</strong> on the selected date via WhatsApp.
           </p>
         </div>
       </div>

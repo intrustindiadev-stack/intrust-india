@@ -8,15 +8,15 @@ export const maxDuration = 300; // Up to 5 min — large user lists may take tim
 
 /**
  * GET /api/cron/morning-greeting
- * Trigger frequency : Daily at 08:00 IST (02:30 UTC)
+ * Trigger frequency : Daily at 05:00 IST (23:30 UTC previous day)
  * Purpose           : Broadcast a personalised good morning WhatsApp message to
- *                     every opted-in customer user. Alternates between a greeting
- *                     template (GM_GREET_TEMPLATE) and a financial tip template
- *                     (GM_TIP_TEMPLATE) on alternate days for variety.
+ *                     every opted-in user using GM_QUOTE_TEMPLATE (intrust_gm_quote_v1).
+ *                     Picks today's admin-scheduled quote from daily_quotes if present,
+ *                     or falls back to an approved neutral inspirational quote pool.
  *
  * Trigger via system cron:
- *   30 2 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting \
- *     -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+ *   30 23 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting \
+ *     -H "Authorization: Bearer $CRON_SECRET" >> /home/intrustindia/logs/cron.log 2>&1
  */
 export async function GET(request) {
   const authHeader = request.headers.get('authorization');

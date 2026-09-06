@@ -260,9 +260,9 @@ def install_morning_cron(client):
 
     # 2. The cron line to install
     cron_line = (
-        f"30 2 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting "
+        f"30 23 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting "
         f'-H "Authorization: Bearer {cron_secret}" '
-        f">> /var/log/intrust-cron.log 2>&1"
+        f">> /home/intrustindia/logs/cron.log 2>&1"
         f"  # intrust-morning-greeting"
     )
 
@@ -277,7 +277,7 @@ def install_morning_cron(client):
         return
 
     # 4. Append to crontab (preserving existing entries)
-    print("\n[7c] Adding morning-greeting cron entry (02:30 UTC = 08:00 IST)...")
+    print("\n[7c] Adding morning-greeting cron entry (23:30 UTC = 05:00 IST)...")
 
     # Write new crontab: existing lines + new line
     # We use a heredoc-safe approach via temp file

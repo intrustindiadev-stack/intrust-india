@@ -7,7 +7,7 @@
  *
  * Will be removed in a future release once all clients migrate.
  */
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { createRequestLogger } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rateLimit';
@@ -56,8 +56,11 @@ export async function PATCH(request) {
             return NextResponse.json({ success: false, code: 'bad_request' }, { status: 400 });
         }
 
+        // ── Privileged Admin Client for DB update ─────────────────────────────
+        const adminSupabase = createAdminClient();
+
         // ── Idempotent UPDATE (maybeSingle so no throw on 0 rows) ─────────────
-        const { data, error: updateError } = await supabase
+        const { data, error: updateError } = await adminSupabase
             .from('reward_transactions')
             .update({ is_scratched: true })
             .eq('id', transactionId)
@@ -67,7 +70,7 @@ export async function PATCH(request) {
             .maybeSingle();
 
         if (updateError) {
-            logger.error('scratch_update_failed', { code: updateError.code });
+            logger.error('scratch_update_failed', { code: updateError.code, message: updateError.message });
             return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
         }
 
@@ -77,7 +80,7 @@ export async function PATCH(request) {
         }
 
         // No row matched — check whether it's already scratched (idempotency)
-        const { data: existing, error: selectError } = await supabase
+        const { data: existing, error: selectError } = await adminSupabase
             .from('reward_transactions')
             .select('id, is_scratched')
             .eq('id', transactionId)
@@ -85,7 +88,7 @@ export async function PATCH(request) {
             .maybeSingle();
 
         if (selectError) {
-            logger.error('scratch_select_failed', { code: selectError.code });
+            logger.error('scratch_select_failed', { code: selectError.code, message: selectError.message });
             return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
         }
 
@@ -94,12 +97,12 @@ export async function PATCH(request) {
             return NextResponse.json({ success: true, code: 'already_scratched' });
         }
 
-        // Row doesn't exist for this user
+        // Row doesn't exist or not owned by this authenticated user
         return NextResponse.json({ success: false, code: 'not_found' }, { status: 404 });
 
     } catch (err) {
         const logger = createRequestLogger('scratch');
-        logger.error('scratch_unexpected', { type: err?.constructor?.name });
+        logger.error('scratch_unexpected', { message: err?.message, type: err?.constructor?.name });
         return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
     }
 }

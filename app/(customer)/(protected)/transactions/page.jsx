@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Clock, CheckCircle, Search, Filter, TrendingUp, TrendingDown, Wallet, Gift, ArrowDownLeft, ArrowUpRight, ArrowLeft } from 'lucide-react';
+import { Clock, CheckCircle, Search, Filter, TrendingUp, TrendingDown, Wallet, Gift, ArrowDownLeft, ArrowUpRight, ArrowLeft, ShoppingBag, Receipt, Smartphone, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import Link from 'next/link';
@@ -51,31 +51,98 @@ export default function TransactionsPage() {
         const normalizedWallet = (walletTxs || [])
             .filter(w => w.reference_type !== 'GIFT_CARD_PURCHASE')
             .map(w => {
-                let logo = <Wallet size={20} />;
-                let isSpent = false;
-                let isCashback = false;
-                let isAdminAdjustment = w.reference_type === 'ADMIN_ADJUSTMENT' || w.type === 'ADMIN_ADJUSTMENT';
+                const descLower = (w.description || '').toLowerCase();
+                const refType = (w.reference_type || '').toUpperCase();
+                const txType = (w.type || '').toUpperCase();
 
-                if (w.type === 'TOPUP') logo = <Wallet size={20} />;
-                if (w.type === 'CASHBACK') {
-                    logo = <TrendingUp size={20} />;
-                    isCashback = true;
-                }
-                if (w.type === 'DEBIT') {
-                    logo = <Gift size={20} />;
-                    if (isAdminAdjustment) logo = <Wallet size={20} />;
+                const isAdminAdjustment = refType === 'ADMIN_ADJUSTMENT' || txType === 'ADMIN_ADJUSTMENT' || descLower.includes('admin adjustment');
+                const isUdhari = refType === 'UDHARI_PAYMENT' || refType === 'STORE_CREDIT_PAYMENT' || descLower.includes('udhari') || descLower.includes('store credit');
+                const isNfc = refType === 'NFC_ORDER' || descLower.includes('nfc');
+                const isGold = refType === 'GOLD_SUBSCRIPTION' || descLower.includes('gold subscription');
+                const isOrder = refType === 'SHOPPING_ORDER' || refType === 'ORDER' || refType === 'SHOPPING_PURCHASE' || descLower.includes('shopping purchase') || descLower.includes('order group') || descLower.startsWith('shopping:');
+                const isTopup = txType === 'TOPUP' || refType === 'TOPUP' || descLower.includes('wallet topup') || descLower.includes('wallet added');
+                const isCashback = txType === 'CASHBACK' || descLower.includes('cashback');
+                const isReward = txType === 'REWARD' || refType === 'REWARD_CONVERSION' || descLower.includes('reward');
+                const isGiftCard = refType === 'GIFT_CARD_PURCHASE' || descLower.includes('gift card');
+
+                let isSpent = txType === 'DEBIT';
+                let logo = <Wallet size={20} />;
+                let brand = 'Wallet Transaction';
+                let category = 'WALLET';
+                let type = isSpent ? 'SPENT' : 'TOPUP';
+
+                if (isAdminAdjustment) {
+                    brand = 'Admin Adjustment';
+                    logo = <Wallet size={20} />;
+                    category = 'ADMIN';
+                    type = isSpent ? 'SPENT' : 'TOPUP';
+                } else if (isOrder) {
+                    brand = 'Order Payment';
+                    logo = <ShoppingBag size={20} />;
+                    category = 'PURCHASES';
                     isSpent = true;
+                    type = 'SPENT';
+                } else if (isNfc) {
+                    brand = 'NFC Order';
+                    logo = <Smartphone size={20} />;
+                    category = 'PURCHASES';
+                    isSpent = true;
+                    type = 'SPENT';
+                } else if (isUdhari) {
+                    brand = 'Store Credit Settled';
+                    logo = <Receipt size={20} />;
+                    category = 'UDHARI';
+                    isSpent = true;
+                    type = 'SPENT';
+                } else if (isGold) {
+                    brand = 'Gold Subscription';
+                    logo = <Crown size={20} />;
+                    category = 'WALLET';
+                    isSpent = true;
+                    type = 'SPENT';
+                } else if (isTopup) {
+                    brand = 'Wallet Added';
+                    logo = <Wallet size={20} />;
+                    category = 'WALLET';
+                    type = 'TOPUP';
+                } else if (isCashback) {
+                    brand = 'Cashback Earned';
+                    logo = <TrendingUp size={20} />;
+                    category = 'CASHBACK';
+                    type = 'CASHBACK';
+                } else if (isReward) {
+                    brand = 'Reward Converted';
+                    logo = <TrendingUp size={20} />;
+                    category = 'CASHBACK';
+                    type = 'CASHBACK';
+                } else if (isGiftCard) {
+                    brand = 'Gift Card Paid';
+                    logo = <Gift size={20} />;
+                    category = 'GIFT_CARD';
+                    isSpent = true;
+                    type = 'SPENT';
+                } else if (isSpent) {
+                    // Fallback for any other debit
+                    brand = 'Order Payment';
+                    logo = <ShoppingBag size={20} />;
+                    category = 'PURCHASES';
+                    type = 'SPENT';
+                } else {
+                    brand = 'Wallet Added';
+                    logo = <Wallet size={20} />;
+                    category = 'WALLET';
+                    type = 'TOPUP';
                 }
 
                 return {
                     id: `wallet-${w.id}`,
                     rawDate: new Date(w.created_at).getTime(),
-                    brand: isAdminAdjustment ? 'Admin Adjustment' : (w.reference_type === 'UDHARI_PAYMENT' ? 'Store Credit Settled' : (w.type === 'TOPUP' ? 'Wallet Added' : (w.type === 'CASHBACK' ? 'Cashback Earned' : 'Gift Card Paid'))),
-                    description: w.description || w.type,
+                    brand,
+                    description: w.description || brand,
                     amount: (w.amount_paise || 0) / 100,
                     status: 'success',
-                    type: isAdminAdjustment && !isSpent ? 'TOPUP' : (isCashback ? 'CASHBACK' : (isSpent ? 'SPENT' : 'TOPUP')),
-                    category: isAdminAdjustment ? 'ADMIN' : (w.reference_type === 'UDHARI_PAYMENT' ? 'UDHARI' : 'WALLET'),
+                    type,
+                    category,
                     logo
                 };
             });

@@ -93,7 +93,7 @@ export default function CustomerDashboardPage() {
     });
 
     // Merchant Apply Popup
-    const { isOpen: merchantPopupOpen, closePopup: closeMerchantPopup } = useMerchantApplyPopup({
+    const { isOpen: merchantPopupOpen, closeMerchantPopup, closePopup } = useMerchantApplyPopup({
         merchantStatus: userData.merchantStatus,
         enabled: !loading && !!user
     });
@@ -389,7 +389,7 @@ export default function CustomerDashboardPage() {
     return (
         <div className="w-full space-y-8 font-body-md text-on-surface">
             <KYCPopup isOpen={kycPopupOpen} onClose={closeKYC} />
-            <MerchantApplyPopup isOpen={merchantPopupOpen} onClose={closeMerchantPopup} />
+            <MerchantApplyPopup isOpen={merchantPopupOpen} onClose={closeMerchantPopup || closePopup} />
 
             {!userData.completedOnboarding && user && (
                 <OnboardingModal

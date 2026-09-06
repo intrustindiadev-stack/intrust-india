@@ -62,9 +62,9 @@ These templates are designed for a premium merchant experience. Create them in t
 Both broadcast crons run daily on the VPS via `crontab -e`. The `CRON_SECRET` env var must be set in `/etc/environment` or the crontab environment block.
 
 ```cron
-# Morning greeting — 08:00 IST (02:30 UTC)
-30 2 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting \
-  -H "Authorization: Bearer $CRON_SECRET" >> /var/log/intrust-cron.log 2>&1
+# Morning greeting — 05:00 IST (23:30 UTC)
+30 23 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting \
+  -H "Authorization: Bearer $CRON_SECRET" >> /home/intrustindia/logs/cron.log 2>&1
 
 # Evening greeting — 20:00 IST (14:30 UTC)
 30 14 * * * curl -s -X GET https://intrustindia.com/api/cron/evening-greeting \

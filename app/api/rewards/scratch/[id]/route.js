@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse }               from 'next/server';
 import { createRequestLogger }        from '@/lib/logger';
 import { checkRateLimit }             from '@/lib/rateLimit';
@@ -55,8 +55,11 @@ export async function POST(request, { params }) {
             );
         }
 
+        // ── Privileged Admin Client for DB update ─────────────────────────────
+        const adminSupabase = createAdminClient();
+
         // ── 1. Atomic UPDATE: mark scratched only if still unscratched ────────
-        const { data: updated, error: updateError } = await supabase
+        const { data: updated, error: updateError } = await adminSupabase
             .from('reward_transactions')
             .update({ is_scratched: true })
             .eq('id', id)
@@ -66,17 +69,20 @@ export async function POST(request, { params }) {
             .maybeSingle();
 
         if (updateError) {
-            logger.error('update_failed', { code: updateError.code });
+            logger.error('update_failed', { code: updateError.code, message: updateError.message });
             return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
         }
 
         // Helper: fetch current balance + tier (one SELECT)
         const fetchBalance = async () => {
-            const { data: bal } = await supabase
+            const { data: bal, error: balError } = await adminSupabase
                 .from('reward_points_balance')
                 .select('current_balance, tier')
                 .eq('user_id', user.id)
-                .single();
+                .maybeSingle();
+            if (balError) {
+                logger.error('balance_fetch_failed', { code: balError.code });
+            }
             return { newBalance: bal?.current_balance ?? 0, tier: bal?.tier ?? 'bronze' };
         };
 
@@ -93,7 +99,7 @@ export async function POST(request, { params }) {
         }
 
         // ── 2. No row matched — check idempotency ─────────────────────────────
-        const { data: existing, error: selectError } = await supabase
+        const { data: existing, error: selectError } = await adminSupabase
             .from('reward_transactions')
             .select('id, is_scratched')
             .eq('id', id)
@@ -101,7 +107,7 @@ export async function POST(request, { params }) {
             .maybeSingle();
 
         if (selectError) {
-            logger.error('select_failed', { code: selectError.code });
+            logger.error('select_failed', { code: selectError.code, message: selectError.message });
             return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
         }
 
@@ -116,11 +122,11 @@ export async function POST(request, { params }) {
             });
         }
 
-        // ── 3. Row not found for this user ────────────────────────────────────
+        // ── 3. Row not found or not owned by this authenticated user ──────────
         return NextResponse.json({ success: false, code: 'not_found' }, { status: 404 });
 
     } catch (err) {
-        createRequestLogger('scratch_reveal').error('unexpected', { type: err?.constructor?.name });
+        logger.error('unexpected', { message: err?.message, type: err?.constructor?.name });
         return NextResponse.json({ success: false, code: 'server_error' }, { status: 500 });
     }
 }

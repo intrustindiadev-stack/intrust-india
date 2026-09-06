@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Trophy, Crown, Medal, Award, ChevronLeft, Star, ChevronRight, Sparkles, TrendingUp, Target, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';

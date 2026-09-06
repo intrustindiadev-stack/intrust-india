@@ -8,18 +8,30 @@ export default function BottomSheet({ isOpen, onClose, children, title, classNam
 
     // Close on outside tap
     const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && typeof onClose === 'function') {
+            onClose();
+        }
     };
 
-    // Prevent body scroll when open
+    // Prevent body scroll and handle Escape key when open
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape' && typeof onClose === 'function') {
+                    onClose();
+                }
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.body.style.overflow = '';
+                window.removeEventListener('keydown', handleKeyDown);
+            };
         } else {
             document.body.style.overflow = '';
         }
         return () => { document.body.style.overflow = ''; };
-    }, [isOpen]);
+    }, [isOpen, onClose]);
 
     return (
         <AnimatePresence>
@@ -44,7 +56,7 @@ export default function BottomSheet({ isOpen, onClose, children, title, classNam
                         dragConstraints={{ top: 0, bottom: 0 }}
                         dragElastic={0.2}
                         onDragEnd={(e, info) => {
-                            if (info.offset.y > 100 || info.velocity.y > 500) {
+                            if ((info.offset.y > 100 || info.velocity.y > 500) && typeof onClose === 'function') {
                                 onClose();
                             }
                         }}

@@ -448,7 +448,9 @@ export default function CustomerAppShell({ children }) {
                                     </div>
                                     <div className="flex flex-col text-left">
                                         <span className="text-xs font-bold text-slate-800 dark:text-on-surface group-hover:text-blue-600 dark:group-hover:text-primary transition-colors leading-tight">{userName}</span>
-                                        <span className="text-[10px] font-semibold text-slate-500 dark:text-brand-steel">Verified Account</span>
+                                        <span className="text-[10px] font-semibold text-slate-500 dark:text-brand-steel">
+                                            {profile?.kyc_status === 'verified' ? 'Verified Account' : 'Standard Account'}
+                                        </span>
                                     </div>
                                 </Link>
                                 <button
@@ -603,7 +605,9 @@ export default function CustomerAppShell({ children }) {
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-sm text-slate-900 dark:text-on-surface">{userName}</p>
-                                                    <p className="text-xs text-amber-600 dark:text-[#D4AF37] font-semibold">Verified Member</p>
+                                                    <p className="text-xs text-amber-600 dark:text-[#D4AF37] font-semibold">
+                                                        {profile?.kyc_status === 'verified' ? 'Verified Member' : 'Standard Member'}
+                                                    </p>
                                                 </div>
                                             </div>
                                         )}

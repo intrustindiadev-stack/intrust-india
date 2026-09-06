@@ -66,12 +66,12 @@ def main():
     print(f"[OK] CRON_SECRET found (length={len(cron_secret)})")
 
     # ── 2. Build the cron content ─────────────────────────────────────────────
-    # 30 2 * * *  = 02:30 UTC = 08:00 IST
+    # 30 23 * * *  = 23:30 UTC = 05:00 IST
     cron_content = (
-        "# InTrust India — Daily good morning WhatsApp broadcast (08:00 IST = 02:30 UTC)\n"
-        f'30 2 * * * {VPS_USER} curl -s -X GET https://intrustindia.com/api/cron/morning-greeting '
+        "# InTrust India — Daily good morning WhatsApp broadcast (05:00 IST = 23:30 UTC)\n"
+        f'30 23 * * * {VPS_USER} curl -s -X GET https://intrustindia.com/api/cron/morning-greeting '
         f'-H "Authorization: Bearer {cron_secret}" '
-        f'>> /var/log/intrust-cron.log 2>&1\n'
+        f'>> /home/intrustindia/logs/cron.log 2>&1\n'
     )
 
     # ── 3. Check if already installed ────────────────────────────────────────
@@ -131,7 +131,7 @@ def main():
     client.close()
     print("\n" + "=" * 55)
     print("  *** CRON INSTALLED SUCCESSFULLY!")
-    print("  Schedule: 02:30 UTC = 08:00 AM IST every day")
+    print("  Schedule: 23:30 UTC = 05:00 AM IST every day")
     print(f"  File: {CRON_FILE}")
     print("=" * 55)
 

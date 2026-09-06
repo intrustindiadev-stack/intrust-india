@@ -71,7 +71,8 @@ export default function CustomerSettingsPage() {
         return false;
     });
 
-    const [kycStatus, setKycStatus] = useState('pending');
+    const [fetchedKycStatus, setFetchedKycStatus] = useState(null);
+    const kycStatus = fetchedKycStatus || profile?.kyc_status || 'pending';
     const [savingSettings, setSavingSettings] = useState(false);
 
     useEffect(() => {
@@ -79,14 +80,19 @@ export default function CustomerSettingsPage() {
 
         const loadSettings = async () => {
             try {
-                const { data } = await supabase
+                const { data, error } = await supabase
                     .from('user_profiles')
-                    .select('kyc_status, is_verified, phone')
+                    .select('kyc_status, phone')
                     .eq('id', user.id)
                     .maybeSingle();
 
-                if (data) {
-                    setKycStatus(data.kyc_status || (data.is_verified ? 'verified' : 'pending'));
+                if (error) {
+                    console.error('Failed to load user settings:', error);
+                    return;
+                }
+
+                if (data?.kyc_status) {
+                    setFetchedKycStatus(data.kyc_status);
                 }
             } catch (err) {
                 console.error('Failed to load user settings:', err);

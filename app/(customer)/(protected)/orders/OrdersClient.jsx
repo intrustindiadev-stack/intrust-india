@@ -89,7 +89,14 @@ const OrdersClient = ({ userId }) => {
         setIsProcessingReveal(false);
       }, 2500);
     } catch (err) {
-      toast.error(err.message || 'Failed to claim reward. Please try again.');
+      const friendlyMessages = {
+        not_found: 'Reward card not found or already claimed.',
+        rate_limited: 'Please wait a moment before revealing another card.',
+        server_error: "We couldn't reveal your reward right now. Please try again.",
+        unauthorized: 'Please sign in to reveal your reward.',
+        bad_request: 'Invalid reward card request.',
+      };
+      toast.error(friendlyMessages[err.message] || err.message || 'Failed to claim reward. Please try again.');
       setIsProcessingReveal(false);
     }
   }, [isProcessingReveal, markScratched, closeModal]);

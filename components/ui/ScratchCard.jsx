@@ -24,6 +24,7 @@ export default function ScratchCard({
     id,
     children,
     onComplete,
+    onProgress,
     revealed,            // external control (§4.7)
     isScratched = false, // legacy compat – treated as initial revealed=true
     prizePoints = 0,
@@ -58,8 +59,9 @@ export default function ScratchCard({
         if (revealed === false) {
             setThresholdReached(false);
             completedRef.current = false;
+            if (onProgress) onProgress(0);
         }
-    }, [revealed]);
+    }, [revealed, onProgress]);
 
     // ── §8 Offscreen canvas helpers ───────────────────────────────────────────
     /**
@@ -290,13 +292,14 @@ export default function ScratchCard({
 
         if (sampled === 0) return;
         const percentage = (transparentPixels / sampled) * 100;
+        if (onProgress) onProgress(percentage);
 
         if (percentage > 40) {
             completedRef.current = true;
             setThresholdReached(true);
             if (onComplete) onComplete(prizePoints);
         }
-    }, [onComplete, prizePoints]);
+    }, [onComplete, onProgress, prizePoints]);
 
     // ── Event handlers ────────────────────────────────────────────────────────
     const getCoordinates = (e) => {

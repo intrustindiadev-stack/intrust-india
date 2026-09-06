@@ -43,5 +43,10 @@ export function useMerchantApplyPopup({ merchantStatus = null, enabled = false, 
         return () => clearTimeout(timer);
     }, [enabled, merchantStatus, delayMs]);
 
-    return { isOpen, openMerchantPopup, closeMerchantPopup };
+    return {
+        isOpen,
+        openMerchantPopup,
+        closeMerchantPopup,
+        closePopup: closeMerchantPopup
+    };
 }

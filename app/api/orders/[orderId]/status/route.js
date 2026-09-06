@@ -9,7 +9,7 @@ export async function PATCH(request, { params }) {
         const body = await request.json();
         const { newStatus, trackingNumber, estimatedAt, statusNotes, isAdmin, isMerchant, isCustomer } = body;
 
-        const supabase = createServerSupabaseClient();
+        const supabase = await createServerSupabaseClient();
         
         // 1. Call the RPC using the authenticated client
         const { data: rpcResult, error: rpcError } = await supabase.rpc('update_order_delivery_v3', {
