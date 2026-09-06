@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function Pagination({ totalCount, pageSize, currentPage }) {
+export default function Pagination({ totalCount, pageSize, currentPage, onPageChange }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
@@ -19,60 +19,83 @@ export default function Pagination({ totalCount, pageSize, currentPage }) {
         return `${pathname}?${params.toString()}`;
     };
 
+    const handleClick = (e, pageNum) => {
+        if (onPageChange) {
+            e.preventDefault();
+            onPageChange(pageNum);
+        }
+    };
+
     return (
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#0c0e16] px-4 py-3 sm:px-6 rounded-2xl shadow-sm mt-8">
-            <div className="flex flex-1 justify-between sm:hidden">
+        <nav aria-label="Pagination" className="flex items-center justify-between border-t border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-[#0c0e16]/80 backdrop-blur-md px-4 py-3 sm:px-6 rounded-2xl shadow-xs mt-8">
+            {/* Mobile View: Compact ←  2 / 8  → */}
+            <div className="flex flex-1 items-center justify-between sm:hidden">
                 <Link
                     href={currentPage > 1 ? createPageUrl(currentPage - 1) : '#'}
-                    className={`relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#151822] px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ${
-                        currentPage <= 1 ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    onClick={(e) => handleClick(e, currentPage - 1)}
+                    aria-label="Go to previous page"
+                    className={`relative inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#151822] px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all ${
+                        currentPage <= 1 ? 'opacity-40 pointer-events-none' : 'hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95'
                     }`}
                 >
-                    Previous
+                    <ChevronLeft size={16} />
+                    <span>Prev</span>
                 </Link>
+
+                <div className="text-xs font-black text-slate-800 dark:text-slate-200 px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/5">
+                    {currentPage} / {totalPages}
+                </div>
+
                 <Link
                     href={currentPage < totalPages ? createPageUrl(currentPage + 1) : '#'}
-                    className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#151822] px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ${
-                        currentPage >= totalPages ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    onClick={(e) => handleClick(e, currentPage + 1)}
+                    aria-label="Go to next page"
+                    className={`relative inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#151822] px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all ${
+                        currentPage >= totalPages ? 'opacity-40 pointer-events-none' : 'hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95'
                     }`}
                 >
-                    Next
+                    <span>Next</span>
+                    <ChevronRight size={16} />
                 </Link>
             </div>
+
+            {/* Desktop View: ← Previous   1  2  3  4   Next → */}
             <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                 <div>
-                    <p className="text-sm text-gray-700 dark:text-gray-400">
-                        Showing <span className="font-bold text-gray-900 dark:text-white">{((currentPage - 1) * pageSize) + 1}</span> to{' '}
-                        <span className="font-bold text-gray-900 dark:text-white">{Math.min(currentPage * pageSize, totalCount)}</span> of{' '}
-                        <span className="font-bold text-gray-900 dark:text-white">{totalCount}</span> results
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        Showing <span className="font-black text-slate-900 dark:text-white">{((currentPage - 1) * pageSize) + 1}</span> to{' '}
+                        <span className="font-black text-slate-900 dark:text-white">{Math.min(currentPage * pageSize, totalCount)}</span> of{' '}
+                        <span className="font-black text-slate-900 dark:text-white">{totalCount}</span> products
                     </p>
                 </div>
                 <div>
-                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <div className="inline-flex items-center gap-1" role="navigation" aria-label="Desktop pagination">
                         <Link
                             href={currentPage > 1 ? createPageUrl(currentPage - 1) : '#'}
-                            className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${
-                                currentPage <= 1 ? 'opacity-50 pointer-events-none' : ''
+                            onClick={(e) => handleClick(e, currentPage - 1)}
+                            aria-label="Previous page"
+                            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 bg-white dark:bg-[#151822] text-slate-700 dark:text-slate-300 transition-all ${
+                                currentPage <= 1 ? 'opacity-40 pointer-events-none' : 'hover:bg-slate-50 dark:hover:bg-white/5 hover:border-sky-500 active:scale-95'
                             }`}
                         >
-                            <span className="sr-only">Previous</span>
-                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                            <ChevronLeft size={14} />
+                            <span>Previous</span>
                         </Link>
                         
                         {/* Page Numbers */}
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                            // Show first, last, current, and adjacent pages
                             if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
                                 const isCurrent = page === currentPage;
                                 return (
                                     <Link
                                         key={page}
                                         href={createPageUrl(page)}
+                                        onClick={(e) => handleClick(e, page)}
                                         aria-current={isCurrent ? 'page' : undefined}
-                                        className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ring-1 ring-inset ${
+                                        className={`inline-flex items-center justify-center min-w-8 h-8 px-2 rounded-xl text-xs font-bold transition-all ${
                                             isCurrent
-                                                ? 'z-10 bg-indigo-600 text-white focus-visible:outline-indigo-600 ring-indigo-600'
-                                                : 'text-gray-900 dark:text-gray-300 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                                ? 'bg-sky-500 text-white font-black shadow-xs shadow-sky-500/30 pointer-events-none'
+                                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 active:scale-95'
                                         }`}
                                     >
                                         {page}
@@ -80,14 +103,14 @@ export default function Pagination({ totalCount, pageSize, currentPage }) {
                                 );
                             }
                             
-                            // Show ellipsis
+                            // Ellipsis
                             if (page === currentPage - 2 || page === currentPage + 2) {
                                 return (
                                     <span
                                         key={page}
-                                        className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 focus:outline-offset-0"
+                                        className="inline-flex items-center justify-center w-6 h-8 text-xs font-bold text-slate-400 dark:text-slate-600"
                                     >
-                                        ...
+                                        …
                                     </span>
                                 );
                             }
@@ -97,16 +120,19 @@ export default function Pagination({ totalCount, pageSize, currentPage }) {
 
                         <Link
                             href={currentPage < totalPages ? createPageUrl(currentPage + 1) : '#'}
-                            className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${
-                                currentPage >= totalPages ? 'opacity-50 pointer-events-none' : ''
+                            onClick={(e) => handleClick(e, currentPage + 1)}
+                            aria-label="Next page"
+                            className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-white/10 bg-white dark:bg-[#151822] text-slate-700 dark:text-slate-300 transition-all ${
+                                currentPage >= totalPages ? 'opacity-40 pointer-events-none' : 'hover:bg-slate-50 dark:hover:bg-white/5 hover:border-sky-500 active:scale-95'
                             }`}
                         >
-                            <span className="sr-only">Next</span>
-                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                            <span>Next</span>
+                            <ChevronRight size={14} />
                         </Link>
-                    </nav>
+                    </div>
                 </div>
             </div>
-        </div>
+        </nav>
     );
 }
+

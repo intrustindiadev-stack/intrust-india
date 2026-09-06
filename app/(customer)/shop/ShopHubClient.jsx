@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { 
     Search, 
     MapPin, 
@@ -47,11 +47,12 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     const activeCustomer = profile || user;
     const searchParams = useSearchParams();
     const urlCategory = searchParams?.get('category') || '';
+    const urlSubCategory = searchParams?.get('sub_category') || '';
 
     const [searchQuery, setSearchQuery] = useState('');
     const [pickupMode, setPickupMode] = useState('all');
     const [selectedCategory, setSelectedCategory] = useState(urlCategory);
-    const [selectedSubCategory, setSelectedSubCategory] = useState('all');
+    const [selectedSubCategory, setSelectedSubCategory] = useState(urlSubCategory || 'all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterOnlyOpen, setFilterOnlyOpen] = useState(false);
     const [filterOnlyLikedStores, setFilterOnlyLikedStores] = useState(false);
@@ -139,13 +140,41 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         }
     };
 
-    // Sync selectedCategory if URL parameter changes
+    // Sync selectedCategory and selectedSubCategory if URL parameter changes
     useEffect(() => {
         if (urlCategory) {
             setSelectedCategory(urlCategory);
+        }
+        if (urlSubCategory) {
+            setSelectedSubCategory(urlSubCategory);
+        } else if (urlCategory) {
             setSelectedSubCategory('all');
         }
-    }, [urlCategory]);
+    }, [urlCategory, urlSubCategory]);
+
+    const handleCategoryClick = useCallback((catSlug) => {
+        setSelectedCategory(catSlug);
+        setSelectedSubCategory('all');
+        const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
+        if (catSlug && catSlug !== 'all') {
+            params.set('category', catSlug);
+        } else {
+            params.delete('category');
+        }
+        params.delete('sub_category');
+        router.push(`/shop?${params.toString()}`, { scroll: false });
+    }, [searchParams, router]);
+
+    const handleSubCategoryClick = useCallback((sub) => {
+        setSelectedSubCategory(sub);
+        const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
+        if (sub && sub !== 'all') {
+            params.set('sub_category', sub);
+        } else {
+            params.delete('sub_category');
+        }
+        router.push(`/shop?${params.toString()}`, { scroll: false });
+    }, [searchParams, router]);
 
     // Fetch real products from shopping_products table using valid schema columns
     useEffect(() => {
@@ -185,7 +214,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         category: p.category || 'all',
                         sub_category: p.sub_category || null,
                         rating: 4.8,
-                        merchants: { business_name: 'InTrust Official', slug: 'official' }
+                        merchants: { business_name: 'InTrust Official', slug: 'intrust-official' }
                     }));
                     setProducts(mapped);
                 } else {
@@ -205,7 +234,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     // Filter merchants based on search, open status, rating & favorites
     const filteredMerchants = useMemo(() => {
         return merchants.filter((m) => {
-            if (m.id === 'official') return false; // Handled in dedicated hub
+            if (m.id === 'official' || m.slug === 'official' || m.slug === 'intrust-official') return false; // Handled in dedicated hub
             if (filterOnlyLikedStores && !likedStoreIds.has(m.id) && !likedStoreIds.has(m.slug)) {
                 return false;
             }
@@ -425,7 +454,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         {/* Store Mode Switcher */}
                         <div className="p-1.5 rounded-2xl bg-surface-container-low flex items-center gap-1 self-start md:self-auto shrink-0 border border-outline-variant/20">
                             <button
-                                onClick={() => { setPickupMode('all'); setSelectedCategory(''); }}
+                                onClick={() => { setPickupMode('all'); handleCategoryClick(''); }}
                                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                                     pickupMode === 'all' && selectedCategory !== 'official'
                                         ? 'bg-surface-container-lowest text-primary shadow-sm'
@@ -477,7 +506,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                 return (
                                     <button
                                         key={cat.slug || idx}
-                                        onClick={() => setSelectedCategory(cat.slug)}
+                                        onClick={() => handleCategoryClick(cat.slug)}
                                         className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-xs active:scale-95 ${
                                             isActive
                                                 ? 'bg-blue-600 text-white shadow-md'
@@ -536,7 +565,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             </div>
                         </div>
                         <button
-                            onClick={() => setSelectedCategory('electronics')}
+                            onClick={() => handleCategoryClick('electronics')}
                             className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center gap-2 shadow-md transition-all active:scale-95"
                         >
                             <span>Shop Tech Deals</span>
@@ -955,7 +984,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             Sub-Category:
                         </span>
                         <button
-                            onClick={() => setSelectedSubCategory('all')}
+                            onClick={() => handleSubCategoryClick('all')}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                                 selectedSubCategory === 'all'
                                     ? 'bg-violet-600 text-white shadow-xs font-black'
@@ -967,7 +996,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         {availableSubCategories.map((sub) => (
                             <button
                                 key={sub}
-                                onClick={() => setSelectedSubCategory(sub)}
+                                onClick={() => handleSubCategoryClick(sub)}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                                     selectedSubCategory === sub
                                         ? 'bg-violet-600 text-white shadow-xs font-black'

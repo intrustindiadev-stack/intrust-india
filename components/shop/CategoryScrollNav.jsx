@@ -16,7 +16,11 @@ export default function CategoryScrollNav({ categories, activeCategory, basePath
                     const params = new URLSearchParams(preservedParams);
                     if (!isAll) {
                         params.set('category', cat);
+                    } else {
+                        params.delete('category');
                     }
+                    params.delete('sub_category');
+                    params.set('page', '1');
                     
                     const href = `${basePath}${params.toString() ? '?' + params.toString() : ''}`;
                     

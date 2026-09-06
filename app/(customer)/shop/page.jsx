@@ -27,6 +27,9 @@ export default async function MerchantHubPage() {
             .eq('status', 'approved')
             .eq('subscription_status', 'active')
             .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${nowIso}`)
+            .not('slug', 'ilike', '%test%')
+            .not('business_name', 'ilike', '%test%')
+            .not('slug', 'in', '("official","intrust-official")')
             .order('business_name', { ascending: true }),
         supabase
             .from('platform_settings')
@@ -83,29 +86,24 @@ export default async function MerchantHubPage() {
         console.error('Error parsing platform status in shop:', e);
     }
 
-    if (userIds.length > 0) {
-        const profileMap = Object.fromEntries((profilesResult.data || []).map(p => [p.id, p]));
-        merchants = merchants.map(m => ({
-            ...m,
-            user_profiles: profileMap[m.user_id] || { avatar_url: null, full_name: null }
-        }));
-    }
+    const profileMap = Object.fromEntries((profilesResult.data || []).map(p => [p.id, p]));
+    merchants = merchants.map(m => ({
+        ...m,
+        is_open: m.is_open,
+        user_profiles: {
+            avatar_url: profileMap[m.user_id]?.avatar_url || null,
+            full_name: profileMap[m.user_id]?.full_name || null
+        }
+    }));
+
+    // Alphabetical local merchants
+    merchants.sort((a, b) => (a.business_name || '').localeCompare(b.business_name || ''));
 
     const ratingsMap = Object.fromEntries(
         (ratingsResult.data || []).map(r => [r.merchant_id, r])
     );
 
-    const allMerchants = [
-        {
-            id: 'official',
-            slug: 'official',
-            business_name: 'Intrust Official',
-            business_address: null,
-            user_profiles: { avatar_url: '/icons/intrustLogo.png', full_name: null },
-            is_open: !!platformStatus.is_open
-        },
-        ...merchants
-    ];
+    const allMerchants = merchants;
 
     // Fetch real inventory for active merchants so store cards showcase THEIR products only
     let merchantProductsMap = {};

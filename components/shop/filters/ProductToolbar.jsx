@@ -14,10 +14,11 @@ export default function ProductToolbar({ onOpenMobileFilters, activeFilters, onR
                 
                 {/* Mobile Filter Toggle */}
                 <button
+                    type="button"
                     onClick={onOpenMobileFilters}
-                    className="lg:hidden flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-white dark:bg-[#151822] border border-gray-200 dark:border-gray-700 rounded-xl text-xs md:text-sm font-bold text-gray-700 dark:text-gray-300 shadow-sm hover:border-indigo-400 dark:hover:border-indigo-500 transition-all active:scale-95 whitespace-nowrap"
+                    className="lg:hidden flex items-center gap-1.5 md:gap-2 px-3.5 py-2 bg-white dark:bg-[#151822] border border-slate-200 dark:border-white/10 rounded-xl text-xs md:text-sm font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 transition-all active:scale-95 whitespace-nowrap"
                 >
-                    <SlidersHorizontal size={14} className="md:w-4 md:h-4" />
+                    <SlidersHorizontal size={14} className="md:w-4 md:h-4 text-sky-500" />
                     Filters
                 </button>
             </div>

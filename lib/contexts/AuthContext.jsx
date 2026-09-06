@@ -230,6 +230,18 @@ export function AuthProvider({ children }) {
         return freshUser;
     };
 
+    const signOut = async () => {
+        try {
+            await supabase.auth.signOut();
+            await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+        } catch (err) {
+            console.error('[AUTH-CONTEXT] Error during signOut:', err);
+        } finally {
+            setUser(null);
+            setProfile(null);
+        }
+    };
+
     const value = {
         user,
         profile,
@@ -241,6 +253,7 @@ export function AuthProvider({ children }) {
         isMerchant: profile?.role === 'merchant',
         refreshProfile,
         refreshUser,
+        signOut,
     };
 
     return (

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useTransition } from 'react';
 import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store, Plus, Minus, X, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -16,13 +16,16 @@ import Image from 'next/image';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
-
+import FilterSidebar from '@/components/shop/FilterSidebar';
+import MobileFilterDrawer from '@/components/shop/MobileFilterDrawer';
+import ProductToolbar from '@/components/shop/filters/ProductToolbar';
+import Pagination from '@/components/ui/Pagination';
+import { STOREFRONT_FILTERS, PRICE_RANGES } from '@/lib/shop/filterTypes';
 
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import { getSubCategories } from '@/lib/constants/categories';
 
 const PAGE_SIZE = 24;
-const storeCache = new Map();
 
 // Lazy load below-fold and modal components
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
@@ -30,6 +33,11 @@ const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
 export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, initialFilters = {}, currentPage = 1 }) {
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [isPending, startTransition] = useTransition();
+    const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
     const { theme } = useTheme();
     const { user: authUser, profile: authProfile } = useAuth();
     const activeCustomer = authProfile || customer;
@@ -37,31 +45,34 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [isLoading, setIsLoading] = useState(true);
-    const [activeCategory, setActiveCategory] = useState(initialFilters.category || 'All');
-    const [selectedSubCategory, setSelectedSubCategory] = useState(initialFilters.sub_category || 'All');
-    const [searchInput, setSearchInput] = useState(initialFilters.search || '');
-    const [searchQuery, setSearchQuery] = useState(initialFilters.search || '');
+
+    // Single source of truth from URL searchParams
+    const activeCategory = searchParams.get('category') || initialFilters.category || 'All';
+    const selectedSubCategory = searchParams.get('sub_category') || initialFilters.sub_category || 'All';
+    const currentSearch = searchParams.get('search') || '';
+    const [searchInput, setSearchInput] = useState(currentSearch || initialFilters.search || '');
+    const currentPageNum = Math.max(1, parseInt(searchParams.get('page') || currentPage?.toString() || '1', 10));
+
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [selectedProductItem, setSelectedProductItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
+    const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
+    const [page, setPage] = useState(currentPageNum);
     const debounceRef = useRef(null);
 
-    const [page, setPage] = useState(currentPage || 1);
-    const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
-    const [loading, setLoading] = useState(false);
-    const isFirstRender = useRef(true);
-    const [pageLastIds, setPageLastIds] = useState({ 1: null });
-
+    // Synchronize inventory, total count and page when server props or URL page change
     useEffect(() => {
         setLiveInventory(initialInventory);
-        setPage(currentPage || 1);
         setTotalCount(initialTotalCount ?? 0);
-        setPageLastIds({ 1: null });
-        setLoading(false);
-        isFirstRender.current = true;
-    }, [initialInventory, initialTotalCount, currentPage]);
+        setPage(currentPageNum);
+    }, [initialInventory, initialTotalCount, currentPageNum]);
+
+    // Keep searchInput in sync when URL changes (e.g. back/forward navigation or clearing filters)
+    useEffect(() => {
+        setSearchInput(searchParams.get('search') || '');
+    }, [searchParams]);
 
     // Open-at-top fix: scrolls to top on mount and whenever merchant slug changes
     useEffect(() => {
@@ -75,148 +86,156 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         setLiveMerchant(merchant);
     }, [merchant]);
 
-    const fetchItems = useCallback(async (pageNum, searchVal, catVal, subCatVal, lastIdVal) => {
-        const queryParams = new URLSearchParams({
-            merchantSlug: liveMerchant?.slug || '',
-            offset: ((pageNum - 1) * PAGE_SIZE).toString(),
-            limit: PAGE_SIZE.toString(),
-        });
+    // Construct active filter chips list for ProductToolbar (excluding category to prevent navbar duplication)
+    const activeFiltersList = useMemo(() => {
+        const list = [];
+        const subCat = searchParams.get('sub_category');
+        if (subCat && subCat !== 'All') {
+            list.push({ type: 'sub_category', value: subCat, label: subCat });
+        }
+        const brand = searchParams.get('brand');
+        if (brand) {
+            const opt = STOREFRONT_FILTERS.find(f => f.id === 'brand')?.options?.find(o => o.value.toLowerCase() === brand.toLowerCase());
+            list.push({ type: 'brand', value: brand, label: opt?.label || brand });
+        }
+        const size = searchParams.get('size');
+        if (size) {
+            list.push({ type: 'size', value: size, label: size });
+        }
+        const color = searchParams.get('color');
+        if (color) {
+            const opt = STOREFRONT_FILTERS.find(f => f.id === 'color')?.options?.find(o => o.value.toLowerCase() === color.toLowerCase());
+            list.push({ type: 'color', value: color, label: opt?.label || color });
+        }
+        const minP = searchParams.get('min_price');
+        const maxP = searchParams.get('max_price');
+        if (minP || maxP) {
+            const matchedRange = PRICE_RANGES.find(r => 
+                (r.min != null ? r.min.toString() : '') === (minP || '') &&
+                (r.max != null ? r.max.toString() : '') === (maxP || '')
+            );
+            const minRupees = minP ? Math.round(Number(minP) / 100) : null;
+            const maxRupees = maxP ? Math.round(Number(maxP) / 100) : null;
+            let priceLabel = matchedRange?.label;
+            if (!priceLabel) {
+                if (minRupees && maxRupees) priceLabel = `₹${minRupees} - ₹${maxRupees}`;
+                else if (minRupees) priceLabel = `> ₹${minRupees}`;
+                else if (maxRupees) priceLabel = `< ₹${maxRupees}`;
+                else priceLabel = 'Price';
+            }
+            list.push({ type: 'price', value: `${minP}-${maxP}`, label: priceLabel });
+        }
+        const searchVal = searchParams.get('search');
         if (searchVal) {
-            queryParams.append('search', searchVal);
+            list.push({ type: 'search', value: searchVal, label: `"${searchVal}"` });
         }
-        if (catVal && catVal !== 'All') {
-            queryParams.append('category', catVal);
-        }
-        if (subCatVal && subCatVal !== 'All') {
-            queryParams.append('sub_category', subCatVal);
-        } else if (initialFilters?.sub_category) {
-            queryParams.append('sub_category', initialFilters.sub_category);
-        }
-        if (initialFilters?.min_price != null) {
-            queryParams.append('min_price', initialFilters.min_price.toString());
-        }
-        if (initialFilters?.max_price != null) {
-            queryParams.append('max_price', initialFilters.max_price.toString());
-        }
-        if (initialFilters?.brand) {
-            queryParams.append('brand', initialFilters.brand);
-        }
-        if (initialFilters?.size) {
-            queryParams.append('size', initialFilters.size);
-        }
-        if (initialFilters?.color) {
-            queryParams.append('color', initialFilters.color);
-        }
-        if (lastIdVal) {
-            queryParams.append('lastId', lastIdVal);
-        }
+        return list;
+    }, [searchParams]);
 
-        const cacheKey = queryParams.toString();
-        
-        if (storeCache.has(cacheKey)) {
-            const cachedData = storeCache.get(cacheKey);
-            if (pageNum === 1) {
-                setLiveInventory(cachedData.items);
+    const hasSecondaryFilters = useMemo(() => {
+        return Boolean(
+            (searchParams.get('sub_category') && searchParams.get('sub_category') !== 'All') ||
+            searchParams.get('min_price') ||
+            searchParams.get('max_price') ||
+            searchParams.get('brand') ||
+            searchParams.get('size') ||
+            searchParams.get('color')
+        );
+    }, [searchParams]);
+
+    // Handle filter changes: updates URL and always resets to page 1
+    const handleFilterChange = useCallback((newParams) => {
+        startTransition(() => {
+            router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+        });
+    }, [pathname, router]);
+
+    // Handle individual filter removal
+    const handleRemoveFilter = useCallback((filter) => {
+        startTransition(() => {
+            const params = new URLSearchParams(searchParams);
+            if (filter.type === 'price') {
+                params.delete('min_price');
+                params.delete('max_price');
+            } else if (filter.type === 'category') {
+                params.delete('category');
+                params.delete('sub_category');
             } else {
-                setLiveInventory(prev => {
-                    const existingIds = new Set(prev.map(i => i.id));
-                    const newItems = cachedData.items.filter(i => !existingIds.has(i.id));
-                    return [...prev, ...newItems];
-                });
+                params.delete(filter.type);
             }
-            setTotalCount(cachedData.totalCount);
-            setPage(pageNum);
-            return;
-        }
+            params.set('page', '1');
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+    }, [searchParams, pathname, router]);
 
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/shopping/storefront?${cacheKey}`);
-            if (!res.ok) throw new Error('Failed to fetch storefront items');
-            const data = await res.json();
+    // Clear secondary filters while preserving active category from navbar
+    const handleClearSecondaryFilters = useCallback(() => {
+        startTransition(() => {
+            const params = new URLSearchParams(searchParams);
+            params.delete('sub_category');
+            params.delete('min_price');
+            params.delete('max_price');
+            params.delete('brand');
+            params.delete('size');
+            params.delete('color');
+            params.set('page', '1');
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+    }, [searchParams, pathname, router]);
 
-            const items = data.items || [];
-            storeCache.set(cacheKey, { items, totalCount: data.totalCount ?? 0 });
+    // Clear all filters completely
+    const handleClearAllFilters = useCallback(() => {
+        startTransition(() => {
+            const params = new URLSearchParams();
+            params.set('page', '1');
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+    }, [pathname, router]);
 
-            if (pageNum === 1) {
-                setLiveInventory(items);
+    // Page navigation handler
+    const handlePageChange = useCallback((newPage) => {
+        startTransition(() => {
+            const params = new URLSearchParams(searchParams);
+            params.set('page', newPage.toString());
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }, [searchParams, pathname, router]);
+
+    // Category change from sticky header pills (resets sub_category and page to 1)
+    const handleCategoryChange = useCallback((cat) => {
+        startTransition(() => {
+            const params = new URLSearchParams(searchParams);
+            if (!cat || cat === 'All' || activeCategory.toLowerCase() === cat.toLowerCase()) {
+                params.delete('category');
             } else {
-                setLiveInventory(prev => {
-                    const existingIds = new Set(prev.map(i => i.id));
-                    const newItems = items.filter(i => !existingIds.has(i.id));
-                    return [...prev, ...newItems];
-                });
+                params.set('category', cat);
             }
-            setTotalCount(data.totalCount ?? 0);
-            setPage(pageNum);
+            params.delete('sub_category');
+            params.set('page', '1');
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+    }, [searchParams, activeCategory, pathname, router]);
 
-            // Cache the last seen ID of this page for the next page
-            if (items.length > 0) {
-                const lastItem = items[items.length - 1];
-                const nextLastId = liveMerchant?.slug === 'official' ? lastItem.product_id : lastItem.id;
-                setPageLastIds(prev => ({
-                    ...prev,
-                    [pageNum + 1]: nextLastId
-                }));
-            }
-        } catch (err) {
-            console.error('Error fetching storefront items:', err);
-            toast.error('Could not load products');
-        } finally {
-            setLoading(false);
-        }
-    }, [liveMerchant?.slug]);
+    // Debounce search input — 300ms prevents spamming router on every keystroke
+    const handleSearchChange = useCallback((e) => {
+        const val = e.target.value;
+        setSearchInput(val);
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            startTransition(() => {
+                const params = new URLSearchParams(searchParams);
+                if (val.trim()) {
+                    params.set('search', val.trim());
+                } else {
+                    params.delete('search');
+                }
+                params.set('page', '1');
+                router.push(`${pathname}?${params.toString()}`, { scroll: false });
+            });
+        }, 300);
+    }, [searchParams, pathname, router]);
 
-    // Page changes trigger fetches
-    useEffect(() => {
-        if (isFirstRender.current) {
-            return;
-        }
-        const lastId = pageLastIds[page] || null;
-        fetchItems(page, searchQuery, activeCategory, selectedSubCategory, lastId);
-    }, [page, fetchItems, searchQuery, activeCategory, selectedSubCategory, pageLastIds]);
-
-    const loadMoreRef = useRef(null);
-
-    // IntersectionObserver for infinite scrolling
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && !loading && liveInventory.length < totalCount) {
-                setPage(p => p + 1);
-            }
-        }, { threshold: 0.1 });
-
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, [loading, liveInventory.length, totalCount]);
-
-    // Search and Category resets page to 1 and synchronizes URL query params
-    useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            return;
-        }
-        if (typeof window !== 'undefined') {
-            const url = new URL(window.location.href);
-            if (searchQuery) url.searchParams.set('search', searchQuery);
-            else url.searchParams.delete('search');
-            if (activeCategory && activeCategory !== 'All') url.searchParams.set('category', activeCategory);
-            else url.searchParams.delete('category');
-            if (selectedSubCategory && selectedSubCategory !== 'All') url.searchParams.set('sub_category', selectedSubCategory);
-            else url.searchParams.delete('sub_category');
-            url.searchParams.delete('page');
-            window.history.replaceState({}, '', url.toString());
-        }
-        setPageLastIds({ 1: null });
-        if (page !== 1) {
-            setPage(1);
-        } else {
-            fetchItems(1, searchQuery, activeCategory, selectedSubCategory, null);
-        }
-    }, [searchQuery, activeCategory, selectedSubCategory, fetchItems]);
 
     useEffect(() => {
         if (!liveMerchant?.id) return;
@@ -520,18 +539,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         return Array.from(dynamicSet);
     }, [activeCategory, liveInventory]);
 
-    const handleCategoryChange = (cat) => {
-        setActiveCategory(cat);
-        setSelectedSubCategory('All');
-    };
-
-    // Debounce search — 150ms prevents re-filtering large inventories on every keystroke
-    const handleSearchChange = useCallback((e) => {
-        const val = e.target.value;
-        setSearchInput(val);
-        clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => setSearchQuery(val), 150);
-    }, []);
 
     const getCategoryIcon = useCallback((category) => {
         const cat = category.toLowerCase();
@@ -623,6 +630,23 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                     }`}
                             />
                         </div>
+
+                        {/* Mobile Filters button in sticky bar */}
+                        <button
+                            type="button"
+                            onClick={() => setIsMobileFiltersOpen(true)}
+                            aria-label="Open filter drawer"
+                            className={`lg:hidden relative w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${
+                                isDark 
+                                    ? 'bg-white/5 hover:bg-white/10 text-white/80 border border-white/10' 
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 shadow-xs'
+                            }`}
+                        >
+                            <SlidersHorizontal size={18} className="text-sky-500" />
+                            {hasSecondaryFilters && (
+                                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-[#0c0e16]" />
+                            )}
+                        </button>
                     </div>
 
                     {/* Animated Category Pills */}
@@ -649,38 +673,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             })}
                         </div>
                     )}
-
-                    {/* Animated Sub-category Chips */}
-                    {availableSubCategories.length > 0 && (
-                        <div className={`flex items-center gap-1.5 px-3.5 md:px-5 py-1.5 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04] bg-white/[0.02]' : 'border-slate-100 bg-slate-50/80'}`}>
-                            <button
-                                onClick={() => setSelectedSubCategory('All')}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
-                                    selectedSubCategory === 'All'
-                                        ? isDark ? 'bg-white text-slate-950 font-black' : 'bg-slate-900 text-white font-black'
-                                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:bg-slate-200/60'
-                                }`}
-                            >
-                                All {activeCategory}
-                            </button>
-                            {availableSubCategories.map(sub => {
-                                const isSubActive = selectedSubCategory === sub;
-                                return (
-                                    <button
-                                        key={sub}
-                                        onClick={() => setSelectedSubCategory(sub)}
-                                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
-                                            isSubActive
-                                                ? 'bg-sky-500 text-white shadow-xs font-black'
-                                                : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:bg-slate-200/60'
-                                        }`}
-                                    >
-                                        {sub}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
                 </header>
             </div>
 
@@ -694,7 +686,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                         <CustomerBreadcrumbs 
                             items={[
                                 { label: 'Shop', href: '/shop' },
-                                { label: liveMerchant?.id === 'official' ? 'InTrust Official' : (liveMerchant?.business_name || 'Store') }
+                                { label: (liveMerchant?.id === 'official' || liveMerchant?.slug === 'intrust-official' || liveMerchant?.slug === 'official') ? 'InTrust Official' : (liveMerchant?.business_name || 'Store') }
                             ]}
                         />
                     </div>
@@ -707,7 +699,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     />
 
                     {/* FLASH SALE */}
-                    {liveMerchant?.id === 'official' && (
+                    {(liveMerchant?.id === 'official' || liveMerchant?.slug === 'intrust-official' || liveMerchant?.slug === 'official') && (
                         <Suspense fallback={<div className="w-full h-[200px] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse mb-6" />}>
                             <FlashSale
                                 cart={cart}
@@ -734,44 +726,78 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             </div>
                         </div>
                     )}
-                    {(isLoading || loading) ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-                            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                                <ProductCardSkeleton key={`psk-${i}`} />
-                            ))}
-                        </div>
-                    ) : filteredItems.length === 0 ? (
-                        <div className={`py-20 text-center rounded-3xl mt-10 ${isDark ? 'bg-white/[0.03] border border-white/[0.05]' : 'bg-white shadow-sm border border-slate-100'}`}>
-                            <Package className={isDark ? 'text-white/10 mx-auto mb-4' : 'text-slate-300 mx-auto mb-4'} size={48} />
-                            <h3 className={`text-lg font-black uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-600'}`}>No items found</h3>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-                                {filteredItems.map(item => (
-                                    <ProductCardV2
-                                        key={item.id}
-                                        item={item}
-                                        cartItem={cart.find(i => i.id === item.id)}
-                                        onAdd={() => addToCart(item)}
-                                        onRemove={() => removeFromCart(item)}
-                                        onSelect={() => setSelectedProductItem(item)}
-                                        primaryColor={primaryColor}
-                                        secondaryColor={secondaryColor}
-                                        isWishlisted={wishlistIds.has(item.product_id)}
-                                        onWishlist={() => toggleWishlist(item)}
-                                        isStoreOpen={isStoreOpen}
-                                    />
-                                ))}
-                            </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start mt-4">
+                        {/* Desktop Filter Sidebar */}
+                        <aside className="hidden lg:block lg:col-span-1 sticky top-36">
+                            <FilterSidebar
+                                onFilterChange={handleFilterChange}
+                                showHeader={true}
+                            />
+                        </aside>
 
-                            {liveInventory.length < totalCount && (
-                                <div ref={loadMoreRef} className="w-full h-20 flex items-center justify-center mt-6">
-                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        {/* Storefront Products & Controls */}
+                        <div className="col-span-1 lg:col-span-3 space-y-4">
+                            <ProductToolbar
+                                resultsCount={totalCount}
+                                onOpenMobileFilters={() => setIsMobileFiltersOpen(true)}
+                                activeFilters={activeFiltersList}
+                                onRemoveFilter={handleRemoveFilter}
+                                onClearAll={handleClearSecondaryFilters}
+                            />
+
+                            {isPending ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4">
+                                    {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                                        <ProductCardSkeleton key={`psk-${i}`} />
+                                    ))}
                                 </div>
+                            ) : filteredItems.length === 0 ? (
+                                <div className={`py-16 text-center rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-white border-slate-200/80 shadow-xs'}`}>
+                                    <Package className={isDark ? 'text-white/10 mx-auto mb-3' : 'text-slate-300 mx-auto mb-3'} size={44} />
+                                    <h3 className={`text-base font-black uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-600'}`}>No products available</h3>
+                                    <p className={`text-xs mt-1 font-medium ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Try adjusting your filters or search terms</p>
+                                    {activeFiltersList.length > 0 && (
+                                        <button
+                                            onClick={handleClearAllFilters}
+                                            className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-600 text-white transition-all shadow-sm"
+                                        >
+                                            Clear All Filters
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4">
+                                        {filteredItems.map(item => (
+                                            <ProductCardV2
+                                                key={item.id}
+                                                item={item}
+                                                cartItem={cart.find(i => i.id === item.id)}
+                                                onAdd={() => addToCart(item)}
+                                                onRemove={() => removeFromCart(item)}
+                                                onSelect={() => setSelectedProductItem(item)}
+                                                primaryColor={primaryColor}
+                                                secondaryColor={secondaryColor}
+                                                isWishlisted={wishlistIds.has(item.product_id)}
+                                                onWishlist={() => toggleWishlist(item)}
+                                                isStoreOpen={isStoreOpen}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* Server-Side Pagination */}
+                                    <div className="pt-6 pb-2">
+                                        <Pagination
+                                            totalCount={totalCount}
+                                            pageSize={PAGE_SIZE}
+                                            currentPage={page}
+                                            onPageChange={handlePageChange}
+                                        />
+                                    </div>
+                                </>
                             )}
-                        </>
-                    )}
+                        </div>
+                    </div>
                 </div>
             </main>
 
@@ -959,6 +985,20 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Mobile Filter Drawer */}
+            <MobileFilterDrawer
+                isOpen={isMobileFiltersOpen}
+                onClose={() => setIsMobileFiltersOpen(false)}
+                onClearAll={handleClearSecondaryFilters}
+                hasActiveFilters={hasSecondaryFilters}
+                resultsCount={totalCount}
+            >
+                <FilterSidebar
+                    onFilterChange={handleFilterChange}
+                    showHeader={false}
+                />
+            </MobileFilterDrawer>
         </div>
     );
 }

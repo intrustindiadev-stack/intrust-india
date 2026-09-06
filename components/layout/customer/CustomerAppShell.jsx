@@ -110,10 +110,10 @@ export default function CustomerAppShell({ children }) {
         try {
             setIsSigningOut(true);
             await signOut();
-            router.push('/login');
+            window.location.href = '/login';
         } catch (e) {
             console.error('Sign out error:', e);
-            router.push('/login');
+            window.location.href = '/login';
         } finally {
             setIsSigningOut(false);
             setShowLogoutModal(false);
