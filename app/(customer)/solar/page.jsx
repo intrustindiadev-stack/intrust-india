@@ -1,13 +1,12 @@
 import { Suspense } from 'react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 import SolarHero from '@/components/solar/customer/SolarHero';
 import SolarLeadForm from '@/components/solar/customer/SolarLeadForm';
 import SolarRequestTracker from '@/components/solar/customer/SolarRequestTracker';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { WHY_SOLAR } from '@/lib/solar/estimator'; // I need to move WHY_SOLAR to estimator or create SolarWhy component. Wait, I didn't export WHY_SOLAR. Let me just inline it or create a SolarWhy.jsx later. I will inline it for now or extract.
+import { WHY_SOLAR } from '@/lib/solar/estimator';
 import { IndianRupee, TrendingDown, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { revalidatePath } from 'next/cache';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 const WHY_SOLAR_LIST = [
     { title: 'Zero Investment', desc: 'Government subsidy covers your full down payment', icon: IndianRupee },
@@ -46,11 +45,16 @@ export default async function SolarServicePage() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#08090b] text-slate-900 dark:text-white overflow-x-hidden">
-            <div className="fixed top-0 left-0 right-0 z-[120]">
-                <Navbar />
-            </div>
-
-            <main className="relative z-10 pt-[104px]">
+            <main className="relative z-10 pt-4 sm:pt-6 pb-28">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 mb-4">
+                    <CustomerBreadcrumbs 
+                        items={[
+                            { label: 'Services Hub', href: '/services' }, 
+                            { label: 'Rooftop Solar' }
+                        ]} 
+                        className="mb-0"
+                    />
+                </div>
                 <SolarHero />
 
                 {/* Optional tracker logic based on user session */}
@@ -95,8 +99,6 @@ export default async function SolarServicePage() {
                         <SolarLeadForm existingLead={existingLead} onSubmissionSuccess={handleSubmissionSuccess} />
                     </div>
                 </section>
-
-                <Footer />
             </main>
         </div>
     );

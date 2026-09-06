@@ -6,8 +6,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 
 const STAGES = [
     { key: 'pending', label: 'Applied', icon: Send, color: 'text-blue-600', bg: 'bg-blue-100' },
@@ -180,8 +178,7 @@ export default function ApplicationsHistoryPage() {
     if (!user) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex items-center justify-center p-4">
+                <div className="flex-1 flex items-center justify-center p-4 py-16">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-indigo-200 dark:border-indigo-700/50"><AlertCircle size={28} className="text-indigo-500 dark:text-indigo-400" /></div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sign In Required</h2>
@@ -189,17 +186,14 @@ export default function ApplicationsHistoryPage() {
                         <Link href="/login?callbackUrl=%2Fcareer%2Fapplications" className="inline-flex items-center justify-center bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25">Sign In to Continue</Link>
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-            <Navbar />
-            
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col pb-28">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-8 pt-28 relative overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-8 pt-6 relative overflow-hidden rounded-b-3xl">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
                 <div className="max-w-4xl mx-auto">
                     <Link href="/career" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors">
@@ -241,8 +235,6 @@ export default function ApplicationsHistoryPage() {
                     </div>
                 )}
             </div>
-            
-            <Footer />
         </div>
     );
 }

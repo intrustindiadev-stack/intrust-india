@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store, Plus, Minus, X, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -16,24 +16,19 @@ import Image from 'next/image';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
 import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
-import ShopLayout from '@/components/shop/ShopLayout';
-import FilterSidebar from '@/components/shop/FilterSidebar';
-import Pagination from '@/components/ui/Pagination';
-import ProductToolbar from '@/components/shop/filters/ProductToolbar';
-import { STOREFRONT_FILTERS } from '@/lib/shop/filterTypes';
+
+
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 const PAGE_SIZE = 24;
 const storeCache = new Map();
 
 // Lazy load below-fold and modal components
-const AdBannerCarousel = React.lazy(() => import('@/components/customer/dashboard/AdBannerCarousel'));
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, currentPage, categoryNav }) {
+export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories }) {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const pathname = usePathname();
     const { theme } = useTheme();
     const { user: authUser, profile: authProfile } = useAuth();
     const activeCustomer = authProfile || customer;
@@ -41,15 +36,30 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [isLoading, setIsLoading] = useState(true);
+    const [activeSubCategory, setActiveSubCategory] = useState('All');
+    const [searchInput, setSearchInput] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [selectedProductItem, setSelectedProductItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
+    const debounceRef = useRef(null);
+
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
+    const [loading, setLoading] = useState(false);
+    const isFirstRender = useRef(true);
+    const [pageLastIds, setPageLastIds] = useState({ 1: null });
 
     useEffect(() => {
         setLiveInventory(initialInventory);
-    }, [initialInventory]);
+        setPage(1);
+        setTotalCount(initialTotalCount ?? 0);
+        setPageLastIds({ 1: null });
+        setLoading(false);
+        isFirstRender.current = true;
+    }, [initialInventory, initialTotalCount]);
 
     // Open-at-top fix: scrolls to top on mount and whenever merchant slug changes
     useEffect(() => {
@@ -63,74 +73,117 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         setLiveMerchant(merchant);
     }, [merchant]);
 
-    const activeFiltersList = useMemo(() => {
-        const filters = [];
-        STOREFRONT_FILTERS.forEach(config => {
-            const val = searchParams.get(config.id);
-            if (val) {
-                const values = val.split(',');
-                values.forEach(v => {
-                    const opt = config.options.find(o => o.value === v);
-                    filters.push({
-                        type: config.id,
-                        value: v,
-                        label: opt ? opt.label : v
-                    });
-                });
-            }
+    const fetchItems = useCallback(async (pageNum, searchVal, catVal, lastIdVal) => {
+        const queryParams = new URLSearchParams({
+            merchantSlug: liveMerchant.slug,
+            offset: ((pageNum - 1) * PAGE_SIZE).toString(),
+            limit: PAGE_SIZE.toString(),
         });
-        const extraFilters = ['sub_category', 'size', 'color'];
-        extraFilters.forEach(type => {
-            const val = searchParams.get(type);
-            if (val) {
-                val.split(',').forEach(v => {
-                    filters.push({ type, value: v, label: v });
-                });
-            }
-        });
-
-        if (searchParams.has('search')) {
-            filters.push({ type: 'search', value: searchParams.get('search'), label: `"${searchParams.get('search')}"` });
+        if (searchVal) {
+            queryParams.append('search', searchVal);
         }
-        return filters;
-    }, [searchParams]);
+        if (catVal && catVal !== 'All') {
+            queryParams.append('category', catVal);
+        }
+        if (lastIdVal) {
+            queryParams.append('lastId', lastIdVal);
+        }
 
-    const handleRemoveFilter = (filter) => {
-        const params = new URLSearchParams(searchParams);
-        if (filter.type === 'search') {
-            params.delete('search');
+        const cacheKey = queryParams.toString();
+        
+        if (storeCache.has(cacheKey)) {
+            const cachedData = storeCache.get(cacheKey);
+            if (pageNum === 1) {
+                setLiveInventory(cachedData.items);
+            } else {
+                setLiveInventory(prev => {
+                    const existingIds = new Set(prev.map(i => i.id));
+                    const newItems = cachedData.items.filter(i => !existingIds.has(i.id));
+                    return [...prev, ...newItems];
+                });
+            }
+            setTotalCount(cachedData.totalCount);
+            setPage(pageNum);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/shopping/storefront?${cacheKey}`);
+            if (!res.ok) throw new Error('Failed to fetch storefront items');
+            const data = await res.json();
+
+            const items = data.items || [];
+            storeCache.set(cacheKey, { items, totalCount: data.totalCount ?? 0 });
+
+            if (pageNum === 1) {
+                setLiveInventory(items);
+            } else {
+                setLiveInventory(prev => {
+                    const existingIds = new Set(prev.map(i => i.id));
+                    const newItems = items.filter(i => !existingIds.has(i.id));
+                    return [...prev, ...newItems];
+                });
+            }
+            setTotalCount(data.totalCount ?? 0);
+            setPage(pageNum);
+
+            // Cache the last seen ID of this page for the next page
+            if (items.length > 0) {
+                const lastItem = items[items.length - 1];
+                const nextLastId = liveMerchant.slug === 'official' ? lastItem.product_id : lastItem.id;
+                setPageLastIds(prev => ({
+                    ...prev,
+                    [pageNum + 1]: nextLastId
+                }));
+            }
+        } catch (err) {
+            console.error('Error fetching storefront items:', err);
+            toast.error('Could not load products');
+        } finally {
+            setLoading(false);
+        }
+    }, [liveMerchant.slug]);
+
+    // Page changes trigger fetches
+    useEffect(() => {
+        if (isFirstRender.current) {
+            return;
+        }
+        const lastId = pageLastIds[page] || null;
+        fetchItems(page, searchQuery, activeSubCategory, lastId);
+    }, [page, fetchItems]);
+
+    const loadMoreRef = useRef(null);
+
+    // IntersectionObserver for infinite scrolling
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !loading && liveInventory.length < totalCount) {
+                setPage(p => p + 1);
+            }
+        }, { threshold: 0.1 });
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loading, liveInventory.length, totalCount]);
+
+    // Search and Category resets page to 1
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        setPageLastIds({ 1: null });
+        if (page !== 1) {
+            setPage(1);
         } else {
-            const current = params.get(filter.type);
-            if (current) {
-                const updated = current.split(',').filter(v => v !== filter.value);
-                if (updated.length > 0) {
-                    params.set(filter.type, updated.join(','));
-                } else {
-                    params.delete(filter.type);
-                    if (filter.type === 'category') {
-                        params.delete('sub_category');
-                        params.delete('size');
-                        params.delete('color');
-                    }
-                }
-            }
+            fetchItems(1, searchQuery, activeSubCategory, null);
         }
-        params.set('page', '1');
-        router.push(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
-    const handleClearAllFilters = () => {
-        const params = new URLSearchParams(searchParams);
-        STOREFRONT_FILTERS.forEach(c => params.delete(c.id));
-        params.delete('search');
-        params.delete('min_price');
-        params.delete('max_price');
-        params.delete('sub_category');
-        params.delete('size');
-        params.delete('color');
-        params.set('page', '1');
-        router.push(`${pathname}?${params.toString()}`, { scroll: false });
-    };
+    }, [searchQuery, activeSubCategory, fetchItems]);
 
     useEffect(() => {
         if (!liveMerchant?.id) return;
@@ -419,7 +472,13 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         return categories || ['All'];
     }, [categories]);
 
-
+    // Debounce search — 150ms prevents re-filtering large inventories on every keystroke
+    const handleSearchChange = useCallback((e) => {
+        const val = e.target.value;
+        setSearchInput(val);
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => setSearchQuery(val), 150);
+    }, []);
 
     const getCategoryIcon = useCallback((category) => {
         const cat = category.toLowerCase();
@@ -454,77 +513,170 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
 
     return (
-        <div className="font-[family-name:var(--font-outfit)]">
-            <ShopLayout
-                title={merchant?.business_name || 'Storefront'}
-                sidebar={<FilterSidebar categories={merchantCategories} />}
-                toolbar={
-                    <ProductToolbar 
-                        activeFilters={activeFiltersList}
-                        onRemoveFilter={handleRemoveFilter}
-                        onClearAll={handleClearAllFilters}
-                        resultsCount={initialTotalCount}
+        <div className={`relative min-h-screen flex flex-col transition-colors duration-700`}>
+
+            {/* ====== CREATIVE AMBIENT BACKGROUND ====== */}
+            <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+                <div className={`absolute inset-0 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`} />
+            </div>
+
+            {/* ====== STICKY HEADER — FROSTED GLASS ====== */}
+            <div className="sticky top-[76px] md:top-[92px] z-30 px-2 sm:px-4 md:px-6 max-w-7xl mx-auto w-full mb-4 pointer-events-none">
+                <header
+                    className={`pointer-events-auto md:backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${
+                        isDark 
+                            ? 'bg-[#0c0e16]/95 md:bg-[#080a10]/90 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.4)]' 
+                            : 'bg-white/95 md:bg-white/95 border-slate-200/90 shadow-md'
+                    }`}
+                >
+                    {/* Top Row */}
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 md:px-5 md:py-3">
+                        <button
+                            onClick={() => router.push('/shop')}
+                            aria-label="Back to shops"
+                            className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 transition-all ${
+                                isDark 
+                                    ? 'bg-white/5 hover:bg-white/10 text-white/80 border border-white/10' 
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 shadow-xs'
+                            }`}
+                        >
+                            <ArrowLeft size={18} strokeWidth={2.5} />
+                        </button>
+
+                        {/* Search - Desktop AND Mobile inline for sticky bar */}
+                        <div className="flex-1 w-full relative">
+                            <Search size={16} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
+                            <input
+                                type="text"
+                                placeholder={`Search in ${merchant?.business_name || 'store'}...`}
+                                value={searchInput}
+                                onChange={handleSearchChange}
+                                className={`w-full pl-9 sm:pl-10 pr-4 py-2 md:py-2.5 rounded-full text-xs sm:text-sm font-semibold outline-none transition-all border ${
+                                    isDark 
+                                        ? 'bg-[#0a0c14]/60 text-white placeholder:text-white/35 border-white/[0.08] focus:bg-[#0a0c14] focus:border-sky-500/50' 
+                                        : 'bg-slate-100/90 text-slate-900 placeholder:text-slate-500 border-slate-200/80 hover:bg-slate-100 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 shadow-xs'
+                                    }`}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Animated Subcategory Pills */}
+                    {merchantCategories.length > 1 && (
+                        <div className={`relative flex items-center gap-2 px-3.5 md:px-5 py-2 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
+                            {merchantCategories.map(sub => {
+                                const isActive = activeSubCategory === sub;
+                                return (
+                                    <button
+                                        key={sub}
+                                        onClick={() => setActiveSubCategory(sub)}
+                                        className={`relative px-3.5 py-1.5 flex items-center gap-1.5 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-all ${
+                                            isActive 
+                                                ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-sm shadow-sky-500/30 border border-sky-400 font-black' 
+                                                : isDark 
+                                                    ? 'bg-white/5 hover:bg-sky-950/40 hover:text-sky-300 text-slate-300 border border-white/10' 
+                                                    : 'bg-sky-50/70 hover:bg-sky-100 text-slate-700 hover:text-sky-900 border border-sky-100'
+                                        }`}
+                                    >
+                                        <span>{getCategoryIcon(sub)}</span>
+                                        <span>{sub}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </header>
+            </div>
+
+            {/* MAIN CONTENT AREA */}
+            <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-3 md:py-5 relative z-10">
+                {/* pb-36 on mobile gives clearance below last card for floating cart and bottom nav */}
+                <div className="max-w-7xl mx-auto pb-36 md:pb-8 space-y-4">
+                    
+                    {/* Standardized Customer Breadcrumbs */}
+                    <div className="px-1">
+                        <CustomerBreadcrumbs 
+                            items={[
+                                { label: 'Shop', href: '/shop' },
+                                { label: liveMerchant?.id === 'official' ? 'InTrust Official Flagship' : (liveMerchant?.business_name || 'Store') }
+                            ]}
+                        />
+                    </div>
+
+                    {/* MERCHANT PROFILE HEADER */}
+                    <MerchantProfileCard 
+                        merchant={liveMerchant} 
+                        totalItems={totalCount} 
+                        isStoreOpen={isStoreOpen}
                     />
-                }
-            >
-                {/* Store Closed Browsing Note */}
-                {!isStoreOpen && (
-                    <div className="mb-6 p-4 rounded-xl flex flex-col sm:flex-row items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white shadow-sm shrink-0">
-                            <Store size={20} className="text-amber-600" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h4 className="font-bold text-sm">Not Accepting Orders</h4>
-                            <p className="text-xs font-medium opacity-80 mt-0.5">You can still explore our inventory, but ordering is turned off. Check back soon!</p>
-                        </div>
-                    </div>
-                )}
 
-                {categoryNav && (
-                    <div className="mb-6 -mx-4 sm:mx-0">
-                        {categoryNav}
-                    </div>
-                )}
+                    {/* FLASH SALE */}
+                    {liveMerchant?.id === 'official' && (
+                        <Suspense fallback={<div className="w-full h-[200px] bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse mb-6" />}>
+                            <FlashSale
+                                cart={cart}
+                                onAdd={addToCart}
+                                onRemove={removeFromCart}
+                                isStoreOpen={isStoreOpen}
+                                primaryColor={primaryColor}
+                                secondaryColor={secondaryColor}
+                            />
+                        </Suspense>
+                    )}
 
-                {isLoading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                            <ProductCardSkeleton key={`psk-${i}`} />
-                        ))}
-                    </div>
-                ) : filteredItems.length === 0 ? (
-                    <div className="py-20 text-center rounded-2xl bg-white dark:bg-[#0c0e16] shadow-sm border border-slate-100 dark:border-white/10 mt-6">
-                        <Package className="text-slate-300 dark:text-slate-700 mx-auto mb-4" size={48} />
-                        <h3 className="text-lg font-bold text-slate-600 dark:text-slate-400">No items found</h3>
-                    </div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 px-1 sm:px-0">
-                            {filteredItems.map(item => (
-                                <ProductCardV2
-                                    key={item.id}
-                                    item={item}
-                                    cartItem={cart.find(i => i.id === item.id)}
-                                    onAdd={() => addToCart(item)}
-                                    onRemove={() => removeFromCart(item)}
-                                    onSelect={() => setSelectedProductItem(item)}
-                                    primaryColor={primaryColor}
-                                    secondaryColor={secondaryColor}
-                                    isWishlisted={wishlistIds.has(item.product_id)}
-                                    onWishlist={() => toggleWishlist(item)}
-                                    isStoreOpen={isStoreOpen}
-                                />
+                    {/* Store Closed Browsing Note */}
+                    {!isStoreOpen && (
+                        <div className={`mt-4 mb-2 md:mt-6 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/20 text-amber-200' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-amber-500/20' : 'bg-white shadow-sm'}`}>
+                                    <Store size={20} className={isDark ? 'text-amber-400' : 'text-amber-600'} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h4 className="font-bold text-sm">Not Acccepting Orders</h4>
+                                    <p className="text-xs font-medium opacity-80 mt-0.5">You can still explore our inventory, but ordering is turned off. Check back soon!</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {(isLoading || loading) ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+                            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                                <ProductCardSkeleton key={`psk-${i}`} />
                             ))}
                         </div>
+                    ) : filteredItems.length === 0 ? (
+                        <div className={`py-20 text-center rounded-3xl mt-10 ${isDark ? 'bg-white/[0.03] border border-white/[0.05]' : 'bg-white shadow-sm border border-slate-100'}`}>
+                            <Package className={isDark ? 'text-white/10 mx-auto mb-4' : 'text-slate-300 mx-auto mb-4'} size={48} />
+                            <h3 className={`text-lg font-black uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-600'}`}>No items found</h3>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+                                {filteredItems.map(item => (
+                                    <ProductCardV2
+                                        key={item.id}
+                                        item={item}
+                                        cartItem={cart.find(i => i.id === item.id)}
+                                        onAdd={() => addToCart(item)}
+                                        onRemove={() => removeFromCart(item)}
+                                        onSelect={() => setSelectedProductItem(item)}
+                                        primaryColor={primaryColor}
+                                        secondaryColor={secondaryColor}
+                                        isWishlisted={wishlistIds.has(item.product_id)}
+                                        onWishlist={() => toggleWishlist(item)}
+                                        isStoreOpen={isStoreOpen}
+                                    />
+                                ))}
+                            </div>
 
-                        <Pagination
-                            totalCount={initialTotalCount}
-                            pageSize={PAGE_SIZE}
-                            currentPage={currentPage}
-                        />
-                    </>
-                )}
-            </ShopLayout>
+                            {liveInventory.length < totalCount && (
+                                <div ref={loadMoreRef} className="w-full h-20 flex items-center justify-center mt-6">
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </main>
 
             {/* FLOATING CART */}
             {totalItems > 0 && isStoreOpen && (
@@ -615,21 +767,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                         <Zap size={12} className="fill-white" /> {discountPct}% OFF
                                                     </div>
                                                 )}
-
-                                                {/* Wishlist Button */}
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); toggleWishlist(pItem); }}
-                                                    className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-sm transition-all ${
-                                                        wishlistIds.has(pItem.product_id)
-                                                            ? 'bg-pink-50 text-pink-500 border border-pink-100'
-                                                            : isDark 
-                                                                ? 'bg-black/40 text-white backdrop-blur-md hover:bg-black/60 border border-white/10' 
-                                                                : 'bg-white/80 text-slate-400 border border-slate-200 hover:text-pink-500 hover:border-pink-200 backdrop-blur-md'
-                                                    }`}
-                                                    aria-label="Toggle Wishlist"
-                                                >
-                                                    <Heart size={20} className={wishlistIds.has(pItem.product_id) ? 'fill-current' : ''} />
-                                                </button>
                                             </div>
                                             
                                             {/* Details Area */}
@@ -691,7 +828,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                                 Out of Stock
                                                             </div>
                                                         ) : pCartItem ? (
-                                                            <div className="flex items-center bg-blue-600 text-white rounded-xl h-[48px] px-1 shadow-[0_8px_20px_rgb(59,130,246,0.3)] w-full overflow-hidden">
+                                                            <div className="flex items-center bg-sky-500 text-white rounded-xl h-[48px] px-1 shadow-[0_4px_16px_rgba(14,165,233,0.3)] w-full overflow-hidden">
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50); removeFromCart(pItem); }}
                                                                     className="w-12 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
@@ -709,7 +846,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                         ) : (
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); addToCart(pItem); }}
-                                                                className="w-full h-[48px] rounded-xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 dark:bg-blue-600/10 dark:text-blue-400 dark:border-blue-500/20 dark:hover:bg-blue-600/20 font-black text-[13px] uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                                                                className="w-full h-[48px] rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-black text-[13px] uppercase tracking-widest shadow-md shadow-sky-500/25 transition-all active:scale-95 flex items-center justify-center"
                                                             >
                                                                 ADD TO CART
                                                             </button>

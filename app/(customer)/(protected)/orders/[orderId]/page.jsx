@@ -2,7 +2,6 @@ import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { notFound } from "next/navigation";
 import { isValidUUID } from "@/lib/utils";
 import OrderDetailsClient from "./OrderDetailsClient";
-import Navbar from "@/components/layout/Navbar";
 
 export default async function OrderDetailsPage({ params }) {
     const { orderId } = await params;
@@ -113,12 +112,10 @@ export default async function OrderDetailsPage({ params }) {
     }
 
     return (
-        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10]">
-            <Navbar customer={customerProfile} />
+        <div className="w-full">
             <main>
                 <OrderDetailsClient order={orderData} orderType={orderType} userId={user.id} customerProfile={customerProfile} />
             </main>
-            
         </div>
     );
 }

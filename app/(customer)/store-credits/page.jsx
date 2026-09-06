@@ -5,13 +5,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import Navbar from '@/components/layout/Navbar';
-
 import { Clock, ShieldCheck, CreditCard, ChevronRight, AlertCircle, Loader2, Copy, CheckCircle2, Eye, EyeOff, Info, Calendar, Lock, Smartphone, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import ShopOrderCreditCard from '@/components/customer/store-credits/ShopOrderCreditCard';
 import { RequestTimeline, UdhariStatusBadge } from '@/components/customer/store-credits/UdhariSharedComponents';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 export default function StoreCreditsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -174,18 +173,23 @@ export default function StoreCreditsPage() {
     if (authLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" /></div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col font-outfit">
-            <Navbar />
-
-            <div className="flex-1 pt-24 pb-28 px-4 sm:px-6 max-w-4xl mx-auto w-full">
+        <div className="min-h-screen bg-slate-50 dark:bg-transparent flex flex-col font-outfit text-slate-900 dark:text-white">
+            <div className="flex-1 pt-4 sm:pt-6 pb-28 px-4 sm:px-6 max-w-4xl mx-auto w-full">
+                <CustomerBreadcrumbs 
+                    items={[
+                        { label: 'InTrust Wallet', href: '/wallet' }, 
+                        { label: 'Store Credit (Udhari)' }
+                    ]} 
+                    className="mb-4"
+                />
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-200">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-200 dark:shadow-none">
                             <Clock size={24} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Store Credits</h1>
-                            <p className="text-sm text-gray-500 font-medium">Manage your "Pay Later" purchases</p>
+                            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Store Credits</h1>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage your "Pay Later" purchases</p>
                         </div>
                     </div>
                 </div>

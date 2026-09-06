@@ -18,7 +18,15 @@ import {
     Heart,
     CreditCard,
     AlertCircle,
+    Phone,
+    Sparkles,
+    ShoppingBag,
+    MapPin,
+    RefreshCw,
+    Star,
+    Award,
 } from 'lucide-react';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -29,10 +37,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { isPdpProductOOS, isInventoryRowOOS, OOS_LABEL, isPlatformProductOOS } from '@/lib/shopping/stock';
 import OutOfStockOverlay from '@/components/ui/OutOfStockOverlay';
-import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
-import NotifyMeButton from '@/components/ui/NotifyMeButton';
-import RecentlyViewed, { recordRecentlyViewed } from '@/components/commerce/RecentlyViewed';
 
 // Lazy-load modal — only needed on rare cart-conflict path, keep it out of the initial bundle
 const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
@@ -44,22 +49,6 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const activeCustomer = authProfile || customer;
     const activeEmail = activeCustomer?.email || authUser?.email;
     const isDark = theme === 'dark';
-
-    // Record recently viewed
-    useEffect(() => {
-        if (product?.id) {
-            recordRecentlyViewed({
-                id: product.id,
-                title: product.title,
-                category: product.category || 'General',
-                price_paise: product.platform_price_paise || product.suggested_retail_price_paise || 0,
-                compare_at_price_paise: product.mrp_paise || null,
-                image: product.product_images?.[0] || null,
-                slug: product.slug,
-                is_fashion: false
-            });
-        }
-    }, [product.id, product.title, product.category, product.platform_price_paise, product.suggested_retail_price_paise, product.mrp_paise, product.product_images, product.slug]);
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
     const [buyNowLoading, setBuyNowLoading] = useState(false);
@@ -72,9 +61,31 @@ export default function ProductDetailClient({ product, inventory, customer, reco
     const [isPlatformOpen, setIsPlatformOpen] = useState(initialPlatformStatus?.is_open ?? true);
     const [merchantStatuses, setMerchantStatuses] = useState(new Map()); // Map<id, is_open>
     const [isClosedAnimation, setIsClosedAnimation] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
+    const [activeDetailTab, setActiveDetailTab] = useState('highlights');
 
     // Memoized supabase client — prevents a new instance on every render
     const supabase = useMemo(() => createClient(), []);
+
+    // Sync active shopping cart count
+    useEffect(() => {
+        if (!activeCustomer?.id) return;
+        const fetchCartCount = async () => {
+            try {
+                const { data } = await supabase
+                    .from('shopping_cart')
+                    .select('quantity')
+                    .eq('customer_id', activeCustomer.id);
+                if (data) {
+                    const totalQty = data.reduce((acc, row) => acc + (row.quantity || 1), 0);
+                    setCartCount(totalQty);
+                }
+            } catch (e) {
+                console.error('Error fetching cart count:', e);
+            }
+        };
+        fetchCartCount();
+    }, [activeCustomer?.id, supabase]);
 
     useEffect(() => {
         if (!activeCustomer?.id) return;
@@ -265,9 +276,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                 return;
             }
 
+            setCartCount(prev => prev + quantity);
             setAddedToCart(true);
             toast.success('Added to cart! 🛒');
-            setTimeout(() => { setAddedToCart(false); }, 2000);
+            setTimeout(() => { setAddedToCart(false); }, 2500);
         } catch (err) {
             console.error('Add to cart error:', err);
             toast.error('Failed to add to cart');
@@ -375,32 +387,30 @@ export default function ProductDetailClient({ product, inventory, customer, reco
             </div>
 
             {/* ====== MAIN CONTENT ====== */}
-            <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-8 pt-24 md:pt-28 pb-28 sm:pb-32 relative z-10">
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-8 pt-4 sm:pt-6 md:pt-8 pb-32 relative z-10">
 
-                {/* Back Button */}
-                <button
-                    onClick={() => router.back()}
-                    className={`flex items-center gap-2 mb-3 px-1 py-1 rounded-xl transition-all group ${isDark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-700'}`}
-                >
-                    <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Back</span>
-                </button>
-
-                {/* Breadcrumb — compact on mobile */}
-                <nav className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-4 sm:mb-6 overflow-x-auto whitespace-nowrap no-scrollbar">
-                    <Link href="/shop" className={`transition-colors ${isDark ? 'text-white/30 hover:text-white/60' : 'text-slate-400 hover:text-slate-600'}`}>Shop</Link>
-                    <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
-                    <span
-                        className="transition-colors"
-                        style={{ color: isDark ? `${primaryColor}90` : primaryColor }}
+                {/* Top Navigation & Breadcrumbs */}
+                <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6">
+                    <CustomerBreadcrumbs
+                        items={[
+                            { label: 'Shop Hub', href: '/shop' },
+                            { label: categoryName, href: `/shop/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s+/g, '-'))}` },
+                            { label: product.title }
+                        ]}
+                        className="mb-0"
+                    />
+                    <button
+                        onClick={() => router.back()}
+                        className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shrink-0 ${
+                            isDark 
+                                ? 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-xs'
+                        }`}
                     >
-                        {categoryName}
-                    </span>
-                    <ChevronRight size={10} className={isDark ? 'text-white/15' : 'text-slate-300'} />
-                    <span className={isDark ? 'text-white/60' : 'text-slate-700'}>
-                        {product.title.length > 20 ? product.title.substring(0, 20) + '...' : product.title}
-                    </span>
-                </nav>
+                        <ArrowLeft size={14} />
+                        <span>Back</span>
+                    </button>
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-14">
 
@@ -537,12 +547,6 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                             {product.description || 'Premium quality product vetted by InTrust for our customers.'}
                         </p>
 
-                        {isOutOfStock && (
-                            <div className="mb-4">
-                                <OutOfStockBanner />
-                            </div>
-                        )}
-
                         <div className="mb-6">
                             <div className="flex items-baseline gap-2">
                                 <span className={`text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -554,11 +558,17 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     </span>
                                 )}
                             </div>
-                            {savingsPercent > 0 && (
-                                <p className="text-xs font-bold mt-1" style={{ color: primaryColor }}>
-                                    Save ₹{(savings / 100).toLocaleString('en-IN')} ({savingsPercent}% OFF)
-                                </p>
-                            )}
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                                {savingsPercent > 0 && (
+                                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                        Save ₹{(savings / 100).toLocaleString('en-IN')} ({savingsPercent}% OFF)
+                                    </span>
+                                )}
+                                <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                    <Sparkles size={12} />
+                                    <span>+5% InTrust Coins Cashback</span>
+                                </span>
+                            </div>
                         </div>
 
                         {allOffers.length > 1 && (
@@ -610,182 +620,318 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         )}
 
                         {/* ====== DESKTOP ACTIONS ====== */}
-                        <div className="hidden sm:block mb-4 space-y-3">
-                                    {/* Quantity + Add to Cart row */}
-                                    <div className="flex items-center gap-3">
-                                        {/* Quantity stepper */}
-                                        <div
-                                            className={`flex items-center p-1 rounded-xl flex-shrink-0 ${isDark ? 'bg-white/[0.04]' : 'bg-white shadow-sm'}`}
-                                            style={{ 
-                                                border: isDark ? `1px solid ${primaryColor}15` : '1px solid #e2e8f0',
-                                                opacity: isOutOfStock ? 0.5 : 1,
-                                                pointerEvents: isOutOfStock ? 'none' : 'auto'
-                                            }}
-                                        >
-                                            <button
-                                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                                className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
-                                            >
-                                                <Minus size={16} strokeWidth={3} />
-                                            </button>
-                                            <span className={`w-10 text-center font-black text-lg ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                                {quantity}
-                                            </span>
-                                            <button
-                                                onClick={() => setQuantity(quantity + 1)}
-                                                className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-slate-100'}`}
-                                            >
-                                                <Plus size={16} strokeWidth={3} />
-                                            </button>
-                                        </div>
-
-                                        {/* Add to Cart */}
-                                        <motion.button
-                                            whileTap={{ scale: 0.97 }}
-                                            whileHover={{ scale: 1.02 }}
-                                            onClick={addToCart}
-                                            disabled={loading || isOutOfStock}
-                                            animate={{
-                                                x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
-                                                backgroundColor: isOutOfStock ? (isDark ? '#1e293b' : '#f1f5f9') : (isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444')
-                                            }}
-                                            transition={{
-                                                x: { type: 'keyframes', duration: 0.4 },
-                                                default: { type: 'spring', stiffness: 400, damping: 25 }
-                                            }}
-                                            className={`flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 overflow-hidden relative shadow-lg ${isOutOfStock ? (isDark ? 'text-white/20' : 'text-slate-400') : 'text-white'}`}
-                                        >
-                                            <AnimatePresence mode="wait">
-                                                {isOutOfStock ? (
-                                                    <motion.div key="oos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                                        <OutOfStockBadge variant="solid" size="md" icon={true}/>
-                                                    </motion.div>
-                                                ) : !isStoreOpen ? (
-                                                    <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 line-clamp-1 px-2">
-                                                        <Store size={18} strokeWidth={2.5} />
-                                                        <span>STORE CLOSED</span>
-                                                    </motion.div>
-                                                ) : loading ? (
-                                                    <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
-                                                        <Loader2 className="animate-spin" size={18} />
-                                                        <span>Adding...</span>
-                                                    </motion.div>
-                                                ) : addedToCart ? (
-                                                    <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
-                                                        <CheckCircle2 size={18} strokeWidth={2.5} />
-                                                        <span>In Cart!</span>
-                                                    </motion.div>
-                                                ) : (
-                                                    <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
-                                                        <ShoppingCart size={18} strokeWidth={2.5} />
-                                                        <span>Add to Cart</span>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </motion.button>
-                                    </div>
-
-                                    {(productIsOOS || selectedOfferIsOOS) && (
-                                        <NotifyMeButton
-                                            productId={product.id}
-                                            inventoryId={selectedOffer?.is_platform_direct ? undefined : selectedOffer?.id}
-                                            email={activeEmail}
-                                            className="mt-1"
-                                        />
-                                    )}
-
-                                    <motion.button
-                                        whileTap={{ scale: 0.97 }}
-                                        whileHover={{ scale: 1.01 }}
-                                        onClick={buyNow}
-                                        disabled={buyNowLoading || isOutOfStock}
-                                        animate={{
-                                            x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
-                                            borderColor: isOutOfStock ? (isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0') : (isStoreOpen ? (isDark ? 'rgba(255,255,255,0.1)' : 'transparent') : '#ef4444'),
-                                            backgroundColor: isOutOfStock ? (isDark ? 'transparent' : '#f8fafc') : (isStoreOpen ? (isDark ? 'rgba(255,255,255,0.06)' : '#0f172a') : '#ef4444')
-                                        }}
-                                        transition={{
-                                            x: { type: 'keyframes', duration: 0.4 },
-                                            default: { type: 'spring', stiffness: 400, damping: 25 }
-                                        }}
-                                        className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2.5 transition-all border-2 ${isOutOfStock ? (isDark ? 'text-white/20' : 'text-slate-400') : 'text-white'}`}
-                                    >
-                                        {buyNowLoading ? (
-                                            <><Loader2 className="animate-spin" size={18} /><span className="ml-1">Processing...</span></>
-                                        ) : isOutOfStock ? (
-                                            <span>{OOS_LABEL}</span>
-                                        ) : !isStoreOpen ? (
-                                            <><Store size={18} strokeWidth={2.5} /><span>NOT ACCEPTING ORDERS</span></>
-                                        ) : (
-                                            <><CreditCard size={18} strokeWidth={2.5} /><span>Buy Now</span></>
-                                        )}
-                                    </motion.button>
-                        </div>
-
-                        {/* ====== MERCHANT INFO ====== */}
-                        <div
-                            className={`p-3 sm:p-4 rounded-xl flex items-center justify-between mb-4 ${isDark ? 'bg-white/[0.03]' : 'bg-slate-50'}`}
-                            style={{ border: isDark ? `1px solid ${primaryColor}10` : '1px solid #e2e8f0' }}
-                        >
-                            <div className="flex items-center gap-2.5">
+                        <div className="hidden sm:block mb-5 space-y-3">
+                            {/* Quantity + Add to Cart row */}
+                            <div className="flex items-center gap-3">
+                                {/* Minimalist Quantity Stepper */}
                                 <div
-                                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${isDark ? '' : 'bg-white shadow-sm border border-slate-200 text-slate-500'}`}
-                                    style={isDark ? {
-                                        background: `${primaryColor}15`,
-                                        border: `1px solid ${primaryColor}20`,
-                                        color: primaryColor
-                                    } : {}}
-                                >
-                                    <Store size={16} strokeWidth={2} />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold ${isDark ? 'text-white/25' : 'text-slate-400'}`}>Sold by</p>
-                                    <div className="flex items-center gap-1">
-                                        <p className={`font-black text-xs sm:text-sm truncate ${isDark ? 'text-white/80' : 'text-slate-800'}`}>{selectedOffer.merchant_name}</p>
-                                        <BadgeCheck size={12} className="shrink-0" style={{ color: primaryColor }} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="text-right shrink-0 ml-2">
-                                <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider`}
-                                    style={{
-                                        backgroundColor: isOutOfStock
-                                            ? (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)')
-                                            : (isDark ? `${primaryColor}20` : `${primaryColor}10`),
-                                        color: isOutOfStock ? '#ef4444' : primaryColor
+                                    className={`flex items-center p-1 rounded-2xl flex-shrink-0 ${isDark ? 'bg-white/[0.04] border-white/10' : 'bg-slate-50 border-slate-200'} border`}
+                                    style={{ 
+                                        opacity: isOutOfStock ? 0.5 : 1,
+                                        pointerEvents: isOutOfStock ? 'none' : 'auto'
                                     }}
                                 >
-                                    {isOutOfStock ? 'Out of Stock' : 'In Stock'}
+                                    <button
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.08]' : 'text-slate-500 hover:bg-white hover:shadow-xs'}`}
+                                    >
+                                        <Minus size={15} strokeWidth={2.5} />
+                                    </button>
+                                    <span className={`w-9 text-center font-black text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                        {quantity}
+                                    </span>
+                                    <button
+                                        onClick={() => setQuantity(quantity + 1)}
+                                        className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.08]' : 'text-slate-500 hover:bg-white hover:shadow-xs'}`}
+                                    >
+                                        <Plus size={15} strokeWidth={2.5} />
+                                    </button>
                                 </div>
-                                {!isOutOfStock && <p className={`text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/20' : 'text-slate-500'}`}>{selectedOffer.stock} left</p>}
+
+                                {/* Add to Cart */}
+                                <motion.button
+                                    whileTap={{ scale: 0.98 }}
+                                    whileHover={{ scale: 1.01 }}
+                                    onClick={addToCart}
+                                    disabled={loading || isOutOfStock}
+                                    animate={{
+                                        x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
+                                        backgroundColor: isOutOfStock ? (isDark ? '#1e293b' : '#f1f5f9') : (isStoreOpen ? (addedToCart ? '#0284c7' : '#2563eb') : '#ef4444')
+                                    }}
+                                    transition={{
+                                        x: { type: 'keyframes', duration: 0.4 },
+                                        default: { type: 'spring', stiffness: 400, damping: 25 }
+                                    }}
+                                    className={`flex-1 h-12 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 overflow-hidden relative shadow-md ${
+                                        isOutOfStock 
+                                            ? (isDark ? 'text-white/20' : 'text-slate-400') 
+                                            : 'text-white shadow-blue-600/20'
+                                    }`}
+                                >
+                                    <AnimatePresence mode="wait">
+                                        {isOutOfStock ? (
+                                            <motion.div key="oos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                                <OutOfStockBadge variant="solid" size="md" icon={true}/>
+                                            </motion.div>
+                                        ) : !isStoreOpen ? (
+                                            <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 line-clamp-1 px-2">
+                                                <Store size={16} strokeWidth={2.5} />
+                                                <span>STORE CLOSED</span>
+                                            </motion.div>
+                                        ) : loading ? (
+                                            <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
+                                                <Loader2 className="animate-spin" size={16} />
+                                                <span>Adding...</span>
+                                            </motion.div>
+                                        ) : addedToCart ? (
+                                            <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
+                                                <CheckCircle2 size={16} strokeWidth={2.5} />
+                                                <span>Added to Cart</span>
+                                            </motion.div>
+                                        ) : (
+                                            <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-bold">
+                                                <ShoppingCart size={16} strokeWidth={2.5} />
+                                                <span>ADD TO CART</span>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.button>
                             </div>
+
+                            {(productIsOOS || selectedOfferIsOOS) && (
+                                <Link
+                                    href={`/shop/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s+/g, '-'))}`}
+                                    className="w-full h-11 rounded-2xl flex items-center justify-center gap-2 font-bold text-xs bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/25 transition-all mt-1"
+                                >
+                                    <Sparkles size={14} />
+                                    <span>Explore In-Stock in {categoryName}</span>
+                                </Link>
+                            )}
+
+                            {/* Order Now (Instant Buyout Button) */}
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                whileHover={{ scale: 1.01 }}
+                                onClick={buyNow}
+                                disabled={buyNowLoading || isOutOfStock}
+                                animate={{
+                                    x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
+                                    borderColor: isOutOfStock ? (isDark ? 'rgba(255,255,255,0.05)' : '#e2e8f0') : (isStoreOpen ? (isDark ? 'rgba(255,255,255,0.15)' : 'transparent') : '#ef4444'),
+                                    backgroundColor: isOutOfStock ? (isDark ? 'transparent' : '#f8fafc') : (isStoreOpen ? (isDark ? '#ffffff' : '#0c101c') : '#ef4444')
+                                }}
+                                transition={{
+                                    x: { type: 'keyframes', duration: 0.4 },
+                                    default: { type: 'spring', stiffness: 400, damping: 25 }
+                                }}
+                                className={`w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all border shadow-sm active:scale-95 ${
+                                    isOutOfStock 
+                                        ? (isDark ? 'text-white/20' : 'text-slate-400') 
+                                        : (isDark ? 'text-slate-950' : 'text-white')
+                                }`}
+                            >
+                                {buyNowLoading ? (
+                                    <><Loader2 className="animate-spin" size={16} /><span className="ml-1">Processing Order...</span></>
+                                ) : isOutOfStock ? (
+                                    <span>{OOS_LABEL}</span>
+                                ) : !isStoreOpen ? (
+                                    <><Store size={16} strokeWidth={2.5} /><span>STORE CLOSED</span></>
+                                ) : (
+                                    <><Zap size={16} strokeWidth={2.5} className={isDark ? "fill-slate-950" : "fill-white"} /><span>BUY NOW • EXPRESS DISPATCH</span></>
+                                )}
+                            </motion.button>
                         </div>
 
-                        {/* ====== TRUST BADGES ====== */}
-                        <div className="grid grid-cols-4 gap-2 sm:gap-3">
-                            {[
-                                { icon: ShieldCheck, title: "Quality", sub: "Original" },
-                                { icon: Truck, title: "Delivery", sub: "Tracked" },
-                                { icon: CheckCircle2, title: "Secure", sub: "Safe Pay" },
-                                { icon: BadgeCheck, title: "Genuine", sub: "Verified" }
-                            ].map((f, i) => (
-                                <div
-                                    key={i}
-                                    className={`flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg sm:rounded-xl text-center ${isDark ? 'bg-white/[0.02]' : 'bg-white shadow-sm'}`}
-                                    style={{ border: isDark ? `1px solid ${primaryColor}08` : '1px solid #f1f5f9' }}
-                                >
-                                    <f.icon
-                                        className="mb-1"
-                                        size={16}
-                                        strokeWidth={1.5}
-                                        style={{ color: isDark ? `${primaryColor}80` : '#64748b' }}
-                                    />
-                                    <p className={`text-[9px] sm:text-[10px] font-black leading-tight ${isDark ? 'text-white/50' : 'text-slate-700'}`}>{f.title}</p>
-                                    <p className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-white/15' : 'text-slate-400'}`}>{f.sub}</p>
+                        {/* ====== MINIMALIST PREMIUM TRUST & FULFILLMENT STRIP ====== */}
+                        <div
+                            className={`p-4 rounded-3xl mb-4 space-y-3 ${isDark ? 'bg-white/[0.02] border-white/[0.08]' : 'bg-slate-50/80 border-slate-200/80'} border shadow-xs`}
+                        >
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div
+                                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-500/10 text-sky-400 border border-blue-500/20' : 'bg-white shadow-xs border border-slate-200 text-blue-600'}`}
+                                    >
+                                        <Store size={16} strokeWidth={2} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <p className={`font-black text-xs truncate ${isDark ? 'text-white/90' : 'text-slate-900'}`}>{selectedOffer.merchant_name}</p>
+                                            <BadgeCheck size={14} className="shrink-0 text-blue-600 dark:text-sky-400" />
+                                        </div>
+                                        <p className={`text-[10px] font-medium truncate ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+                                            Verified Bhopal Hub • 100% InTrust Guarantee
+                                        </p>
+                                    </div>
                                 </div>
-                            ))}
+                                <div className="text-right shrink-0">
+                                    <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                        isOutOfStock
+                                            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                    }`}>
+                                        {isOutOfStock ? 'Out of Stock' : `${selectedOffer.stock || 10} In Stock`}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Minimalist Tri-Spec Badges */}
+                            <div className="pt-2.5 border-t border-slate-200/60 dark:border-white/5 grid grid-cols-3 gap-2 text-center text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                                <div className="flex items-center justify-center gap-1.5 py-0.5">
+                                    <Truck size={13} className="text-sky-500 shrink-0" />
+                                    <span>Express Delivery</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-1.5 py-0.5 border-x border-slate-200/60 dark:border-white/10">
+                                    <ShieldCheck size={13} className="text-blue-600 dark:text-sky-400 shrink-0" />
+                                    <span>100% Genuine</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-1.5 py-0.5">
+                                    <Phone size={13} className="text-slate-400 shrink-0" />
+                                    <a href="tel:18008890199" className="hover:text-blue-600 transition-colors">1800-889-0199</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                {/* ====== INTERACTIVE PRODUCT DEEP-DIVE & INTRUST ASSURANCE ====== */}
+                <div className={`mt-8 sm:mt-12 rounded-3xl border p-5 sm:p-8 transition-all ${
+                    isDark ? 'bg-[#0c0e16] border-white/[0.08]' : 'bg-white border-slate-200/80 shadow-sm'
+                }`}>
+                    {/* Minimalist Tab Strip */}
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 border-b border-slate-100 dark:border-white/10 mb-6">
+                        {[
+                            { id: 'highlights', label: 'Highlights & Specs', icon: Sparkles },
+                            { id: 'assurance', label: 'InTrust Buyer Protection', icon: ShieldCheck },
+                            { id: 'delivery', label: 'Express Delivery & Bhopal Hub', icon: Truck },
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setActiveDetailTab(tab.id)}
+                                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                                    activeDetailTab === tab.id
+                                        ? isDark 
+                                            ? 'bg-white text-slate-950 font-black shadow-xs' 
+                                            : 'bg-slate-900 text-white font-black shadow-xs'
+                                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                                }`}
+                            >
+                                <tab.icon size={14} className={activeDetailTab === tab.id ? (isDark ? 'text-blue-600' : 'text-sky-400') : 'text-slate-400'} />
+                                <span>{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Tab Contents */}
+                    {activeDetailTab === 'highlights' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                <h4 className="text-xs font-black uppercase tracking-wider text-sky-600 dark:text-sky-400 mb-3 flex items-center gap-1.5">
+                                    <Award size={16} />
+                                    <span>Key Highlights</span>
+                                </h4>
+                                <ul className="space-y-2.5 text-xs sm:text-sm font-medium">
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle2 size={16} className="text-sky-500 shrink-0" />
+                                        <span>100% Genuine product sourced directly from certified merchant</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle2 size={16} className="text-sky-500 shrink-0" />
+                                        <span>Tamper-evident verification seal applied before transit</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle2 size={16} className="text-sky-500 shrink-0" />
+                                        <span>Eligible for 5% InTrust Coins cashback credited to wallet</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle2 size={16} className="text-sky-500 shrink-0" />
+                                        <span>Full manufacturer warranty support with direct GST invoice</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                <h4 className="text-xs font-black uppercase tracking-wider text-sky-600 dark:text-sky-400 mb-3 flex items-center gap-1.5">
+                                    <Package size={16} />
+                                    <span>Quick Specifications</span>
+                                </h4>
+                                <div className="space-y-2 text-xs">
+                                    <div className="flex justify-between py-1.5 border-b border-slate-200/50 dark:border-white/5">
+                                        <span className="text-slate-500">Category</span>
+                                        <span className="font-bold">{categoryName}</span>
+                                    </div>
+                                    <div className="flex justify-between py-1.5 border-b border-slate-200/50 dark:border-white/5">
+                                        <span className="text-slate-500">Fulfilled By</span>
+                                        <span className="font-bold">{selectedOffer.merchant_name}</span>
+                                    </div>
+                                    <div className="flex justify-between py-1.5 border-b border-slate-200/50 dark:border-white/5">
+                                        <span className="text-slate-500">Stock Availability</span>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">Ready for Dispatch</span>
+                                    </div>
+                                    <div className="flex justify-between py-1.5">
+                                        <span className="text-slate-500">Packaging</span>
+                                        <span className="font-bold">Eco-Safe InTrust Shield</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeDetailTab === 'assurance' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                <ShieldCheck size={24} className="text-sky-500 mb-2" />
+                                <h4 className="text-sm font-black mb-1">100% InTrust Guarantee</h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Zero risk shopping. Your funds are secured until the product is verified and delivered to your doorstep.
+                                </p>
+                            </div>
+                            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                <RefreshCw size={24} className="text-blue-500 mb-2" />
+                                <h4 className="text-sm font-black mb-1">7-Day Replacement</h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Damaged or defective? Request an instant doorstep replacement through your InTrust customer dashboard.
+                                </p>
+                            </div>
+                            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                                <CreditCard size={24} className="text-indigo-500 mb-2" />
+                                <h4 className="text-sm font-black mb-1">Flexible Payments</h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Pay securely with UPI, InTrust Wallet points, Credit/Debit cards, or Cash on Delivery with no extra fees.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeDetailTab === 'delivery' && (
+                        <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                            isDark ? 'bg-white/[0.02] border-white/5' : 'bg-slate-50 border-slate-100'
+                        }`}>
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                                    <MapPin size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <span>Express Delivery to Bhopal</span>
+                                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase">Active</span>
+                                    </h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                        Order now and get it dispatched via InTrust Express local logistics with live tracking updates in your orders.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs font-bold text-slate-400">Need assistance?</span>
+                                <a
+                                    href="tel:18008890199"
+                                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                                >
+                                    <Phone size={13} />
+                                    <span>1800-889-0199</span>
+                                </a>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* ====== RECOMMENDED PRODUCTS ====== */}
@@ -855,13 +1001,10 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                         </div>
                     </div>
                 )}
-
-                {/* ====== RECENTLY VIEWED ====== */}
-                <RecentlyViewed currentProductId={product.id} />
             </div>
 
             {/* ====== MOBILE STICKY ADD TO CART BAR ====== */}
-            <div className={`fixed bottom-0 left-0 w-full z-50 sm:hidden backdrop-blur-xl border-t ${isDark ? 'bg-[#080a10]/90 border-white/[0.06]' : 'bg-white/95 border-slate-200'}`}>
+            <div className={`fixed bottom-[72px] left-0 w-full z-40 sm:hidden backdrop-blur-xl border-t shadow-[0_-4px_16px_rgba(0,0,0,0.06)] ${isDark ? 'bg-[#080a10]/95 border-white/[0.08]' : 'bg-white/95 border-slate-200'}`}>
                 <div className="flex flex-col w-full">
                     <div className="flex items-center gap-3 px-3 py-3">
                         <div className="flex-1 min-w-0">
@@ -901,18 +1044,13 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     disabled={loading || isOutOfStock}
                                     animate={{
                                         x: isClosedAnimation ? [-2, 2, -2, 2, 0] : 0,
-                                        backgroundColor: isOutOfStock ? (isDark ? '#1e293b' : '#f1f5f9') : (isStoreOpen ? (addedToCart ? '#10b981' : primaryColor) : '#ef4444')
+                                        backgroundColor: isOutOfStock ? (isDark ? '#1e293b' : '#f1f5f9') : (isStoreOpen ? (addedToCart ? '#0284c7' : '#2563eb') : '#ef4444')
                                     }}
                                     transition={{
                                         x: { type: 'keyframes', duration: 0.4 },
                                         default: { type: 'spring', stiffness: 400, damping: 25 }
                                     }}
-                                    className={`flex-1 h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-80 relative overflow-hidden ${isOutOfStock ? (isDark ? 'text-white/20' : 'text-slate-400') : 'text-white'}`}
-                                    style={{
-                                        boxShadow: addedToCart
-                                            ? '0 0 20px rgba(16,185,129,0.45)'
-                                            : (isOutOfStock ? 'none' : `0 4px 14px ${primaryColor}35`)
-                                    }}
+                                    className={`flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all disabled:opacity-80 relative overflow-hidden text-white shadow-md shadow-blue-600/25 ${isOutOfStock ? (isDark ? 'text-white/20' : 'text-slate-400') : 'text-white'}`}
                                 >
                                     <AnimatePresence mode="wait">
                                         {isOutOfStock ? (
@@ -921,12 +1059,13 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                             </motion.div>
                                         ) : !isStoreOpen ? (
                                             <motion.div key="closed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
-                                                <Store size={18} strokeWidth={2.5} />
+                                                <Store size={15} strokeWidth={2.5} />
                                                 <span>CLOSED</span>
                                             </motion.div>
                                         ) : loading ? (
-                                            <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-2">
-                                                <Loader2 className="animate-spin" size={16} />
+                                            <motion.div key="loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-1.5">
+                                                <Loader2 className="animate-spin" size={15} />
+                                                <span>Adding...</span>
                                             </motion.div>
                                         ) : addedToCart ? (
                                             <motion.div key="success" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: 'spring', stiffness: 400 }} className="flex items-center gap-1.5">
@@ -935,8 +1074,8 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                             </motion.div>
                                         ) : (
                                             <motion.div key="default" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
-                                                <ShoppingCart size={16} strokeWidth={2.5} />
-                                                <span>Add</span>
+                                                <ShoppingCart size={15} strokeWidth={2.5} />
+                                                <span>ADD TO CART</span>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
@@ -946,34 +1085,83 @@ export default function ProductDetailClient({ product, inventory, customer, reco
                                     whileTap={{ scale: 0.95 }}
                                     onClick={buyNow}
                                     disabled={buyNowLoading || isOutOfStock}
-                                    className={`h-12 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all border-2 shrink-0 ${
+                                    className={`h-12 px-3.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all border shrink-0 active:scale-95 shadow-md ${
                                         isOutOfStock 
                                             ? (isDark ? 'bg-white/5 text-white/20 border-white/5' : 'bg-slate-50 text-slate-400 border-slate-100')
-                                            : (isDark ? 'bg-white/[0.08] text-white border-white/10' : 'bg-slate-900 text-white border-slate-900')
+                                            : (isDark ? 'bg-white text-slate-950 border-white hover:bg-slate-100' : 'bg-slate-950 text-white border-slate-900 hover:bg-slate-800')
                                     }`}
                                 >
                                     {buyNowLoading ? (
-                                        <Loader2 className="animate-spin" size={15} />
+                                        <Loader2 className="animate-spin" size={14} />
                                     ) : isOutOfStock ? (
                                         <span>{OOS_LABEL}</span>
                                     ) : (
-                                        <><CreditCard size={15} strokeWidth={2.5} /><span>Buy Now</span></>
+                                        <><Zap size={14} strokeWidth={2.5} className={isDark ? "fill-slate-950" : "fill-white"} /><span>ORDER NOW</span></>
                                     )}
                                 </motion.button>
                     </div>
                     {(productIsOOS || selectedOfferIsOOS) && (
                         <div className="px-3 pb-3">
-                            <NotifyMeButton
-                                productId={product.id}
-                                inventoryId={selectedOffer?.is_platform_direct ? undefined : selectedOffer?.id}
-                                email={activeEmail}
-                                variant="outline"
-                                className="w-full h-10 text-xs"
-                            />
+                            <Link
+                                href={`/shop/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s+/g, '-'))}`}
+                                className="w-full h-10 rounded-xl flex items-center justify-center gap-2 font-bold text-xs bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/25 active:scale-95 transition-all"
+                            >
+                                <Sparkles size={14} />
+                                <span>Explore In-Stock in {categoryName}</span>
+                            </Link>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Persistent Blinkit Quick-Checkout Floating Bar (Desktop only on PDP to prevent mobile overlap) */}
+            <AnimatePresence>
+                {cartCount > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                        className="hidden sm:flex fixed sm:bottom-6 sm:right-6 sm:w-[420px] z-50 p-4 rounded-3xl bg-gradient-to-r from-blue-600 via-sky-600 to-indigo-600 text-white shadow-2xl shadow-blue-500/25 border border-sky-300/30 items-center justify-between gap-4 backdrop-blur-xl"
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <motion.div 
+                                key={cartCount}
+                                initial={{ scale: 1.4, rotate: -10 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{ type: "spring", stiffness: 450, damping: 18 }}
+                                className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border border-white/20"
+                            >
+                                <ShoppingBag size={22} className="text-white" />
+                            </motion.div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <motion.span 
+                                        key={cartCount}
+                                        initial={{ scale: 1.3 }}
+                                        animate={{ scale: 1 }}
+                                        className="text-sm font-black tracking-tight"
+                                    >
+                                        {cartCount} {cartCount === 1 ? 'ITEM' : 'ITEMS'}
+                                    </motion.span>
+                                    <span className="text-xs opacity-75">•</span>
+                                    <span className="text-xs text-sky-100 font-bold">In Your Bag</span>
+                                </div>
+                                <p className="text-[11px] text-sky-100 font-bold flex items-center gap-1 truncate">
+                                    <Zap size={12} className="fill-sky-200 text-sky-200 shrink-0" />
+                                    <span className="truncate">⚡ Express Delivery • Live Tracking</span>
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            href="/shop/cart"
+                            className="px-4 py-2.5 rounded-2xl bg-white hover:bg-sky-50 text-blue-900 text-xs font-black uppercase tracking-wider shrink-0 flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+                        >
+                            <span>View Cart</span>
+                            <ChevronRight size={15} strokeWidth={3} />
+                        </Link>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <Suspense fallback={null}>
                 {confirmModalOpen && (

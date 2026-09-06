@@ -1,13 +1,9 @@
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-
 export default function ShopLoading() {
     return (
-        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32">
-            <Navbar />
-            <main className="pt-[88px] md:pt-[104px] max-w-7xl mx-auto px-4 md:px-8">
+        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-28">
+            <main className="pt-4 sm:pt-6 max-w-7xl mx-auto px-4 md:px-8">
                 {/* Header Skeleton */}
-                <div className="sticky top-[76px] md:top-[92px] z-30 mb-6 bg-white dark:bg-[#0c0e16] rounded-2xl md:rounded-[2rem] border border-slate-200 dark:border-white/[0.08] shadow-sm py-4 px-5 flex items-center justify-between">
+                <div className="sticky top-20 z-30 mb-6 bg-white dark:bg-[#0c0e16] rounded-2xl md:rounded-[2rem] border border-slate-200 dark:border-white/[0.08] shadow-sm py-4 px-5 flex items-center justify-between">
                     <div className="flex flex-col gap-2 w-1/3">
                         <div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-2/3 animate-pulse" />
                         <div className="h-3 bg-slate-100 dark:bg-white/5 rounded-full w-1/2 animate-pulse" />
@@ -38,8 +34,6 @@ export default function ShopLoading() {
                     ))}
                 </div>
             </main>
-            <Footer />
-            
         </div>
     );
 }

@@ -18,6 +18,7 @@ import {
 import { useRouter } from 'next/navigation';
 import CouponCodeReveal from './CouponCodeReveal';
 import { generateOrderInvoice } from '@/lib/invoiceGenerator';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 // ─── Animation variants ────────────────────────────────────────────────────────
 
@@ -321,10 +322,16 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pe
         });
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-950">
-            <div className="pt-[15vh] pb-32 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <CustomerBreadcrumbs 
+                items={[
+                    { label: 'InTrust Wallet', href: '/wallet' }, 
+                    { label: 'My Gift Cards' }
+                ]} 
+                className="mb-4"
+            />
 
-                {/* ── Header ───────────────────────────────────────────────── */}
+            {/* ── Header ───────────────────────────────────────────────── */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -436,8 +443,6 @@ export default function MyGiftCardsClient({ coupons, totalCards, activeCount, pe
                         <EmptyState key="empty" />
                     )}
                 </AnimatePresence>
-
             </div>
-        </div>
-    );
-}
+        );
+    }

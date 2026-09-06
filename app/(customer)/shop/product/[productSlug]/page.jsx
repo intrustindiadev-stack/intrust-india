@@ -1,7 +1,6 @@
 import { createStaticSupabaseClient, createServerSupabaseClient, createAdminClient } from "@/lib/supabaseServer";
 import { redirect } from "next/navigation";
 import ProductDetailClient from "./ProductDetailClient";
-import Navbar from "@/components/layout/Navbar";
 
 // UUID pattern to detect legacy ID-based URLs
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
@@ -184,8 +183,7 @@ export default async function ProductDetailPage({ params }) {
     }
 
     return (
-        <div className="min-h-screen">
-            <Navbar customer={customerProfile} />
+        <div className="w-full">
             <main>
                 <ProductDetailClient
                     product={product}

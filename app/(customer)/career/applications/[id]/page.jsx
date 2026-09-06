@@ -10,8 +10,6 @@ import {
     Globe, FileText, Download, ChevronRight, AlertCircle, DollarSign
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 
 const STAGES = [
     { key: 'pending', label: 'Applied', icon: Send, color: 'text-blue-600', bg: 'bg-blue-100', border: 'border-blue-200' },
@@ -81,8 +79,7 @@ export default function ApplicationDetailPage({ params }) {
     if (!user) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex items-center justify-center p-4">
+                <div className="flex-1 flex items-center justify-center p-4 py-16">
                     <div className="text-center">
                         <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-indigo-200 dark:border-indigo-700/50"><AlertCircle size={28} className="text-indigo-500 dark:text-indigo-400" /></div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sign In Required</h2>
@@ -90,7 +87,6 @@ export default function ApplicationDetailPage({ params }) {
                         <Link href={`/login?callbackUrl=${encodeURIComponent(`/career/applications/${appId || ''}`)}`} className="inline-flex items-center justify-center bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-8 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25">Sign In to Continue</Link>
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
@@ -98,15 +94,13 @@ export default function ApplicationDetailPage({ params }) {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
-                <Navbar />
-                <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-6">
+                <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-6 pt-6">
                     <div className="h-40 bg-white rounded-3xl border border-gray-100 animate-pulse" />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="h-64 bg-white rounded-3xl border border-gray-100 animate-pulse" />
                         <div className="h-64 bg-white rounded-3xl border border-gray-100 animate-pulse" />
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
@@ -114,8 +108,7 @@ export default function ApplicationDetailPage({ params }) {
     if (error || !app) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex items-center justify-center p-4">
+                <div className="flex-1 flex items-center justify-center p-4 py-16">
                     <div className="text-center max-w-md">
                         <XCircle size={48} className="text-rose-500 mx-auto mb-4" />
                         <h2 className="text-xl font-bold text-gray-900 mb-2">{error || 'Not Found'}</h2>
@@ -124,7 +117,6 @@ export default function ApplicationDetailPage({ params }) {
                         </Link>
                     </div>
                 </div>
-                <Footer />
             </div>
         );
     }
@@ -134,11 +126,9 @@ export default function ApplicationDetailPage({ params }) {
     const isRejected = app.status === 'rejected';
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <Navbar />
-            
+        <div className="min-h-screen bg-gray-50 flex flex-col pb-28">
             {/* Header */}
-            <div className="bg-white border-b border-gray-100 px-4 py-6">
+            <div className="bg-white border-b border-gray-100 px-4 py-6 rounded-b-3xl">
                 <div className="max-w-4xl mx-auto">
                     <Link href="/career/applications" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-semibold mb-5 transition-colors">
                         <ArrowLeft size={16} /> Back to My Applications
@@ -327,8 +317,6 @@ export default function ApplicationDetailPage({ params }) {
                 </div>
 
             </div>
-            
-            <Footer />
         </div>
     );
 }

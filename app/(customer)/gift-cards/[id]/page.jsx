@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import Navbar from '@/components/layout/Navbar';
 import Image from 'next/image';
 import { Star, ShieldCheck, Clock, CheckCircle, Share2, Loader2, AlertCircle, Sparkles, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -244,8 +243,7 @@ export default function GiftCardDetailPage({ params }) {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex items-center justify-center pt-24">
+                <div className="flex-1 flex items-center justify-center py-16">
                     <Loader2 size={48} className="animate-spin text-blue-600" />
                 </div>
             </div>
@@ -255,11 +253,10 @@ export default function GiftCardDetailPage({ params }) {
     if (error || !card) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex flex-col items-center justify-center pt-24 px-6 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
                     <AlertCircle size={64} className="text-red-500 mb-4" />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Unavailable</h2>
-                    <p className="text-gray-600 mb-6">{error || 'This gift card is usually not accessible.'}</p>
+                    <p className="text-gray-600 mb-6">{error || 'This gift card is not accessible.'}</p>
                     <button
                         onClick={() => router.push('/gift-cards')}
                         className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors"
@@ -272,11 +269,9 @@ export default function GiftCardDetailPage({ params }) {
     }
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
-            <Navbar />
-
-            <div className="pt-28 pb-20">
-                <div className="max-w-6xl mx-auto px-6">
+        <div className="w-full">
+            <div className="py-6 sm:py-8">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6">
 
                     {/* Breadcrumbs */}
                     <div className="mb-6">

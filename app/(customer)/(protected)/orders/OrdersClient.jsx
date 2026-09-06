@@ -16,6 +16,7 @@ import { useRewardsRealtime } from "@/lib/contexts/RewardsRealtimeContext";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import CouponCodeReveal from "./CouponCodeReveal";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import CustomerBreadcrumbs from "@/components/common/CustomerBreadcrumbs";
 
 const FILTER_OPTIONS = ['All', 'Shopping', 'NFC Cards', 'Gift Cards', 'Solar'];
 
@@ -169,6 +170,8 @@ const OrdersClient = ({ userId }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <CustomerBreadcrumbs items={[{ label: 'Orders & Tracking' }]} className="mb-0" />
+
       {isSuccess && (
         <div className={`rounded-2xl p-5 flex items-start gap-4 shadow-sm border ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>
           <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
@@ -472,7 +475,7 @@ const OrdersClient = ({ userId }) => {
                   <X size={20} />
                 </button>
                 <div className="text-center mb-10 relative z-10 pt-4">
-                  <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">Empire Loot Box</h3>
+                  <h3 className="text-3xl font-black text-white mb-2 tracking-tighter italic">InTrust Reward Box</h3>
                   <p className="text-emerald-400 font-bold uppercase tracking-[0.3em] text-[10px]">Scratch to Reveal Prize</p>
                 </div>
                 <div className="relative h-72 sm:h-80 w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl ring-4 ring-emerald-500/5">

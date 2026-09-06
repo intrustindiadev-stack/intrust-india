@@ -1,10 +1,9 @@
 import { createStaticSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { ShoppingBag } from 'lucide-react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 
 import ShopHubClient from './ShopHubClient';
-
+import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import UserShopHeaderActions from './UserShopHeaderActions';
 
 // ISR: cache the merchant list for 60 seconds at the edge.
 // Real-time open/closed status is handled client-side via WebSocket (ShopHubClient).
@@ -36,9 +35,8 @@ export default async function MerchantHubPage() {
             .single(),
         supabase
             .from('shopping_categories')
-            .select('id, name, slug, icon_url')
+            .select('*')
             .eq('is_active', true)
-            .order('sort_order', { ascending: true })
     ]);
 
     if (merchantsResult.error) {
@@ -58,11 +56,9 @@ export default async function MerchantHubPage() {
         profilesResult,
         ratingsResult
     ] = await Promise.all([
-        // Avatar profiles for all merchant users (requires service role / adminClient to bypass RLS)
         userIds.length > 0
             ? adminClient.from('user_profiles').select('id, avatar_url, full_name').in('id', userIds)
             : Promise.resolve({ data: [] }),
-        // Filtered ratings stats (static client)
         merchantIds.length > 0
             ? supabase.from('merchant_rating_stats').select('merchant_id, avg_rating, total_ratings').in('merchant_id', merchantIds)
             : Promise.resolve({ data: [] })
@@ -87,7 +83,6 @@ export default async function MerchantHubPage() {
         console.error('Error parsing platform status in shop:', e);
     }
 
-    // Merge avatar profiles into merchants
     if (userIds.length > 0) {
         const profileMap = Object.fromEntries((profilesResult.data || []).map(p => [p.id, p]));
         merchants = merchants.map(m => ({
@@ -115,22 +110,8 @@ export default async function MerchantHubPage() {
     const categories = categoriesResult?.data || [];
 
     return (
-        <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#080a10] relative pb-32 transition-colors">
-            <Navbar />
-
-            <main className="pt-[88px] md:pt-[104px]">
-
-
-
-                {/* ── Main Content ── */}
-                <div>
-                    <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} categories={categories} />
-                </div>
-
-            </main>
-
-            <Footer />
-            
+        <div className="w-full space-y-6">
+            <ShopHubClient merchants={allMerchants} ratingsMap={ratingsMap} categories={categories} />
         </div>
     );
 }

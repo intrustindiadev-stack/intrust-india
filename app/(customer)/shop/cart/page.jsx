@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { redirect } from "next/navigation";
 import CartClient from "./CartClient";
-import Navbar from "@/components/layout/Navbar";
 
 export default async function CartPage() {
   const supabase = await createServerSupabaseClient();
@@ -30,8 +29,7 @@ export default async function CartPage() {
   const minOrderValuePaise = minOrderSetting?.value ? parseInt(minOrderSetting.value, 10) : 49900;
 
   return (
-    <div className="min-h-screen">
-      <Navbar />
+    <div className="w-full">
       <CartClient 
         userId={user.id} 
         initialPlatformStatus={platformStatus} 

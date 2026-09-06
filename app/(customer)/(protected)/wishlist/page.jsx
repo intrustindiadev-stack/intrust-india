@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import WishlistClient from './WishlistClient';
 import { redirect } from 'next/navigation';
-import Navbar from '@/components/layout/Navbar';
 
 export const metadata = { title: 'My Wishlist — InTrust' };
 
@@ -13,11 +12,10 @@ export default async function WishlistPage() {
   const { data: wishlistItems, error } = await supabase
     .from('user_wishlists')
     .select(`
-      id, added_at, is_platform_item, inventory_id, variant_id,
+      id, added_at, is_platform_item, inventory_id,
       shopping_products ( id, slug, title, product_images, category, suggested_retail_price_paise, platform_price_paise, mrp_paise, admin_stock ),
       merchants ( id, business_name ),
-      merchant_inventory ( retail_price_paise, stock_quantity, is_active ),
-      fashion_variants ( id, color, size, price_paise, compare_at_price_paise, inventory_quantity, is_active, fashion_variant_media ( image_url ) )
+      merchant_inventory ( retail_price_paise, stock_quantity, is_active )
     `)
     .eq('user_id', user.id)
     .order('added_at', { ascending: false });
@@ -25,8 +23,7 @@ export default async function WishlistPage() {
   if (error) console.error('Wishlist fetch error:', error);
 
   return (
-    <main className="min-h-screen pb-20 md:pb-0 bg-slate-50">
-      <Navbar />
+    <main className="w-full pb-20 md:pb-0">
       <WishlistClient userId={user.id} userEmail={user.email} initialItems={wishlistItems || []} />
     </main>
   );

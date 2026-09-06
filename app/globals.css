@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "../components/ui/fashion-tokens.css";
+@config "../tailwind.config.js";
 
 @variant dark (&:where(.dark, .dark *));
 
@@ -27,6 +27,18 @@
   --card-bg: rgba(255, 255, 255, 0.95);
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(255, 255, 255, 0.3);
+
+  /* Stitch MD3 Tokens (Light) */
+  --surface: #f8fafc;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f1f5f9;
+  --surface-container: #ecedf7;
+  --surface-container-high: #dbe4f0;
+  --surface-container-highest: #cbd5e1;
+  --on-surface: #171a21;
+  --on-surface-variant: #475569;
+  --outline: #cbd5e1;
+  --outline-variant: #e2e8f0;
 }
 
 
@@ -41,6 +53,18 @@
   --card-bg: rgba(26, 31, 46, 0.95);
   --glass-bg: rgba(15, 20, 25, 0.8);
   --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Stitch MD3 Tokens (Dark) */
+  --surface: #0a0f1e;
+  --surface-container-lowest: #0f1419;
+  --surface-container-low: #171a21;
+  --surface-container: #1e2430;
+  --surface-container-high: #272f3e;
+  --surface-container-highest: #333d4f;
+  --on-surface: #f1f5f9;
+  --on-surface-variant: #94a3b8;
+  --outline: #334155;
+  --outline-variant: #1e293b;
 }
 
 /* Smooth theme transition - Applied selectively to avoid conflicts */
@@ -588,14 +612,4 @@ button, a, [role="button"] {
 }
 .animate-scan {
   animation: scan 2s linear infinite;
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-/* Hide scrollbar for IE, Edge and Firefox */
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
 }

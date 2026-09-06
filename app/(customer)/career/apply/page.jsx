@@ -13,9 +13,6 @@ import {
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-
 import { toast } from 'react-hot-toast';
 
 const ROLE_CONFIG = {
@@ -292,8 +289,7 @@ function CareerApplyForm() {
     if (user && profile && profile.kyc_status !== 'verified') {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex items-center justify-center px-4 py-32">
+                <div className="flex-1 flex items-center justify-center px-4 py-16">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-xl p-8 max-w-md w-full text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 to-orange-600" />
@@ -322,7 +318,6 @@ function CareerApplyForm() {
                         </div>
                     </motion.div>
                 </div>
-                
             </div>
         );
     }
@@ -331,8 +326,7 @@ function CareerApplyForm() {
     if (submitted) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-                <Navbar />
-                <main className="flex-1 flex items-center justify-center px-4 py-24 relative overflow-hidden">
+                <main className="flex-1 flex items-center justify-center px-4 py-16 relative overflow-hidden">
                     {/* Background decorations */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl aspect-square bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
                     
@@ -347,39 +341,37 @@ function CareerApplyForm() {
                             initial={{ scale: 0 }} 
                             animate={{ scale: 1 }} 
                             transition={{ type: 'spring', damping: 12, delay: 0.1 }}
-                            className="w-24 h-24 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800 flex items-center justify-center mx-auto mb-8 shadow-inner"
+                            className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 text-emerald-500 border border-emerald-100 dark:border-emerald-700/50"
                         >
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.5 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3, duration: 0.4 }}
-                            >
-                                <CheckCircle2 size={48} className="text-emerald-500 dark:text-emerald-400" />
-                            </motion.div>
+                            <CheckCircle2 size={44} />
                         </motion.div>
 
-                        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">Application Sent</h2>
-                        <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed text-sm">
-                            Thank you for applying. We have received your application and our talent team is currently reviewing your profile.
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider mb-4 border border-emerald-200 dark:border-emerald-800">
+                            <Sparkles size={12} /> Application Submitted
+                        </div>
+
+                        <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">You're All Set!</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-8">
+                            Thank you, <span className="font-bold text-gray-800 dark:text-gray-200">{form.full_name}</span>. Your application for <span className="font-bold text-gray-800 dark:text-gray-200">{selectedRole?.title}</span> has been received. Our recruitment team will review your profile and reach out within 2–3 business days.
                         </p>
 
-                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-5 mb-8 border border-gray-100 dark:border-gray-700 text-left space-y-4">
-                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
-                                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Position</span>
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedRole?.title || 'Selected Role'}</span>
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-4 mb-8 border border-gray-100 dark:border-gray-700 text-left space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider">Application ID</span>
+                                <span className="font-mono font-bold text-gray-700 dark:text-gray-300">#INT-{Math.floor(100000 + Math.random() * 900000)}</span>
                             </div>
-                            <div className="flex justify-between items-center pb-4 border-b border-gray-100 dark:border-gray-700">
-                                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Applicant</span>
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">{form.full_name || 'Applicant'}</span>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider">Role Applied</span>
+                                <span className="font-bold text-gray-700 dark:text-gray-300">{selectedRole?.title}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Expected Response</span>
-                                <span className="text-sm font-bold text-gray-900 dark:text-white">2-3 business days</span>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-gray-400 font-bold uppercase tracking-wider">Contact</span>
+                                <span className="font-bold text-gray-700 dark:text-gray-300">{form.phone}</span>
                             </div>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <Link href="/career/applications" className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-xl shadow-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all text-sm">
+                            <Link href="/career/applications" className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/25 hover:from-emerald-700 transition-all text-sm">
                                 Track Application <ChevronRight size={16} />
                             </Link>
                             <Link href="/career" className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm">
@@ -388,7 +380,6 @@ function CareerApplyForm() {
                         </div>
                     </motion.div>
                 </main>
-                <Footer />
             </div>
         );
     }
@@ -396,11 +387,10 @@ function CareerApplyForm() {
     // ── MAIN FORM ──────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Navbar />
-            <div className="pt-20 pb-32">
+            <div className="pt-4 sm:pt-6 pb-28">
 
                 {/* Hero strip */}
-                <div className={`bg-gradient-to-r ${config.gradient} text-white px-4 py-8 relative overflow-hidden`}>
+                <div className={`bg-gradient-to-r ${config.gradient} text-white px-4 py-8 relative overflow-hidden rounded-3xl mx-4 sm:mx-8 mb-6`}>
                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
                     <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
                     <div className="max-w-2xl mx-auto relative z-10">
@@ -643,8 +633,6 @@ function CareerApplyForm() {
                     </div>
                 </div>
             </div>
-            <Footer />
-            
         </div>
     );
 }

@@ -13,9 +13,7 @@ import {
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
-import Navbar from '@/components/layout/Navbar';
-
-import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const POINTS_PER_RUPEE = 100;
@@ -81,8 +79,8 @@ function NetworkNode({ node, depth = 0 }) {
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <p className={`font-black text-sm sm:text-base truncate tracking-tight ${isRoot ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                            {isRoot ? 'Executive Master' : node.full_name}
+                        <p className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                            {isRoot ? 'Your Account (Primary)' : node.full_name}
                         </p>
                         {isRoot && (
                             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
@@ -262,14 +260,14 @@ export default function ReferAndEarnPage() {
     }, [user]);
 
     const shareUrl = `https://intrustindia.com/signup?ref=${referralCode}`;
-    const shareText = `Join my InTrust Empire! Use my code ${referralCode} to unlock exclusive rewards.`;
+    const shareText = `Join InTrust India! Shop smart, save big, and earn direct cashback on top brands. Use my referral code ${referralCode} to claim your welcome bonus.`;
 
     const handleCopy = () => {
         if (!referralCode) return;
         navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-        toast.success("Referral link copied to neural link!");
+        toast.success("Referral link copied to clipboard!");
     };
 
     const handleMainShare = async () => {
@@ -277,7 +275,7 @@ export default function ReferAndEarnPage() {
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'InTrust Empire Invitation',
+                    title: 'InTrust Referral Invitation',
                     text: shareText,
                     url: shareUrl,
                 });
@@ -360,18 +358,16 @@ export default function ReferAndEarnPage() {
     const totalRupees = (totalPoints / POINTS_PER_RUPEE).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] font-[family-name:var(--font-outfit)] pb-24 overflow-x-hidden">
-            <Navbar />
-
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-[12vh]">
-                <Breadcrumbs items={[{ label: 'Referral' }]} />
+        <div className="w-full pb-24 overflow-x-hidden">
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                <CustomerBreadcrumbs items={[{ label: 'Refer & Earn' }]} />
 
                 {/* Cross-navigation to Rewards */}
                 <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => router.push('/rewards')}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30"
+                    className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30 shadow-xs"
                 >
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
@@ -385,7 +381,7 @@ export default function ReferAndEarnPage() {
                     <ChevronRight size={16} className="text-slate-400 dark:text-white/40 group-hover:translate-x-1 transition-transform" />
                 </motion.button>
 
-                {/* Hero / Empire Section */}
+                {/* Hero / Referral Section */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -402,8 +398,8 @@ export default function ReferAndEarnPage() {
                         </motion.div>
                         
                         <div>
-                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Empire <span className="text-[#D4AF37]">Builder</span></h1>
-                            <p className="text-slate-400 text-xs sm:text-base font-medium max-w-sm">Grow a 7-level deep network and unlock unlimited liquid rewards.</p>
+                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Referral <span className="text-[#D4AF37]">Program</span></h1>
+                            <p className="text-slate-400 text-xs sm:text-base font-medium max-w-sm">Invite friends to InTrust, grow your network up to 7 levels, and earn real cash rewards on every purchase.</p>
                         </div>
                     </div>
                 </motion.div>
@@ -455,10 +451,10 @@ export default function ReferAndEarnPage() {
                         <div className="flex gap-2 sm:gap-3 w-full">
                             <button
                                 onClick={handleCopy}
-                                className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-white text-blue-600 py-3.5 sm:py-4 rounded-[1.5rem] sm:rounded-[2rem] font-black text-xs sm:text-sm shadow-xl hover:bg-blue-50 active:scale-95 transition-all"
+                                className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-950 text-white py-3.5 sm:py-4 rounded-[1.5rem] sm:rounded-[2rem] font-black text-xs sm:text-sm shadow-xl hover:bg-slate-900 active:scale-95 transition-all"
                             >
                                 {copied ? <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Copy size={16} className="sm:w-[18px] sm:h-[18px]" />}
-                                {copied ? 'Secured' : 'Secure Code'}
+                                {copied ? 'Copied' : 'Copy Code'}
                             </button>
                             <button
                                 onClick={() => handleChannelShare('WhatsApp')}
@@ -469,7 +465,7 @@ export default function ReferAndEarnPage() {
                             </button>
                             <button
                                 onClick={handleShare}
-                                className="p-3.5 sm:p-4 rounded-[1.5rem] sm:rounded-2xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center"
+                                className="p-3.5 sm:p-4 rounded-[1.5rem] sm:rounded-2xl bg-white/20 border border-white/30 text-slate-950 hover:bg-white/30 transition-all active:scale-95 flex items-center justify-center"
                             >
                                 <Share2 size={20} className="sm:w-6 sm:h-6" />
                             </button>
@@ -482,22 +478,22 @@ export default function ReferAndEarnPage() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-[#020617] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-sm mb-10"
+                        className="bg-white dark:bg-[#020617] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 border border-slate-200 dark:border-white/10 shadow-xs mb-10"
                     >
                         <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Enter Invite Code</h3>
-                        <p className="text-xs text-slate-500 mb-6">Received an invite? Enter it here to join an empire.</p>
+                        <p className="text-xs text-slate-500 mb-6">Have an invite code from a friend? Enter it here to link your account and earn bonus points.</p>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <input
                                 type="text"
                                 value={enterCode}
                                 onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
-                                placeholder="Neural Code"
-                                className="w-full sm:flex-1 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase"
+                                placeholder="ENTER CODE"
+                                className="w-full sm:flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase text-slate-900 dark:text-white"
                             />
                             <button
                                 onClick={handleApplyCode}
                                 disabled={applyingCode}
-                                className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all disabled:opacity-50 flex items-center justify-center"
+                                className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center active:scale-95"
                             >
                                 {applyingCode ? <RefreshCw className="animate-spin" size={18} /> : 'Connect'}
                             </button>
@@ -521,7 +517,7 @@ export default function ReferAndEarnPage() {
                     <div className="flex items-center justify-between mb-8 px-1">
                         <div className="flex items-center gap-3">
                             <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
-                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Empire Chain</h3>
+                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Referral Network</h3>
                         </div>
                         <div className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest border border-white/10">7 Levels Deep</div>
                     </div>
@@ -535,8 +531,8 @@ export default function ReferAndEarnPage() {
                                     <div className="w-24 h-24 mx-auto bg-red-50 dark:bg-red-500/10 rounded-[2.5rem] flex items-center justify-center mb-8 border border-red-100 dark:border-red-500/20 shadow-inner">
                                         <X size={40} className="text-red-500" />
                                     </div>
-                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">Chain Unavailable</h4>
-                                    <p className="text-sm font-medium text-slate-400 max-w-[250px] mx-auto leading-relaxed">We encountered an anomaly while mapping your network. Please try again.</p>
+                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">Network Unavailable</h4>
+                                    <p className="text-sm font-medium text-slate-400 max-w-[250px] mx-auto leading-relaxed">We encountered an issue loading your referral tree. Please retry.</p>
                                     <button
                                         onClick={() => fetchNetworkData(true)}
                                         disabled={retryingNetwork}
@@ -559,13 +555,13 @@ export default function ReferAndEarnPage() {
                                     <div className="w-24 h-24 mx-auto bg-gray-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-gray-100 dark:border-white/10 shadow-inner">
                                         <Users size={40} className="text-gray-300 dark:text-gray-700" />
                                     </div>
-                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">Chain Empty</h4>
-                                    <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">Your network empire starts with a single share.</p>
+                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">No Referrals Yet</h4>
+                                    <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">Your referral earnings begin when you share your link with friends.</p>
                                     <button
                                         onClick={handleShare}
                                         className="mt-10 px-10 py-4 bg-blue-600 text-white font-black rounded-[2rem] shadow-2xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95 uppercase tracking-widest text-xs"
                                     >
-                                        Initiate Share
+                                        Share Invite Link
                                     </button>
                                 </div>
                             )}
@@ -597,14 +593,14 @@ export default function ReferAndEarnPage() {
                             </button>
 
                             <div className="mb-10">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Empire Analytics</h3>
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Referral Analytics</h3>
                                 <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-2">Network breakdown</p>
                             </div>
 
                             <div className="space-y-6">
                                 {[
                                     { label: 'Direct Referrals', value: networkData?.direct_referrals || 0, icon: <Users size={18} />, color: 'blue' },
-                                    { label: 'Secondary Chain', value: (networkData?.total_network_size || 0) - (networkData?.direct_referrals || 0), icon: <Network size={18} />, color: 'purple' },
+                                    { label: 'Secondary Referrals', value: (networkData?.total_network_size || 0) - (networkData?.direct_referrals || 0), icon: <Network size={18} />, color: 'purple' },
                                     { label: 'Lifetime Earnings', value: totalPoints, icon: <Coins size={18} />, color: 'amber' },
                                 ].map((stat) => (
                                     <div key={stat.label} className="flex items-center justify-between p-5 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
@@ -620,8 +616,8 @@ export default function ReferAndEarnPage() {
                             </div>
 
                             <div className="mt-10 p-6 bg-[#020617] rounded-[2rem] text-center border border-white/5">
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-2">Passive Potential</p>
-                                <p className="text-2xl font-black text-white italic">Level 7 Unlocked</p>
+                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-2">Earning Potential</p>
+                                <p className="text-2xl font-black text-white italic">7 Levels Active</p>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -647,8 +643,8 @@ export default function ReferAndEarnPage() {
                         >
                             <div className="w-16 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mb-8" />
                             
-                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 italic">Broadcast Empire</h3>
-                            <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mb-10">Select your preferred encrypted channel</p>
+                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 italic">Share Referral Link</h3>
+                            <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mb-10">Choose how you want to invite your friends</p>
 
                             <div className="grid grid-cols-2 gap-4 mb-10">
                                 {[

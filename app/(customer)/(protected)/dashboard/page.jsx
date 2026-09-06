@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/layout/Navbar';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import {
     Wallet, Package, TrendingUp, Gift, Heart, Star,
@@ -19,11 +18,14 @@ import { PayerContactError, usePayment } from '@/hooks/usePayment';
 import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
 import GoldBadge from '@/components/ui/GoldBadge';
-
-
 import { displayName } from '@/lib/auth';
 
-
+// ── E-Commerce First Dashboard Components ──
+import EcomHeroCarousel from '@/components/customer/dashboard/EcomHeroCarousel';
+import CategoryQuickPills from '@/components/customer/dashboard/CategoryQuickPills';
+import TrendingProductsGrid from '@/components/customer/dashboard/TrendingProductsGrid';
+import VerifiedStoresNearby from '@/components/customer/dashboard/VerifiedStoresNearby';
+import ActiveOrdersSnapshot from '@/components/customer/dashboard/ActiveOrdersSnapshot';
 import FintechWalletCard from '@/components/customer/dashboard/FintechWalletCard';
 import FintechServiceGrid from '@/components/customer/dashboard/FintechServiceGrid';
 import FintechGrowthSection from '@/components/customer/dashboard/FintechGrowthSection';
@@ -32,49 +34,28 @@ import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
 import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
 import { useMerchantApplyPopup } from '@/hooks/useMerchantApplyPopup';
+import MerchantOpportunityBanner from '@/components/customer/MerchantOpportunityBanner';
 
 const DisclaimerNote = dynamic(() => import('@/components/customer/dashboard/DisclaimerNote'), { ssr: false });
-const EcommerceHub = dynamic(() => import('@/components/customer/dashboard/EcommerceHub'), { ssr: false });
 const RecentActivity = dynamic(() => import('@/components/customer/dashboard/RecentActivity'), { ssr: false });
-
-const RecentShoppingOrders = dynamic(() => import('@/components/customer/RecentShoppingOrders'), {
-    ssr: false,
-    loading: () => <div className="h-52 w-full bg-slate-200/60 dark:bg-gray-800/60 animate-pulse rounded-3xl" />
-});
 const PackageSelectionModal = dynamic(() => import('@/components/customer/dashboard/PackageSelectionModal'), { ssr: false });
 const OnboardingModal = dynamic(() => import('@/components/customer/dashboard/OnboardingModal'), { ssr: false });
 
-
-
 function DashboardSkeleton() {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#0B1014] font-[family-name:var(--font-outfit)] flex flex-col">
-            <Navbar />
-            <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
-                <div className="max-w-7xl mx-auto animate-pulse">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-8" />
-                    <div className="h-8 sm:h-10 w-64 sm:w-80 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-10" />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                        <div className="lg:col-span-2 space-y-8">
-                            <div className="h-48 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                            <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                        </div>
-                        <div className="lg:col-span-1 space-y-8">
-                            <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                            <div className="h-40 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
-                        </div>
-                    </div>
-                </div>
+        <div className="w-full space-y-8 animate-pulse">
+            <div className="h-10 w-64 bg-surface-container-high rounded-2xl" />
+            <div className="h-72 w-full bg-surface-container-high rounded-3xl" />
+            <div className="flex gap-3 overflow-hidden">
+                {[1, 2, 3, 4, 5].map((n) => (
+                    <div key={n} className="h-10 w-32 bg-surface-container-high rounded-2xl shrink-0" />
+                ))}
             </div>
-            
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((n) => (
+                    <div key={n} className="h-64 bg-surface-container-high rounded-3xl" />
+                ))}
+            </div>
         </div>
     );
 }
@@ -94,149 +75,45 @@ export default function CustomerDashboardPage() {
         subscriptionExpiry: null,
         walletBalance: 0.00,
         activeCards: 0,
-        completedOnboarding: true, // Optimistically true until fetched
+        completedOnboarding: true,
         referralCode: null,
         merchantStatus: null,
         merchantSub1mPrice: null,
     });
 
-    // Populate name from AuthContext profile immediately (before async DB fetch completes)
-    useEffect(() => {
-        const name = displayName(profile, user);
-        if (name && name !== 'User') {
-            setUserData(prev => prev.name ? prev : { ...prev, name });
-        }
-    }, [profile, user]);
-
-    const [recentActivity, setRecentActivity] = useState([]);
     const [topMerchants, setTopMerchants] = useState([]);
-    const [shoppingCategories, setShoppingCategories] = useState([]);
-
+    const [recentActivity, setRecentActivity] = useState([]);
     const [showPackages, setShowPackages] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(null);
     const [walletConfirmPkg, setWalletConfirmPkg] = useState(null);
 
+    // KYC Popup
     const { isOpen: kycPopupOpen, closeKYC } = useKYCPopup({
         kycStatus: userData.kycStatus,
         enabled: !loading && !!user
     });
 
-    const { isOpen: merchantPopupOpen, closeMerchantPopup } = useMerchantApplyPopup({
+    // Merchant Apply Popup
+    const { isOpen: merchantPopupOpen, closePopup: closeMerchantPopup } = useMerchantApplyPopup({
         merchantStatus: userData.merchantStatus,
         enabled: !loading && !!user
     });
-
-    // Countdown logic
-    useEffect(() => {
-        if (!userData.isGoldVerified || !userData.subscriptionExpiry) {
-            setTimeLeft(null);
-            return;
-        }
-
-        const interval = setInterval(() => {
-            const now = new Date();
-            const expiry = new Date(userData.subscriptionExpiry);
-            const diff = expiry - now;
-
-            if (diff <= 0) {
-                setTimeLeft('EXPIRED');
-                clearInterval(interval);
-            } else {
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-                if (days > 0) {
-                    setTimeLeft(`${days}d ${hours}h left`);
-                } else {
-                    setTimeLeft(`${hours}h ${mins}m ${secs}s`);
-                }
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [userData.isGoldVerified, userData.subscriptionExpiry]);
-
-    const handleBuyPackage = async (pkg) => {
-        // Check if balance is sufficient for wallet payment
-        if (userData.walletBalance >= pkg.price) {
-            setWalletConfirmPkg(pkg);
-            return;
-        }
-
-        try {
-            await initiatePayment({
-                amount: pkg.price,
-                payerName: payerContact.payerName || userData.name,
-                payerEmail: payerContact.payerEmail,
-                payerMobile: payerContact.payerPhone,
-                udf1: 'GOLD_SUBSCRIPTION',
-                udf2: pkg.id // e.g., GOLD_1M, GOLD_3M, GOLD_1Y
-            });
-        } catch (err) {
-            if (err instanceof PayerContactError) {
-                toast.error(err.field === 'email' ? 'Add your email address to continue.' : 'Add your mobile number to continue.');
-                router.push(`/profile?focus=${err.field || 'phone'}&return=${encodeURIComponent('/dashboard')}`);
-                return;
-            }
-            toast.error('Payment failed: ' + err.message);
-        }
-    };
-
-    const handleWalletPayment = async (pkg) => {
-        setLoading(true);
-        setWalletConfirmPkg(null);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('Authentication session required');
-
-            const response = await fetch('/api/payment/wallet-pay', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({
-                    packageId: pkg.id,
-                    amount: pkg.price
-                })
-            });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Wallet payment failed');
-
-            toast.success('Elite Gold activated successfully via wallet!');
-
-            // Redirect to premium success page with animation
-            router.push(`/payment/success?txnId=WALLET_${pkg.id}&amount=${pkg.price}&type=GOLD_SUBSCRIPTION`);
-
-            setShowPackages(false);
-        } catch (err) {
-            console.error('Wallet payment error:', err);
-            toast.error(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const processActivityFeed = (coupons, walletTxs) => {
         const normalizedCoupons = (coupons || []).map(c => ({
             id: `coupon-${c.id}`,
             rawDate: new Date(c.purchased_at).getTime(),
-            brand: 'Gift Card',
-            description: c.title || c.brand || 'Gift Card Purchase',
-            value: ((c.selling_price_paise || 0) / 100).toFixed(2),
+            brand: c.brand || 'Gift Card',
+            description: c.title || 'Gift Card Purchase',
+            value: ((c.face_value_paise || 0) / 100).toFixed(2),
             status: 'success',
-            type: 'GIFT_CARD',
-            logo: <Gift size={24} className="text-purple-500" />
+            type: 'COUPON',
+            logo: <Gift size={20} />
         }));
 
         const normalizedWallet = (walletTxs || []).map(w => {
-            let logo = <CreditCardIcon size={24} className="text-blue-500" />;
-            if (w.type === 'TOPUP') logo = <Coins size={24} className="text-amber-500" />;
-            if (w.type === 'CASHBACK') logo = <ZapIcon size={24} className="text-emerald-500" />;
-            if (w.type === 'DEBIT') logo = <ShoppingBag size={24} className="text-rose-500" />;
+            let logo = <Wallet size={20} />;
+            if (w.type === 'CASHBACK') logo = <TrendingUp size={20} />;
+            if (w.type === 'DEBIT') logo = <Package size={20} />;
 
             return {
                 id: `wallet-${w.id}`,
@@ -279,19 +156,14 @@ export default function CustomerDashboardPage() {
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
         try {
-            const now = new Date().toISOString();
-
-            // Create a timeout promise to reject after 5s
             const timeoutTx = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Dashboard fetch timeout')), 5000)
             );
 
-            // Race the fetch bundle against timeout
             const mainFetch = Promise.allSettled([
                 supabase.from('user_profiles').select('full_name, role, is_gold_verified, subscription_expiry, kyc_status, completed_onboarding, referral_code').eq('id', user.id).single(),
                 supabase.from('kyc_records').select('status, verification_status').eq('user_id', user.id).maybeSingle(),
                 supabase.from('customer_wallets').select('balance_paise').eq('user_id', user.id).maybeSingle(),
-                // Query through orders table (same as My Gift Cards page) for accurate counts
                 supabase.from('orders').select(`
                     id, amount, created_at,
                     coupons:coupons!orders_giftcard_id_fkey (
@@ -302,13 +174,11 @@ export default function CustomerDashboardPage() {
                 supabase.from('merchants').select('status, subscription_status').eq('user_id', user.id).maybeSingle(),
                 supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle(),
                 supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
-                supabase.from('merchants').select('id, slug, business_name, shopping_banner_url, is_open').eq('status', 'approved').eq('subscription_status', 'active').order('business_name', { ascending: true }).limit(6),
-                supabase.from('shopping_categories').select('*').order('name', { ascending: true }),
+                supabase.from('merchants').select('id, slug, business_name, shopping_banner_url, is_open, business_address').eq('status', 'approved').order('business_name', { ascending: true }).limit(6),
             ]);
 
             const results = await Promise.race([mainFetch, timeoutTx]);
 
-            // Process results (allSettled returns objects with { status, value })
             const profileResult = results[0];
             const kycResult = results[1];
             const walletResult = results[2];
@@ -316,28 +186,23 @@ export default function CustomerDashboardPage() {
             const walletTxResult = results[4];
             const merchantResult = results[5];
             const rewardsResult = results[6];
-            const sub1mResult   = results[7];
+            const sub1mResult = results[7];
             const topMerchantsResult = results[8];
-            const categoriesResult = results[9];
 
-            // 1. Process Profile
-            let profile = null;
+            let profileData = null;
             if (profileResult.status === 'fulfilled' && profileResult.value.data) {
-                profile = profileResult.value.data;
+                profileData = profileResult.value.data;
             }
 
-            // 2. Process KYC (Prioritize user_profiles, fallback to kyc_records)
-            let kycStatus = profile?.kyc_status || 'not_started';
+            let kycStatus = profileData?.kyc_status || 'not_started';
             if (kycStatus === 'not_started' && kycResult.status === 'fulfilled' && kycResult.value.data) {
                 kycStatus = kycResult.value.data.verification_status || kycResult.value.data.status;
             }
 
-            // 3. Process Orders → Coupons (matches My Gift Cards logic)
             let coupons = [];
             if (couponsResult.status === 'fulfilled' && couponsResult.value.data) {
-                // Flatten: extract coupon from each order, attach order info
                 coupons = couponsResult.value.data
-                    .filter(order => order.coupons) // Only orders with linked coupons
+                    .filter(order => order.coupons)
                     .map(order => ({
                         ...order.coupons,
                         order_amount: order.amount,
@@ -356,7 +221,6 @@ export default function CustomerDashboardPage() {
                     const sellingPrice = coupon.selling_price_paise || 0;
                     totalSavings += (faceValue - sellingPrice);
 
-                    // Active = sold + not expired (same logic as My Gift Cards page)
                     const isExpired = new Date(coupon.valid_until) < new Date();
                     if (coupon.status === 'sold' && !isExpired) {
                         activeCards++;
@@ -364,16 +228,13 @@ export default function CustomerDashboardPage() {
                 });
             }
 
-            // Convert savings from paise to Rupee
             totalSavings = totalSavings / 100;
 
-            // 4. Wallet Balance
             let walletBalance = 0.00;
             if (walletResult.status === 'fulfilled' && walletResult.value.data) {
                 walletBalance = (walletResult.value.data.balance_paise || 0) / 100;
             }
 
-            // 5. Build Recent Activity
             let walletTxs = [];
             if (walletTxResult.status === 'fulfilled' && walletTxResult.value.data) {
                 walletTxs = walletTxResult.value.data;
@@ -381,27 +242,23 @@ export default function CustomerDashboardPage() {
             processActivityFeed(coupons.slice(0, 5), walletTxs);
 
             const rewardPoints = rewardsResult.status === 'fulfilled' && rewardsResult.value.data ? rewardsResult.value.data.total_earned : 0;
-            
+
             if (topMerchantsResult && topMerchantsResult.status === 'fulfilled' && topMerchantsResult.value.data) {
                 setTopMerchants(topMerchantsResult.value.data);
             }
 
-            if (categoriesResult && categoriesResult.status === 'fulfilled' && categoriesResult.value.data) {
-                setShoppingCategories(categoriesResult.value.data);
-            }
-
             setUserData({
-                name: displayName(profile, user),
+                name: displayName(profileData, user),
                 totalPurchases,
                 totalSavings,
                 kycStatus,
-                isGoldVerified: profile?.is_gold_verified || false,
-                subscriptionExpiry: profile?.subscription_expiry || null,
+                isGoldVerified: profileData?.is_gold_verified || false,
+                subscriptionExpiry: profileData?.subscription_expiry || null,
                 walletBalance,
                 rewardPoints,
                 activeCards,
-                completedOnboarding: profile?.completed_onboarding ?? true,
-                referralCode: profile?.referral_code || null,
+                completedOnboarding: profileData?.completed_onboarding ?? true,
+                referralCode: profileData?.referral_code || null,
                 merchantStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.status : null,
                 merchantSubscriptionStatus: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_status : null,
                 merchantSubscriptionExpiresAt: merchantResult.status === 'fulfilled' && merchantResult.value.data ? merchantResult.value.data.subscription_expires_at : null,
@@ -461,7 +318,7 @@ export default function CustomerDashboardPage() {
                     )
                     .subscribe();
             } else {
-                setLoading(false);
+                router.push('/login');
             }
         }
 
@@ -469,19 +326,64 @@ export default function CustomerDashboardPage() {
             if (walletSub) supabase.removeChannel(walletSub);
             if (activitySub) supabase.removeChannel(activitySub);
         };
-    }, [user, authLoading]);
+    }, [authLoading, user, fetchDashboardData, router]);
 
+    const handleBuyPackage = async (pkg) => {
+        setShowPackages(false);
+        if (userData.walletBalance >= pkg.price) {
+            setWalletConfirmPkg(pkg);
+            return;
+        }
+        try {
+            await initiatePayment({
+                amount: pkg.price,
+                payerName: payerContact.payerName || userData.name || 'User',
+                payerEmail: payerContact.payerEmail,
+                payerMobile: payerContact.payerPhone,
+                udf1: 'SUBSCRIPTION_UPGRADE',
+                udf2: pkg.duration.toString()
+            });
+        } catch (err) {
+            if (err instanceof PayerContactError) {
+                alert('Please update your contact details to proceed: ' + err.message);
+                router.push('/profile');
+                return;
+            }
+            alert('Payment initialization failed: ' + err.message);
+        }
+    };
 
+    const handleWalletPayment = async (pkg) => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase.rpc('process_wallet_subscription_payment', {
+                p_user_id: user.id,
+                p_amount: pkg.price,
+                p_duration_months: pkg.duration
+            });
 
-    if (authLoading || loading) {
-        return <DashboardSkeleton />;
-    }
+            if (error) throw error;
+
+            if (data && data.success) {
+                alert('Subscription activated successfully using Wallet Balance!');
+                setWalletConfirmPkg(null);
+                fetchDashboardData();
+            } else {
+                throw new Error(data?.message || 'Transaction failed.');
+            }
+        } catch (err) {
+            alert(err.message || 'Payment via wallet failed.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (authLoading || loading) return <DashboardSkeleton />;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col">
+        <div className="w-full space-y-8 font-body-md text-on-surface">
             <KYCPopup isOpen={kycPopupOpen} onClose={closeKYC} />
             <MerchantApplyPopup isOpen={merchantPopupOpen} onClose={closeMerchantPopup} />
-            <Navbar />
 
             {!userData.completedOnboarding && user && (
                 <OnboardingModal
@@ -491,61 +393,69 @@ export default function CustomerDashboardPage() {
             )}
 
             <PullToRefresh onRefresh={fetchDashboardData}>
-                <div className="pt-24 sm:pt-32 px-4 sm:px-6 flex-grow">
-                    <div className="max-w-7xl mx-auto">
-                    <div className="mb-4 sm:mb-8">
-                        <Breadcrumbs items={[{ label: 'Dashboard' }]} />
+                <div className="w-full space-y-8">
+                    {/* Welcome Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[11px] font-bold text-brand-steel uppercase tracking-widest">Bhopal Hub • Live</span>
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-on-surface tracking-tight flex items-center gap-2">
+                                <span>Welcome back, {userData.name.split(' ')[0]}!</span>
+                                {userData.isGoldVerified && (
+                                    <span className="inline-flex items-center">
+                                        <GoldBadge size="sm" />
+                                    </span>
+                                )}
+                            </h1>
+                            <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-1">
+                                Explore festive tech deals, genuine essentials, and verified local stores across Bhopal.
+                            </p>
+                        </div>
                     </div>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-6 sm:mb-10"
-                    >
-                        <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-gray-100 mb-1 tracking-tight">
-                            Welcome back, {userData.name.split(' ')[0]}! 👋
-                            {userData.isGoldVerified && (
-                                <span className="inline-flex items-center align-middle ml-2.5">
-                                    <GoldBadge size="md" />
-                                </span>
-                            )}
-                        </h1>
-                        <p className="text-slate-500 dark:text-gray-400 text-sm sm:text-lg">
-                            Manage your eCommerce orders, wallet, gift cards, and payments.
-                        </p>
-                    </motion.div>
+                    {/* E-Commerce Hero Carousel */}
+                    <EcomHeroCarousel />
 
-                    <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8 mb-12">
-                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                    {/* Category Quick Pills */}
+                    <CategoryQuickPills />
+
+                    {/* Trending Flash Deals */}
+                    <TrendingProductsGrid />
+
+                    {/* Nearby Verified Bhopal Stores */}
+                    <VerifiedStoresNearby merchants={topMerchants} />
+
+                    {/* Active Order & Logistics Tracking (No OTP) */}
+                    <ActiveOrdersSnapshot userId={user?.id} />
+
+                    {/* Merchant Partner Opportunity Card */}
+                    <MerchantOpportunityBanner
+                        merchantStatus={userData.merchantStatus}
+                        subscriptionStatus={userData.subscriptionStatus}
+                        subscriptionExpiresAt={userData.subscriptionExpiry}
+                        startingPriceRupees={userData.merchantSub1mPrice}
+                    />
+
+                    {/* 2-Column Section: Wallet & Services + Recent Activity */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        {/* Left Column: Wallet Card + Quick Services Grid */}
+                        <div className="lg:col-span-6 space-y-6">
                             <FintechWalletCard userData={userData} />
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
                             <FintechServiceGrid />
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
-                            <EcommerceHub merchants={topMerchants} categories={shoppingCategories} />
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
+                        </div>
+
+                        {/* Right Column: Recent Activity Stream + Promo Banners */}
+                        <div className="lg:col-span-6 space-y-6">
+                            <RecentActivity orders={recentActivity} />
                             <FintechGrowthSection userData={userData} />
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
                             <PromoBanners />
-                        </motion.div>
-                        
-                        <div className="space-y-6 pt-4">
-                            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
-                                <RecentShoppingOrders userId={user?.id} />
-                            </motion.div>
-                            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.5 }}>
-                                <RecentActivity orders={recentActivity} />
-                            </motion.div>
                         </div>
                     </div>
                 </div>
-            </div>
             </PullToRefresh>
-            
+
             <DisclaimerNote />
 
             <PackageSelectionModal
@@ -562,35 +472,32 @@ export default function CustomerDashboardPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[120] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm p-4"
+                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
                     >
                         <motion.div
                             initial={{ scale: 0.95, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 20 }}
-                            className="bg-gray-900 border border-white/10 rounded-[2rem] p-8 text-center shadow-2xl max-w-sm w-full relative overflow-hidden"
+                            className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-7 text-center shadow-2xl max-w-sm w-full relative overflow-hidden"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-[50px] rounded-full pointer-events-none" />
-                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 blur-[50px] rounded-full pointer-events-none" />
-
-                            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/5 text-blue-400 flex items-center justify-center mb-6 border border-blue-500/20 shadow-lg shadow-blue-500/10">
-                                <Wallet size={32} />
+                            <div className="mx-auto w-14 h-14 rounded-2xl bg-blue-500/10 text-primary flex items-center justify-center mb-5">
+                                <Wallet size={28} />
                             </div>
-                            <h3 className="text-2xl font-black text-white mb-2 italic tracking-tight">Confirm Wallet Pay</h3>
-                            <p className="text-[13px] font-medium text-gray-400 mb-8 leading-relaxed">
-                                Deduct <span className="font-bold text-white relative whitespace-nowrap"><span className="absolute -inset-1 bg-white/10 rounded-lg blur-sm"></span><span className="relative">₹{walletConfirmPkg.price}</span></span> from your wallet balance to activate the <span className="text-amber-500 font-bold">{walletConfirmPkg.label}</span> package?
+                            <h3 className="text-xl font-extrabold text-on-surface mb-2">Confirm Wallet Payment</h3>
+                            <p className="text-xs text-on-surface-variant mb-6 leading-relaxed">
+                                Deduct <strong className="text-on-surface font-bold">₹{walletConfirmPkg.price}</strong> from your wallet balance to activate the <span className="text-[#D4AF37] font-bold">{walletConfirmPkg.label}</span> package?
                             </p>
-                            <div className="flex flex-col gap-3 relative z-10">
+                            <div className="flex flex-col gap-2.5">
                                 <button
                                     onClick={() => handleWalletPayment(walletConfirmPkg)}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl transition-all shadow-[0_0_30px_rgba(37,99,235,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all disabled:opacity-50"
                                     disabled={loading}
                                 >
-                                    {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Confirm Payment'}
+                                    {loading ? 'Processing...' : 'Confirm & Pay'}
                                 </button>
                                 <button
                                     onClick={() => setWalletConfirmPkg(null)}
-                                    className="w-full bg-white/5 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-all"
+                                    className="w-full bg-surface-container-low hover:bg-surface-container-high text-on-surface font-semibold py-2.5 rounded-xl transition-all text-xs"
                                     disabled={loading}
                                 >
                                     Cancel

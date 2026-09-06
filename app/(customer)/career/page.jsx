@@ -10,8 +10,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
 
 const DEPT_COLORS = {
     freelancer: 'bg-violet-50 text-violet-700 border-violet-100',
@@ -106,11 +104,9 @@ export default function CareerPage() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-            <Navbar />
-            
+        <div className="w-full pb-20">
             {/* ── HERO ── */}
-            <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-purple-900 text-white">
+            <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-purple-900 text-white rounded-3xl mx-3 sm:mx-6 my-4 shadow-xl">
                 {/* Background image */}
                 <div className="absolute inset-0">
                     <Image
@@ -129,7 +125,7 @@ export default function CareerPage() {
                     <div className="absolute bottom-10 right-10 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
                 </div>
 
-                <div className="relative z-10 max-w-4xl mx-auto text-center px-4 pt-20 pb-12">
+                <div className="relative z-10 max-w-4xl mx-auto text-center px-4 pt-12 pb-12">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm font-medium mb-6 backdrop-blur-sm">
                         <Sparkles size={14} className="text-violet-300" />
@@ -339,8 +335,6 @@ export default function CareerPage() {
                     </div>
                 </motion.div>
             </section>
-            
-            <Footer />
         </div>
     );
 }

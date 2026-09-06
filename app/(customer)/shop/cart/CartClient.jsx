@@ -36,6 +36,7 @@ import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, minOrderValuePaise = 49900 }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -75,17 +76,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           id,
           quantity,
           inventory_id,
-          variant_id,
           is_platform_item,
-          fashion_variants (
-            id,
-            sku,
-            color,
-            size,
-            price_paise,
-            compare_at_price_paise,
-            fashion_variant_media (image_url)
-          ),
           merchant_inventory (
             retail_price_paise,
             custom_title,
@@ -127,7 +118,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
               }))
             })
           });
-
+          
           if (validateRes.ok) {
             const results = await validateRes.json();
             for (let i = 0; i < cart.length; i++) {
@@ -504,15 +495,11 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
   // Bill
   const billDetails = cartItems.reduce((acc, item) => {
-    const sellingPrice = item.variant_id && item.fashion_variants?.price_paise
-      ? item.fashion_variants.price_paise
-      : item.is_platform_item
-        ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
-        : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+    const sellingPrice = item.is_platform_item
+      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
+      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
 
-    const mrp = item.variant_id && item.fashion_variants?.compare_at_price_paise
-      ? item.fashion_variants.compare_at_price_paise
-      : (item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice);
+    const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
     const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
     const gstRate = item.shopping_products?.gst_percentage || 0;
     const gstAmount = Math.round(sellingPrice * item.quantity * gstRate / 100);
@@ -590,7 +577,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             transition={{ delay: 0.8 }}
             className={`text-sm font-medium mb-8 ${isDark ? 'text-white/40' : 'text-slate-500'}`}
           >
-            Your order is pending merchant approval. You&apos;ll be notified once approved. Redirecting to Store Credits...
+            Your order is pending merchant approval. You'll be notified once approved. Redirecting to Store Credits...
           </motion.p>
 
           <motion.div className={`w-full h-1 rounded-full overflow-hidden ${isDark ? 'bg-white/[0.06]' : 'bg-slate-100'}`}>
@@ -700,8 +687,15 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   }
 
   return (
-    <div className={`min-h-screen pb-52 sm:pb-12 pt-24 md:pt-28 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
+    <div className={`min-h-screen pb-52 sm:pb-12 pt-4 sm:pt-6 ${isDark ? 'bg-[#080a10] text-white' : 'bg-[#f7f8fa] text-slate-900'}`}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 md:px-6">
+        {/* Breadcrumb Navigation */}
+        <CustomerBreadcrumbs 
+          items={[
+            { label: 'Shop Hub', href: '/shop' }, 
+            { label: 'My Cart & Checkout' }
+          ]} 
+        />
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-5 md:mb-8">
@@ -756,14 +750,15 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             {/* Delivery Address */}
             <motion.div
               initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-              className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all duration-300 ${!hasValidAddress
+              className={`rounded-2xl p-4 sm:p-5 relative overflow-hidden transition-all duration-300 ${
+                !hasValidAddress
                   ? isDark
                     ? 'bg-[#1a1408] border border-amber-500/40 shadow-[0_0_24px_rgba(245,158,11,0.15)]'
                     : 'bg-amber-50 border border-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.2)]'
                   : isDark
                     ? 'bg-[#12151c] border border-white/[0.06]'
                     : 'bg-white border border-slate-100 shadow-sm'
-                }`}
+              }`}
             >
               {/* Left accent bar */}
               <div className={`absolute top-0 left-0 w-1 h-full ${!hasValidAddress ? 'bg-amber-500' : 'bg-blue-600'}`} />
@@ -775,10 +770,11 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${!hasValidAddress
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    !hasValidAddress
                       ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'
                       : isDark ? 'bg-blue-900/20 text-blue-500' : 'bg-blue-50 text-blue-600'
-                    }`}>
+                  }`}>
                     <MapPin size={16} />
                   </div>
                   <div className="min-w-0">
@@ -799,10 +795,11 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                 </div>
                 <button
                   onClick={() => setIsAddressModalOpen(true)}
-                  className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-all active:scale-95 ${!hasValidAddress
+                  className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg shrink-0 transition-all active:scale-95 ${
+                    !hasValidAddress
                       ? 'bg-amber-500 text-white shadow-sm hover:bg-amber-600'
                       : isDark ? 'bg-white/[0.04] text-white/40 hover:text-white/70' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                    }`}
+                  }`}
                 >
                   {hasValidAddress ? 'Change' : 'Add Info'}
                 </button>
@@ -834,14 +831,10 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
               <AnimatePresence mode="popLayout">
                 {cartItems.map((item, idx) => {
-                  const sellingPrice = item.variant_id && item.fashion_variants?.price_paise
-                    ? item.fashion_variants.price_paise
-                    : item.is_platform_item
-                      ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
-                      : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
-                  const mrp = item.variant_id && item.fashion_variants?.compare_at_price_paise
-                    ? item.fashion_variants.compare_at_price_paise
-                    : (item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice);
+                  const sellingPrice = item.is_platform_item
+                    ? (item.shopping_products?.platform_price_paise ?? item.shopping_products?.suggested_retail_price_paise ?? 0)
+                    : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+                  const mrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || sellingPrice;
                   const finalMrp = mrp > sellingPrice ? mrp : sellingPrice;
                   const savings = finalMrp - sellingPrice;
                   const merchantName = item.is_platform_item ? "InTrust Official" : (item.merchant_inventory?.merchants?.business_name || "Merchant");
@@ -850,14 +843,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
 
                   const merchantId = item.merchant_inventory?.merchants?.id;
                   const isItemStoreOpen = item.is_platform_item ? isPlatformOpen : (merchantStatuses.get(merchantId) ?? true);
-
-                  const itemUrl = item.variant_id
-                    ? `/shop/product/${item.shopping_products?.id}`
-                    : `/shop/product/${item.shopping_products?.slug || item.shopping_products?.id}`;
-
-                  const itemImage = item.fashion_variants?.fashion_variant_media?.[0]?.image_url
-                    || item.shopping_products?.product_images?.[0]
-                    || null;
 
                   return (
                     <motion.div
@@ -870,13 +855,13 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                       className={`flex gap-3 pb-4 mb-4 border-b last:border-b-0 last:pb-0 last:mb-0 ${isDark ? 'border-white/[0.03]' : 'border-slate-50'}`}
                     >
                       <Link
-                        href={itemUrl}
+                        href={`/shop/product/${item.shopping_products?.slug}`}
                         className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 p-1.5 flex items-center justify-center ${isDark ? 'bg-[#0c0e14] border border-white/[0.04]' : 'bg-slate-50 border border-slate-100'}`}
                       >
-                        {itemImage ? (
+                        {item.shopping_products?.product_images?.[0] ? (
                           <div className="relative w-full h-full">
                             <Image
-                              src={itemImage}
+                              src={item.shopping_products.product_images[0]}
                               alt="product"
                               fill
                               sizes="(max-width: 640px) 20vw, 80px"
@@ -901,23 +886,6 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                             <h3 className={`text-xs sm:text-sm font-bold leading-tight line-clamp-2 ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
                               {item.merchant_inventory?.custom_title || item.shopping_products?.title}
                             </h3>
-                            {item.variant_id && item.fashion_variants && (
-                              <div className="mt-0.5 flex items-center gap-1.5">
-                                {item.fashion_variants.color && (
-                                  <span className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
-                                    {item.fashion_variants.color}
-                                  </span>
-                                )}
-                                {item.fashion_variants.color && item.fashion_variants.size && (
-                                  <span className={`text-[10px] ${isDark ? 'text-white/30' : 'text-slate-300'}`}>•</span>
-                                )}
-                                {item.fashion_variants.size && (
-                                  <span className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
-                                    Size {item.fashion_variants.size}
-                                  </span>
-                                )}
-                              </div>
-                            )}
                             {!isItemStoreOpen && (
                               <div className="mt-1 flex gap-1.5 flex-wrap">
                                 <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-red-500 text-white flex items-center gap-1`}>
@@ -931,7 +899,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                                 {liveStock === 0 ? (
                                   <>
                                     <OutOfStockBadge variant="soft" size="sm" />
-                                    <button
+                                    <button 
                                       onClick={() => removeItem(item.id)}
                                       className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 active:scale-95 transition-all"
                                     >
@@ -970,7 +938,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                           </div>
 
                           <div className={`flex items-center rounded-lg overflow-hidden h-7 ${isDark ? 'bg-blue-900/20 text-blue-400 border border-blue-800/20' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
-                            <button
+                            <button 
                               onClick={() => updateQuantity(item.id, -1)}
                               disabled={liveStock === 0}
                               className={`w-7 h-full flex items-center justify-center transition-all ${liveStock === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-black/5 active:scale-90'}`}
@@ -989,8 +957,8 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                               onClick={() => updateQuantity(item.id, 1)}
                               disabled={liveStock === 0 || (hasStockIssue && item.quantity >= liveStock)}
                               className={`w-7 h-full flex items-center justify-center transition-all ${liveStock === 0 || (hasStockIssue && item.quantity >= liveStock)
-                                ? 'opacity-30 cursor-not-allowed'
-                                : 'hover:bg-black/5 active:scale-90'
+                                  ? 'opacity-30 cursor-not-allowed'
+                                  : 'hover:bg-black/5 active:scale-90'
                                 }`}
                             >
                               <Plus size={12} strokeWidth={3} />
@@ -999,7 +967,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                         </div>
                         {liveStock > 0 && liveStock < item.quantity && (
                           <div className="mt-1 flex justify-end">
-                            <button
+                            <button 
                               onClick={() => updateQuantity(item.id, liveStock - item.quantity)}
                               className="text-[10px] font-black text-blue-600 underline cursor-pointer"
                             >
@@ -1111,10 +1079,10 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                         onClick={() => !isDisabled && setPaymentMode(mode.id)}
                         disabled={isDisabled}
                         className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left relative overflow-hidden ${isDisabled
-                          ? `cursor-not-allowed ${isDark ? 'opacity-30' : 'opacity-40'}`
-                          : isSelected
-                            ? `${isDark ? 'bg-white/[0.04]' : 'bg-slate-50'} ring-2`
-                            : `${isDark ? 'bg-white/[0.02] hover:bg-white/[0.04]' : 'bg-slate-50/50 hover:bg-slate-50'}`
+                            ? `cursor-not-allowed ${isDark ? 'opacity-30' : 'opacity-40'}`
+                            : isSelected
+                              ? `${isDark ? 'bg-white/[0.04]' : 'bg-slate-50'} ring-2`
+                              : `${isDark ? 'bg-white/[0.02] hover:bg-white/[0.04]' : 'bg-slate-50/50 hover:bg-slate-50'}`
                           }`}
                         style={isSelected && !isDisabled ? {
                           ringColor: mode.color,
@@ -1164,10 +1132,10 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                           key={days}
                           onClick={() => setStoreCreditDuration(days)}
                           className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${storeCreditDuration === days
-                            ? 'bg-amber-500 text-white shadow-md'
-                            : isDark
-                              ? 'bg-white/5 text-white/50 hover:bg-white/10'
-                              : 'bg-white text-slate-500 hover:bg-amber-100 border border-amber-200'
+                              ? 'bg-amber-500 text-white shadow-md'
+                              : isDark
+                                ? 'bg-white/5 text-white/50 hover:bg-white/10'
+                                : 'bg-white text-slate-500 hover:bg-amber-100 border border-amber-200'
                             }`}
                         >
                           {days} Days
@@ -1197,8 +1165,8 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
                   disabled={checkingOut || paymentLoading || !canCheckout}
                   onClick={handleCheckout}
                   className={`w-full py-3.5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] ${!canCheckout
-                    ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
-                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.25)]"
+                      ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
+                      : "bg-blue-600 hover:bg-blue-700 text-white shadow-[0_6px_20px_rgba(37,99,235,0.25)]"
                     }`}
                 >
                   {checkingOut || paymentLoading ? (
@@ -1231,7 +1199,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className={`fixed bottom-0 left-0 w-full p-3.5 pb-6 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/95 border-white/[0.06]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]'}`}>
+      <div className={`fixed bottom-[72px] left-0 w-full p-3 sm:hidden z-40 border-t rounded-t-3xl backdrop-blur-xl ${isDark ? 'bg-[#080a10]/95 border-white/[0.08]' : 'bg-white/95 border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
         {error && (
           <div className={`flex items-center gap-2 p-2 rounded-lg mb-2 ${isDark ? 'bg-red-900/20 border border-red-800/20' : 'bg-red-50'}`}>
             <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -1268,12 +1236,13 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
               }
               handleCheckout();
             }}
-            className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] relative overflow-hidden ${!hasValidAddress
+            className={`flex-1 py-3 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.97] relative overflow-hidden ${
+              !hasValidAddress
                 ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)]'
                 : !canCheckout
-                  ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
-                  : 'bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]'
-              }`}
+                ? `cursor-not-allowed ${isDark ? 'bg-white/[0.04] text-white/20' : 'bg-slate-100 text-slate-400'}`
+                : 'bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]'
+            }`}
           >
             {/* Pulsing glow ring when address is missing */}
             {!hasValidAddress && (
