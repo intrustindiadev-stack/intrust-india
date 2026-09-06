@@ -427,7 +427,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                                 </span>
                                 {[
                                     { id: 'all', label: 'All Stores' },
-                                    { id: 'official', label: 'InTrust Flagship' },
+                                    { id: 'official', label: 'InTrust Official' },
                                     { id: 'local', label: 'Local Bhopal Stores' }
                                 ].map((m) => {
                                     const active = selectedMerchantFilter === m.id;

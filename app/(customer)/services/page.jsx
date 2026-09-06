@@ -34,7 +34,7 @@ export default function ServicesPage() {
             id: 'shop',
             title: 'Local Shopping & Official Store',
             category: 'retail',
-            description: 'Order electronics, gadgets, groceries, and daily essentials from verified Bhopal merchants and InTrust Flagship Store with guaranteed doorstep delivery.',
+            description: 'Order electronics, gadgets, groceries, and daily essentials from verified Bhopal merchants and InTrust Official Store with guaranteed doorstep delivery.',
             icon: ShoppingBag,
             badge: 'Fast Delivery',
             badgeColor: 'bg-blue-500/10 text-blue-600 dark:text-primary border-blue-500/20',

@@ -71,7 +71,7 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
                         {isOfficial ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600/95 text-white text-[11px] font-black uppercase tracking-wider shadow-md backdrop-blur-md">
                                 <BadgeCheck size={14} className="fill-white text-blue-600" />
-                                Official Flagship
+                                Official Store
                             </span>
                         ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600/95 text-white text-[11px] font-black uppercase tracking-wider shadow-md backdrop-blur-md">

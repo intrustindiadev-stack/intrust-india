@@ -402,7 +402,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             InTrust Official
                         </h3>
                         <p className="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
-                            Order genuine essentials and verified gadgets directly from the company flagship hub with live order tracking and verified fulfillment.
+                            Order genuine essentials and verified gadgets directly from the official InTrust hub with live order tracking and verified fulfillment.
                         </p>
                     </div>
 
@@ -415,7 +415,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             href="/shop/official"
                             className="px-5 py-2.5 rounded-xl bg-white text-emerald-950 hover:bg-slate-100 font-black text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
                         >
-                            <span>Visit Flagship</span>
+                            <span>Visit Official Store</span>
                             <ArrowRight size={13} />
                         </Link>
                     </div>
@@ -442,7 +442,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                         href="/shop/official"
                         className="text-xs font-bold text-blue-600 dark:text-primary hover:underline flex items-center gap-1 group"
                     >
-                        <span>View Official Flagship</span>
+                        <span>View Official Store</span>
                         <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
                     </Link>
                 </div>
