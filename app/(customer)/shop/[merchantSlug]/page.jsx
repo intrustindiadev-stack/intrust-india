@@ -165,10 +165,10 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
         ] = await Promise.all([
             // Avatar
             fetchedMerchant.user_id
-                ? adminClient.from('user_profiles').select('avatar_url').eq('id', fetchedMerchant.user_id).single()
+                ? adminClient.from('user_profiles').select('avatar_url').eq('id', fetchedMerchant.user_id).maybeSingle()
                 : Promise.resolve({ data: null }),
             // Rating
-            supabase.from('merchant_rating_stats').select('avg_rating, total_ratings').eq('merchant_id', fetchedMerchant.id).single(),
+            supabase.from('merchant_rating_stats').select('avg_rating, total_ratings').eq('merchant_id', fetchedMerchant.id).maybeSingle(),
             // Inventory via optimized unified pagination RPC
             supabase.rpc('get_storefront_page', {
                 p_merchant_slug: fetchedMerchant.slug,

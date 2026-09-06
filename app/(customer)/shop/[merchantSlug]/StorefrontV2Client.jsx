@@ -64,7 +64,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     // Open-at-top fix: scrolls to top on mount and whenever merchant slug changes
     useEffect(() => {
         window.scrollTo({ top: 0 });
-    }, [liveMerchant.slug]);
+    }, [liveMerchant?.slug]);
 
     // Supabase client — memoized to avoid creating a new instance on every render
     const supabase = useMemo(() => createClient(), []);
@@ -75,7 +75,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
     const fetchItems = useCallback(async (pageNum, searchVal, catVal, lastIdVal) => {
         const queryParams = new URLSearchParams({
-            merchantSlug: liveMerchant.slug,
+            merchantSlug: liveMerchant?.slug || '',
             offset: ((pageNum - 1) * PAGE_SIZE).toString(),
             limit: PAGE_SIZE.toString(),
         });
@@ -149,7 +149,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             // Cache the last seen ID of this page for the next page
             if (items.length > 0) {
                 const lastItem = items[items.length - 1];
-                const nextLastId = liveMerchant.slug === 'official' ? lastItem.product_id : lastItem.id;
+                const nextLastId = liveMerchant?.slug === 'official' ? lastItem.product_id : lastItem.id;
                 setPageLastIds(prev => ({
                     ...prev,
                     [pageNum + 1]: nextLastId
@@ -161,7 +161,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         } finally {
             setLoading(false);
         }
-    }, [liveMerchant.slug]);
+    }, [liveMerchant?.slug]);
 
     // Page changes trigger fetches
     useEffect(() => {

@@ -2,10 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Store, Star, MapPin, Phone, ShieldCheck, ArrowRight, Clock } from 'lucide-react';
 
 export default function VerifiedStoresNearby({ merchants = [] }) {
+    const router = useRouter();
     if (!merchants || merchants.length === 0) return null;
 
     return (
@@ -36,10 +38,13 @@ export default function VerifiedStoresNearby({ merchants = [] }) {
                     const isOpen = merchant.is_open !== false;
                     const ratingVal = merchant.avg_rating || merchant.rating?.avg_rating;
 
+                    const storeUrl = `/shop/${merchant.slug || merchant.id}`;
+
                     return (
                         <div
                             key={merchant.id}
-                            className="group bg-surface-container-lowest hover:bg-surface-container-low rounded-3xl p-4 border border-outline-variant/30 hover:border-primary/40 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                            onClick={() => router.push(storeUrl)}
+                            className="group bg-white dark:bg-[#0c0e16] hover:bg-slate-50 dark:hover:bg-white/[0.02] rounded-3xl p-4 border border-slate-200/90 dark:border-white/[0.08] hover:border-blue-500/40 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer"
                         >
                             <div>
                                 {/* Banner */}
@@ -87,35 +92,37 @@ export default function VerifiedStoresNearby({ merchants = [] }) {
 
                                 {/* Store Title & Verified Badge */}
                                 <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-extrabold text-base text-on-surface truncate group-hover:text-primary transition-colors">
+                                    <h3 className="font-extrabold text-base text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                         {merchant.business_name}
                                     </h3>
                                     <ShieldCheck size={16} className="text-[#D4AF37] shrink-0" title="Verified Merchant" />
                                 </div>
 
                                 {merchant.business_address && (
-                                    <p className="text-xs text-on-surface-variant font-medium line-clamp-1 mb-3">
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-1 mb-3">
                                         {merchant.business_address}
                                     </p>
                                 )}
                             </div>
 
                             {/* Store Action Bar with Merchant Phone */}
-                            <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between gap-3">
+                            <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between gap-3">
                                 {merchantPhone && (
                                     <a
                                         href={`tel:${merchantPhone}`}
-                                        className="px-3 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-on-surface text-xs font-bold flex items-center gap-1.5 border border-outline-variant/20 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold flex items-center gap-1.5 border border-slate-200/80 dark:border-white/10 transition-colors"
                                         title="Call Store"
                                     >
-                                        <Phone size={13} className="text-emerald-600" />
+                                        <Phone size={13} className="text-emerald-600 dark:text-emerald-400" />
                                         <span>Call</span>
                                     </a>
                                 )}
 
                                 <Link
-                                    href={`/shop/${merchant.slug || merchant.id}`}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-primary hover:bg-blue-700 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
+                                    href={storeUrl}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
                                 >
                                     <span>Explore Catalog</span>
                                     <ArrowRight size={13} />
