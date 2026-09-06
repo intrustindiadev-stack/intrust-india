@@ -105,24 +105,31 @@ export default async function CategoryPage({ params }) {
     }
 
     // Map platform products (Fulfilled by InTrust Official)
-    const platformItems = matchedPlatformProducts.map(p => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        description: p.description,
-        selling_price: Math.round(((p.platform_price_paise || p.suggested_retail_price_paise || 0) / 100)),
-        mrp: Math.round(((p.mrp_paise || p.suggested_retail_price_paise || 0) / 100)),
-        stock_quantity: p.admin_stock,
-        images: p.product_images || [],
-        category: p.category || formattedCategoryTitle,
-        rating: 4.9,
-        is_platform: true,
-        merchants: { 
-            business_name: 'InTrust Official Flagship',
-            slug: 'official',
-            is_open: true
-        }
-    }));
+    const platformItems = matchedPlatformProducts.map(p => {
+        const sPrice = Math.round(((p.platform_price_paise || p.suggested_retail_price_paise || 0) / 100));
+        const mrpVal = Math.round(((p.mrp_paise || p.suggested_retail_price_paise || 0) / 100));
+        return {
+            id: p.id,
+            product_id: p.id,
+            title: p.title,
+            slug: p.slug,
+            description: p.description,
+            selling_price: sPrice,
+            sale_price: sPrice,
+            price: sPrice,
+            mrp: mrpVal,
+            stock_quantity: p.admin_stock,
+            images: p.product_images || [],
+            category: p.category || formattedCategoryTitle,
+            rating: 4.9,
+            is_platform: true,
+            merchants: { 
+                business_name: 'InTrust Official Flagship',
+                slug: 'official',
+                is_open: true
+            }
+        };
+    });
 
     // Filter & map merchant inventory items
     const merchantItems = merchantInventory
@@ -134,13 +141,19 @@ export default async function CategoryPage({ params }) {
         .map(item => {
             const sp = item.shopping_products || {};
             const merch = item.merchants || {};
+            const sPrice = Math.round(((item.retail_price_paise || sp.suggested_retail_price_paise || 0) / 100));
+            const mrpVal = Math.round(((sp.mrp_paise || item.retail_price_paise || 0) / 100));
             return {
                 id: item.id,
+                inventory_id: item.id,
+                product_id: item.product_id || sp.id,
                 title: item.custom_title || sp.title || 'Product',
                 slug: sp.slug || item.id,
                 description: sp.description,
-                selling_price: Math.round(((item.retail_price_paise || sp.suggested_retail_price_paise || 0) / 100)),
-                mrp: Math.round(((sp.mrp_paise || item.retail_price_paise || 0) / 100)),
+                selling_price: sPrice,
+                sale_price: sPrice,
+                price: sPrice,
+                mrp: mrpVal,
                 stock_quantity: item.stock_quantity,
                 images: sp.product_images || [],
                 category: sp.category || formattedCategoryTitle,
@@ -162,9 +175,12 @@ export default async function CategoryPage({ params }) {
         products = [
             {
                 id: 'cat-prod-1',
+                product_id: 'cat-prod-1',
                 title: `${formattedCategoryTitle} Premium Pack`,
                 slug: `${slug}-premium-pack`,
                 selling_price: 1499,
+                sale_price: 1499,
+                price: 1499,
                 mrp: 2999,
                 rating: 4.8,
                 stock_quantity: 10,
@@ -173,9 +189,12 @@ export default async function CategoryPage({ params }) {
             },
             {
                 id: 'cat-prod-2',
+                product_id: 'cat-prod-2',
                 title: `${formattedCategoryTitle} Pro Series`,
                 slug: `${slug}-pro-series`,
                 selling_price: 2499,
+                sale_price: 2499,
+                price: 2499,
                 mrp: 4999,
                 rating: 4.7,
                 stock_quantity: 5,

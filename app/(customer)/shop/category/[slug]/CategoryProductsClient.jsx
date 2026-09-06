@@ -42,6 +42,7 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
     const [selectedSubCategory, setSelectedSubCategory] = useState('all'); // 'all' or a valid sub-category name
     const [sortBy, setSortBy] = useState('popular'); // 'popular', 'price_asc', 'price_desc', 'rating'
     const [cartQuantities, setCartQuantities] = useState({}); // { [productId]: quantity }
+    const [cartItemDetails, setCartItemDetails] = useState({}); // { [productId]: { price, mrp } }
     const [justAddedProduct, setJustAddedProduct] = useState(null);
 
     // Sync active cart from database on mount if logged in
@@ -51,17 +52,49 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
             try {
                 const { data, error } = await supabase
                     .from('shopping_cart')
-                    .select('product_id, quantity')
+                    .select(`
+                        id,
+                        product_id,
+                        inventory_id,
+                        quantity,
+                        is_platform_item,
+                        merchant_inventory (
+                            id,
+                            retail_price_paise,
+                            custom_title
+                        ),
+                        shopping_products (
+                            id,
+                            title,
+                            platform_price_paise,
+                            suggested_retail_price_paise,
+                            mrp_paise
+                        )
+                    `)
                     .eq('customer_id', user.id);
 
                 if (!error && data) {
                     const qMap = {};
+                    const detailsMap = {};
                     data.forEach(item => {
-                        if (item.product_id) {
-                            qMap[item.product_id] = (qMap[item.product_id] || 0) + (item.quantity || 1);
+                        const key = item.inventory_id || item.product_id;
+                        const qty = Number(item.quantity) || 1;
+                        if (key) {
+                            qMap[key] = (qMap[key] || 0) + qty;
                         }
+                        const pricePaise = item.is_platform_item
+                            ? (item.shopping_products?.platform_price_paise || item.shopping_products?.suggested_retail_price_paise || 0)
+                            : (item.merchant_inventory?.retail_price_paise || item.shopping_products?.suggested_retail_price_paise || 0);
+                        const mrpPaise = item.shopping_products?.mrp_paise || pricePaise;
+                        const unitPrice = Math.round(Number(pricePaise) / 100);
+                        const unitMrp = Math.round(Number(mrpPaise) / 100);
+
+                        if (key) detailsMap[key] = { price: unitPrice, mrp: unitMrp };
+                        if (item.product_id) detailsMap[item.product_id] = { price: unitPrice, mrp: unitMrp };
+                        if (item.inventory_id) detailsMap[item.inventory_id] = { price: unitPrice, mrp: unitMrp };
                     });
                     setCartQuantities(qMap);
+                    setCartItemDetails(detailsMap);
                 }
             } catch (err) {
                 console.error('Error fetching initial cart:', err);
@@ -95,13 +128,14 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
 
         // Price / Stock / Discount Filtering
         if (selectedFilter === 'under_500') {
-            list = list.filter(p => Number(p.selling_price) <= 500);
+            list = list.filter(p => Number(p.sale_price || p.price || p.selling_price || 0) <= 500);
         } else if (selectedFilter === 'under_1500') {
-            list = list.filter(p => Number(p.selling_price) <= 1500);
+            list = list.filter(p => Number(p.sale_price || p.price || p.selling_price || 0) <= 1500);
         } else if (selectedFilter === 'discount_20') {
             list = list.filter(p => {
-                if (!p.mrp || !p.selling_price) return false;
-                const disc = Math.round(((p.mrp - p.selling_price) / p.mrp) * 100);
+                const sp = Number(p.sale_price || p.price || p.selling_price || 0);
+                if (!p.mrp || !sp) return false;
+                const disc = Math.round(((p.mrp - sp) / p.mrp) * 100);
                 return disc >= 20;
             });
         } else if (selectedFilter === 'in_stock') {
@@ -110,9 +144,9 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
 
         // Sorting
         if (sortBy === 'price_asc') {
-            list.sort((a, b) => Number(a.selling_price) - Number(b.selling_price));
+            list.sort((a, b) => Number(a.sale_price || a.price || a.selling_price || 0) - Number(b.sale_price || b.price || b.selling_price || 0));
         } else if (sortBy === 'price_desc') {
-            list.sort((a, b) => Number(b.selling_price) - Number(a.selling_price));
+            list.sort((a, b) => Number(b.sale_price || b.price || b.selling_price || 0) - Number(a.sale_price || a.price || a.selling_price || 0));
         } else if (sortBy === 'rating') {
             list.sort((a, b) => (Number(b.rating) || 4.5) - (Number(a.rating) || 4.5));
         }
@@ -121,25 +155,50 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
     }, [initialProducts, selectedFilter, selectedMerchantFilter, selectedSubCategory, sortBy]);
 
     const totalCartItems = useMemo(() => {
-        return Object.values(cartQuantities).reduce((acc, q) => acc + q, 0);
+        return Object.values(cartQuantities).reduce((acc, q) => acc + (Number(q) || 0), 0);
     }, [cartQuantities]);
 
     const totalCartAmount = useMemo(() => {
         return Object.entries(cartQuantities).reduce((acc, [pId, qty]) => {
-            const prod = initialProducts.find(x => x.id === pId);
-            return acc + (prod ? (Number(prod.selling_price) * qty) : 0);
+            const prod = initialProducts.find(x => 
+                x.id === pId || 
+                x.product_id === pId || 
+                (x.inventory_id && x.inventory_id === pId) || 
+                x.slug === pId
+            );
+            const price = Number(
+                prod?.sale_price || 
+                prod?.price || 
+                prod?.selling_price || 
+                cartItemDetails[pId]?.price || 
+                0
+            );
+            return acc + (price * Number(qty || 0));
         }, 0);
-    }, [cartQuantities, initialProducts]);
+    }, [cartQuantities, initialProducts, cartItemDetails]);
 
     const totalSavings = useMemo(() => {
         return Object.entries(cartQuantities).reduce((acc, [pId, qty]) => {
-            const prod = initialProducts.find(x => x.id === pId);
-            if (prod && prod.mrp && prod.mrp > prod.selling_price) {
-                return acc + ((Number(prod.mrp) - Number(prod.selling_price)) * qty);
+            const prod = initialProducts.find(x => 
+                x.id === pId || 
+                x.product_id === pId || 
+                (x.inventory_id && x.inventory_id === pId) || 
+                x.slug === pId
+            );
+            const price = Number(
+                prod?.sale_price || 
+                prod?.price || 
+                prod?.selling_price || 
+                cartItemDetails[pId]?.price || 
+                0
+            );
+            const mrp = Number(prod?.mrp || cartItemDetails[pId]?.mrp || 0);
+            if (mrp > price) {
+                return acc + ((mrp - price) * Number(qty || 0));
             }
             return acc;
         }, 0);
-    }, [cartQuantities, initialProducts]);
+    }, [cartQuantities, initialProducts, cartItemDetails]);
 
     // Blinkit-style Add to Cart
     const handleAddToCart = useCallback(async (product, e) => {
@@ -158,6 +217,15 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
         setCartQuantities(prev => ({
             ...prev,
             [product.id]: (prev[product.id] || 0) + 1
+        }));
+
+        const pPrice = Number(product.sale_price || product.price || product.selling_price || 0);
+        const pMrp = Number(product.mrp || 0);
+        setCartItemDetails(prev => ({
+            ...prev,
+            [product.id]: { price: pPrice, mrp: pMrp },
+            ...(product.product_id ? { [product.product_id]: { price: pPrice, mrp: pMrp } } : {}),
+            ...(product.inventory_id ? { [product.inventory_id]: { price: pPrice, mrp: pMrp } } : {})
         }));
 
         setJustAddedProduct(product);
@@ -189,6 +257,8 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                 setCartQuantities(prev => {
                     const next = { ...prev };
                     delete next[product.id];
+                    if (product.product_id) delete next[product.product_id];
+                    if (product.inventory_id) delete next[product.inventory_id];
                     return next;
                 });
             }
@@ -201,6 +271,8 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                     next[product.id] -= 1;
                 } else {
                     delete next[product.id];
+                    if (product.product_id) delete next[product.product_id];
+                    if (product.inventory_id) delete next[product.inventory_id];
                 }
                 return next;
             });
@@ -219,6 +291,8 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
             if (current <= 1) {
                 const next = { ...prev };
                 delete next[product.id];
+                if (product.product_id) delete next[product.product_id];
+                if (product.inventory_id) delete next[product.inventory_id];
                 return next;
             }
             return {
@@ -418,7 +492,6 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                         {/* Sub-Category Filter Pills — shown only when sub-categories exist for this category */}
                         {availableSubCategories.length > 0 && (
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-white/5 pt-2.5">
-                                <span className="text-xs font-black uppercase tracking-wider text-slate-400 shrink-0">Dept:</span>
                                 <button
                                     key="sub-all"
                                     onClick={() => setSelectedSubCategory('all')}
@@ -466,11 +539,13 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                             {filteredAndSortedProducts.map((prod) => {
-                                const discount = prod.mrp && prod.selling_price
-                                    ? Math.round(((prod.mrp - prod.selling_price) / prod.mrp) * 100)
+                                const pPrice = Number(prod.sale_price || prod.price || prod.selling_price || 0);
+                                const pMrp = Number(prod.mrp || 0);
+                                const discount = pMrp > pPrice
+                                    ? Math.round(((pMrp - pPrice) / pMrp) * 100)
                                     : 0;
 
-                                const qty = cartQuantities[prod.id] || 0;
+                                const qty = cartQuantities[prod.id] || cartQuantities[prod.product_id] || (prod.inventory_id ? cartQuantities[prod.inventory_id] : 0) || 0;
                                 const isOfficial = (prod.merchants?.business_name || '').toLowerCase().includes('official');
                                 const merchantName = prod.merchants?.business_name || 'InTrust Official Flagship';
 
@@ -532,11 +607,11 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
                                             <div className="flex flex-col">
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
-                                                        ₹{Number(prod.selling_price).toLocaleString('en-IN')}
+                                                        ₹{pPrice.toLocaleString('en-IN')}
                                                     </span>
-                                                    {prod.mrp && prod.mrp > prod.selling_price && (
+                                                    {pMrp > pPrice && (
                                                         <span className="text-[11px] text-slate-400 dark:text-slate-500 line-through font-semibold">
-                                                            ₹{Number(prod.mrp).toLocaleString('en-IN')}
+                                                            ₹{pMrp.toLocaleString('en-IN')}
                                                         </span>
                                                     )}
                                                 </div>

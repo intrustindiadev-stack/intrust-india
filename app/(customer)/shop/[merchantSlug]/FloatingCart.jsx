@@ -20,7 +20,19 @@ export default function FloatingCart({
     // Only render when there are items
     if (!count || count === 0) return null;
 
-    const formattedTotal = ((total || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 });
+    // Fallback if total wasn't calculated upstream or passed as 0
+    const computedTotal = (total && total > 0)
+        ? total
+        : items.reduce((acc, item) => {
+            const unitPrice = Number(
+                item.retail_price_paise
+                    ? item.retail_price_paise / 100
+                    : (item.sale_price || item.price || item.selling_price || 0)
+            );
+            return acc + (unitPrice * (item.quantity || 1) * 100);
+        }, 0);
+
+    const formattedTotal = ((computedTotal || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 });
     const formattedSavings = savings > 0 ? Math.round(savings / 100) : 0;
 
     const handleGoToCart = (e) => {

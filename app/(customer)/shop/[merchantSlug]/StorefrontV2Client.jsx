@@ -496,13 +496,25 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
     const totalItems = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
     const totalPrice = cart.reduce((acc, item) => {
-        const price = item.retail_price_paise || 0;
-        return acc + (price * (item.quantity || 0));
+        let pricePaise = item.retail_price_paise;
+        if (pricePaise == null || pricePaise === 0) {
+            const rupeePrice = Number(item.sale_price || item.price || item.selling_price || 0);
+            if (rupeePrice > 0) {
+                pricePaise = rupeePrice * 100;
+            } else {
+                pricePaise = item.shopping_products?.platform_price_paise || item.shopping_products?.suggested_retail_price_paise || 0;
+            }
+        }
+        return acc + (Number(pricePaise || 0) * (item.quantity || 0));
     }, 0);
 
     const totalMrp = cart.reduce((acc, item) => {
-        const itemMrp = item.shopping_products?.mrp_paise || item.shopping_products?.suggested_retail_price_paise || item.retail_price_paise || 0;
-        return acc + (itemMrp * (item.quantity || 0));
+        const itemMrp = item.shopping_products?.mrp_paise || 
+            item.shopping_products?.suggested_retail_price_paise || 
+            item.retail_price_paise || 
+            (Number(item.mrp || 0) * 100) || 
+            0;
+        return acc + (Number(itemMrp || 0) * (item.quantity || 0));
     }, 0);
 
     const totalSavings = totalMrp - totalPrice;
