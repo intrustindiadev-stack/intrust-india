@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ChevronLeft, History, TrendingUp, Wallet, Filter, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronLeft, History, TrendingUp, Wallet, Filter, ArrowLeft, ArrowRight, Coins } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 
 const eventTypeLabels = {
     signup: 'Signup Bonus',
@@ -64,147 +65,132 @@ export default function TransactionsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 font-[family-name:var(--font-outfit)] flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                <p className="text-xs font-bold text-on-surface-variant animate-pulse">Loading Activity...</p>
             </div>
         );
     }
 
     return (
-        <div className="w-full pb-24">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="w-full pb-24 overflow-x-hidden">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+                <CustomerBreadcrumbs items={[
+                    { label: 'Rewards & Coins', href: '/rewards' },
+                    { label: 'Transaction History' }
+                ]} />
+
                 {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 bg-gradient-to-br from-violet-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-violet-500/20">
-                            <History size={24} className="text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                                Transaction History
-                            </h1>
-                            <p className="text-slate-500 dark:text-gray-300 text-sm">
-                                All your reward point activities
-                            </p>
-                        </div>
+                <div className="flex items-center justify-between px-1">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight">Reward Activities</h1>
+                        <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">All your reward coin transactions and logs</p>
                     </div>
-                </motion.div>
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 border border-blue-500/20 flex items-center justify-center shadow-xs shrink-0">
+                        <History size={22} />
+                    </div>
+                </div>
 
                 {/* Filter */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="mb-6"
-                >
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        <Filter size={16} className="text-gray-400 flex-shrink-0" />
-                        {['all', 'signup', 'purchase', 'kyc_complete', 'wallet_conversion'].map((type) => (
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    <Filter size={15} className="text-on-surface-variant shrink-0" />
+                    {['all', 'signup', 'purchase', 'kyc_complete', 'wallet_conversion'].map((type) => {
+                        const isSelected = filter === type;
+                        return (
                             <button
                                 key={type}
                                 onClick={() => setFilter(type)}
-                                className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === type
-                                        ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/20'
-                                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                    }`}
+                                className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap uppercase tracking-wider transition-all active:scale-95 ${
+                                    isSelected
+                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                                        : 'bg-surface-container-lowest text-on-surface-variant border border-outline-variant/30 hover:border-blue-500/30'
+                                }`}
                             >
-                                {type === 'all' ? 'All' : eventTypeLabels[type] || type}
+                                {type === 'all' ? 'All Types' : eventTypeLabels[type] || type}
                             </button>
-                        ))}
-                    </div>
-                </motion.div>
+                        );
+                    })}
+                </div>
 
                 {/* Transactions List */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="space-y-3"
-                >
+                <div className="space-y-3">
                     {transactions.length === 0 ? (
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 text-center border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <History size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                            <p className="text-gray-500 dark:text-gray-400 font-medium">No transactions found</p>
-                            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-                                {filter !== 'all' ? 'Try a different filter' : 'Start referring to earn points!'}
+                        <div className="bg-surface-container-lowest rounded-3xl p-10 text-center border border-outline-variant/30 shadow-xs">
+                            <History size={36} className="text-on-surface-variant/40 mx-auto mb-3" />
+                            <p className="text-on-surface font-extrabold text-base">No transactions found</p>
+                            <p className="text-on-surface-variant text-xs mt-1">
+                                {filter !== 'all' ? 'Try selecting a different filter above' : 'Start referring friends and shopping to earn coins!'}
                             </p>
                         </div>
                     ) : (
                         transactions.map((txn, index) => (
                             <motion.div
                                 key={txn.id}
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm"
+                                transition={{ delay: index * 0.03 }}
+                                className="bg-surface-container-lowest rounded-2xl p-4 sm:p-5 border border-outline-variant/30 hover:border-blue-500/30 transition-all shadow-xs flex items-center justify-between gap-4"
                             >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${txn.points > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                                            }`}>
-                                            {txn.points > 0 ? <TrendingUp size={18} /> : <Wallet size={18} />}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-gray-900 dark:text-white text-sm">
-                                                {eventTypeLabels[txn.event_type] || txn.event_type}
-                                            </p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                {txn.description || (txn.level ? `Level ${txn.level} reward` : 'Direct reward')}
-                                            </p>
-                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                                {new Date(txn.created_at).toLocaleString('en-IN', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </p>
-                                        </div>
+                                <div className="flex items-center gap-3.5 min-w-0">
+                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                                        txn.points > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                    }`}>
+                                        {txn.points > 0 ? <TrendingUp size={18} /> : <Wallet size={18} />}
                                     </div>
-                                    <div className="text-right">
-                                        <p className={`text-lg font-black ${txn.points > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                            {txn.points > 0 ? '+' : ''}{txn.points}
+                                    <div className="min-w-0">
+                                        <p className="font-extrabold text-sm text-on-surface truncate">
+                                            {eventTypeLabels[txn.event_type] || txn.event_type}
                                         </p>
-                                        <p className="text-xs text-gray-400 dark:text-gray-500">
-                                            Bal: {txn.points_after}
+                                        <p className="text-xs text-on-surface-variant font-medium truncate mt-0.5">
+                                            {txn.description || (txn.level ? `Level ${txn.level} reward` : 'Direct reward')}
+                                        </p>
+                                        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mt-0.5">
+                                            {new Date(txn.created_at).toLocaleString('en-IN', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
                                         </p>
                                     </div>
+                                </div>
+                                <div className="text-right shrink-0 pl-3">
+                                    <p className={`text-base sm:text-lg font-black tabular-nums ${txn.points > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                        {txn.points > 0 ? '+' : ''}{txn.points}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5">
+                                        Bal: {txn.points_after}
+                                    </p>
                                 </div>
                             </motion.div>
                         ))
                     )}
-                </motion.div>
+                </div>
 
                 {/* Pagination */}
                 {pagination.total_pages > 1 && (
-                    <div className="flex items-center justify-center gap-4 mt-8">
+                    <div className="flex items-center justify-center gap-3 pt-4">
                         <button
                             onClick={() => handlePageChange(pagination.page - 1)}
                             disabled={pagination.page === 1}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-all active:scale-95"
                         >
                             <ArrowLeft size={16} />
                         </button>
-                        <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                        <span className="text-xs text-on-surface-variant font-extrabold uppercase tracking-wider">
                             Page {pagination.page} of {pagination.total_pages}
                         </span>
                         <button
                             onClick={() => handlePageChange(pagination.page + 1)}
                             disabled={pagination.page === pagination.total_pages}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-all active:scale-95"
                         >
                             <ArrowRight size={16} />
                         </button>
                     </div>
                 )}
             </div>
-
-            
         </div>
     );
 }

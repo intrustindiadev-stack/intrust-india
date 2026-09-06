@@ -28,14 +28,18 @@
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(255, 255, 255, 0.3);
 
-  /* Stitch MD3 Tokens (Light) */
+  /* InTrust Royal Blue Primary Tokens */
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+
+  /* Stitch MD3 Tokens (Light) - High Contrast & Clean */
   --surface: #f8fafc;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #f1f5f9;
-  --surface-container: #ecedf7;
-  --surface-container-high: #dbe4f0;
+  --surface-container-low: #f8fafc;
+  --surface-container: #f1f5f9;
+  --surface-container-high: #e2e8f0;
   --surface-container-highest: #cbd5e1;
-  --on-surface: #171a21;
+  --on-surface: #0f172a;
   --on-surface-variant: #475569;
   --outline: #cbd5e1;
   --outline-variant: #e2e8f0;
@@ -54,6 +58,10 @@
   --glass-bg: rgba(15, 20, 25, 0.8);
   --glass-border: rgba(255, 255, 255, 0.1);
 
+  /* InTrust Royal Blue Primary Tokens (Dark) */
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+
   /* Stitch MD3 Tokens (Dark) */
   --surface: #0a0f1e;
   --surface-container-lowest: #0f1419;
@@ -67,10 +75,31 @@
   --outline-variant: #1e293b;
 }
 
-/* Smooth theme transition - Applied selectively to avoid conflicts */
-body,
-.theme-transition {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+/* View Transition Theme Ripple Animation */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+}
+.dark::view-transition-old(root) {
+  z-index: 9999;
+}
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
+/* Fallback theme transition class */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 0.25s ease, color 0.2s ease, border-color 0.25s ease !important;
 }
 
 
@@ -612,4 +641,38 @@ button, a, [role="button"] {
 }
 .animate-scan {
   animation: scan 2s linear infinite;
+}
+
+/* ── Theme Toggle Circular View Transition ── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+.dark::view-transition-old(root) {
+  z-index: 9999;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
+/* Fallback smooth transition when View Transition API is inactive */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.25s ease-out,
+              border-color 0.25s ease-out,
+              color 0.25s ease-out !important;
+  transition-delay: 0s !important;
 }

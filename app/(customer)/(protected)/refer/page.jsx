@@ -19,14 +19,14 @@ import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 const POINTS_PER_RUPEE = 100;
 
 const LEVEL_GRADIENTS = [
-    'from-blue-600 to-blue-400',     // root / You
-    'from-amber-400 to-orange-500',     // L1
-    'from-indigo-400 to-violet-500',    // L2
-    'from-blue-400 to-cyan-500',        // L3
-    'from-sky-400 to-blue-500',         // L4
-    'from-lime-400 to-green-500',       // L5
-    'from-fuchsia-400 to-purple-500',   // L6
-    'from-teal-400 to-cyan-500',        // L7
+    'from-blue-600 to-indigo-600',    // root / You
+    'from-blue-500 to-sky-500',       // L1
+    'from-indigo-500 to-blue-600',    // L2
+    'from-sky-500 to-cyan-600',       // L3
+    'from-blue-600 to-blue-400',      // L4
+    'from-indigo-600 to-sky-500',     // L5
+    'from-blue-500 to-indigo-500',    // L6
+    'from-slate-600 to-slate-500',    // L7
 ];
 
 const gradient = (level) => LEVEL_GRADIENTS[Math.min(level, LEVEL_GRADIENTS.length - 1)];
@@ -40,7 +40,6 @@ function NetworkNode({ node, depth = 0 }) {
     const initial = node.full_name?.charAt(0)?.toUpperCase() || '?';
     const kycVerified = node.kyc_status === 'verified' || node.kyc_status === 'approved';
     const earnedPoints = node.reward_points?.total_earned || 0;
-    const earnedRupees = (earnedPoints / POINTS_PER_RUPEE).toFixed(2);
 
     return (
         <motion.div
@@ -50,27 +49,26 @@ function NetworkNode({ node, depth = 0 }) {
             className="relative"
         >
             {depth > 0 && (
-                <div className="absolute -left-4 top-0 bottom-0 w-[2px] bg-emerald-100 dark:bg-emerald-500/10" />
+                <div className="absolute -left-4 top-0 bottom-0 w-[2px] bg-blue-100 dark:bg-blue-500/20" />
             )}
 
-            <div className={`flex items-center gap-3 p-4 rounded-[2rem] mb-3 border transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer relative overflow-hidden group
-                ${isRoot
-                    ? 'bg-[#020617] border-white/10 shadow-2xl text-white'
-                    : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:shadow-xl backdrop-blur-xl'
+            <div
+                className={`flex items-center gap-3 p-4 rounded-2xl mb-3 border transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer relative overflow-hidden group ${
+                    isRoot
+                        ? 'bg-surface-container-lowest border-blue-500/30 shadow-md text-on-surface'
+                        : 'bg-surface-container-lowest border-outline-variant/30 hover:border-blue-500/30 text-on-surface shadow-xs'
                 }`}
                 onClick={() => setExpanded(e => !e)}
             >
                 {/* Avatar */}
-                <div className={`w-12 h-12 flex-shrink-0 rounded-2xl bg-gradient-to-br ${gradient(depth)} flex items-center justify-center text-white font-black text-lg shadow-lg ring-2 ring-white dark:ring-white/10 relative overflow-hidden`}>
-                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className={`w-11 h-11 flex-shrink-0 rounded-xl bg-gradient-to-br ${gradient(depth)} flex items-center justify-center text-white font-black text-base shadow-sm relative overflow-hidden`}>
                     {node.avatar_url ? (
                         <Image
                             src={node.avatar_url}
                             alt=""
                             fill
-                            sizes="48px"
+                            sizes="44px"
                             className="object-cover"
-                            quality={60}
                         />
                     ) : (
                         initial
@@ -79,40 +77,39 @@ function NetworkNode({ node, depth = 0 }) {
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <p className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                        <p className="font-extrabold text-sm text-on-surface leading-tight truncate">
                             {isRoot ? 'Your Account (Primary)' : node.full_name}
                         </p>
                         {isRoot && (
-                            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
                         )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {!isRoot && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-lg font-black bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-white/5 uppercase tracking-[0.1em]">
+                            <span className="text-[9px] px-2 py-0.5 rounded-md font-black bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase tracking-wider">
                                 L{node.level}
                             </span>
                         )}
-                        <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black border flex items-center gap-1 uppercase tracking-widest
-                            ${kycVerified
-                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20'
-                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20'
-                            }`}
-                        >
+                        <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold border flex items-center gap-1 uppercase tracking-wider ${
+                            kycVerified
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        }`}>
                             {kycVerified ? <ShieldCheck size={10} /> : <Clock size={10} />}
                             {kycVerified ? 'Verified' : 'Pending'}
                         </span>
                     </div>
                 </div>
 
-                <div className={`text-right flex-shrink-0 pl-4 border-l ${isRoot ? 'border-white/10' : 'border-gray-100 dark:border-white/10'}`}>
+                <div className={`text-right flex-shrink-0 pl-3 border-l border-outline-variant/20`}>
                     {isRoot ? (
-                         <ChevronRight size={18} className={`text-white/40 transition-transform duration-500 ${expanded ? 'rotate-90' : ''}`} />
+                        <ChevronRight size={16} className={`text-on-surface-variant/40 transition-transform duration-300 ${expanded ? 'rotate-90' : ''}`} />
                     ) : (
                         <div className="flex flex-col items-end">
-                            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">
+                            <p className="text-sm font-black text-blue-600 dark:text-blue-400 tracking-tight leading-none">
                                 {earnedPoints.toLocaleString()}
                             </p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Pts</p>
+                            <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5">Pts</p>
                         </div>
                     )}
                 </div>
@@ -124,10 +121,10 @@ function NetworkNode({ node, depth = 0 }) {
                         initial={{ height: 0, opacity: 0, x: -10 }}
                         animate={{ height: 'auto', opacity: 1, x: 0 }}
                         exit={{ height: 0, opacity: 0, x: -10 }}
-                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                        className="ml-6 pl-4 border-l-2 border-emerald-500/10 dark:border-emerald-500/20 overflow-hidden"
+                        transition={{ duration: 0.3 }}
+                        className="ml-5 pl-4 border-l-2 border-blue-500/20 overflow-hidden"
                     >
-                        <div className="pt-2">
+                        <div className="pt-1">
                             {node.children.map(child => (
                                 <NetworkNode key={child.user_id} node={child} depth={depth + 1} />
                             ))}
@@ -139,96 +136,68 @@ function NetworkNode({ node, depth = 0 }) {
     );
 }
 
-// ─── Single upline node row ───────────────────────────────────────────────────
+// ─── Upline Node Row ─────────────────────────────────────────────────────────
 function UplineNode({ node }) {
+    if (!node) return null;
     const initial = node.full_name?.charAt(0)?.toUpperCase() || '?';
-    const kycVerified = node.kyc_status === 'verified' || node.kyc_status === 'approved';
-
     return (
-        <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3 p-4 rounded-[1.5rem] sm:rounded-[2rem] bg-white dark:bg-[#020617] border border-gray-100 dark:border-white/10 shadow-sm"
-        >
-            <div className={`w-12 h-12 flex-shrink-0 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-black text-lg shadow-lg relative overflow-hidden`}>
+        <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs mb-6">
+            <div className="w-11 h-11 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center font-black text-base shrink-0">
                 {node.avatar_url ? (
-                    <Image
-                        src={node.avatar_url}
-                        alt=""
-                        fill
-                        sizes="48px"
-                        className="object-cover"
-                        quality={60}
-                    />
+                    <div className="relative w-full h-full rounded-xl overflow-hidden">
+                        <Image src={node.avatar_url} alt="" fill className="object-cover" />
+                    </div>
                 ) : (
                     initial
                 )}
             </div>
-
             <div className="flex-1 min-w-0">
-                <p className="font-black text-sm sm:text-base truncate tracking-tight text-gray-900 dark:text-white">
-                    {node.full_name}
-                </p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="text-[9px] px-2 py-0.5 rounded-lg font-black bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 uppercase tracking-[0.1em]">
-                        REFERRED YOU
-                    </span>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-lg font-black border flex items-center gap-1 uppercase tracking-widest
-                        ${kycVerified
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20'
-                            : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20'
-                        }`}
-                    >
-                        {kycVerified ? <ShieldCheck size={10} /> : <Clock size={10} />}
-                        {kycVerified ? 'Verified' : 'Pending'}
-                    </span>
-                </div>
+                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Invited By</p>
+                <p className="font-extrabold text-sm text-on-surface truncate">{node.full_name}</p>
             </div>
-        </motion.div>
+            <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase tracking-widest">
+                Sponsor
+            </span>
+        </div>
     );
 }
 
-export default function ReferAndEarnPage() {
+export default function ReferPage() {
     const { user } = useAuth();
     const router = useRouter();
-
-    const [referralCode, setReferralCode] = useState(null);
-    const [copied, setCopied] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [networkData, setNetworkData] = useState(null);
-    const [networkError, setNetworkError] = useState(false);
-    const [retryingNetwork, setRetryingNetwork] = useState(false);
+    const [referralCode, setReferralCode] = useState('');
     const [hasReferrer, setHasReferrer] = useState(false);
-    
-    // Modal & Sheet state
-    const [showStats, setShowStats] = useState(false);
-    const [showShareSheet, setShowShareSheet] = useState(false);
-
-    // Referral application state
     const [enterCode, setEnterCode] = useState('');
     const [applyingCode, setApplyingCode] = useState(false);
     const [codeApplied, setCodeApplied] = useState(false);
-
-    useEffect(() => {
-        if (!user && !loading) {
-            router.push('/login');
-        }
-    }, [user, loading, router]);
+    const [networkData, setNetworkData] = useState(null);
+    const [networkError, setNetworkError] = useState(null);
+    const [retryingNetwork, setRetryingNetwork] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [copied, setCopied] = useState(false);
+    const [showShareSheet, setShowShareSheet] = useState(false);
+    const [showStats, setShowStats] = useState(false);
 
     const fetchNetworkData = async (isRetry = false) => {
         if (isRetry) setRetryingNetwork(true);
-        setNetworkError(false);
         try {
-            const res = await fetch('/api/referral/network');
-            if (res.ok) {
-                const data = await res.json();
-                setNetworkData(data);
-            } else {
-                setNetworkError(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/referral/network', {
+                headers: { 'Authorization': `Bearer ${session?.access_token}` }
+            });
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error('Unable to parse network response');
             }
+            if (!res.ok) throw new Error(data?.error || 'Failed to load network tree');
+            setNetworkData(data);
+            setNetworkError(null);
         } catch (err) {
-            console.error('Error fetching referral network data:', err);
-            setNetworkError(true);
+            console.error('Error fetching referral network:', err);
+            setNetworkError(err.message);
         } finally {
             if (isRetry) setRetryingNetwork(false);
         }
@@ -236,7 +205,6 @@ export default function ReferAndEarnPage() {
 
     useEffect(() => {
         if (!user) return;
-
         const fetchData = async () => {
             try {
                 const { data: profile } = await supabase
@@ -259,8 +227,11 @@ export default function ReferAndEarnPage() {
         fetchData();
     }, [user]);
 
-    const shareUrl = `https://intrustindia.com/signup?ref=${referralCode}`;
-    const shareText = `Join InTrust India! Shop smart, save big, and earn direct cashback on top brands. Use my referral code ${referralCode} to claim your welcome bonus.`;
+    const shareUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/signup?ref=${referralCode}`
+        : `https://intrustindia.com/signup?ref=${referralCode}`;
+
+    const shareText = `Join InTrust India! Shop smart, save big, and earn instant cashback on top local stores. Use my referral code ${referralCode} to claim your welcome bonus: ${shareUrl}`;
 
     const handleCopy = () => {
         if (!referralCode) return;
@@ -280,7 +251,6 @@ export default function ReferAndEarnPage() {
                     url: shareUrl,
                 });
             } catch (err) {
-                console.error('Error sharing:', err);
                 setShowShareSheet(true);
             }
         } else {
@@ -292,7 +262,7 @@ export default function ReferAndEarnPage() {
         let url = '';
         switch (channel) {
             case 'WhatsApp':
-                url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+                url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
                 break;
             case 'Telegram':
                 url = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
@@ -303,43 +273,48 @@ export default function ReferAndEarnPage() {
                 url = 'https://instagram.com';
                 break;
             case 'X / Twitter':
-                url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+                url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
                 break;
         }
         if (url) window.open(url, '_blank');
         setShowShareSheet(false);
     };
 
-    const handleShare = async () => {
-        setShowShareSheet(true);
-    };
-
     const handleApplyCode = async () => {
         if (!enterCode.trim()) {
-            toast.error('Enter valid code');
+            toast.error('Please enter a valid invite code');
             return;
         }
 
         setApplyingCode(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch('/api/referral/apply', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ referral_code_entered: enterCode })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    referral_code_entered: enterCode.trim(),
+                    code: enterCode.trim()
+                })
             });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                toast.success('Joined successfully!');
-                setCodeApplied(true);
-                setHasReferrer(true);
-                await fetchNetworkData();
-            } else {
-                toast.error(data.error || 'Failed to join');
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error('Failed to process referral code');
             }
+            if (!res.ok) throw new Error(data?.error || 'Failed to apply referral code');
+
+            toast.success('Referral code linked successfully!');
+            setCodeApplied(true);
+            setHasReferrer(true);
+            await fetchNetworkData();
         } catch (err) {
-            console.error('Error:', err);
+            toast.error(err.message || 'Invalid or expired referral code');
         } finally {
             setApplyingCode(false);
         }
@@ -347,8 +322,9 @@ export default function ReferAndEarnPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#121212] flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+            <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                <p className="text-xs font-bold text-on-surface-variant animate-pulse">Loading Refer &amp; Earn...</p>
             </div>
         );
     }
@@ -359,7 +335,7 @@ export default function ReferAndEarnPage() {
 
     return (
         <div className="w-full pb-24 overflow-x-hidden">
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
                 <CustomerBreadcrumbs items={[{ label: 'Refer & Earn' }]} />
 
                 {/* Cross-navigation to Rewards */}
@@ -367,107 +343,107 @@ export default function ReferAndEarnPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => router.push('/rewards')}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] mb-6 group transition-all hover:border-emerald-500/30 shadow-xs"
+                    className="w-full flex items-center justify-between px-5 py-3.5 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl group transition-all hover:border-blue-500/30 shadow-xs"
                 >
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20 group-hover:scale-110 transition-transform">
-                            <Gift size={16} />
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-500/20 group-hover:scale-105 transition-transform">
+                            <Gift size={18} />
                         </div>
                         <div className="text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37]/60">Portfolio</p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">My Rewards</p>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">Portfolio</p>
+                            <p className="text-sm font-extrabold text-on-surface">View My Rewards</p>
                         </div>
                     </div>
-                    <ChevronRight size={16} className="text-slate-400 dark:text-white/40 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight size={16} className="text-on-surface-variant/40 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-transform" />
                 </motion.button>
 
-                {/* Hero / Referral Section */}
+                {/* Hero / Referral Section Banner */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative bg-gradient-to-br from-[#1A1208] to-[#0A0906] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-white shadow-2xl mb-10 overflow-hidden group border border-amber-900/30"
+                    className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-500/20 overflow-hidden"
                 >
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-[#D4AF37]/10 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] rounded-full pointer-events-none" />
                     
-                    <div className="relative z-10 text-center sm:text-left flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                        <motion.div
-                            whileHover={{ rotate: 12, scale: 1.1 }}
-                            className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#D4AF37] to-amber-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-amber-500/20 border border-white/20 shrink-0"
-                        >
-                            <Network className="w-10 h-10 sm:w-11 sm:h-11 text-white" />
-                        </motion.div>
+                    <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 sm:gap-6 text-center sm:text-left">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg border border-white/30 shrink-0">
+                            <Network className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                        </div>
                         
                         <div>
-                            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tighter leading-none">Referral <span className="text-[#D4AF37]">Program</span></h1>
-                            <p className="text-slate-400 text-xs sm:text-base font-medium max-w-sm">Invite friends to InTrust, grow your network up to 7 levels, and earn real cash rewards on every purchase.</p>
+                            <h1 className="text-2xl sm:text-4xl font-black mb-1.5 tracking-tight leading-none text-white">
+                                Refer &amp; Earn Program
+                            </h1>
+                            <p className="text-blue-100 text-xs sm:text-sm font-medium max-w-sm">
+                                Invite friends to InTrust, grow your network up to 7 tiers, and earn cashback on every transaction.
+                            </p>
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Tactical Stats Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-10">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
                     <button 
                         onClick={() => setShowStats(true)}
-                        className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-6 text-left hover:shadow-xl transition-all group relative overflow-hidden"
+                        className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 sm:p-5 text-left hover:border-blue-500/30 transition-all group relative overflow-hidden shadow-xs hover:shadow-sm"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-3 sm:mb-4">
-                            <PieChart size={20} className="sm:w-6 sm:h-6" />
+                        <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center mb-3">
+                            <PieChart size={18} />
                         </div>
-                        <h4 className="font-black text-xs sm:text-base text-slate-900 dark:text-white mb-1">Network Stats</h4>
-                        <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">{networkData?.total_network_size || 0} Members</p>
+                        <h4 className="font-extrabold text-xs sm:text-sm text-on-surface mb-0.5">Network Stats</h4>
+                        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{networkData?.total_network_size || 0} Members</p>
                     </button>
 
-                    <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-6 text-left relative overflow-hidden">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3 sm:mb-4">
-                            <TrendingUp size={20} className="sm:w-6 sm:h-6" />
+                    <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 sm:p-5 text-left relative overflow-hidden shadow-xs">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                            <TrendingUp size={18} />
                         </div>
-                        <h4 className="font-black text-xs sm:text-base text-slate-900 dark:text-white mb-1">Cash Value</h4>
-                        <p className="text-lg sm:text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tighter leading-none">₹{totalRupees}</p>
+                        <h4 className="font-extrabold text-xs sm:text-sm text-on-surface mb-0.5">Total Earnings</h4>
+                        <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">₹{totalRupees}</p>
                     </div>
                 </div>
 
-                {/* Premium Invitation Passport */}
+                {/* Invitation Passport Card */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-[#D4AF37] to-amber-600 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-slate-900 shadow-2xl shadow-amber-500/20 mb-10 relative overflow-hidden group"
+                    className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant/30 shadow-sm relative overflow-hidden text-center space-y-5"
                 >
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-                    <div className="absolute -top-32 -right-32 w-80 h-80 bg-white/10 blur-[100px] rounded-full group-hover:bg-white/20 transition-all duration-700" />
-                    
-                    <div className="relative z-10 flex flex-col items-center">
-                        <div className="flex items-center gap-3 mb-6 sm:mb-8">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                <Target size={22} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Invitation Code</span>
-                        </div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <Target size={13} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Your Exclusive Referral Code</span>
+                    </div>
 
-                        <div className="text-3xl sm:text-5xl lg:text-6xl font-mono font-black tracking-[0.25em] sm:tracking-[0.3em] mb-8 sm:mb-10 drop-shadow-2xl select-all">
-                            {referralCode || '------'}
-                        </div>
+                    <div className="text-3xl sm:text-5xl font-mono font-black tracking-[0.25em] text-on-surface select-all py-1">
+                        {referralCode || '------'}
+                    </div>
 
-                        <div className="flex gap-2 sm:gap-3 w-full">
-                            <button
-                                onClick={handleCopy}
-                                className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-950 text-white py-3.5 sm:py-4 rounded-[1.5rem] sm:rounded-[2rem] font-black text-xs sm:text-sm shadow-xl hover:bg-slate-900 active:scale-95 transition-all"
-                            >
-                                {copied ? <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Copy size={16} className="sm:w-[18px] sm:h-[18px]" />}
-                                {copied ? 'Copied' : 'Copy Code'}
-                            </button>
+                    <div className="flex flex-col sm:flex-row gap-2.5 w-full pt-1">
+                        <button
+                            onClick={handleCopy}
+                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white py-3.5 px-5 rounded-2xl font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all"
+                        >
+                            {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                            <span>{copied ? 'Code Copied!' : 'Copy Invite Code'}</span>
+                        </button>
+
+                        <div className="flex gap-2">
                             <button
                                 onClick={() => handleChannelShare('WhatsApp')}
-                                className="px-4 sm:px-6 rounded-[1.5rem] sm:rounded-[2rem] bg-[#25D366] text-white hover:bg-[#20bd5a] shadow-xl transition-all active:scale-95 flex items-center gap-2 justify-center font-bold text-xs sm:text-sm"
+                                className="flex-1 sm:flex-none px-5 py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center gap-2 justify-center font-bold text-xs sm:text-sm"
                             >
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                                <span className="hidden sm:inline">WhatsApp</span>
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+                                </svg>
+                                <span>WhatsApp</span>
                             </button>
+
                             <button
-                                onClick={handleShare}
-                                className="p-3.5 sm:p-4 rounded-[1.5rem] sm:rounded-2xl bg-white/20 border border-white/30 text-slate-950 hover:bg-white/30 transition-all active:scale-95 flex items-center justify-center"
+                                onClick={handleMainShare}
+                                className="p-3.5 rounded-2xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/30 active:scale-[0.98] transition-all flex items-center justify-center"
+                                title="Share"
                             >
-                                <Share2 size={20} className="sm:w-6 sm:h-6" />
+                                <Share2 size={18} />
                             </button>
                         </div>
                     </div>
@@ -476,96 +452,95 @@ export default function ReferAndEarnPage() {
                 {/* Enter Referral Code Section */}
                 {!hasReferrer && !codeApplied && (
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-[#020617] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 border border-slate-200 dark:border-white/10 shadow-xs mb-10"
+                        className="bg-surface-container-lowest rounded-3xl p-6 sm:p-7 border border-outline-variant/30 shadow-sm space-y-3"
                     >
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Enter Invite Code</h3>
-                        <p className="text-xs text-slate-500 mb-6">Have an invite code from a friend? Enter it here to link your account and earn bonus points.</p>
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <h3 className="text-base font-extrabold text-on-surface">Enter Sponsor / Friend Code</h3>
+                        <p className="text-xs text-on-surface-variant font-medium">Have an invitation code from a friend? Enter it here to claim your sign-up bonus coins.</p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
                             <input
                                 type="text"
                                 value={enterCode}
                                 onChange={(e) => setEnterCode(e.target.value.toUpperCase())}
                                 placeholder="ENTER CODE"
-                                className="w-full sm:flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 font-mono font-bold text-lg focus:border-emerald-500 outline-none transition-all uppercase text-slate-900 dark:text-white"
+                                className="w-full sm:flex-1 bg-surface-container-low border border-outline-variant/30 rounded-2xl px-4 py-3.5 font-mono font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all uppercase text-on-surface placeholder:text-on-surface-variant/40"
                             />
                             <button
                                 onClick={handleApplyCode}
                                 disabled={applyingCode}
-                                className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center active:scale-95"
+                                className="w-full sm:w-auto px-6 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md shadow-blue-500/25 transition-all disabled:opacity-40 flex items-center justify-center active:scale-[0.98]"
                             >
-                                {applyingCode ? <RefreshCw className="animate-spin" size={18} /> : 'Connect'}
+                                {applyingCode ? <RefreshCw className="animate-spin" size={16} /> : 'Connect'}
                             </button>
                         </div>
                     </motion.div>
                 )}
 
-
                 {/* Upline Section */}
                 {networkData?.upline?.length > 0 && (
-                    <section className="mb-8">
-                        <div className="flex items-center justify-between mb-4 px-1">
-                            <h3 className="font-black text-xl text-slate-900 dark:text-white tracking-tight leading-none">Your Sponsor</h3>
-                        </div>
+                    <section className="space-y-2">
+                        <h3 className="font-extrabold text-sm text-on-surface-variant uppercase tracking-wider px-1">Your Sponsor</h3>
                         <UplineNode node={networkData.upline[0]} />
                     </section>
                 )}
 
                 {/* Network Chain Tree */}
-                <section className="mb-14">
-                    <div className="flex items-center justify-between mb-8 px-1">
-                        <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
-                            <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight leading-none">Referral Network</h3>
+                <section className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+                            <h3 className="font-black text-lg text-on-surface tracking-tight">Referral Network Hierarchy</h3>
                         </div>
-                        <div className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest border border-white/10">7 Levels Deep</div>
+                        <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-500/20">
+                            7 Tiers Active
+                        </span>
                     </div>
 
-                    <div className="bg-white dark:bg-[#020617] rounded-[3rem] p-6 sm:p-10 border border-gray-100 dark:border-white/5 shadow-sm min-h-[400px] relative overflow-hidden">
-                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-                        
-                        <div className="relative z-10">
-                            {networkError ? (
-                                <div className="text-center py-24">
-                                    <div className="w-24 h-24 mx-auto bg-red-50 dark:bg-red-500/10 rounded-[2.5rem] flex items-center justify-center mb-8 border border-red-100 dark:border-red-500/20 shadow-inner">
-                                        <X size={40} className="text-red-500" />
-                                    </div>
-                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">Network Unavailable</h4>
-                                    <p className="text-sm font-medium text-slate-400 max-w-[250px] mx-auto leading-relaxed">We encountered an issue loading your referral tree. Please retry.</p>
-                                    <button
-                                        onClick={() => fetchNetworkData(true)}
-                                        disabled={retryingNetwork}
-                                        className="mt-10 px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-[2rem] shadow-xl hover:bg-slate-800 dark:hover:bg-gray-100 transition-all active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2 mx-auto disabled:opacity-50"
-                                    >
-                                        <RefreshCw size={16} className={retryingNetwork ? "animate-spin" : ""} />
-                                        {retryingNetwork ? 'Retrying...' : 'Retry Connection'}
-                                    </button>
+                    <div className="bg-surface-container-lowest rounded-3xl p-5 sm:p-7 border border-outline-variant/30 shadow-xs min-h-[300px] relative overflow-hidden">
+                        {networkError ? (
+                            <div className="text-center py-16 space-y-3">
+                                <div className="w-14 h-14 mx-auto bg-red-100 dark:bg-red-950/40 rounded-2xl flex items-center justify-center text-red-500">
+                                    <X size={26} />
                                 </div>
-                            ) : hasNetwork ? (
-                                <NetworkNode node={networkData.tree} depth={0} />
-                            ) : networkData?.upline?.length > 0 ? (
-                                <div className="text-center py-10 px-4">
-                                    <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">
-                                        No referrals yet — share your code to grow your network.
-                                    </p>
+                                <h4 className="font-black text-on-surface text-base">Network Unavailable</h4>
+                                <p className="text-xs text-on-surface-variant max-w-xs mx-auto">We encountered an issue loading your referral tree. Please retry.</p>
+                                <button
+                                    onClick={() => fetchNetworkData(true)}
+                                    disabled={retryingNetwork}
+                                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-md shadow-blue-500/25 transition-all active:scale-[0.98] inline-flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <RefreshCw size={14} className={retryingNetwork ? "animate-spin" : ""} />
+                                    <span>{retryingNetwork ? 'Retrying...' : 'Retry Connection'}</span>
+                                </button>
+                            </div>
+                        ) : hasNetwork ? (
+                            <NetworkNode node={networkData.tree} depth={0} />
+                        ) : networkData?.upline?.length > 0 ? (
+                            <div className="text-center py-10 px-4">
+                                <p className="text-xs font-medium text-on-surface-variant max-w-xs mx-auto">
+                                    No referrals yet — share your link with friends to start earning passive commissions.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 space-y-4">
+                                <div className="w-16 h-16 mx-auto bg-blue-600/10 text-blue-600 rounded-3xl flex items-center justify-center">
+                                    <Users size={30} />
                                 </div>
-                            ) : (
-                                <div className="text-center py-24">
-                                    <div className="w-24 h-24 mx-auto bg-gray-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-8 border border-gray-100 dark:border-white/10 shadow-inner">
-                                        <Users size={40} className="text-gray-300 dark:text-gray-700" />
-                                    </div>
-                                    <h4 className="font-black text-slate-900 dark:text-white text-xl mb-3 tracking-tight">No Referrals Yet</h4>
-                                    <p className="text-sm font-medium text-slate-400 max-w-[200px] mx-auto leading-relaxed">Your referral earnings begin when you share your link with friends.</p>
-                                    <button
-                                        onClick={handleShare}
-                                        className="mt-10 px-10 py-4 bg-blue-600 text-white font-black rounded-[2rem] shadow-2xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95 uppercase tracking-widest text-xs"
-                                    >
-                                        Share Invite Link
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                <h4 className="font-black text-on-surface text-lg">No Referrals Yet</h4>
+                                <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
+                                    Your referral earnings will grow automatically as soon as your invited friends place their first orders.
+                                </p>
+                                <button
+                                    onClick={handleMainShare}
+                                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black rounded-2xl text-xs uppercase tracking-wider shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all inline-flex items-center gap-2"
+                                >
+                                    <Share2 size={14} />
+                                    <span>Share Invite Link</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </section>
             </div>
@@ -573,65 +548,58 @@ export default function ReferAndEarnPage() {
             {/* Stats Analysis Modal */}
             <AnimatePresence>
                 {showStats && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl"
-                    >
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-md bg-white dark:bg-[#020617] rounded-[3rem] p-8 shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden"
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="relative w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 sm:p-7 shadow-2xl border border-outline-variant/30 overflow-hidden space-y-5"
                         >
-                            <button 
-                                onClick={() => setShowStats(false)}
-                                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
-                            >
-                                <X size={20} />
-                            </button>
-
-                            <div className="mb-10">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Referral Analytics</h3>
-                                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-2">Network breakdown</p>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-lg font-black text-on-surface">Referral Analytics</h3>
+                                    <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mt-0.5">Network breakdown</p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowStats(false)}
+                                    className="w-8 h-8 rounded-full bg-surface-container-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="space-y-3">
                                 {[
-                                    { label: 'Direct Referrals', value: networkData?.direct_referrals || 0, icon: <Users size={18} />, color: 'blue' },
-                                    { label: 'Secondary Referrals', value: (networkData?.total_network_size || 0) - (networkData?.direct_referrals || 0), icon: <Network size={18} />, color: 'purple' },
-                                    { label: 'Lifetime Earnings', value: totalPoints, icon: <Coins size={18} />, color: 'amber' },
+                                    { label: 'Direct Referrals', value: networkData?.direct_referrals || 0, icon: <Users size={16} />, color: 'text-blue-600 bg-blue-500/10' },
+                                    { label: 'Secondary Referrals', value: (networkData?.total_network_size || 0) - (networkData?.direct_referrals || 0), icon: <Network size={16} />, color: 'text-indigo-600 bg-indigo-500/10' },
+                                    { label: 'Lifetime Earnings', value: totalPoints, icon: <Coins size={16} />, color: 'text-amber-600 bg-amber-500/10' },
                                 ].map((stat) => (
-                                    <div key={stat.label} className="flex items-center justify-between p-5 rounded-[2rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-2xl bg-${stat.color}-500/10 text-${stat.color}-500 flex items-center justify-center`}>
+                                    <div key={stat.label} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low/70 border border-outline-variant/20">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-9 h-9 rounded-xl ${stat.color} flex items-center justify-center shrink-0`}>
                                                 {stat.icon}
                                             </div>
-                                            <span className="font-bold text-slate-600 dark:text-slate-400 text-sm">{stat.label}</span>
+                                            <span className="font-bold text-on-surface text-xs">{stat.label}</span>
                                         </div>
-                                        <span className="font-black text-xl text-slate-900 dark:text-white">{stat.value.toLocaleString()}</span>
+                                        <span className="font-black text-base text-on-surface tabular-nums">{stat.value.toLocaleString()}</span>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="mt-10 p-6 bg-[#020617] rounded-[2rem] text-center border border-white/5">
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-2">Earning Potential</p>
-                                <p className="text-2xl font-black text-white italic">7 Levels Active</p>
+                            <div className="p-4 bg-surface-container-low rounded-2xl text-center border border-outline-variant/20">
+                                <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Network Status</p>
+                                <p className="text-base font-black text-blue-600 dark:text-blue-400">7 Active Earning Tiers</p>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 
-            {/* Premium Share Sheet (Bottom Sheet) */}
+            {/* Share Bottom Sheet */}
             <AnimatePresence>
                 {showShareSheet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[150] flex items-end justify-center p-0 bg-slate-950/40 backdrop-blur-sm"
+                    <div 
+                        className="fixed inset-0 z-[150] flex items-end justify-center p-0 bg-slate-950/60 backdrop-blur-sm"
                         onClick={() => setShowShareSheet(false)}
                     >
                         <motion.div
@@ -639,45 +607,45 @@ export default function ReferAndEarnPage() {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             onClick={(e) => e.stopPropagation()}
-                            className="relative w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-t-[3rem] p-10 shadow-2xl border-t border-gray-100 dark:border-white/10"
+                            className="relative w-full max-w-lg bg-surface-container-lowest rounded-t-3xl p-6 sm:p-8 shadow-2xl border-t border-outline-variant/30 space-y-6"
                         >
-                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mx-auto mb-8" />
+                            <div className="w-12 h-1 bg-surface-container-high rounded-full mx-auto" />
                             
-                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-2 italic">Share Referral Link</h3>
-                            <p className="text-sm font-medium text-slate-500 dark:text-gray-400 mb-10">Choose how you want to invite your friends</p>
+                            <div className="text-center">
+                                <h3 className="text-xl font-black text-on-surface tracking-tight">Share Referral Link</h3>
+                                <p className="text-xs text-on-surface-variant font-medium mt-1">Choose your preferred channel to invite friends</p>
+                            </div>
 
-                            <div className="grid grid-cols-2 gap-4 mb-10">
+                            <div className="grid grid-cols-2 gap-3">
                                 {[
-                                    { label: 'WhatsApp', icon: <Share2 size={24} />, color: 'emerald' },
-                                    { label: 'Telegram', icon: <Zap size={24} />, color: 'blue' },
-                                    { label: 'Instagram', icon: <Target size={24} />, color: 'pink' },
-                                    { label: 'X / Twitter', icon: <Network size={24} />, color: 'slate' },
+                                    { label: 'WhatsApp', icon: <Share2 size={20} />, color: 'bg-emerald-500/10 text-emerald-600' },
+                                    { label: 'Telegram', icon: <Zap size={20} />, color: 'bg-sky-500/10 text-sky-600' },
+                                    { label: 'Instagram', icon: <Target size={20} />, color: 'bg-pink-500/10 text-pink-600' },
+                                    { label: 'X / Twitter', icon: <Network size={20} />, color: 'bg-slate-500/10 text-slate-700 dark:text-slate-200' },
                                 ].map((channel) => (
                                     <button
                                         key={channel.label}
                                         onClick={() => handleChannelShare(channel.label)}
-                                        className="flex flex-col items-center gap-3 p-6 rounded-[2.5rem] bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95"
+                                        className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/25 transition-all active:scale-95"
                                     >
-                                        <div className={`w-14 h-14 rounded-full bg-${channel.color}-500/10 text-${channel.color}-500 flex items-center justify-center shadow-inner`}>
+                                        <div className={`w-11 h-11 rounded-full ${channel.color} flex items-center justify-center`}>
                                             {channel.icon}
                                         </div>
-                                        <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">{channel.label}</span>
+                                        <span className="text-xs font-extrabold text-on-surface">{channel.label}</span>
                                     </button>
                                 ))}
                             </div>
 
                             <button 
                                 onClick={handleCopy}
-                                className="w-full py-5 bg-blue-600 text-white font-black rounded-[2rem] shadow-2xl shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-[0.2em] text-xs"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black rounded-2xl shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all text-xs uppercase tracking-wider"
                             >
-                                Copy Private Link
+                                Copy Referral Link
                             </button>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
-
-            
         </div>
     );
 }

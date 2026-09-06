@@ -1,13 +1,64 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, Coins, Plus, History, Eye, EyeOff, ShieldCheck, ArrowUpRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
+function AnimatedCounter({ targetValue, isVisible, duration = 650 }) {
+    const [displayVal, setDisplayVal] = useState(0);
+
+    useEffect(() => {
+        if (!isVisible) {
+            setDisplayVal(0);
+            return;
+        }
+
+        let startTime = null;
+        let animationFrameId;
+        const startVal = 0;
+        const endVal = Number(targetValue) || 0;
+
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // Ease-out cubic: 1 - (1 - t)^3
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            const current = startVal + (endVal - startVal) * easeProgress;
+            setDisplayVal(current);
+
+            if (progress < 1) {
+                animationFrameId = requestAnimationFrame(step);
+            } else {
+                setDisplayVal(endVal);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(step);
+        return () => {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        };
+    }, [isVisible, targetValue, duration]);
+
+    if (!isVisible) {
+        return <span className="tracking-widest select-none text-on-surface/40">••••••</span>;
+    }
+
+    return (
+        <span className="tabular-nums">
+            ₹{displayVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+    );
+}
+
 export default function FintechWalletCard({ userData }) {
     const { walletBalance = 0, rewardPoints = 0, totalSavings = 0 } = userData || {};
-    const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+    // Hidden by default when page opens as requested
+    const [isBalanceVisible, setIsBalanceVisible] = useState(false);
+
+    const toggleBalance = () => {
+        setIsBalanceVisible((prev) => !prev);
+    };
 
     return (
         <motion.div
@@ -22,8 +73,8 @@ export default function FintechWalletCard({ userData }) {
             <div className="relative z-10">
                 {/* Header row inside digital wallet */}
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-primary flex items-center justify-center font-bold">
                             <Wallet size={20} />
                         </div>
                         <div>
@@ -37,24 +88,42 @@ export default function FintechWalletCard({ userData }) {
 
                     <button
                         type="button"
-                        onClick={() => setIsBalanceVisible(!isBalanceVisible)}
-                        className="w-8 h-8 rounded-full bg-surface-container-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors"
-                        title={isBalanceVisible ? 'Hide Balance' : 'Show Balance'}
+                        onClick={toggleBalance}
+                        aria-label={isBalanceVisible ? 'Hide Balance' : 'Reveal Balance'}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-all text-xs font-semibold cursor-pointer active:scale-95"
+                        title={isBalanceVisible ? 'Hide Balance' : 'Reveal Balance'}
                     >
-                        {isBalanceVisible ? <Eye size={15} /> : <EyeOff size={15} />}
+                        {isBalanceVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                        <span className="text-[11px] hidden sm:inline">{isBalanceVisible ? 'Hide' : 'Reveal'}</span>
                     </button>
                 </div>
 
-                {/* Main Digital Balance Display */}
+                {/* Main Digital Balance Display with interactive click-to-reveal */}
                 <div className="my-3">
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                        Available Balance
-                    </span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <h2 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tight tabular-nums">
-                            {isBalanceVisible
-                                ? `₹${Number(walletBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                : '••••••'}
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                            Available Balance
+                        </span>
+                        {!isBalanceVisible && (
+                            <button
+                                type="button"
+                                onClick={toggleBalance}
+                                className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1"
+                            >
+                                Tap to reveal
+                            </button>
+                        )}
+                    </div>
+                    <div
+                        onClick={toggleBalance}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBalance(); } }}
+                        title={isBalanceVisible ? 'Click to hide balance' : 'Click to reveal balance'}
+                        className="inline-flex items-baseline gap-2 mt-1 cursor-pointer group select-none"
+                    >
+                        <h2 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tight">
+                            <AnimatedCounter targetValue={walletBalance} isVisible={isBalanceVisible} />
                         </h2>
                     </div>
                 </div>

@@ -377,27 +377,27 @@ function SignupPageInner() {
     // ─── Shared UI helpers ───────────────────────────────────────────────────────
     // ─── Shared UI helpers ───────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
-            <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[var(--border-color)] p-8">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#06080e] p-4">
+            <div className="w-full max-w-md bg-white dark:bg-[#0c0e16] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/10 p-6 sm:p-8 backdrop-blur-xl">
 
                 {/* ── EMAIL FORM (New Default Sign Up Screen) ── */}
                 {step === 'email-form' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
-                        <h1 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Create an account</h1>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">Please enter your details to create an account.</p>
+                        <h1 className="text-2xl font-black text-slate-900 dark:text-white text-center mt-2">Create an account</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1 mb-6">Please enter your details to create an account.</p>
 
                         {/* ── CALLBACK / SIGN UP REQUIRED NOTE ── */}
                         {postLoginRedirect && (
-                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
-                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
-                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                            <div className="mb-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600" />
+                                <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <span>Account Required to Continue</span>
                                 </div>
-                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                                     {postLoginRedirect.includes('/career')
                                         ? "Please sign up to submit your career application and track your progress."
                                         : "Please create an account to proceed to your requested destination."}
@@ -405,64 +405,64 @@ function SignupPageInner() {
                             </div>
                         )}
 
-                        <form onSubmit={handleEmailSignup} className="space-y-5">
+                        <form onSubmit={handleEmailSignup} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Full Name</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="Enter your full name"
-                                    className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                    className="w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Email</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
                                 <input
                                     type="email"
                                     value={emailAddress}
                                     onChange={(e) => setEmailAddress(e.target.value)}
-                                    placeholder="Enter your Email"
-                                    className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                    placeholder="name@example.com"
+                                    className="w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Mobile Number</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Mobile Number</label>
                                 <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-3 border-r border-[var(--border-color)]">
-                                        <span className="text-sm font-semibold text-[var(--text-secondary)]">+91</span>
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-white/10">
+                                        <span className="text-sm font-bold text-slate-500">+91</span>
                                     </div>
                                     <input
                                         type="tel"
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                                         placeholder="00000 00000"
-                                        className="w-full pl-20 pr-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] text-lg tracking-widest placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                        className="w-full pl-20 pr-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white text-base tracking-wider placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                                         required pattern="[0-9]{10}" maxLength={10}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Password</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
                                 <div className="relative">
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Min. 8 characters"
-                                        className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all pr-12"
+                                        className="w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-12 text-sm font-medium"
                                         required
                                         minLength={8}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
@@ -470,20 +470,20 @@ function SignupPageInner() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Confirm Password</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Confirm Password</label>
                                 <div className="relative">
                                     <input
                                         type={showConfirm ? 'text' : 'password'}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="Re-enter your password"
-                                        className="w-full px-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all pr-12"
+                                        className="w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-12 text-sm font-medium"
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirm(!showConfirm)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
                                     >
                                         {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
@@ -493,23 +493,23 @@ function SignupPageInner() {
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim() || !emailAddress || phone.length !== 10 || !password || !confirmPassword}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl transition-all flex justify-center"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex justify-center text-sm"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Create Account'}
                             </button>
                         </form>
 
                         <div className="flex items-center gap-3 my-4">
-                            <div className="flex-1 h-px bg-[var(--border-color)]"></div>
-                            <span className="text-xs text-[var(--text-secondary)]">OR</span>
-                            <div className="flex-1 h-px bg-[var(--border-color)]"></div>
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-white/10"></div>
+                            <span className="text-xs font-bold text-slate-400">OR</span>
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-white/10"></div>
                         </div>
 
                         <div className="space-y-3">
                             <button
                                 onClick={handleGoogleSignIn}
                                 disabled={googleLoading}
-                                className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all disabled:opacity-50"
+                                className="w-full py-3.5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-center gap-3 text-slate-700 dark:text-white font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-all disabled:opacity-50 text-sm"
                             >
                                 {googleLoading ? (
                                     <Loader2 className="animate-spin" size={20} />
@@ -528,15 +528,15 @@ function SignupPageInner() {
 
                             <button
                                 onClick={() => { setStep('details'); }}
-                                className="w-full py-3.5 border border-[var(--border-color)] rounded-xl flex items-center justify-center gap-3 text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-all"
+                                className="w-full py-3.5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-center gap-3 text-slate-700 dark:text-white font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-sm"
                             >
-                                <Phone size={18} className="text-[#92BCEA]" />
+                                <Phone size={18} className="text-blue-600 dark:text-blue-400" />
                                 Continue with Mobile Number
                             </button>
                         </div>
 
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-6">
-                            Already have an account? <Link href={postLoginRedirect ? `/login?callbackUrl=${encodeURIComponent(postLoginRedirect)}` : "/login"} className="text-[#92BCEA] font-semibold hover:underline">Sign in</Link>
+                        <p className="text-sm text-slate-500 text-center mt-6">
+                            Already have an account? <Link href={postLoginRedirect ? `/login?callbackUrl=${encodeURIComponent(postLoginRedirect)}` : "/login"} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Sign in</Link>
                         </p>
                     </div>
                 )}
@@ -574,9 +574,9 @@ function SignupPageInner() {
                             <button
                                 type="submit"
                                 disabled={!name.trim()}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex justify-center items-center gap-2 transition-all disabled:opacity-50"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] flex justify-center items-center gap-2 transition-all disabled:opacity-50 text-sm"
                             >
-                                Next <ArrowRight size={18} />
+                                Next <ArrowRight size={16} />
                             </button>
                         </form>
                     </div>
@@ -585,28 +585,28 @@ function SignupPageInner() {
                 {/* ── PHONE ── */}
                 {step === 'phone' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
                         <div className="flex items-center gap-3 mb-6 relative">
-                            <button onClick={() => { setStep('details'); }} className="absolute -left-2 top-0 bottom-0 text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors p-2">
+                            <button onClick={() => { setStep('details'); }} className="absolute -left-2 top-0 bottom-0 text-slate-400 hover:text-blue-600 transition-colors p-2">
                                 <ArrowRight size={20} className="rotate-180" />
                             </button>
-                            <h2 className="text-2xl font-bold text-[var(--text-primary)] w-full text-center">Verify Phone</h2>
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-white w-full text-center">Verify Phone</h2>
                         </div>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-6">
-                            Welcome, <span className="font-bold text-[var(--text-primary)]">{name.split(' ')[0]}</span>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1 mb-6">
+                            Welcome, <span className="font-semibold text-slate-900 dark:text-white">{name.split(' ')[0]}</span>
                         </p>
 
                         {/* ── CALLBACK / SIGN UP REQUIRED NOTE ── */}
                         {postLoginRedirect && (
-                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/25 dark:border-indigo-400/30 text-center relative overflow-hidden shadow-sm animate-fadeIn">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
-                                <div className="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400 font-extrabold text-sm mb-1">
-                                    <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                            <div className="mb-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/25 text-center relative overflow-hidden shadow-sm animate-fadeIn">
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600" />
+                                <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-extrabold text-sm mb-1">
+                                    <ShieldCheck size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <span>Account Required to Continue</span>
                                 </div>
-                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                                     {postLoginRedirect.includes('/career')
                                         ? "Please sign up to submit your career application and track your progress."
                                         : "Please create an account to proceed to your requested destination."}
@@ -616,17 +616,17 @@ function SignupPageInner() {
 
                         <form onSubmit={(e) => handleSendOTP(e, 'sms')} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1.5">Mobile Number</label>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Mobile Number</label>
                                 <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-3 border-r border-[var(--border-color)]">
-                                        <span className="text-sm font-semibold text-[var(--text-secondary)]">+91</span>
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-white/10">
+                                        <span className="text-sm font-bold text-slate-500">+91</span>
                                     </div>
                                     <input
                                         type="tel"
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                                         placeholder="00000 00000"
-                                        className="w-full pl-20 pr-4 py-3 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] text-[var(--text-primary)] text-lg tracking-widest placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[#92BCEA]/30 focus:border-[#92BCEA] transition-all"
+                                        className="w-full pl-20 pr-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white text-base tracking-wider placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                                         required pattern="[0-9]{10}" maxLength={10} autoFocus
                                     />
                                 </div>
@@ -636,16 +636,16 @@ function SignupPageInner() {
                                 <button
                                     type="submit"
                                     disabled={loading || whatsappLoading || phone.length !== 10}
-                                    className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2 transition-all disabled:opacity-50 text-sm"
                                 >
-                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Send code via SMS <ArrowRight size={18} /></>}
+                                    {loading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <>Send code via SMS <ArrowRight size={16} /></>}
                                 </button>
 
                                 <button
                                     type="button"
                                     onClick={(e) => handleSendOTP(e, 'whatsapp')}
                                     disabled={loading || whatsappLoading || phone.length !== 10}
-                                    className="w-full py-3.5 border border-[#25D366]/30 rounded-xl flex items-center justify-center gap-2 text-[#25D366] font-medium hover:bg-[#25D366]/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3.5 border border-[#25D366]/40 rounded-xl flex items-center justify-center gap-2 text-[#25D366] font-bold hover:bg-[#25D366]/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                 >
                                     {whatsappLoading ? <><Loader2 className="animate-spin" size={20} /> Sending...</> : <><MessageCircle size={18} /> Get code on WhatsApp</>}
                                 </button>
@@ -657,18 +657,18 @@ function SignupPageInner() {
                 {/* ── OTP ── */}
                 {step === 'otp' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
-                        <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Secure Code</h2>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-1">
-                            Enter 6-digit code sent to <br /><span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white text-center mt-2">Secure Code</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1 mb-1">
+                            Enter 6-digit code sent to <br /><span className="font-semibold text-slate-900 dark:text-white">+91 {phone}</span>
                         </p>
                         {/* Channel badge */}
                         <p className="text-xs text-center mb-6">
                             {otpChannel === 'whatsapp'
                                 ? <span className="inline-flex items-center gap-1 text-[#25D366] font-medium"><MessageCircle size={13} /> via WhatsApp</span>
-                                : <span className="inline-flex items-center gap-1 text-[var(--text-secondary)] font-medium"><Phone size={13} /> via SMS</span>
+                                : <span className="inline-flex items-center gap-1 text-slate-500 font-medium"><Phone size={13} /> via SMS</span>
                             }
                         </p>
 
@@ -683,14 +683,14 @@ function SignupPageInner() {
                             <button
                                 type="submit"
                                 disabled={loading || otp.replace(/\s+/g, '').length !== 6}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center transition-all disabled:opacity-50 text-sm"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Finalize Signup'}
                             </button>
 
                             <div className="flex flex-col gap-3 text-center">
                                 {/* Same-channel resend */}
-                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
+                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }} disabled={loading || !canResend} className="text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors disabled:opacity-50">
                                     {canResend ? 'Resend Code' : `Resend in ${timer}s`}
                                 </button>
                                 {/* Cross-channel resend */}
@@ -700,7 +700,7 @@ function SignupPageInner() {
                                         onClick={(e) => handleSendOTP(e, otpChannel === 'whatsapp' ? 'sms' : 'whatsapp')}
                                         disabled={loading || whatsappLoading}
                                         className="text-sm font-medium transition-colors disabled:opacity-50"
-                                        style={{ color: otpChannel === 'whatsapp' ? 'var(--text-secondary)' : '#25D366' }}
+                                        style={{ color: otpChannel === 'whatsapp' ? '#64748b' : '#25D366' }}
                                     >
                                         {otpChannel === 'whatsapp'
                                             ? <>Resend via SMS instead</>
@@ -708,7 +708,7 @@ function SignupPageInner() {
                                         }
                                     </button>
                                 )}
-                                <button type="button" onClick={() => setStep('phone')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
+                                <button type="button" onClick={() => setStep('phone')} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                                     Update Number
                                 </button>
                             </div>
@@ -719,18 +719,18 @@ function SignupPageInner() {
                 {/* ── EMAIL OTP ── */}
                 {step === 'email-otp' && (
                     <div className="animate-fadeIn">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-white/5 border border-blue-500/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             <Image src="/icon.png" alt="INTRUST" width={36} height={36} className="object-contain" priority />
                         </div>
-                        <h2 className="text-2xl font-bold text-[var(--text-primary)] text-center mt-2">Verify your mobile</h2>
-                        <p className="text-sm text-[var(--text-secondary)] text-center mt-1 mb-1">
-                            Enter 6-digit code sent to <br /><span className="font-semibold text-[var(--text-primary)]">+91 {phone}</span>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white text-center mt-2">Verify your mobile</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 text-center mt-1 mb-1">
+                            Enter 6-digit code sent to <br /><span className="font-semibold text-slate-900 dark:text-white">+91 {phone}</span>
                         </p>
                         {/* Channel badge */}
                         <p className="text-xs text-center mb-6">
                             {otpChannel === 'whatsapp'
                                 ? <span className="inline-flex items-center gap-1 text-[#25D366] font-medium"><MessageCircle size={13} /> via WhatsApp</span>
-                                : <span className="inline-flex items-center gap-1 text-[var(--text-secondary)] font-medium"><Phone size={13} /> via SMS</span>
+                                : <span className="inline-flex items-center gap-1 text-slate-500 font-medium"><Phone size={13} /> via SMS</span>
                             }
                         </p>
 
@@ -745,14 +745,14 @@ function SignupPageInner() {
                             <button
                                 type="submit"
                                 disabled={loading || otp.replace(/\s+/g, '').length !== 6}
-                                className="w-full py-3.5 bg-[#1E3A5F] hover:bg-[#152B4D] text-white font-semibold rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center transition-all disabled:opacity-50 text-sm"
                             >
                                 {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify & Create Account'}
                             </button>
 
                             <div className="flex flex-col gap-3 text-center">
                                 {/* Same-channel resend */}
-                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }} disabled={loading || !canResend} className="text-sm font-semibold text-[var(--text-secondary)] hover:text-[#92BCEA] transition-colors disabled:opacity-50">
+                                <button type="button" onClick={(e) => { if (canResend) handleSendOTP(e, otpChannel); }} disabled={loading || !canResend} className="text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors disabled:opacity-50">
                                     {canResend ? 'Resend code' : `Resend in ${timer}s`}
                                 </button>
                                 {/* Cross-channel resend */}
@@ -762,7 +762,7 @@ function SignupPageInner() {
                                         onClick={(e) => handleSendOTP(e, otpChannel === 'whatsapp' ? 'sms' : 'whatsapp')}
                                         disabled={loading || whatsappLoading}
                                         className="text-sm font-medium transition-colors disabled:opacity-50"
-                                        style={{ color: otpChannel === 'whatsapp' ? 'var(--text-secondary)' : '#25D366' }}
+                                        style={{ color: otpChannel === 'whatsapp' ? '#64748b' : '#25D366' }}
                                     >
                                         {otpChannel === 'whatsapp'
                                             ? <>Resend via SMS instead</>
@@ -770,7 +770,7 @@ function SignupPageInner() {
                                         }
                                     </button>
                                 )}
-                                <button type="button" onClick={() => setStep('email-form')} className="text-sm font-semibold text-[#92BCEA] hover:underline">
+                                <button type="button" onClick={() => setStep('email-form')} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                                     Update Number
                                 </button>
                             </div>

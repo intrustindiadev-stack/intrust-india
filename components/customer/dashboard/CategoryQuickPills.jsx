@@ -82,10 +82,10 @@ export default function CategoryQuickPills() {
                     </span>
                 </div>
                 <Link
-                    href="/shop"
-                    className="text-xs font-bold text-primary hover:underline flex items-center gap-0.5 group"
+                    href="/shop/category"
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 group"
                 >
-                    <span>View All</span>
+                    <span>View All Categories</span>
                     <ChevronRight size={13} strokeWidth={2.5} className="transition-transform group-hover:translate-x-0.5" />
                 </Link>
             </div>

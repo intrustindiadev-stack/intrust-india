@@ -19,6 +19,7 @@ import React, { Suspense } from 'react';
 
 
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import { getSubCategories } from '@/lib/constants/categories';
 
 const PAGE_SIZE = 24;
 const storeCache = new Map();
@@ -36,7 +37,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [cart, setCart] = useState([]);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [isLoading, setIsLoading] = useState(true);
-    const [activeSubCategory, setActiveSubCategory] = useState(initialFilters.category || initialFilters.sub_category || 'All');
+    const [activeCategory, setActiveCategory] = useState(initialFilters.category || 'All');
+    const [selectedSubCategory, setSelectedSubCategory] = useState(initialFilters.sub_category || 'All');
     const [searchInput, setSearchInput] = useState(initialFilters.search || '');
     const [searchQuery, setSearchQuery] = useState(initialFilters.search || '');
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -73,7 +75,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         setLiveMerchant(merchant);
     }, [merchant]);
 
-    const fetchItems = useCallback(async (pageNum, searchVal, catVal, lastIdVal) => {
+    const fetchItems = useCallback(async (pageNum, searchVal, catVal, subCatVal, lastIdVal) => {
         const queryParams = new URLSearchParams({
             merchantSlug: liveMerchant?.slug || '',
             offset: ((pageNum - 1) * PAGE_SIZE).toString(),
@@ -85,7 +87,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         if (catVal && catVal !== 'All') {
             queryParams.append('category', catVal);
         }
-        if (initialFilters?.sub_category) {
+        if (subCatVal && subCatVal !== 'All') {
+            queryParams.append('sub_category', subCatVal);
+        } else if (initialFilters?.sub_category) {
             queryParams.append('sub_category', initialFilters.sub_category);
         }
         if (initialFilters?.min_price != null) {
@@ -169,8 +173,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             return;
         }
         const lastId = pageLastIds[page] || null;
-        fetchItems(page, searchQuery, activeSubCategory, lastId);
-    }, [page, fetchItems]);
+        fetchItems(page, searchQuery, activeCategory, selectedSubCategory, lastId);
+    }, [page, fetchItems, searchQuery, activeCategory, selectedSubCategory, pageLastIds]);
 
     const loadMoreRef = useRef(null);
 
@@ -199,8 +203,10 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             const url = new URL(window.location.href);
             if (searchQuery) url.searchParams.set('search', searchQuery);
             else url.searchParams.delete('search');
-            if (activeSubCategory && activeSubCategory !== 'All') url.searchParams.set('category', activeSubCategory);
+            if (activeCategory && activeCategory !== 'All') url.searchParams.set('category', activeCategory);
             else url.searchParams.delete('category');
+            if (selectedSubCategory && selectedSubCategory !== 'All') url.searchParams.set('sub_category', selectedSubCategory);
+            else url.searchParams.delete('sub_category');
             url.searchParams.delete('page');
             window.history.replaceState({}, '', url.toString());
         }
@@ -208,9 +214,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         if (page !== 1) {
             setPage(1);
         } else {
-            fetchItems(1, searchQuery, activeSubCategory, null);
+            fetchItems(1, searchQuery, activeCategory, selectedSubCategory, null);
         }
-    }, [searchQuery, activeSubCategory, fetchItems]);
+    }, [searchQuery, activeCategory, selectedSubCategory, fetchItems]);
 
     useEffect(() => {
         if (!liveMerchant?.id) return;
@@ -324,7 +330,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
     const toggleWishlist = useCallback(async (item) => {
         if (!activeCustomer?.id) {
-            router.push('/login');
+            toast.error('Please login to save items');
+            const returnUrl = typeof window !== 'undefined' ? window.location.pathname : `/shop/${merchant?.slug}`;
+            router.push(`/login?next=${encodeURIComponent(returnUrl)}`);
             return;
         }
         const productId = item.product_id;
@@ -389,7 +397,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             return;
         }
         if (!activeCustomer?.id) {
-            router.push('/login');
+            toast.error('Please login to add to cart');
+            const returnUrl = typeof window !== 'undefined' ? window.location.pathname : `/shop/${merchant?.slug}`;
+            router.push(`/login?next=${encodeURIComponent(returnUrl)}`);
             return;
         }
 
@@ -499,6 +509,22 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
         return categories || ['All'];
     }, [categories]);
 
+    const availableSubCategories = useMemo(() => {
+        if (!activeCategory || activeCategory === 'All') return [];
+        const canonical = getSubCategories(activeCategory);
+        const dynamicSet = new Set(canonical);
+        liveInventory?.forEach(item => {
+            const sub = item.sub_category || item.shopping_products?.sub_category;
+            if (sub && sub !== 'General') dynamicSet.add(sub);
+        });
+        return Array.from(dynamicSet);
+    }, [activeCategory, liveInventory]);
+
+    const handleCategoryChange = (cat) => {
+        setActiveCategory(cat);
+        setSelectedSubCategory('All');
+    };
+
     // Debounce search — 150ms prevents re-filtering large inventories on every keystroke
     const handleSearchChange = useCallback((e) => {
         const val = e.target.value;
@@ -546,8 +572,8 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
     const totalSavings = totalMrp - totalPrice;
 
-    const primaryColor = '#3b82f6'; // Light Blue (tailwind blue-500)
-    const secondaryColor = '#60a5fa'; // Blue-400
+    const primaryColor = '#2563EB'; // Royal Blue (InTrust Brand Blue)
+    const secondaryColor = '#3b82f6'; // Blue-500
     const avatarUrl = merchant?.user_profiles?.avatar_url || (Array.isArray(merchant?.user_profiles) ? merchant?.user_profiles[0]?.avatar_url : null);
 
 
@@ -599,15 +625,15 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                         </div>
                     </div>
 
-                    {/* Animated Subcategory Pills */}
+                    {/* Animated Category Pills */}
                     {merchantCategories.length > 1 && (
                         <div className={`relative flex items-center gap-2 px-3.5 md:px-5 py-2 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.05]' : 'border-slate-100'}`}>
                             {merchantCategories.map(sub => {
-                                const isActive = activeSubCategory === sub;
+                                const isActive = activeCategory === sub;
                                 return (
                                     <button
                                         key={sub}
-                                        onClick={() => setActiveSubCategory(sub)}
+                                        onClick={() => handleCategoryChange(sub)}
                                         className={`relative px-3.5 py-1.5 flex items-center gap-1.5 rounded-full text-xs font-bold whitespace-nowrap outline-none transition-all ${
                                             isActive 
                                                 ? 'bg-sky-500 hover:bg-sky-600 text-white shadow-sm shadow-sky-500/30 border border-sky-400 font-black' 
@@ -618,6 +644,38 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                     >
                                         <span>{getCategoryIcon(sub)}</span>
                                         <span>{sub}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Animated Sub-category Chips */}
+                    {availableSubCategories.length > 0 && (
+                        <div className={`flex items-center gap-1.5 px-3.5 md:px-5 py-1.5 overflow-x-auto no-scrollbar border-t ${isDark ? 'border-white/[0.04] bg-white/[0.02]' : 'border-slate-100 bg-slate-50/80'}`}>
+                            <button
+                                onClick={() => setSelectedSubCategory('All')}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+                                    selectedSubCategory === 'All'
+                                        ? isDark ? 'bg-white text-slate-950 font-black' : 'bg-slate-900 text-white font-black'
+                                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:bg-slate-200/60'
+                                }`}
+                            >
+                                All {activeCategory}
+                            </button>
+                            {availableSubCategories.map(sub => {
+                                const isSubActive = selectedSubCategory === sub;
+                                return (
+                                    <button
+                                        key={sub}
+                                        onClick={() => setSelectedSubCategory(sub)}
+                                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+                                            isSubActive
+                                                ? 'bg-sky-500 text-white shadow-xs font-black'
+                                                : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:bg-slate-200/60'
+                                        }`}
+                                    >
+                                        {sub}
                                     </button>
                                 );
                             })}
