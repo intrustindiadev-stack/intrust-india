@@ -1,30 +1,16 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 export async function POST(request, { params }) {
     try {
-        const { id: orderId } = params;
-        const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-                cookies: {
-                    get(name) {
-                        return cookieStore.get(name)?.value;
-                    },
-                },
-            }
-        );
-        
-        const { data: { user } } = await supabase.auth.getUser();
+        const { id: orderId } = await params;
+        const { user, admin } = await getAuthUser(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // Fetch the order
-        const { data: order, error: orderError } = await supabase
+        const { data: order, error: orderError } = await admin
             .from('ai_orders')
             .select('*')
             .eq('id', orderId)
@@ -34,15 +20,20 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        if (order.status !== 'PENDING') {
-            return NextResponse.json({ error: 'Order is no longer available' }, { status: 400 });
+        // Security check: cannot initiate on someone else's order
+        if (order.merchant_id && order.merchant_id !== user.id) {
+            return NextResponse.json({ error: 'This order is assigned to another merchant' }, { status: 403 });
         }
 
-        // Mark as PAYMENT_PENDING and assign to merchant temporarily
-        // Sabpaisa transaction simulation
-        const sabpaisaTxnId = `TXN_AI_${Date.now()}_${user.id.substring(0, 8)}`;
+        // Check status
+        if (order.status !== 'PENDING' && order.status !== 'PAYMENT_PENDING') {
+            return NextResponse.json({ error: 'Order is no longer available for payment' }, { status: 400 });
+        }
+
+        // If order already has a sabpaisa_txn_id and is in PAYMENT_PENDING for this user, reuse or generate new
+        const sabpaisaTxnId = order.sabpaisa_txn_id || `SP${Date.now()}`;
         
-        const { error: updateError } = await supabase
+        const { error: updateError } = await admin
             .from('ai_orders')
             .update({ 
                 status: 'PAYMENT_PENDING', 
@@ -50,14 +41,12 @@ export async function POST(request, { params }) {
                 sabpaisa_txn_id: sabpaisaTxnId,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', orderId)
-            .eq('status', 'PENDING'); // Optimistic concurrency check
+            .eq('id', orderId);
 
         if (updateError) {
-            return NextResponse.json({ error: 'Failed to initiate payment or order already taken' }, { status: 409 });
+            return NextResponse.json({ error: 'Failed to initiate payment lock' }, { status: 409 });
         }
 
-        // Return mock Sabpaisa payment details
         return NextResponse.json({ 
             success: true, 
             paymentUrl: `/payment/sabpaisa/checkout?txnId=${sabpaisaTxnId}&amount=${order.wholesale_price_paise}&callback=/api/merchant/ai-orders/sabpaisa-webhook`,

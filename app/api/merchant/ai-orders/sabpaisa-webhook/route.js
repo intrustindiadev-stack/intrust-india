@@ -1,53 +1,49 @@
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 
-// Mock Sabpaisa webhook for accepting payment
+// SabPaisa webhook handler for AI order checkout
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { txnId, status } = body;
+        const { txnId, status, paymentMethod } = body;
 
         if (!txnId) {
             return NextResponse.json({ error: 'Missing transaction ID' }, { status: 400 });
         }
 
-        // We use service role to update order bypassing RLS on webhooks
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const admin = createAdminClient();
 
         if (status === 'SUCCESS') {
-            const { error: updateError } = await supabase
+            const { error: updateError } = await admin
                 .from('ai_orders')
                 .update({ 
                     status: 'ACCEPTED',
+                    payment_method: paymentMethod || 'UPI (PhonePe)',
+                    payment_received_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('sabpaisa_txn_id', txnId);
+
+            if (updateError) throw updateError;
+            
+            return NextResponse.json({ success: true, message: 'Order Accepted and Escrow Locked' });
+        } else {
+            // If payment failed or cancelled, return order status to PENDING but keep assigned merchant
+            const { error: revertError } = await admin
+                .from('ai_orders')
+                .update({ 
+                    status: 'PENDING',
                     updated_at: new Date().toISOString()
                 })
                 .eq('sabpaisa_txn_id', txnId)
                 .eq('status', 'PAYMENT_PENDING');
 
-            if (updateError) throw updateError;
-            
-            return NextResponse.json({ success: true, message: 'Order Accepted' });
-        } else {
-            // Revert to pending
-            const { error: revertError } = await supabase
-                .from('ai_orders')
-                .update({ 
-                    status: 'PENDING',
-                    merchant_id: null,
-                    sabpaisa_txn_id: null,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('sabpaisa_txn_id', txnId);
-
             if (revertError) throw revertError;
 
-            return NextResponse.json({ success: true, message: 'Payment failed, order reverted' });
+            return NextResponse.json({ success: true, message: 'Payment cancelled, order reverted to PENDING' });
         }
     } catch (error) {
-        console.error('Error in webhook:', error);
+        console.error('Error in AI Orders SabPaisa webhook:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

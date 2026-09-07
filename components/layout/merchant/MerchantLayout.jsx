@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Sidebar from '@/components/merchant/Sidebar';
 import Header from '@/components/merchant/Header';
 import BannerPromptModal from '@/components/merchant/BannerPromptModal';
+import AIOrderNotificationModal from '@/components/merchant/ai-orders/AIOrderNotificationModal';
 
 export default function MerchantLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,6 +21,7 @@ export default function MerchantLayout({ children }) {
             </div>
             
             <BannerPromptModal />
+            <AIOrderNotificationModal />
         </div>
     );
 }

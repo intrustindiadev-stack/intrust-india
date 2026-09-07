@@ -27,7 +27,8 @@ function SabpaisaCheckoutContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     txnId,
-                    status: payStatus
+                    status: payStatus,
+                    paymentMethod: selectedMethod === 'upi' ? 'UPI (PhonePe)' : (selectedMethod === 'card' ? 'Credit / Debit Card' : 'Net Banking')
                 })
             });
 

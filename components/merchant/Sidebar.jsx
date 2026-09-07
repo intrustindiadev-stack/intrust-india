@@ -50,6 +50,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 { label: "Lockin Portfolio", href: "/merchant/lockin", icon: "lock_clock" },
                 { label: "AI Grow", href: "/merchant/investments", icon: "auto_awesome" },
                 { label: "AI Orders", href: "/merchant/ai-orders", icon: "psychology" },
+                { label: "My Vault", href: "/merchant/vault/ai-orders", icon: "savings" },
                 { label: "My Network", href: "/merchant/referrals", icon: "share" },
             ]
         },

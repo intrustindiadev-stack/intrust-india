@@ -1,31 +1,38 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useMerchant } from '@/hooks/useMerchant';
 import { supabase } from '@/lib/supabaseClient';
 import OrderBoard from '@/components/merchant/ai-orders/OrderBoard';
-import toast from 'react-hot-toast';
-import { Zap, Activity } from 'lucide-react';
-import Link from 'next/link';
 import AIOrderNotificationModal from '@/components/merchant/ai-orders/AIOrderNotificationModal';
+import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
+import { Zap, ShieldCheck, ArrowRight, Wallet, RefreshCw, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function AIOrdersMerchantPage() {
     const { merchant } = useMerchant();
     const [orders, setOrders] = useState([]);
+    const [counts, setCounts] = useState({ total: 0, pending: 0, paymentPending: 0, inProgress: 0, completed: 0 });
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [activeTab, setActiveTab] = useState('ALL');
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (silent = false) => {
+        if (!silent) setIsLoading(true);
+        else setIsRefreshing(true);
+
         try {
             const res = await fetch('/api/merchant/ai-orders');
             if (!res.ok) throw new Error('Failed to fetch AI orders');
             const data = await res.json();
-            
-            // Only show PENDING orders on the board for them to accept
-            setOrders(data.orders.filter(o => o.status === 'PENDING'));
+            setOrders(data.orders || []);
+            setCounts(data.counts || { total: 0, pending: 0, paymentPending: 0, inProgress: 0, completed: 0 });
         } catch (error) {
-            toast.error(error.message || 'An error occurred');
+            toast.error(error.message || 'An error occurred loading orders');
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -34,72 +41,179 @@ export default function AIOrdersMerchantPage() {
         fetchOrders();
 
         const channel = supabase
-            .channel('public:ai_orders')
+            .channel('merchant_ai_orders_channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders' }, () => {
-                fetchOrders(); // Refresh on any change
+                fetchOrders(true);
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [merchant]);
 
     if (!merchant) return null;
 
+    // Filter orders by active tab
+    const filteredOrders = orders.filter(order => {
+        if (activeTab === 'PENDING') return order.status === 'PENDING';
+        if (activeTab === 'PAYMENT_PENDING') return order.status === 'PAYMENT_PENDING';
+        if (activeTab === 'IN_PROGRESS') return order.status === 'ACCEPTED';
+        if (activeTab === 'COMPLETED') return order.status === 'COMPLETED';
+        return true; // 'ALL'
+    });
+
+    const pendingOrders = orders.filter(o => o.status === 'PENDING');
+    const hasPending = pendingOrders.length > 0;
+
+    const tabs = [
+        { key: 'ALL', label: 'All', count: counts.total || orders.length },
+        { key: 'PENDING', label: 'Pending', count: counts.pending },
+        { key: 'PAYMENT_PENDING', label: 'Payment Pending', count: counts.paymentPending },
+        { key: 'IN_PROGRESS', label: 'In Progress', count: counts.inProgress },
+        { key: 'COMPLETED', label: 'Completed', count: counts.completed },
+    ];
+
+    const handleViewAndAcceptHero = () => {
+        if (hasPending) {
+            setActiveTab('PENDING');
+            const target = document.getElementById('orders-section');
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-            <AIOrderNotificationModal />
-            
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-[#1a1c23] dark:to-black rounded-3xl p-8 relative overflow-hidden shadow-xl shadow-slate-900/10">
-                {/* Decorative background */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none transform translate-x-1/2 -translate-y-1/2" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none transform -translate-x-1/2 translate-y-1/2" />
+            {/* Top Row / Hero Banner: Screen 4 Blueprint */}
+            <div className="relative w-full rounded-3xl overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800 bg-[#e8f3fc] dark:bg-[#121c29]">
+                {/* Background Banner Image with Cityscape and Robot Mascot */}
+                <div className="relative w-full min-h-[190px] sm:min-h-[220px] md:min-h-[250px] flex items-center">
+                    <img 
+                        src="/banners/robo-orders.png" 
+                        alt="Robo AI Orders" 
+                        className="absolute inset-0 w-full h-full object-cover object-right pointer-events-none"
+                    />
 
-                <div className="relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white/90 text-[11px] font-bold uppercase tracking-widest mb-4">
-                        <Activity size={14} className="text-[#D4AF37]" />
-                        Live Feed
+                    {/* Content on Left */}
+                    <div className="relative z-10 p-6 sm:p-8 md:p-10 max-w-lg">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 dark:bg-black/50 backdrop-blur-md text-blue-900 dark:text-blue-300 text-[10px] font-black uppercase tracking-wider mb-3 shadow-xs">
+                            <Zap size={12} className="text-amber-500 fill-amber-500" />
+                            Exclusive Allocation
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-2">
+                            New AI Order Available!
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium mb-5 max-w-md">
+                            A high-demand product has been assigned to you. Don't miss this opportunity!
+                        </p>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleViewAndAcceptHero}
+                                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs sm:text-sm font-bold shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95"
+                            >
+                                View & Accept <ArrowRight size={16} />
+                            </button>
+                            <Link
+                                href="/merchant/vault/ai-orders"
+                                className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/70 dark:bg-black/40 backdrop-blur-md border border-white/60 dark:border-white/10 text-slate-800 dark:text-white text-xs font-bold hover:bg-white dark:hover:bg-black/60 transition-colors"
+                            >
+                                <Wallet size={14} /> My Vault
+                            </Link>
+                        </div>
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
-                        AI Orders
-                    </h1>
-                    <p className="text-slate-400 font-medium max-w-md">
-                        Accept high-demand wholesale orders, pay the principal securely, and earn guaranteed profit when it matures.
-                    </p>
-                </div>
 
-                <div className="relative z-10 w-full md:w-auto flex flex-col sm:flex-row gap-3">
-                    <Link 
-                        href="/merchant/vault/ai-orders"
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/10 text-white font-bold transition-colors active:scale-95"
-                    >
-                        Go to Vault
-                    </Link>
+                    {/* Pending Product Allocation Card with Thumbnail (Screen Blueprint) */}
+                    {hasPending && pendingOrders[0] && (
+                        <div className="hidden lg:flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-white dark:border-slate-800 shadow-xl max-w-xs absolute right-8 z-20">
+                            <ProductThumbnail
+                                src={pendingOrders[0].product_image_url}
+                                alt={pendingOrders[0].product_name}
+                                category={pendingOrders[0].category}
+                                className="w-14 h-14 rounded-xl shadow-xs shrink-0"
+                            />
+                            <div className="min-w-0 pr-2">
+                                <span className="text-[10px] uppercase font-black text-amber-600 dark:text-amber-400 tracking-wider">
+                                    New Allocation
+                                </span>
+                                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                    {pendingOrders[0].product_name}
+                                </div>
+                                <div className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                    +₹{((pendingOrders[0].profit_margin_paise || 0) / 100).toLocaleString('en-IN')} Profit
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="relative">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <Zap size={20} className="text-[#D4AF37]" />
-                        Available to Accept
-                    </h2>
-                    {isLoading && <div className="text-sm text-slate-500 font-medium flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4AF37] opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D4AF37]"></span>
-                        </span>
-                        Syncing...
-                    </div>}
+            {/* Section: My AI Orders */}
+            <div id="orders-section" className="space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                            My AI Orders
+                        </h2>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                            Manage your assigned inventory, escrow lock-ins, and mature profits.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-end sm:self-auto">
+                        <button
+                            onClick={() => fetchOrders(true)}
+                            disabled={isRefreshing}
+                            className="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            title="Refresh orders"
+                        >
+                            <RefreshCw size={16} className={isRefreshing ? 'animate-spin text-blue-600' : ''} />
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('ALL')}
+                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                            View All
+                        </button>
+                    </div>
                 </div>
 
-                {isLoading && orders.length === 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {/* Filter Tabs matching Screen 4 Blueprint */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-200/60 dark:border-slate-800">
+                    {tabs.map((tab) => {
+                        const isActive = activeTab === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                                    isActive
+                                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                                }`}
+                            >
+                                {tab.label}
+                                <span className={`ml-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                                    isActive
+                                        ? 'bg-white/20 text-white dark:bg-black/20 dark:text-slate-900'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                }`}>
+                                    {tab.count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Order Cards Grid */}
+                {isLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         {[1, 2, 3].map(i => (
-                            <div key={i} className="h-[250px] bg-slate-100 dark:bg-[#1a1c23] rounded-3xl animate-pulse" />
+                            <div key={i} className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse" />
                         ))}
                     </div>
                 ) : (
-                    <OrderBoard orders={orders} onAccept={() => {}} />
+                    <OrderBoard orders={filteredOrders} onAccepted={() => fetchOrders(true)} activeTab={activeTab} />
                 )}
             </div>
         </div>

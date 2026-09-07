@@ -72,6 +72,7 @@ const navigationGroups = [
             { name: 'Store Credit', href: '/admin/merchants/udhari', icon: CreditCard },
             { name: 'AI Grow', href: '/admin/investments', icon: TrendingUp },
             { name: 'AI Grow Wallets', href: '/admin/ai-grow/wallets', icon: Wallet, superAdminOnly: true },
+            { name: 'AI Orders', href: '/admin/ai-orders', icon: Sparkles },
             { name: 'Lockin', href: '/admin/lockin', icon: ShieldCheck },
         ]
     },
@@ -221,14 +222,14 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside
-                className={`fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 transition-all duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+                className={`fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-[70] transition-all duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                     } ${isOpen ? 'w-72' : 'lg:w-72'}`}
             >
                 <div className="flex flex-col h-full">

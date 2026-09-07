@@ -1,103 +1,172 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Zap, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { ArrowRight, Loader2, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
+import toast from 'react-hot-toast';
 
-export default function OrderCard({ order, onAccept }) {
-    const [isAccepting, setIsAccepting] = React.useState(false);
+export default function OrderCard({ order, onAccepted }) {
+    const [isProcessing, setIsProcessing] = useState(false);
     const router = useRouter();
 
-    const handleAccept = async () => {
-        setIsAccepting(true);
+    const wholesale = (order.wholesale_price_paise || 0) / 100;
+    const retail = (order.retail_price_paise || 0) / 100;
+    const profit = (order.profit_margin_paise || 0) / 100;
+    const profitPct = wholesale > 0 ? ((profit / wholesale) * 100).toFixed(0) : '0';
+
+    const handleAcceptAndPay = async (e) => {
+        e.stopPropagation();
+        setIsProcessing(true);
         try {
             const res = await fetch(`/api/merchant/ai-orders/${order.id}/initiate-payment`, {
                 method: 'POST'
             });
             const data = await res.json();
-            
             if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
 
-            toast.success('Redirecting to Sabpaisa checkout...');
-
-            // In real app, we would redirect to data.paymentUrl
-            // For now, simulate webhook call for testing if needed, or just redirect.
+            toast.success('Redirecting to secure SabPaisa checkout...');
             if (data.paymentUrl) {
                 router.push(data.paymentUrl);
+            } else {
+                router.push(`/payment/sabpaisa/checkout?txnId=${data.txnId || 'SP' + Date.now()}&amount=${order.wholesale_price_paise}`);
             }
-            
-            if (onAccept) onAccept(order.id);
 
+            if (onAccepted) onAccepted(order.id);
         } catch (error) {
-            toast.error(error.message || 'An error occurred');
+            toast.error(error.message || 'Payment initiation failed');
         } finally {
-            setIsAccepting(false);
+            setIsProcessing(false);
+        }
+    };
+
+    const handleCardClick = () => {
+        router.push(`/merchant/ai-orders/${order.id}`);
+    };
+
+    const getStatusBadge = () => {
+        switch (order.status) {
+            case 'PENDING':
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
+                        • PENDING
+                    </span>
+                );
+            case 'PAYMENT_PENDING':
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200/60 dark:border-orange-800/40">
+                        • PAYMENT PENDING
+                    </span>
+                );
+            case 'ACCEPTED':
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40">
+                        • IN PROGRESS
+                    </span>
+                );
+            case 'COMPLETED':
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                        • COMPLETED
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
+                        {order.status}
+                    </span>
+                );
         }
     };
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+        <motion.div
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className="bg-white dark:bg-[#1a1c23] rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-white/5 relative overflow-hidden group"
+            onClick={handleCardClick}
+            className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer flex flex-col justify-between group"
         >
-            {/* Glow effect on hover */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/0 to-[#D4AF37]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-            <div className="flex justify-between items-start mb-4 relative z-10">
-                <div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#D4AF37]/10 text-[#D4AF37] text-[10px] font-black uppercase tracking-wider mb-2">
-                        <Zap size={10} className="fill-current" />
-                        High Demand
-                    </div>
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight">
-                        {order.product_name}
-                    </h3>
-                </div>
-            </div>
-
-            <div className="bg-slate-50 dark:bg-black/20 rounded-2xl p-4 border border-slate-100 dark:border-white/5 mb-5 relative z-10">
-                <div className="flex justify-between items-end">
+            <div>
+                {/* Product Header & Thumbnail */}
+                <div className="flex items-center gap-3.5 mb-4">
+                    <ProductThumbnail
+                        src={order.product_image_url}
+                        alt={order.product_name}
+                        category={order.category}
+                        className="w-14 h-14 rounded-2xl group-hover:scale-105 transition-transform"
+                    />
                     <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Wholesale / Invest</p>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">
-                            ₹{(order.wholesale_price_paise / 100).toLocaleString('en-IN')}
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
+                            {order.product_name}
+                        </h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                            {order.category || 'Electronics'}
                         </p>
-                        <p className="text-xs text-slate-400 mt-1 line-through">
-                            Retail: ₹{(order.retail_price_paise / 100).toLocaleString('en-IN')}
-                        </p>
+                    </div>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="flex items-end justify-between py-3 px-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/80 mb-4">
+                    <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Wholesale Price</span>
+                        <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                            ₹{wholesale.toLocaleString('en-IN')}
+                        </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mb-1">Guaranteed Profit</p>
-                        <p className="text-2xl font-black text-emerald-500">
-                            +₹{(order.profit_margin_paise / 100).toLocaleString('en-IN')}
-                        </p>
+                        <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Profit</span>
+                        <div className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            +₹{profit.toLocaleString('en-IN')} <span className="text-xs">({profitPct}%)</span>
+                        </div>
                     </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="mb-4">
+                    {getStatusBadge()}
                 </div>
             </div>
 
-            <div className="flex flex-col gap-3 relative z-10">
-                <button
-                    onClick={handleAccept}
-                    disabled={isAccepting || order.status !== 'PENDING'}
-                    className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-[#D4AF37] hover:bg-slate-800 dark:hover:bg-[#B8860B] text-white dark:text-slate-900 font-black tracking-wide flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                >
-                    {isAccepting ? (
-                        <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                        <>
-                            Accept & Pay
-                            <ArrowRight size={16} />
-                        </>
-                    )}
-                </button>
-                <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400 font-medium">
-                    <ShieldCheck size={12} />
-                    Principal securely locked in Vault
-                </div>
+            {/* Dynamic Primary CTA */}
+            <div>
+                {order.status === 'PENDING' ? (
+                    <button
+                        onClick={handleAcceptAndPay}
+                        disabled={isProcessing}
+                        className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                        {isProcessing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                            <>
+                                Accept & Pay <ArrowRight size={14} />
+                            </>
+                        )}
+                    </button>
+                ) : order.status === 'PAYMENT_PENDING' ? (
+                    <button
+                        onClick={handleAcceptAndPay}
+                        disabled={isProcessing}
+                        className="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                        {isProcessing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                            <>
+                                Complete Payment <ArrowRight size={14} />
+                            </>
+                        )}
+                    </button>
+                ) : (
+                    <button
+                        onClick={handleCardClick}
+                        className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
+                    >
+                        View Details <ArrowRight size={14} />
+                    </button>
+                )}
             </div>
         </motion.div>
     );
