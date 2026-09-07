@@ -1,6 +1,6 @@
 'use client';
 
-import Navbar from '@/components/layout/Navbar';
+import CustomerAppShell from '@/components/layout/customer/CustomerAppShell';
 import Footer from '@/components/layout/Footer';
 import PageHero from '@/components/ui/PageHero';
 import StatsSection from '@/components/home/StatsSection';
@@ -49,9 +49,7 @@ export default function AboutPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Navbar />
-
+        <CustomerAppShell fullWidth={true}>
             <PageHero
                 title="We Are InTrust"
                 subtitle="Building the ultimate premium e-commerce experience for India. Quality, exclusivity, and smart shopping solutions for everyone."
@@ -202,7 +200,7 @@ export default function AboutPage() {
             </section>
 
             <Footer />
-        </div>
+        </CustomerAppShell>
     );
 }
 

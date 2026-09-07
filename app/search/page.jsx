@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import Navbar from '@/components/layout/Navbar';
+import CustomerAppShell from '@/components/layout/customer/CustomerAppShell';
 import Footer from '@/components/layout/Footer';
 import SearchResultsClient from './SearchResultsClient';
 import { Loader2 } from 'lucide-react';
@@ -38,8 +38,7 @@ export default async function SearchPage({ searchParams }) {
     const maxPrice = params?.maxPrice || '100000';
 
     return (
-        <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-            <Navbar />
+        <CustomerAppShell fullWidth={true}>
             <Suspense fallback={<SearchPageFallback />}>
                 <SearchResultsClient 
                     initialParams={{ 
@@ -54,6 +53,6 @@ export default async function SearchPage({ searchParams }) {
                 />
             </Suspense>
             <Footer />
-        </div>
+        </CustomerAppShell>
     );
 }

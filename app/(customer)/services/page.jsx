@@ -57,7 +57,7 @@ export default function ServicesPage() {
                 {
                     id: 'mart',
                     title: 'InTrust Mart',
-                    description: 'Shop verified local stores across Bhopal with 2-hour pickup.',
+                    description: 'Shop verified local stores across India with fast pickup.',
                     icon: ShoppingCart,
                     iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30',
                     status: 'available',
@@ -280,7 +280,7 @@ export default function ServicesPage() {
                         </h1>
 
                         <p className="text-xs sm:text-sm text-slate-600 dark:text-on-surface-variant font-medium max-w-xl leading-relaxed">
-                            Shopping, digital payments, brand gift cards, clean solar energy, and local retail tools — built for Bhopal.
+                            Shopping, digital payments, brand gift cards, clean solar energy, and local retail tools — built for India.
                         </p>
 
                         {/* 3 Compact Trust Chips */}
@@ -291,11 +291,11 @@ export default function ServicesPage() {
                             </div>
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-container-low border border-outline-variant/25 text-[11px] font-semibold text-slate-700 dark:text-on-surface">
                                 <Zap size={13} className="text-amber-500 shrink-0" />
-                                <span>2-Hour Local Delivery</span>
+                                <span>Fast Local Delivery</span>
                             </div>
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-container-low border border-outline-variant/25 text-[11px] font-semibold text-slate-700 dark:text-on-surface">
                                 <Headphones size={13} className="text-emerald-500 shrink-0" />
-                                <span>Local Bhopal Support</span>
+                                <span>24/7 Dedicated Support</span>
                             </div>
                         </div>
                     </div>
@@ -567,7 +567,7 @@ export default function ServicesPage() {
                     </div>
                     <div>
                         <h4 className="text-[11px] font-black text-on-surface leading-tight">
-                            Bhopal Network
+                            All India Network
                         </h4>
                         <p className="text-[10px] text-on-surface-variant leading-tight mt-0.5">
                             Verified local retail
@@ -603,7 +603,7 @@ export default function ServicesPage() {
                             Need help choosing an InTrust service?
                         </h3>
                         <p className="text-[11px] text-slate-300 font-medium leading-tight mt-0.5">
-                            Our Bhopal operations and customer care team is here to assist you.
+                            Our dedicated operations and customer care team is here to assist you.
                         </p>
                     </div>
                 </div>

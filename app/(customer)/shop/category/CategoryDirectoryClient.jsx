@@ -38,7 +38,7 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                 id: cat.id || slug,
                 name: name,
                 slug: slug,
-                description: cat.description || `Explore genuine ${name} products from verified Bhopal merchants.`,
+                description: cat.description || `Explore genuine ${name} products from verified merchants.`,
                 image: cat.image_url || getCategoryImage(name),
                 itemCount: initialCounts[slug] || initialCounts[name.toLowerCase()] || 0,
                 subCategories: getSubCategories(name),

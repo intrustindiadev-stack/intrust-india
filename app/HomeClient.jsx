@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Navbar from '@/components/layout/Navbar';
+import CustomerAppShell from '@/components/layout/customer/CustomerAppShell';
 import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/home/HeroSection';
 import ServicesGrid from '@/components/home/ServicesGrid';
@@ -38,8 +38,7 @@ export default function HomeClient() {
                 />
             )}
             {!showLoader && (
-                <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-                    <Navbar />
+                <CustomerAppShell fullWidth={true}>
                     <HeroSection />
                     <ServicesGrid />
                     <TrendingProducts />
@@ -50,7 +49,7 @@ export default function HomeClient() {
                     <TestimonialsSection />
                     <CareerOpportunitiesSection />
                     <Footer />
-                </div>
+                </CustomerAppShell>
             )}
         </>
     );

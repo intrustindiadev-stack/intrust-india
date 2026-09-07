@@ -100,59 +100,87 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
           <div className="absolute bottom-0 left-10 -mb-20 w-80 h-80 rounded-full bg-purple-100/40 dark:bg-purple-950/20 blur-3xl pointer-events-none"></div>
           <div className="absolute top-10 left-1/3 w-72 h-72 rounded-full bg-amber-50/60 dark:bg-amber-950/10 blur-3xl pointer-events-none"></div>
 
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-8">
+          <div className="relative z-10 flex flex-col gap-6 lg:gap-8">
         
-            {/* ── LEFT: Greeting, Plan, Balance ── */}
-            <div className="flex-1 min-w-0">
-              {/* Greeting */}
-              <div className="flex items-center gap-3.5">
-                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer">
+            {/* ── TOP TIER: Greeting, Identity & Operational Status ── */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              {/* Greeting & Identity */}
+              <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer mt-0.5 sm:mt-0">
                       {profile?.avatar_url ? (
                           <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
                           <span className="material-icons-round text-slate-400 text-2xl">storefront</span>
                       )}
                   </Link>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate tracking-tight">
-                    Good {getTimeGreeting()}, <span className="text-slate-600 dark:text-slate-300">{merchant.business_name || 'Merchant'}</span>
-                  </h1>
+                  <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight break-words">
+                      Good {getTimeGreeting()}, <span className="text-slate-600 dark:text-slate-300">{merchant.business_name || 'Merchant'}</span>
+                    </h1>
+
+                    {/* Plan Status Badges */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <button
+                          onClick={() => router.push('/merchant/subscription')}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border hover:opacity-80 transition-opacity ${
+                            planTier === 'pro' 
+                              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 shadow-sm' 
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                          }`}
+                      >
+                        {planName}
+                      </button>
+                      
+                      {daysLeft !== null && (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              expiryColor === 'expired'
+                                  ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-sm'
+                                  : expiryColor === 'urgent'
+                                      ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-sm animate-pulse'
+                                      : daysLeft <= 30
+                                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm'
+                                          : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                          }`}>
+                              {daysLeft <= 0
+                                  ? 'Plan Expired'
+                                  : `Ends in ${daysLeft} ${daysLeft === 1 ? 'Day' : 'Days'}`}
+                          </span>
+                      )}
+                    </div>
+                  </div>
               </div>
-        
-              {/* Plan Status Badge */}
-              <div className="mt-3 flex items-center gap-2 pl-[3.75rem]">
-                <button
-                    onClick={() => router.push('/merchant/subscription')}
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border hover:opacity-80 transition-opacity ${
-                      planTier === 'pro' 
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 shadow-sm' 
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                >
-                  {planName}
-                </button>
-                
-                {daysLeft !== null && (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        expiryColor === 'expired'
-                            ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-sm'
-                            : expiryColor === 'urgent'
-                                ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-sm animate-pulse'
-                                : daysLeft <= 30
-                                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm'
-                                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                    }`}>
-                        {daysLeft <= 0
-                            ? 'Plan Expired'
-                            : `Ends in ${daysLeft} ${daysLeft === 1 ? 'Day' : 'Days'}`}
+
+              {/* Operational Status & Toggles */}
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap shrink-0">
+                <div className="flex items-center gap-3 sm:gap-4 p-1.5 sm:p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-xs">
+                  <LiveButton />
+                  
+                  <div className="flex items-center pl-1 pr-2 border-r border-slate-200 dark:border-slate-700">
+                    <StoreStatusToggle initialStoreData={merchant} compact={true} />
+                  </div>
+          
+                  {/* AI Grow Button */}
+                  <button
+                    onClick={() => setIsAIGrowModalOpen(true)}
+                    className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 text-xs font-bold hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/50 dark:hover:to-orange-950/50 transition-all shadow-sm group"
+                  >
+                    <Sparkles className="w-4 h-4 text-orange-500" />
+                    AI Grow
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                      3
                     </span>
-                )}
+                  </button>
+                </div>
               </div>
-        
+            </div>
+
+            {/* ── BOTTOM TIER: Portfolio Balance & Primary Action Buttons ── */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pt-4 border-t border-slate-100/80 dark:border-slate-800/80">
               {/* Portfolio Balance */}
-              <div className="mt-8 pl-1">
+              <div>
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Portfolio Balance</p>
                 <div className="flex items-center gap-3">
-                  <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                  <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
                     {!showBalance ? '••••••' : formatCurrency(animatedRevenue)}
                   </span>
                   <button
@@ -164,48 +192,23 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                   </button>
                 </div>
               </div>
-            </div>
-        
-            {/* ── RIGHT: Actions & Toggles ── */}
-            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-end xl:items-center gap-4 flex-shrink-0">
-        
+
               {/* Primary Action Buttons */}
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Link
                   href="/merchant/shopping/wholesale"
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-[0_4px_14px_0_rgba(79,70,229,0.25)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.15)] hover:-translate-y-0.5"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all shadow-[0_4px_14px_0_rgba(79,70,229,0.25)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.15)] hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
                   Add Stock
                 </Link>
                 <Link
                   href="/merchant/wallet"
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm hover:-translate-y-0.5"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0"
                 >
                   <ArrowUpRight className="w-4 h-4" />
                   Withdraw
                 </Link>
-              </div>
-        
-              {/* Operational Toggles */}
-              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start mt-2 sm:mt-0 p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl">
-                <LiveButton />
-                
-                <div className="flex items-center pl-1 pr-2 border-r border-slate-200 dark:border-slate-700">
-                  <StoreStatusToggle initialStoreData={merchant} compact={true} />
-                </div>
-        
-                {/* AI Grow Button */}
-                <button
-                  onClick={() => setIsAIGrowModalOpen(true)}
-                  className="relative inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 text-xs font-bold hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/50 dark:hover:to-orange-950/50 transition-all shadow-sm group"
-                >
-                  <Sparkles className="w-4 h-4 text-orange-500" />
-                  AI Grow
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
-                    3
-                  </span>
-                </button>
               </div>
             </div>
           </div>

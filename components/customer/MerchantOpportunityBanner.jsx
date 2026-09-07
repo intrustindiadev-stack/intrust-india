@@ -64,7 +64,7 @@ function MerchantOpportunityBanner({
                 badgeText: 'Verified InTrust Partner',
                 badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                 title: 'Your Merchant Store is Live',
-                description: `Manage your Bhopal retail catalog, fulfill 2-hour pickup orders, and review store earnings. Next cycle: ${expiryFormatted || 'Active'}.`,
+                description: `Manage your retail catalog, fulfill store pickup orders, and review store earnings. Next cycle: ${expiryFormatted || 'Active'}.`,
                 ctaText: 'Merchant Dashboard',
                 ctaHref: '/merchant/dashboard',
                 disabled: false
@@ -110,10 +110,10 @@ function MerchantOpportunityBanner({
         // Default: Clean Opportunity Banner for Customer Dashboard
         return {
             badgeIcon: <Store size={14} className="text-primary" />,
-            badgeText: 'Merchant Partner Program • Bhopal',
+            badgeText: 'Merchant Partner Program',
             badgeClass: 'bg-blue-500/10 text-primary border-blue-500/20',
-            title: 'Own a Shop in Bhopal? Partner With InTrust',
-            description: 'List your retail products, accept direct digital payments, and connect with verified local customers with 2-hour store pickups.',
+            title: 'Own a Local Business? Partner With InTrust',
+            description: 'List your retail products, accept direct digital payments, and connect with verified local customers with fast store pickups.',
             ctaText: 'Register Your Shop',
             ctaHref: '/merchant-apply',
             disabled: false
@@ -128,46 +128,49 @@ function MerchantOpportunityBanner({
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="w-full bg-surface-container-lowest border border-outline-variant/30 dark:border-white/[0.08] rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-md transition-all relative overflow-hidden"
+            className="relative w-full rounded-2xl sm:rounded-3xl border border-outline-variant/30 bg-gradient-to-br from-surface-container-low via-surface-container-lowest to-surface-container-low dark:from-surface-container-lowest dark:via-surface-container-low/40 dark:to-surface-container-lowest p-6 sm:p-7 shadow-xs overflow-hidden"
         >
-            {/* Ambient Minimal Glow */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-primary/[0.03] dark:bg-primary/[0.07] rounded-full blur-3xl pointer-events-none" />
+            {/* Ambient background blur elements */}
+            <div className="absolute -top-10 -right-10 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                {/* Left Side: Details & Highlights */}
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                {/* Left Side: Status Info */}
                 <div className="space-y-3 max-w-2xl">
-                    {/* Status Pill Badge */}
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border tracking-wide select-none">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${config.badgeClass}`}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${config.badgeClass}`}>
                             {config.badgeIcon}
                             <span>{config.badgeText}</span>
                         </span>
+                        {isDefaultOpportunity && (
+                            <span className="text-[11px] font-bold text-on-surface-variant/80 uppercase tracking-wider">
+                                Pan-India Merchant Network
+                            </span>
+                        )}
                     </div>
 
-                    {/* Headline */}
-                    <h3 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight leading-snug">
-                        {config.title}
-                    </h3>
+                    <div>
+                        <h3 className="text-lg sm:text-xl font-black text-on-surface tracking-tight">
+                            {config.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-1 leading-relaxed">
+                            {config.description}
+                        </p>
+                    </div>
 
-                    {/* Subtitle / Description */}
-                    <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                        {config.description}
-                    </p>
-
-                    {/* 3 Clean Highlights (Shown for default merchant invitation) */}
                     {isDefaultOpportunity && (
-                        <div className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-on-surface">
+                        <div className="pt-1 flex items-center gap-4 sm:gap-6 flex-wrap text-xs font-bold text-on-surface">
                             <div className="flex items-center gap-1.5">
                                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
                                 <span>Zero Onboarding Fees</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <Zap size={14} className="text-blue-500 shrink-0" />
-                                <span>2-Hour Local Pickup Network</span>
+                                <span>Fast Local Pickup Network</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <MapPin size={14} className="text-amber-500 shrink-0" />
-                                <span>Bhopal-wide Storefront</span>
+                                <span>Digital & Local Storefront</span>
                             </div>
                         </div>
                     )}

@@ -175,14 +175,13 @@ function TrendingProductsGrid() {
 
             window.dispatchEvent(new Event('cartUpdated'));
             setAddedId(product.id);
-            toast.success(`Added ${product.title} to your cart! 🛒`);
-
-            setTimeout(() => {
-                setAddedId(null);
-            }, 2000);
+            toast.success(`Added ${product.title} to your cart`);
         } catch (err) {
-            console.error('Add to cart error:', err);
-            toast.error(err.message || 'Failed to add item to cart');
+            console.error('Error adding to cart:', err);
+            toast.error('Failed to add item to cart');
+        } finally {
+            setLoading(false);
+            setTimeout(() => setAddedId(null), 1500);
         }
     };
 
@@ -232,14 +231,14 @@ function TrendingProductsGrid() {
     }
 
     return (
-        <div className="w-full space-y-5">
+        <div className="w-full space-y-4">
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-lg sm:text-2xl font-black text-on-surface tracking-tight flex items-center gap-2">
-                        <span>🔥 Flash Deals &amp; Trending</span>
+                        <span>Deals of the Day</span>
                     </h2>
                     <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5 hidden sm:block">
-                        Guaranteed genuine products protected by InTrust 100% Buyer Protection.
+                        Selected offers on verified products with InTrust Buyer Protection.
                     </p>
                 </div>
                 <Link

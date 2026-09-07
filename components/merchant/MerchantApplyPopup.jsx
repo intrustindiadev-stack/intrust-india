@@ -91,7 +91,7 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
                 {/* Subtitle & Value Proposition */}
                 <div className="px-6 pt-5 pb-2">
                     <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Join 500+ verified merchants in Bhopal & across India selling products and gift cards with zero payment gateway fees.
+                        Join 500+ verified merchants across India selling products and gift cards with zero payment gateway fees.
                     </p>
                 </div>
 

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     LayoutGrid, 
+    LayoutDashboard,
     ShoppingBag, 
     ShoppingCart,
     Package, 
@@ -34,20 +35,28 @@ import {
     LogOut,
     LogIn,
     BadgeCheck,
-    Check
+    Check,
+    FileText,
+    Lock,
+    Truck,
+    RefreshCcw
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
+import toast from 'react-hot-toast';
 import Image from 'next/image';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
+const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search'];
+
 const NAV_GROUPS = [
     {
-        title: 'Explore & Shop',
+        title: 'Explore & Marketplace',
         items: [
-            { label: 'Overview', href: '/dashboard', icon: LayoutGrid },
+            { label: 'Home', href: '/', icon: Store },
+            { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
             { label: 'Shop & Stores', href: '/shop', icon: ShoppingBag, badge: 'Deals' },
             { label: 'My Cart', href: '/shop/cart', icon: ShoppingCart, isCart: true },
             { label: 'Wishlist', href: '/wishlist', icon: Heart },
@@ -59,7 +68,15 @@ const NAV_GROUPS = [
             { label: 'InTrust Wallet', href: '/wallet', icon: Wallet, isWallet: true },
             { label: 'Store Credit (Udhari)', href: '/store-credits', icon: Receipt },
             { label: 'Passbook & Activity', href: '/transactions', icon: History },
-            { label: 'My Gift Cards', href: '/my-giftcards', icon: Gift },
+            { label: 'My Gift Cards', href: '/gift-cards', icon: Gift },
+        ]
+    },
+    {
+        title: 'Services & Green Solutions',
+        items: [
+            { label: 'Services Hub', href: '/services', icon: Layers },
+            { label: 'Solar Solutions', href: '/solar', icon: Sparkles },
+            { label: 'Smart NFC Solutions', href: '/nfc-service', icon: ShieldCheck },
         ]
     },
     {
@@ -71,20 +88,29 @@ const NAV_GROUPS = [
         ]
     },
     {
-        title: 'Account & Services',
+        title: 'Company & Support',
         items: [
-            { label: 'Services Hub', href: '/services', icon: Layers },
+            { label: 'About Us', href: '/about', icon: Users },
+            { label: 'Contact Support', href: '/contact', icon: MapPin },
             { label: 'Orders & Tracking', href: '/orders', icon: Package },
-            { label: 'Settings', href: '/settings', icon: Settings },
             { label: 'Profile & KYC', href: '/profile', icon: User },
             { label: 'Partner / Merchant Apply', href: '/merchant-apply', icon: Store, badge: 'Join' },
+        ]
+    },
+    {
+        title: 'Legal & Policies',
+        items: [
+            { label: 'Terms & Conditions', href: '/legal?tab=terms', icon: FileText },
+            { label: 'Privacy Policy', href: '/legal?tab=privacy', icon: Lock },
+            { label: 'Shipping & Delivery', href: '/legal?tab=shipping', icon: Truck },
+            { label: 'Refund Policy', href: '/legal?tab=refund', icon: RefreshCcw },
         ]
     }
 ];
 
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items);
 
-export default function CustomerAppShell({ children }) {
+export default function CustomerAppShell({ children, fullWidth = false }) {
     const pathname = usePathname();
     const router = useRouter();
     const { user, profile, signOut } = useAuth();
@@ -293,10 +319,13 @@ export default function CustomerAppShell({ children }) {
                                 </div>
                                 {group.items.map((item) => {
                                     const Icon = item.icon;
-                                    const destHref = isGuest && item.href !== '/shop' && item.href !== '/shop/cart'
+                                    const baseHref = item.href.split('?')[0];
+                                    const destHref = isGuest && !PUBLIC_HREFS.includes(baseHref)
                                         ? `/login?next=${encodeURIComponent(item.href)}`
                                         : item.href;
-                                    const isActive = pathname === item.href || (item.href !== '/dashboard' && item.href !== '/shop' && pathname.startsWith(item.href));
+                                    const isActive = item.href === '/' 
+                                        ? pathname === '/' 
+                                        : (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)));
 
                                     return (
                                         <Link
@@ -348,7 +377,7 @@ export default function CustomerAppShell({ children }) {
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-slate-900 dark:text-on-surface">Become a Merchant</p>
-                                <p className="text-[10px] text-slate-500 dark:text-on-surface-variant leading-snug mt-0.5">Sell locally in Bhopal with zero gateway fees.</p>
+                                <p className="text-[10px] text-slate-500 dark:text-on-surface-variant leading-snug mt-0.5">Sell across India with zero gateway fees.</p>
                             </div>
                         </div>
                         <Link
@@ -380,7 +409,20 @@ export default function CustomerAppShell({ children }) {
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
                         <div>
                             <h2 className="text-sm font-black text-slate-900 dark:text-on-surface tracking-tight leading-none">
-                                {ALL_NAV_ITEMS.find(n => n.href === pathname)?.label || 'Customer Panel'}
+                                {(() => {
+                                    if (pathname === '/') return 'Home & Marketplace';
+                                    if (pathname === '/about') return 'About InTrust';
+                                    if (pathname === '/contact') return 'Contact & Support';
+                                    if (pathname === '/legal') return 'Legal & Compliance';
+                                    if (pathname === '/search') return 'Search Products';
+                                    if (pathname === '/coming-soon') return 'Coming Soon';
+                                    if (pathname.startsWith('/shop/category')) return 'Categories';
+                                    if (pathname.startsWith('/shop/product')) return 'Product Details';
+                                    if (pathname.startsWith('/shop')) return 'InTrust Shop';
+                                    const found = ALL_NAV_ITEMS.find(n => n.href === pathname);
+                                    if (found) return found.label;
+                                    return isGuest ? 'InTrust India' : 'Customer Panel';
+                                })()}
                             </h2>
                             <p className="text-[11px] text-slate-400 dark:text-brand-steel font-bold mt-0.5">
                                 InTrust India • Verified Commerce Platform
@@ -407,7 +449,7 @@ export default function CustomerAppShell({ children }) {
                         {/* Location Chip */}
                         <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface text-xs font-semibold cursor-pointer transition-colors border border-slate-200/50 dark:border-outline-variant/10">
                             <MapPin size={15} className="text-blue-600 dark:text-primary" />
-                            <span>Bhopal, MP</span>
+                            <span>India</span>
                         </div>
 
                         {/* Wallet Balance Pill (Only for Authenticated Users) */}
@@ -677,11 +719,17 @@ export default function CustomerAppShell({ children }) {
                                                 </div>
                                                 {group.items.map((item) => {
                                                     const Icon = item.icon;
-                                                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                                                    const baseHref = item.href.split('?')[0];
+                                                    const destHref = isGuest && !PUBLIC_HREFS.includes(baseHref)
+                                                        ? `/login?next=${encodeURIComponent(item.href)}`
+                                                        : item.href;
+                                                    const isActive = item.href === '/' 
+                                                        ? pathname === '/' 
+                                                        : (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)));
                                                     return (
                                                         <Link
                                                             key={item.href}
-                                                            href={item.href}
+                                                            href={destHref}
                                                             className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                                                                 isActive
                                                                     ? 'bg-blue-600 text-white shadow-md'
@@ -740,7 +788,7 @@ export default function CustomerAppShell({ children }) {
                 </AnimatePresence>
 
                 {/* ── PAGE VIEWPORT CONTENT ── */}
-                <main className="flex-1 w-full pt-4 lg:pt-24 px-4 lg:px-8 pb-[calc(84px+env(safe-area-inset-bottom,0px))] lg:pb-16 max-w-7xl mx-auto">
+                <main className={`flex-1 w-full pt-4 lg:pt-24 ${fullWidth ? 'p-0 max-w-none' : 'px-4 lg:px-8 pb-[calc(84px+env(safe-area-inset-bottom,0px))] lg:pb-16 max-w-7xl mx-auto'}`}>
                     {children}
                 </main>
 
@@ -748,7 +796,7 @@ export default function CustomerAppShell({ children }) {
                 {!hideBottomNav && (
                     <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[calc(68px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,4px)] bg-white/95 dark:bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200 dark:border-outline-variant/20 z-40 px-3 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                         {[
-                            { label: isGuest ? 'Explore' : 'Home', href: isGuest ? '/shop' : '/dashboard', icon: LayoutGrid },
+                            { label: isGuest ? 'Explore' : 'Dashboard', href: isGuest ? '/shop' : '/dashboard', icon: LayoutGrid },
                             { label: 'Shop', href: '/shop', icon: ShoppingBag },
                             { label: 'Orders', href: isGuest ? `/login?next=${encodeURIComponent('/orders')}` : '/orders', icon: Package },
                             { label: 'Wallet', href: isGuest ? `/login?next=${encodeURIComponent('/wallet')}` : '/wallet', icon: Wallet },

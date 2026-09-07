@@ -1,156 +1,203 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ChevronRight, ChevronLeft, ArrowRight, Zap, ShieldCheck, Clock, Gift, Percent } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Sparkles, ArrowRight } from 'lucide-react';
 
 export const DEFAULT_SLIDES = [
     {
-        id: 1,
-        tag: 'FESTIVE TECH BONANZA',
-        title: 'Up to 60% Off on Top Electronics',
-        subtitle: 'Shop top electronics and gadgets with guaranteed 5% direct cash deposit straight back into your InTrust Wallet.',
-        badge: 'Bhopal Exclusives',
-        ctaText: 'Shop Tech Deals',
-        ctaHref: '/shop?category=electronics',
-        highlight: '+5% Wallet Cashback',
-        image: '/banners/festive_tech_sale.jpg',
-        bgGradient: 'from-slate-950/95 via-slate-900/80 to-blue-950/40',
-        accentColor: 'text-[#D4AF37]',
-        borderColor: 'border-blue-500/30'
-    },
-    {
-        id: 2,
-        tag: 'FAST 2-HOUR PICKUP',
-        title: 'Local Store Pickups Across Bhopal',
-        subtitle: 'Skip shipping delays! Reserve products online and pick up in 2 hours at verified neighborhood electronics & retail stores.',
-        badge: '100% Buyer Protected',
-        ctaText: 'Find Nearby Stores',
+        id: 'mart-deals',
+        title: 'Top Brands, Best Deals - Up to 70% Off',
+        subtitle: 'Shop your favourite electronics, fashion and essentials on InTrust Mart',
+        tag: 'INTRUST MART',
+        badge: 'Up to 70% Off',
+        ctaText: 'Shop Now',
         ctaHref: '/shop',
-        highlight: 'Zero Processing Fees',
-        image: '/banners/local_fast_delivery.jpg',
-        bgGradient: 'from-slate-950/95 via-slate-900/80 to-indigo-950/40',
-        accentColor: 'text-emerald-400',
-        borderColor: 'border-emerald-500/30'
+        image: '/banners/banner_intrust_mart_deals.jpeg',
     },
     {
-        id: 3,
-        tag: 'DIGITAL GIFT CARDS',
-        title: 'Save Instant 2% - 15% On Top Brands',
-        subtitle: 'Zomato, Swiggy, Amazon, Myntra & MakeMyTrip vouchers with instant PIN reveal and lifetime validity.',
-        badge: 'Instant Delivery',
-        ctaText: 'Explore Gift Cards',
-        ctaHref: '/gift-cards',
-        highlight: 'Instant Digital PIN',
-        image: '/banners/digital_rewards_cards.jpg',
-        bgGradient: 'from-slate-950/95 via-purple-950/80 to-slate-950/40',
-        accentColor: 'text-purple-300',
-        borderColor: 'border-purple-500/30'
+        id: 'digital-wallet',
+        title: 'Pay. Save. Do More.',
+        subtitle: 'Faster, safer and smarter way to manage your money with InTrust Wallet',
+        tag: 'DIGITAL WALLET',
+        badge: 'Instant Rewards',
+        ctaText: 'Activate Wallet',
+        ctaHref: '/wallet',
+        image: '/banners/banner_wallet_pay_save.jpeg',
+    },
+    {
+        id: 'solar-square',
+        title: 'A Greener Brighter Tomorrow',
+        subtitle: 'InTrust India partners with SolarSquare for clean energy solutions',
+        tag: 'CLEAN ENERGY PARTNERSHIP',
+        badge: 'Cost Savings',
+        ctaText: 'Explore Solar',
+        ctaHref: '/services',
+        image: '/banners/banner_solarsquare_green.jpeg',
     }
 ];
 
+const swipeConfidenceThreshold = 10000;
+const swipePower = (offset, velocity) => {
+    return Math.abs(offset) * velocity;
+};
+
+const slideVariants = {
+    enter: (direction) => ({
+        x: direction > 0 ? '100%' : direction < 0 ? '-100%' : 0,
+        opacity: 0,
+    }),
+    center: {
+        zIndex: 1,
+        x: 0,
+        opacity: 1,
+        transition: {
+            x: { type: 'spring', stiffness: 340, damping: 32 },
+            opacity: { duration: 0.22, ease: 'easeOut' }
+        }
+    },
+    exit: (direction) => ({
+        zIndex: 0,
+        x: direction > 0 ? '-100%' : '100%',
+        opacity: 0,
+        transition: {
+            x: { type: 'spring', stiffness: 340, damping: 32 },
+            opacity: { duration: 0.18, ease: 'easeIn' }
+        }
+    })
+};
+
 function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
     const slides = Array.isArray(banners) && banners.length > 0 ? banners : DEFAULT_SLIDES;
-    const [currentIdx, setCurrentIdx] = useState(0);
+    const [[page, direction], setPage] = useState([0, 0]);
+    const [isPaused, setIsPaused] = useState(false);
 
-    useEffect(() => {
-        if (!slides || slides.length <= 1) return;
-        const timer = setInterval(() => {
-            setCurrentIdx((prev) => (prev + 1) % slides.length);
-        }, 6000);
-        return () => clearInterval(timer);
+    const safeIdx = ((page % slides.length) + slides.length) % slides.length;
+    const slide = slides[safeIdx];
+
+    const paginate = useCallback((newDirection) => {
+        setPage(([prevPage]) => [prevPage + newDirection, newDirection]);
+    }, []);
+
+    const goToSlide = useCallback((targetIdx) => {
+        setPage(([prevPage]) => {
+            const currentMod = ((prevPage % slides.length) + slides.length) % slides.length;
+            const diff = targetIdx - currentMod;
+            return [prevPage + diff, diff >= 0 ? 1 : -1];
+        });
     }, [slides.length]);
 
-    const safeIdx = currentIdx < slides.length ? currentIdx : 0;
-    const slide = slides[safeIdx];
+    useEffect(() => {
+        if (slides.length <= 1 || isPaused) return;
+        const timer = setInterval(() => {
+            paginate(1);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [slides.length, isPaused, paginate]);
 
     if (!slide) return null;
 
     return (
-        <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border border-outline-variant/30 bg-slate-950">
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={slide.id || safeIdx}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.02 }}
-                    transition={{ duration: 0.5 }}
-                    className="relative p-7 sm:p-10 text-white flex flex-col justify-between min-h-[300px] sm:min-h-[360px] overflow-hidden"
-                >
-                    {/* Background Banner Image */}
-                    <div 
-                        className="absolute inset-0 bg-cover bg-center transition-all duration-700 transform scale-105"
-                        style={{ backgroundImage: `url(${slide.image})` }}
-                    />
-                    
-                    {/* Directional Vignette Gradient Overlay for Crisp Text Readability */}
-                    <div className={`absolute inset-0 bg-gradient-to-r ${slide.bgGradient} sm:w-3/4 w-full`} />
-                    <div className="absolute inset-0 bg-slate-950/40" />
-
-                    {/* Ambient Glows */}
-                    <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
-                    <div className="absolute -left-20 -bottom-20 w-72 h-72 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
-
-                    {/* Top Tags */}
-                    <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 mb-4">
-                        <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 rounded-full bg-slate-900/70 backdrop-blur-md text-[11px] font-black uppercase tracking-wider text-[#D4AF37] border border-white/15 flex items-center gap-1.5">
-                                <Sparkles size={13} className="text-[#D4AF37]" />
-                                {slide.tag}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md text-white/90 text-[11px] font-bold border border-white/10">
-                                {slide.badge}
-                            </span>
-                        </div>
-
-                        {/* Navigation dots */}
-                        <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                            {slides.map((_, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => setCurrentIdx(idx)}
-                                    aria-label={`Slide ${idx + 1}`}
-                                    className={`h-2 rounded-full transition-all ${
-                                        idx === safeIdx ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'
-                                    }`}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Main Headline */}
-                    <div className="relative z-10 max-w-xl my-auto py-2">
-                        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight drop-shadow-md">
-                            {slide.title}
-                        </h2>
-                        <p className="text-sm sm:text-base text-slate-200 mt-3 leading-relaxed max-w-lg font-medium drop-shadow">
-                            {slide.subtitle}
-                        </p>
-                    </div>
-
-                    {/* Bottom Action Ribbon */}
-                    <div className="relative z-10 pt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/15">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-slate-900/80 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
-                                <Zap size={18} className="text-[#D4AF37]" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Wallet Advantage</span>
-                                <span className={`text-sm font-extrabold ${slide.accentColor}`}>{slide.highlight}</span>
-                            </div>
-                        </div>
-
+        <div
+            className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-outline-variant/25 bg-slate-900/5 dark:bg-black/40 group select-none"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+        >
+            <div className="relative w-full aspect-[2.72/1] sm:aspect-[2.85/1] overflow-hidden">
+                <AnimatePresence initial={false} custom={direction}>
+                    <motion.div
+                        key={page}
+                        custom={direction}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={(e, { offset, velocity }) => {
+                            const swipe = swipePower(offset.x, velocity.x);
+                            if (swipe < -swipeConfidenceThreshold) {
+                                paginate(1);
+                            } else if (swipe > swipeConfidenceThreshold) {
+                                paginate(-1);
+                            }
+                        }}
+                        className="absolute inset-0 w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+                    >
                         <Link
-                            href={slide.ctaHref}
-                            className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/40 hover:scale-105 active:scale-95 transition-all backdrop-blur-sm"
+                            href={slide.ctaHref || '/shop'}
+                            className="block relative w-full h-full"
+                            aria-label={slide.title}
                         >
-                            <span>{slide.ctaText}</span>
-                            <ArrowRight size={16} />
+                            {/* High Resolution Banner Image — completely visible without side or bottom cropping */}
+                            <img
+                                src={slide.image}
+                                alt={slide.title}
+                                className="w-full h-full object-contain sm:object-cover object-center pointer-events-none transition-transform duration-300 ease-out group-hover:scale-[1.01]"
+                                loading="eager"
+                                draggable={false}
+                            />
                         </Link>
-                    </div>
-                </motion.div>
-            </AnimatePresence>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+
+            {/* Left Navigation Arrow */}
+            {slides.length > 1 && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        paginate(-1);
+                    }}
+                    aria-label="Previous Slide"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-md z-20 border border-white/20 active:scale-95"
+                >
+                    <ChevronLeft size={18} />
+                </button>
+            )}
+
+            {/* Right Navigation Arrow */}
+            {slides.length > 1 && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        paginate(1);
+                    }}
+                    aria-label="Next Slide"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-md z-20 border border-white/20 active:scale-95"
+                >
+                    <ChevronRight size={18} />
+                </button>
+            )}
+
+            {/* Indicator Dots */}
+            {slides.length > 1 && (
+                <div className="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 z-20">
+                    {slides.map((_, idx) => (
+                        <button
+                            key={idx}
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                goToSlide(idx);
+                            }}
+                            aria-label={`Go to slide ${idx + 1}`}
+                            className={`h-1 sm:h-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                                idx === safeIdx
+                                    ? 'w-5 sm:w-6 bg-white shadow-sm'
+                                    : 'w-1 sm:w-1.5 bg-white/45 hover:bg-white/75'
+                            }`}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

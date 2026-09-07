@@ -8,6 +8,7 @@ import WelcomeCard from '@/components/merchant/WelcomeCard';
 import MerchantDisclaimerNote from '@/components/merchant/dashboard/MerchantDisclaimerNote';
 import DashboardHeader from '@/components/merchant/dashboard/DashboardHeader';
 import QuickAccessGrid from '@/components/merchant/dashboard/QuickAccessGrid';
+import TodayStatsCards from '@/components/merchant/dashboard/TodayStatsCards';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,10 @@ export default async function MerchantDashboardPage() {
 
     const adminDb = createAdminClient();
 
+    // Start of current day in local/UTC time for Today's Stats
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
     // 3. Fetch all data in a single parallel batch
     const [
         couponsRes,
@@ -61,7 +66,9 @@ export default async function MerchantDashboardPage() {
         lockinRes,
         shoppingOrderItemsRes,
         wholesaleOrdersRes,
-        pendingOrdersCountRes
+        pendingOrdersCountRes,
+        todayCouponsRes,
+        todayShoppingGroupsRes
     ] = await Promise.all([
         supabase
             .from('coupons')
@@ -91,7 +98,18 @@ export default async function MerchantDashboardPage() {
         adminDb.from('shopping_order_groups')
             .select('*', { count: 'exact', head: true })
             .eq('merchant_id', merchant.id)
-            .eq('delivery_status', 'pending')
+            .eq('delivery_status', 'pending'),
+        supabase
+            .from('coupons')
+            .select('merchant_selling_price_paise, merchant_purchase_price_paise, merchant_commission_paise, purchased_at')
+            .eq('merchant_id', merchant.id)
+            .eq('status', 'sold')
+            .gte('purchased_at', todayStart),
+        adminDb
+            .from('shopping_order_groups')
+            .select('id, total_amount_paise, merchant_profit_paise, created_at, delivery_status')
+            .eq('merchant_id', merchant.id)
+            .gte('created_at', todayStart)
     ]);
 
     const coupons = couponsRes.data || [];
@@ -131,6 +149,35 @@ export default async function MerchantDashboardPage() {
         lockinBalance: totalLockinPaise / 100,
     };
 
+    // Calculate Today's Stats
+    const todayCoupons = todayCouponsRes.data || [];
+    const todayShoppingGroups = todayShoppingGroupsRes.data || [];
+
+    const todayCouponSales = todayCoupons.reduce((sum, c) => sum + ((c.merchant_selling_price_paise || 0) / 100), 0);
+    const todayCouponProfit = todayCoupons.reduce((sum, c) => {
+        const sp = (c.merchant_selling_price_paise || 0) / 100;
+        const pp = (c.merchant_purchase_price_paise || 0) / 100;
+        const comm = (c.merchant_commission_paise || 0) / 100;
+        return sum + (sp - pp - comm);
+    }, 0);
+
+    const todayShoppingSales = todayShoppingGroups.reduce((sum, g) => sum + ((g.total_amount_paise || 0) / 100), 0);
+    const todayShoppingProfit = todayShoppingGroups.reduce((sum, g) => sum + ((g.merchant_profit_paise || 0) / 100), 0);
+
+    const todaySales = todayCouponSales + todayShoppingSales;
+    const todayProfit = todayCouponProfit + todayShoppingProfit;
+    const todayOrdersCount = todayCoupons.length + todayShoppingGroups.length;
+    const todayMargin = todaySales > 0 ? Number(((todayProfit / todaySales) * 100).toFixed(1)) : 0;
+    const avgOrderValue = todayOrdersCount > 0 ? Math.round(todaySales / todayOrdersCount) : 0;
+
+    const todayStats = {
+        todaySales,
+        todayProfit,
+        todayOrdersCount,
+        todayMargin,
+        avgOrderValue,
+    };
+
     const transformedCoupons = coupons.map(c => ({
         id: c.id,
         brand: c.brand,
@@ -148,6 +195,9 @@ export default async function MerchantDashboardPage() {
             {/* SECTION 1: Financial & Status Header (replaces yellow banner) */}
             <DashboardHeader merchant={merchant} profile={profile} walletBalancePaise={merchant.wallet_balance_paise || 0} />
             
+            {/* SECTION 1.5: Today's Real-time Sales, Profit & Orders Performance */}
+            <TodayStatsCards todayStats={todayStats} />
+
             {/* Welcome Card if no sales */}
             {stats.totalSales === 0 && stats.activeCoupons === 0 && (
                 <WelcomeCard />

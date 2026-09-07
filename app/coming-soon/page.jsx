@@ -3,13 +3,12 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Bell, ArrowLeft, Construction, Clock, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import Navbar from '@/components/layout/Navbar';
+import CustomerAppShell from '@/components/layout/customer/CustomerAppShell';
 import Footer from '@/components/layout/Footer';
 
 export default function ComingSoonPage() {
     return (
-        <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-gray-900 font-[family-name:var(--font-outfit)]">
-            <Navbar />
+        <CustomerAppShell fullWidth={true}>
 
             <main className="flex-grow flex items-center justify-center relative overflow-hidden pt-[10vh] pb-20 px-4 sm:px-6 z-10">
                 {/* Background Elements */}
@@ -96,6 +95,6 @@ export default function ComingSoonPage() {
             </main>
 
             <Footer />
-        </div>
+        </CustomerAppShell>
     );
 }

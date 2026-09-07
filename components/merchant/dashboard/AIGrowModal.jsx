@@ -1,34 +1,70 @@
+'use client';
+
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { X, Sparkles, TrendingUp, ShieldCheck, Zap, ArrowRight, Store, Package, ShoppingCart } from 'lucide-react';
+import { X, Sparkles, TrendingUp, ShieldCheck, Zap, ArrowRight, Store, Package, ShoppingCart, Check } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 
 export default function AIGrowModal({ isOpen, onClose }) {
     const router = useRouter();
-    const [isRedirecting, setIsRedirecting] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     const containerRef = useRef(null);
     const x = useMotionValue(0);
-    // Smooth transition for the background fill as you swipe
-    const backgroundWidth = useTransform(x, [0, 240], ["64px", "100%"]);
-    const textOpacity = useTransform(x, [0, 100], [1, 0]);
+
+    // Dynamic background fill based on swipe
+    const backgroundWidth = useTransform(x, [0, 220], ["64px", "100%"]);
+    const textOpacity = useTransform(x, [0, 80], [1, 0]);
 
     useEffect(() => {
-        if (!isOpen) {
-            setIsRedirecting(false);
+        setMounted(true);
+    }, []);
+
+    // Lock body scroll when open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+            setIsSuccess(false);
             x.set(0);
         }
+        return () => {
+            document.body.style.overflow = '';
+        };
     }, [isOpen, x]);
 
     const handleDragEnd = (event, info) => {
-        if (info.offset.x > 140) {
-            setIsRedirecting(true);
+        if (isSuccess) return;
+
+        if (info.offset.x > 110) {
+            setIsSuccess(true);
+
+            // 1. Move smoothly to the right
+            animate(x, 220, { 
+                type: "spring", 
+                stiffness: 400, 
+                damping: 25 
+            }).then(() => {
+                // 2. Return smoothly back to the left while turning/staying green
+                setTimeout(() => {
+                    animate(x, 0, { 
+                        type: "spring", 
+                        stiffness: 320, 
+                        damping: 24 
+                    });
+                }, 180);
+            });
+
+            // 3. Smooth redirect after the return swipe animation completes
             setTimeout(() => {
                 router.push('/merchant/investments?new=true');
-                setTimeout(() => onClose(), 500);
-            }, 500);
+                onClose();
+            }, 850);
         } else {
-            animate(x, 0, { type: "spring", stiffness: 400, damping: 25 });
+            animate(x, 0, { type: "spring", stiffness: 450, damping: 26 });
         }
     };
 
@@ -42,164 +78,202 @@ export default function AIGrowModal({ isOpen, onClose }) {
         hidden: { opacity: 0 },
         visible: {
             opacity: 1,
-            transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+            transition: { staggerChildren: 0.06, delayChildren: 0.05 }
         }
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 15 },
-        visible: { opacity: 1, y: 0, transition: { type: "spring", damping: 20 } }
+        hidden: { opacity: 0, y: 12 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } }
     };
 
-    return (
+    if (!mounted) return null;
+
+    const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <>
-                    {/* Minimal Backdrop */}
+                <div className="fixed inset-0 z-[99999] flex flex-col justify-end pointer-events-auto">
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
+                        className="fixed inset-0 bg-slate-950/65 backdrop-blur-sm z-[100000]"
                     />
-                    
-                    {/* Redirect Flash */}
-                    {isRedirecting && (
-                        <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 60, opacity: 1 }}
-                            transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
-                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white dark:bg-[#0f111a] rounded-full z-[120] pointer-events-none"
-                        />
-                    )}
 
+                    {/* Bottom Sheet Modal - Smooth, Fast Entrance Animation */}
                     <motion.div
                         initial={{ y: "100%" }}
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 250, mass: 0.8 }}
-                        className="fixed bottom-0 left-0 right-0 h-[85vh] sm:h-[80vh] w-full bg-white dark:bg-[#0f111a] sm:rounded-t-[2.5rem] rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-[101] overflow-hidden flex flex-col border-t border-slate-100 dark:border-white/5"
+                        transition={{ 
+                            type: "spring", 
+                            damping: 28, 
+                            stiffness: 380, 
+                            mass: 0.5 
+                        }}
+                        className="relative w-full max-w-2xl mx-auto h-[82vh] sm:h-[80vh] min-h-[520px] bg-white dark:bg-slate-900 rounded-t-[2.5rem] shadow-[0_-16px_60px_rgba(0,0,0,0.3)] z-[100001] overflow-hidden flex flex-col border-t border-slate-200 dark:border-white/10"
                     >
-                        {/* Elegant Handle */}
-                        <div className="w-full flex justify-center pt-3 pb-2 shrink-0">
-                            <div className="w-10 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full" />
+                        {/* Pull Handle Bar */}
+                        <div className="w-full flex justify-center pt-3 pb-1 shrink-0">
+                            <div className="w-12 h-1.5 bg-slate-200 dark:bg-white/20 rounded-full" />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto no-scrollbar px-6 sm:px-10 pb-32">
-                            {/* Minimal Header */}
-                            <div className="flex justify-end mb-4">
-                                <button onClick={onClose} className="p-2 rounded-full bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
-                                    <X size={20} />
-                                </button>
+                        {/* Top Header with Prominent Cross (X) Button */}
+                        <div className="flex items-center justify-between px-6 sm:px-8 py-2 shrink-0">
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider border border-amber-500/20">
+                                    <Sparkles size={13} className="text-amber-500 animate-pulse" />
+                                    InTrust AI Grow
+                                </span>
                             </div>
 
-                            <motion.div 
+                            {/* Accessible Cross Button */}
+                            <button
+                                onClick={onClose}
+                                aria-label="Close AI Grow modal"
+                                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xs"
+                            >
+                                <X size={18} strokeWidth={2.5} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body Content */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar px-6 sm:px-10 pb-36">
+                            <motion.div
                                 variants={containerVariants}
                                 initial="hidden"
                                 animate="visible"
-                                className="space-y-8"
+                                className="space-y-6 pt-2 text-center"
                             >
-                                {/* Compact Orbit Animation */}
-                                <motion.div variants={itemVariants} className="relative w-32 h-32 mx-auto mt-2">
-                                    {/* Central Node */}
-                                    <div className="absolute inset-0 m-auto w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#b5952f] rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.4)] z-10 border border-white/20">
-                                        <Sparkles className="text-white w-6 h-6 animate-pulse" />
+                                {/* Planetary Orbit Micro Animation */}
+                                <motion.div variants={itemVariants} className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto">
+                                    {/* Central AI Node */}
+                                    <div className="absolute inset-0 m-auto w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-[#D4AF37] to-[#b5952f] rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.4)] z-10 border border-white/25">
+                                        <Sparkles className="text-white w-5 h-5 sm:w-6 sm:h-6" />
                                     </div>
                                     
-                                    {/* Orbital Track */}
-                                    <div className="absolute inset-0 m-auto w-full h-full border border-slate-200 dark:border-white/10 rounded-full border-dashed animate-[spin_10s_linear_infinite] z-0" />
+                                    {/* Orbital Ring */}
+                                    <div className="absolute inset-0 m-auto w-full h-full border border-slate-200 dark:border-white/10 rounded-full border-dashed animate-[spin_12s_linear_infinite]" />
                                     
-                                    {/* Orbiting Icons */}
+                                    {/* Rotating Store Nodes */}
                                     <motion.div 
                                         animate={{ rotate: 360 }}
-                                        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                                        transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
                                         className="absolute inset-0 m-auto w-full h-full z-20"
                                     >
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-white dark:bg-slate-800 rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700" style={{ animation: 'spin 10s linear infinite reverse' }}>
-                                            <ShoppingCart className="w-4 h-4 text-emerald-500" />
+                                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-7 h-7 bg-white dark:bg-slate-800 rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700">
+                                            <ShoppingCart className="w-3.5 h-3.5 text-emerald-500" />
                                         </div>
-                                        <div className="absolute top-1/2 -right-3 -translate-y-1/2 w-8 h-8 bg-white dark:bg-slate-800 rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700" style={{ animation: 'spin 10s linear infinite reverse' }}>
-                                            <Package className="w-4 h-4 text-indigo-500" />
+                                        <div className="absolute top-1/2 -right-2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-slate-800 rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700">
+                                            <Package className="w-3.5 h-3.5 text-indigo-500" />
                                         </div>
-                                        <div className="absolute bottom-2 left-2 w-8 h-8 bg-white dark:bg-slate-800 rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700" style={{ animation: 'spin 10s linear infinite reverse' }}>
-                                            <Store className="w-4 h-4 text-orange-500" />
+                                        <div className="absolute bottom-1 left-2 w-7 h-7 bg-white dark:bg-slate-800 rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700">
+                                            <Store className="w-3.5 h-3.5 text-orange-500" />
                                         </div>
                                     </motion.div>
                                 </motion.div>
 
-                                {/* Typography Focus */}
-                                <div className="space-y-4 max-w-sm mx-auto text-center">
-                                    <motion.h2 variants={itemVariants} className="text-3xl sm:text-4xl font-black font-display text-slate-900 dark:text-white leading-[1.1] tracking-tight">
-                                        Automate<br/>Your Growth.
+                                {/* Headline & Subtitle */}
+                                <div className="space-y-2 max-w-md mx-auto">
+                                    <motion.h2 variants={itemVariants} className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                                        Automate Your Store Growth.
                                     </motion.h2>
                                     
-                                    <motion.p variants={itemVariants} className="text-slate-500 dark:text-white/50 text-[13px] sm:text-sm font-medium leading-relaxed max-w-[280px] mx-auto">
-                                        Supply capital, we route e-com orders via AI and share the profits.
+                                    <motion.p variants={itemVariants} className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-sm mx-auto">
+                                        Deploy smart working capital. Our neural routing algorithm drives orders to your catalog and distributes profits automatically.
                                     </motion.p>
                                 </div>
 
-                                {/* Minimal Interactive Cards */}
-                                <motion.div variants={itemVariants} className="grid grid-cols-3 gap-2 max-w-[340px] mx-auto">
+                                {/* 3 Mini Benefit Cards */}
+                                <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3 max-w-md mx-auto">
                                     {features.map((feat, idx) => {
                                         const Icon = feat.icon;
                                         return (
-                                            <motion.div 
+                                            <div 
                                                 key={idx}
-                                                whileHover={{ y: -2 }}
-                                                className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl p-3 shadow-sm transition-all cursor-default text-center flex flex-col items-center justify-center aspect-square"
+                                                className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-white/10 rounded-2xl p-3 text-center flex flex-col items-center justify-center shadow-xs"
                                             >
-                                                <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#D4AF37]/10 flex items-center justify-center mb-2">
-                                                    <Icon className="text-[#D4AF37]" size={16} />
+                                                <div className="w-8 h-8 rounded-xl bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1.5">
+                                                    <Icon size={16} />
                                                 </div>
-                                                <h4 className="text-slate-800 dark:text-white font-bold text-[10px] leading-tight mb-0.5">{feat.title}</h4>
-                                                <p className="text-slate-500 dark:text-white/40 text-[9px] font-medium leading-[1.1]">{feat.desc}</p>
-                                            </motion.div>
-                                        )
+                                                <h4 className="text-slate-900 dark:text-white font-bold text-[11px] leading-tight mb-0.5">{feat.title}</h4>
+                                                <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight font-medium">{feat.desc}</p>
+                                            </div>
+                                        );
                                     })}
                                 </motion.div>
                             </motion.div>
                         </div>
 
-                        {/* Classic Swiper - White/Gold Theme */}
-                        <div className="absolute bottom-0 left-0 w-full p-6 pb-8 bg-gradient-to-t from-white via-white to-transparent dark:from-[#0f111a] dark:via-[#0f111a]">
+                        {/* Swipe to Activate Footer Bar */}
+                        <div className="absolute bottom-0 left-0 w-full p-6 pb-8 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95">
                             <div 
                                 ref={containerRef}
-                                className="relative w-full max-w-md mx-auto h-16 bg-slate-100 dark:bg-[#1a1c23]/80 rounded-full overflow-hidden shadow-[inset_0_2px_8px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)] flex items-center justify-center touch-none border border-slate-200/50 dark:border-white/5"
+                                className={`relative w-full max-w-md mx-auto h-16 rounded-full overflow-hidden shadow-inner flex items-center justify-center touch-none border transition-all duration-400 ${
+                                    isSuccess 
+                                        ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.4)]' 
+                                        : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10'
+                                }`}
                             >
-                                {/* Fill Background */}
+                                {/* Fill Background (Smooth Transition to Emerald Green) */}
                                 <motion.div 
-                                    style={{ width: backgroundWidth }}
-                                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-[#D4AF37] to-[#b5952f] rounded-full z-0 origin-left"
+                                    style={{ width: isSuccess ? '100%' : backgroundWidth }}
+                                    className={`absolute left-0 top-0 bottom-0 rounded-full z-0 origin-left transition-all duration-400 ${
+                                        isSuccess 
+                                            ? 'bg-emerald-500 w-full' 
+                                            : 'bg-gradient-to-r from-[#D4AF37] to-[#b5952f]'
+                                    }`}
                                 />
                                 
-                                {/* Shimmering Text - Slower and elegant */}
+                                {/* Status Text */}
                                 <motion.p 
-                                    style={{ opacity: textOpacity, backgroundSize: '200% auto' }}
-                                    className="absolute z-10 text-[13px] font-bold uppercase tracking-widest pointer-events-none bg-clip-text text-transparent bg-gradient-to-r from-slate-400 via-slate-700 to-slate-400 dark:from-white/30 dark:via-white/80 dark:to-white/30 animate-[shimmer_4s_infinite_linear]"
+                                    className={`absolute z-10 text-[12px] sm:text-[13px] font-black uppercase tracking-widest pointer-events-none transition-all duration-300 ${
+                                        isSuccess 
+                                            ? 'text-white opacity-100 drop-shadow-sm scale-100' 
+                                            : 'text-slate-600 dark:text-slate-300'
+                                    }`}
+                                    style={isSuccess ? {} : { opacity: textOpacity }}
                                 >
-                                    Slide to Activate
+                                    {isSuccess ? 'Success! Activating InTrust AI Grow...' : 'Slide to Activate AI Grow'}
                                 </motion.p>
 
-                                {/* Drag Handle */}
+                                {/* Drag Handle Button */}
                                 <motion.div
-                                    drag="x"
+                                    drag={isSuccess ? false : "x"}
                                     dragConstraints={containerRef}
                                     dragElastic={0.05}
                                     dragMomentum={false}
                                     onDragEnd={handleDragEnd}
                                     style={{ x }}
-                                    whileTap={{ scale: 0.96 }}
-                                    className="absolute left-1.5 top-1.5 bottom-1.5 w-13 aspect-square bg-white dark:bg-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.15)] flex items-center justify-center z-20 cursor-grab active:cursor-grabbing border border-slate-100 dark:border-transparent"
+                                    whileTap={isSuccess ? {} : { scale: 0.95 }}
+                                    className={`absolute left-1.5 top-1.5 bottom-1.5 w-13 aspect-square rounded-full shadow-lg flex items-center justify-center z-20 cursor-grab active:cursor-grabbing border transition-colors duration-300 ${
+                                        isSuccess 
+                                            ? 'bg-white text-emerald-600 border-emerald-100 shadow-md' 
+                                            : 'bg-white dark:bg-slate-100 text-slate-800 border-slate-200'
+                                    }`}
                                 >
-                                    <ArrowRight className="text-slate-800" size={22} />
+                                    {isSuccess ? (
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{ type: "spring", stiffness: 450, damping: 22 }}
+                                        >
+                                            <Check size={22} className="text-emerald-600 stroke-[3]" />
+                                        </motion.div>
+                                    ) : (
+                                        <ArrowRight size={22} className="text-slate-800" />
+                                    )}
                                 </motion.div>
                             </div>
                         </div>
                     </motion.div>
-                </>
+                </div>
             )}
         </AnimatePresence>
     );
+
+    return createPortal(modalContent, document.body);
 }

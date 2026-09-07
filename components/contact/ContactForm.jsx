@@ -16,7 +16,6 @@ export default function ContactForm() {
         company: '', // honeypot
     });
 
-    const [focused, setFocused] = useState('');
     const [status, setStatus] = useState('idle'); // idle, loading, success, error
 
     const handleChange = (e) => {
@@ -29,7 +28,6 @@ export default function ContactForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Lightweight email sanity check before hitting the server
         if (!EMAIL_RE.test(formState.email.trim())) {
             toast.error('Please enter a valid email address.');
             return;
@@ -47,12 +45,11 @@ export default function ContactForm() {
             if (res.ok) {
                 setStatus('success');
                 setFormState({ name: '', email: '', subject: '', message: '', company: '' });
-                setTimeout(() => setStatus('idle'), 3000);
+                setTimeout(() => setStatus('idle'), 3500);
             } else {
                 const data = await res.json().catch(() => ({}));
                 setStatus('error');
                 toast.error(data.error || 'Something went wrong. Please try again.');
-                // Keep typed data so the user can retry
                 setTimeout(() => setStatus('idle'), 100);
             }
         } catch {
@@ -62,21 +59,10 @@ export default function ContactForm() {
         }
     };
 
-    const inputClasses = "w-full px-4 py-4 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 outline-hidden transition-all duration-300 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 placeholder-transparent peer text-gray-900 dark:text-gray-100";
-    const labelClasses = "absolute left-4 top-4 text-gray-500 dark:text-gray-400 text-sm transition-all duration-200 peer-placeholder-shown:text-base peer-placeholder-shown:top-4 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-blue-500 dark:peer-focus:text-blue-400 peer-focus:bg-white dark:peer-focus:bg-gray-800 peer-focus:px-2 pointer-events-none rounded-md";
-
     return (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 md:p-10 rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700 relative overflow-hidden">
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-bl-full pointer-events-none -z-10" />
-
-            <div className="mb-8">
-                <h3 className="text-3xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2">Send us a Message</h3>
-                <p className="text-gray-500 dark:text-gray-400">We usually respond within 24 hours.</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Honeypot — invisible to humans, catches bots */}
+        <div className="w-full">
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Honeypot for spam bots */}
                 <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', height: 0, overflow: 'hidden' }}>
                     <label htmlFor="company">Company</label>
                     <input
@@ -89,8 +75,13 @@ export default function ContactForm() {
                         onChange={handleChange}
                     />
                 </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="relative group">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {/* Full Name */}
+                    <div className="space-y-1.5">
+                        <label htmlFor="name" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                            Full Name <span className="text-blue-500">*</span>
+                        </label>
                         <input
                             type="text"
                             name="name"
@@ -98,13 +89,16 @@ export default function ContactForm() {
                             value={formState.name}
                             onChange={handleChange}
                             required
-                            placeholder="Name"
-                            className={inputClasses}
+                            placeholder="e.g. Rahul Sharma"
+                            className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
                         />
-                        <label htmlFor="name" className={labelClasses}>Full Name</label>
                     </div>
 
-                    <div className="relative group">
+                    {/* Email Address */}
+                    <div className="space-y-1.5">
+                        <label htmlFor="email" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                            Email Address <span className="text-blue-500">*</span>
+                        </label>
                         <input
                             type="email"
                             name="email"
@@ -112,14 +106,17 @@ export default function ContactForm() {
                             value={formState.email}
                             onChange={handleChange}
                             required
-                            placeholder="Email"
-                            className={inputClasses}
+                            placeholder="e.g. rahul@example.com"
+                            className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
                         />
-                        <label htmlFor="email" className={labelClasses}>Email Address</label>
                     </div>
                 </div>
 
-                <div className="relative group">
+                {/* Subject */}
+                <div className="space-y-1.5">
+                    <label htmlFor="subject" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        Subject <span className="text-blue-500">*</span>
+                    </label>
                     <input
                         type="text"
                         name="subject"
@@ -127,51 +124,58 @@ export default function ContactForm() {
                         value={formState.subject}
                         onChange={handleChange}
                         required
-                        placeholder="Subject"
-                        className={inputClasses}
+                        placeholder="e.g. Order Tracking Inquiry / General Support"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
                     />
-                    <label htmlFor="subject" className={labelClasses}>Subject</label>
                 </div>
 
-                <div className="relative group">
+                {/* Message */}
+                <div className="space-y-1.5">
+                    <label htmlFor="message" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        Message <span className="text-blue-500">*</span>
+                    </label>
                     <textarea
                         name="message"
                         id="message"
                         value={formState.message}
                         onChange={handleChange}
                         required
-                        rows={4}
-                        placeholder="Message"
-                        className={`${inputClasses} resize-none`}
+                        rows={5}
+                        placeholder="Describe your inquiry or question in detail..."
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs resize-none"
                     />
-                    <label htmlFor="message" className={labelClasses}>How can we help?</label>
                 </div>
 
+                {/* Submit Button - Vibrant InTrust Blue Theme */}
                 <button
                     type="submit"
                     disabled={status === 'loading' || status === 'success'}
-                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 transform active:scale-95
-                    ${status === 'success' ? 'bg-green-500 text-white shadow-green-200' : 'bg-[#171A21] text-white hover:bg-gray-800 shadow-xl shadow-gray-200 hover:shadow-2xl'}
-                `}
+                    className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-md transform active:scale-[0.99] cursor-pointer disabled:cursor-not-allowed ${
+                        status === 'success'
+                            ? 'bg-emerald-600 text-white shadow-emerald-500/25'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/30 hover:shadow-blue-600/40'
+                    }`}
                 >
-                    <AnimatePresence mode='wait'>
+                    <AnimatePresence mode="wait">
                         {status === 'loading' ? (
                             <motion.div
                                 key="loading"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
+                                className="flex items-center gap-2"
                             >
-                                <Loader2 className="animate-spin" />
+                                <Loader2 className="animate-spin" size={18} />
+                                <span>Sending Message...</span>
                             </motion.div>
                         ) : status === 'success' ? (
                             <motion.div
                                 key="success"
-                                initial={{ scale: 0.5, opacity: 0 }}
+                                initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 className="flex items-center gap-2"
                             >
-                                <CheckCircle size={20} />
+                                <CheckCircle size={18} />
                                 <span>Message Sent Successfully</span>
                             </motion.div>
                         ) : (
@@ -182,7 +186,7 @@ export default function ContactForm() {
                                 className="flex items-center gap-2"
                             >
                                 <span>Send Message</span>
-                                <Send size={18} />
+                                <Send size={16} />
                             </motion.div>
                         )}
                     </AnimatePresence>

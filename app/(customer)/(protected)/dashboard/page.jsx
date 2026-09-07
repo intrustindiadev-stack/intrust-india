@@ -416,7 +416,7 @@ export default function CustomerDashboardPage() {
                                 )}
                             </h1>
                             <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-1">
-                                Explore festive tech deals, genuine essentials, and verified local stores across Bhopal.
+                                Verified local commerce, essentials, and digital wallet services in Bhopal.
                             </p>
                         </div>
                     </div>

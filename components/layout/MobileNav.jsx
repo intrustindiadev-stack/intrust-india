@@ -1,37 +1,50 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, Moon, Sun, Gift, Sparkles, History, ShoppingBag, CreditCard, ScanFace, ChevronDown, Heart } from 'lucide-react';
-import NotificationBell from '@/components/notifications/NotificationBell';
+import { 
+    X, 
+    ChevronRight, 
+    Moon, 
+    Sun, 
+    Home, 
+    Store, 
+    Zap, 
+    Info, 
+    Phone, 
+    ShoppingBag, 
+    Heart, 
+    LayoutDashboard, 
+    Package, 
+    Wallet, 
+    User, 
+    LogOut,
+    ShoppingCart
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { displayInitial, displayEmail } from '@/lib/auth';
-import GlobalSearch from '@/components/search/GlobalSearch';
-import toast from 'react-hot-toast';
+import { usePathname } from 'next/navigation';
+import { displayName, displayInitial } from '@/lib/auth';
+import GoldBadge from '@/components/ui/GoldBadge';
 
-export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, user, theme, toggleTheme, handleSignOut, menuItems, apiPath }) {
-    const router = useRouter();
-
-    const [avatarError, setAvatarError] = useState(false);
-
-    // Menu Item Variants for Staggered Animation
-    const itemVariants = {
-        hidden: { opacity: 0, x: 10 },
-        visible: (i) => ({
-            opacity: 1,
-            x: 0,
-            transition: {
-                delay: 0.03 + i * 0.03,
-                duration: 0.2,
-                ease: 'easeOut'
-            }
-        })
-    };
+export default function MobileNav({ 
+    isOpen, 
+    onClose, 
+    isAuthenticated, 
+    profile, 
+    user, 
+    theme, 
+    toggleTheme, 
+    handleSignOut, 
+    menuItems = [],
+    cartCount = 0
+}) {
+    const pathname = usePathname();
+    const isDarkMode = theme === 'dark';
+    const isGold = !!profile?.is_gold_verified;
+    const userDisplayName = displayName(profile, user) || 'Member';
 
     return (
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
             {isOpen && (
                 <>
                     {/* Backdrop */}
@@ -39,380 +52,311 @@ export default function MobileNav({ isOpen, onClose, isAuthenticated, profile, u
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.25 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/50 z-[998] lg:hidden"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] md:hidden"
                     />
 
-                    {/* Menu Panel - Slide from Right */}
-                    <motion.div
-                        initial={{ x: '100%' }}
+                    {/* Drawer Panel — slide from left */}
+                    <motion.aside
+                        initial={{ x: '-100%' }}
                         animate={{ x: 0 }}
-                        exit={{ x: '100%' }}
-                        transition={{
-                            duration: 0.35,
-                            ease: [0.32, 0.725, 0.32, 1] // Snappier & tight
-                        }}
-                        style={{ willChange: "transform" }}
-                        className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white dark:bg-gray-900 z-[999] lg:hidden overflow-y-auto shadow-2xl flex flex-col"
+                        exit={{ x: '-100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                        className="fixed top-0 left-0 bottom-0 w-[82vw] max-w-sm bg-white dark:bg-surface-container-lowest z-[999] md:hidden flex flex-col justify-between shadow-2xl p-5 overflow-y-auto no-scrollbar border-r border-slate-200 dark:border-outline-variant/30"
                     >
-                        {/* Header */}
-                        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 p-5 flex items-center justify-between z-10 shrink-0">
-                            <div className="flex items-center gap-2.5">
-                                <div className="relative w-8 h-8">
-                                    <Image
-                                        src="/icon.png"
-                                        alt="INTRUST"
-                                        fill
-                                        className="object-contain"
-                                        priority
-                                        sizes="32px"
-                                    />
-                                </div>
-                                <span className="text-lg font-bold bg-gradient-to-r from-[#7A93AC] to-[#92BCEA] bg-clip-text text-transparent font-[family-name:var(--font-outfit)]">
-                                    INTRUST
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {isAuthenticated && <NotificationBell apiPath={apiPath} variant="navbar" />}
+                        <div className="space-y-4">
+                            {/* Drawer Header with Logo & Close */}
+                            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 dark:border-outline-variant/20 shrink-0">
+                                <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
+                                    <div className="relative w-9 h-9 rounded-xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-xs overflow-hidden">
+                                        <Image src="/icons/intrustLogo.png" alt="InTrust" width={26} height={26} className="object-contain" priority />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-slate-900 dark:text-on-surface leading-none">InTrust</h3>
+                                        <p className="text-[9px] text-slate-400 dark:text-brand-steel font-bold uppercase tracking-wider mt-1">InTrust Network • Live</p>
+                                    </div>
+                                </Link>
                                 <button
                                     onClick={onClose}
-                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200"
-                                    aria-label="Close menu"
+                                    aria-label="Close navigation menu"
+                                    className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-600 dark:text-on-surface hover:bg-slate-200 transition-colors"
                                 >
-                                    <X size={24} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
+                                    <X size={18} />
                                 </button>
                             </div>
-                        </div>
 
-                        {/* Menu Content - Scrollable */}
-                        <div className="p-5 flex-1 overflow-y-auto">
-                            <div className="mb-6">
-                                <GlobalSearch className="w-full" />
-                            </div>
-                            <div className="space-y-2">
-                                {/* Navigation Links */}
-                                {menuItems.map((item, index) => (
-                                    <Link key={item.label} href={item.isComingSoon ? '#' : item.href} passHref legacyBehavior>
-                                        <motion.a
-                                            custom={index}
-                                            variants={itemVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            onClick={(e) => {
-                                                if (item.isComingSoon) {
-                                                    e.preventDefault();
-                                                    toast('We are tailoring something special. The Fashion category is launching soon!', {
-                                                        icon: '✨',
-                                                        style: {
-                                                            background: '#ffffff',
-                                                            color: '#334155',
-                                                            border: '1px solid #e2e8f0',
-                                                            padding: '16px',
-                                                            fontWeight: '500',
-                                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-                                                        }
-                                                    });
-                                                } else {
-                                                    onClose();
-                                                }
-                                            }}
-                                            className="
-                                                group flex items-center justify-between 
-                                                px-4 py-4 text-[#171A21] dark:text-gray-100
-                                                active:bg-gray-50 dark:active:bg-gray-800
-                                                rounded-2xl font-medium text-[16px]
-                                                transition-colors duration-200
-                                                border border-transparent hover:border-gray-100 dark:hover:border-gray-800
-                                            "
-                                        >
-                                            <span>{item.label}</span>
-                                            <ChevronRight
-                                                size={18}
-                                                className="text-gray-300 group-active:text-[#92BCEA] transition-colors"
-                                                strokeWidth={2.5}
-                                            />
-                                        </motion.a>
-                                    </Link>
-                                ))}
-                            </div>
-
-                            {/* Shopping Links */}
-                            <div className="mt-4 space-y-1">
-                                <Link href="/shop/cart" passHref legacyBehavior>
-                                    <motion.a
-                                        onClick={onClose}
-                                        className="
-                                            group flex items-center justify-between 
-                                            px-4 py-3.5 text-[#171A21] dark:text-gray-100
-                                            active:bg-gray-50 dark:active:bg-gray-800
-                                            rounded-2xl font-medium text-[15px]
-                                            transition-colors duration-200
-                                            border border-transparent hover:border-gray-100 dark:hover:border-gray-800
-                                        "
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <ShoppingBag size={18} className="text-blue-500" />
-                                            <span>Cart</span>
+                            {/* User Status Card or Guest Sign In */}
+                            {isAuthenticated ? (
+                                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200/80 dark:border-outline-variant/20 flex items-center justify-between">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="relative shrink-0">
+                                            <div className={`w-10 h-10 rounded-full p-[2px] ${
+                                                isGold 
+                                                    ? 'bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600' 
+                                                    : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                                            }`}>
+                                                <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden">
+                                                    {profile?.avatar_url ? (
+                                                        <img src={profile.avatar_url} alt={userDisplayName} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-xs font-black text-slate-700 dark:text-on-surface">
+                                                            {displayInitial(profile, user)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {isGold && (
+                                                <div className="absolute -bottom-1 -right-1 z-10 scale-90">
+                                                    <GoldBadge size="sm" />
+                                                </div>
+                                            )}
                                         </div>
-                                        <ChevronRight
-                                            size={16}
-                                            className="text-gray-300 group-active:text-blue-500 transition-colors"
-                                            strokeWidth={2.5}
-                                        />
-                                    </motion.a>
-                                </Link>
-
-                                <Link href="/wishlist" passHref legacyBehavior>
-                                    <motion.a
-                                        onClick={onClose}
-                                        className="
-                                            group flex items-center justify-between 
-                                            px-4 py-3.5 text-[#171A21] dark:text-gray-100
-                                            active:bg-gray-50 dark:active:bg-gray-800
-                                            rounded-2xl font-medium text-[15px]
-                                            transition-colors duration-200
-                                            border border-transparent hover:border-gray-100 dark:hover:border-gray-800
-                                        "
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <Heart size={18} className="text-rose-500" />
-                                            <span>Wishlist</span>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-extrabold text-slate-900 dark:text-on-surface truncate">{userDisplayName}</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-brand-steel truncate">{user?.email}</p>
                                         </div>
-                                        <ChevronRight
-                                            size={16}
-                                            className="text-gray-300 group-active:text-rose-500 transition-colors"
-                                            strokeWidth={2.5}
-                                        />
-                                    </motion.a>
-                                </Link>
-
-                                {isAuthenticated && (
-                                    <Link href="/orders" passHref legacyBehavior>
-                                        <motion.a
-                                            onClick={onClose}
-                                            className="
-                                                group flex items-center justify-between 
-                                                px-4 py-3.5 text-[#171A21] dark:text-gray-100
-                                                active:bg-gray-50 dark:active:bg-gray-800
-                                                rounded-2xl font-medium text-[15px]
-                                                transition-colors duration-200
-                                                border border-transparent hover:border-gray-100 dark:hover:border-gray-800
-                                            "
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <History size={18} className="text-[#92BCEA]" />
-                                                <span>My Orders</span>
-                                            </div>
-                                            <ChevronRight
-                                                size={16}
-                                                className="text-gray-300 group-active:text-[#92BCEA] transition-colors"
-                                                strokeWidth={2.5}
-                                            />
-                                        </motion.a>
-                                    </Link>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-
-                                {/* Genz Sidebar CTA */}
-                                {isAuthenticated && (
-                                    <Link href="/refer" passHref legacyBehavior>
-                                        <motion.button
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: 0.3 }}
-                                            onClick={onClose}
-                                            className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white relative overflow-hidden group shadow-lg shadow-indigo-500/20 block"
-                                        >
-                                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-white/20 blur-xl rounded-full" />
-                                            <div className="relative flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                                                    <Gift size={20} className="text-white" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="text-sm font-black uppercase tracking-tighter">Refer & Earn</p>
-                                                    <p className="text-[10px] font-medium opacity-80">Earn ₹100 for every successful referral</p>
-                                                </div>
-                                                <ChevronRight size={16} className="ml-auto opacity-60" />
-                                            </div>
-                                        </motion.button>
-                                    </Link>
-                                )}
-                                
-                                {/* Merchant Apply CTA */}
-                                {isAuthenticated && (
-                                    <Link href="/merchant-apply" passHref legacyBehavior>
-                                        <motion.button
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: 0.4 }}
-                                            onClick={onClose}
-                                            className="w-full p-4 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 text-white relative overflow-hidden group shadow-lg shadow-orange-500/20 block"
-                                        >
-                                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-white/20 blur-xl rounded-full" />
-                                            <div className="relative flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-white">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l1.5-6h15L21 9M3 9h18M3 9l1 12h16L21 9M8 9V3m8 6V3" />
-                                                    </svg>
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="text-sm font-black uppercase tracking-tighter">Become a Merchant</p>
-                                                    <p className="text-[10px] font-medium opacity-80">Sell products, earn more with InTrust</p>
-                                                </div>
-                                                <ChevronRight size={16} className="ml-auto opacity-60" />
-                                            </div>
-                                        </motion.button>
-                                    </Link>
-                                )}
-                            </div>
-
-                            {/* Divider */}
-                            <div className="h-px bg-gray-100 dark:bg-gray-800 my-6" />
-
-                            {/* Auth Actions */}
-                            <div className="space-y-3">
-                                {isAuthenticated ? (
-                                    <>
-                                        {/* Profile Card */}
-                                        <Link href="/profile" passHref legacyBehavior>
-                                            <motion.button
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: 0.15 }}
-                                                onClick={onClose}
-                                                className="w-full flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-2xl text-left block"
-                                            >
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7] p-[2px] flex-shrink-0">
-                                                    <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                        {profile?.avatar_url && !avatarError ? (
-                                                            <Image 
-                                                                src={profile.avatar_url} 
-                                                                alt="Avatar" 
-                                                                fill 
-                                                                sizes="40px" 
-                                                                className="object-cover rounded-full" 
-                                                                onError={() => setAvatarError(true)}
-                                                            />
-                                                        ) : (
-                                                            <span className="font-bold text-[#7A93AC] text-sm">
-                                                                {displayInitial(profile, user)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                                                        {profile?.full_name || 'Your Profile'}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail(user?.email) || profile?.phone || 'Phone user'}</p>
-                                                </div>
-                                                <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
-                                            </motion.button>
-                                        </Link>
-
-                                        <Link href="/dashboard" passHref legacyBehavior>
-                                            <motion.button
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: 0.2 }}
-                                                onClick={onClose}
-                                                className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium block"
-                                            >
-                                                <span>Dashboard</span>
-                                                <ChevronRight size={18} className="text-gray-400" />
-                                            </motion.button>
-                                        </Link>
-
-
-
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.25 }}
-                                            onClick={handleSignOut}
-                                            className="w-full px-4 py-4 bg-[#171A21] text-white rounded-2xl font-semibold shadow-lg shadow-[#171A21]/20 active:scale-95 transition-all"
-                                        >
-                                            Sign Out
-                                        </motion.button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Link href="/login" passHref legacyBehavior>
-                                            <motion.button
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: 0.2 }}
-                                                onClick={onClose}
-                                                className="w-full flex items-center justify-between px-4 py-4 text-[#171A21] dark:text-gray-100 bg-gray-50 dark:bg-gray-800 rounded-2xl font-medium block"
-                                            >
-                                                <span>Login</span>
-                                                <ChevronRight size={18} className="text-gray-400" />
-                                            </motion.button>
-                                        </Link>
-                                        <Link href="/login" passHref legacyBehavior>
-                                            <motion.button
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: 0.25 }}
-                                                onClick={onClose}
-                                                className="w-full px-4 py-4 bg-[#171A21] text-white rounded-2xl font-semibold shadow-lg shadow-[#171A21]/20 active:scale-95 transition-all block text-center"
-                                            >
-                                                Sign Up
-                                            </motion.button>
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Settings (Language & Theme) */}
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.3 }}
-                                className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-6"
-                            >
-
-                                {/* Theme Toggle */}
-                                <div>
-                                    <div className="flex items-center gap-2 text-gray-500 mb-4">
-                                        {theme === 'light' ? <Sun size={16} /> : <Moon size={16} />}
-                                        <span className="text-xs font-bold uppercase tracking-wider">Theme</span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800 p-1 rounded-xl">
+                                    <button
+                                        onClick={(e) => toggleTheme(e)}
+                                        aria-label="Toggle Theme"
+                                        className="w-8 h-8 rounded-xl bg-white dark:bg-surface-container-high border border-slate-200/60 dark:border-outline-variant/20 flex items-center justify-center text-slate-700 dark:text-on-surface"
+                                    >
+                                        {isDarkMode ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} />}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200/80 dark:border-outline-variant/20 space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-brand-steel tracking-wider">Welcome</span>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-on-surface">Sign in for exclusive member perks</p>
+                                        </div>
                                         <button
-                                            onClick={toggleTheme}
-                                            className={`
-                                                py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2
-                                                ${theme === 'light'
-                                                    ? 'bg-white text-[#171A21] shadow-sm'
-                                                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                                                }
-                                            `}
+                                            onClick={(e) => toggleTheme(e)}
+                                            aria-label="Toggle Theme"
+                                            className="w-8 h-8 rounded-xl bg-white dark:bg-surface-container-high border border-slate-200/60 dark:border-outline-variant/20 flex items-center justify-center text-slate-700 dark:text-on-surface shrink-0"
                                         >
-                                            <Sun size={16} />
-                                            Light
+                                            {isDarkMode ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} />}
                                         </button>
-                                        <button
-                                            onClick={toggleTheme}
-                                            className={`
-                                                py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2
-                                                ${theme === 'dark'
-                                                    ? 'bg-gray-700 text-white shadow-sm'
-                                                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                                                }
-                                            `}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Link
+                                            href="/login"
+                                            onClick={onClose}
+                                            className="flex-1 py-2 text-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
                                         >
-                                            <Moon size={16} />
-                                            Dark
-                                        </button>
+                                            Sign In
+                                        </Link>
+                                        <Link
+                                            href="/signup"
+                                            onClick={onClose}
+                                            className="flex-1 py-2 text-center rounded-xl bg-white dark:bg-surface-container-high text-slate-800 dark:text-on-surface font-bold text-xs border border-slate-200 dark:border-outline-variant/20"
+                                        >
+                                            Register
+                                        </Link>
                                     </div>
                                 </div>
-                            </motion.div>
+                            )}
+
+                            {/* Main Navigation Links */}
+                            <nav className="space-y-1">
+                                <Link
+                                    href="/"
+                                    onClick={onClose}
+                                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                        pathname === '/'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black'
+                                            : 'text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Home size={17} className={pathname === '/' ? 'text-blue-600 dark:text-primary' : 'text-slate-400'} />
+                                        <span>Home</span>
+                                    </div>
+                                    <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                <Link
+                                    href="/shop"
+                                    onClick={onClose}
+                                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                        pathname.startsWith('/shop') && !pathname.includes('/cart')
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black'
+                                            : 'text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Store size={17} className={pathname.startsWith('/shop') ? 'text-blue-600 dark:text-primary' : 'text-slate-400'} />
+                                        <span>InTrust Mart & Shop</span>
+                                    </div>
+                                    <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                <Link
+                                    href="/services"
+                                    onClick={onClose}
+                                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                        pathname === '/services'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black'
+                                            : 'text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Zap size={17} className={pathname === '/services' ? 'text-blue-600 dark:text-primary' : 'text-slate-400'} />
+                                        <span>Services & Solar</span>
+                                    </div>
+                                    <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                <Link
+                                    href="/about"
+                                    onClick={onClose}
+                                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                        pathname === '/about'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black'
+                                            : 'text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Info size={17} className={pathname === '/about' ? 'text-blue-600 dark:text-primary' : 'text-slate-400'} />
+                                        <span>About InTrust</span>
+                                    </div>
+                                    <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                <Link
+                                    href="/contact"
+                                    onClick={onClose}
+                                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                        pathname === '/contact'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black'
+                                            : 'text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Phone size={17} className={pathname === '/contact' ? 'text-blue-600 dark:text-primary' : 'text-slate-400'} />
+                                        <span>Contact Support</span>
+                                    </div>
+                                    <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                <Link
+                                    href="/shop/cart"
+                                    onClick={onClose}
+                                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low transition-all"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <ShoppingCart size={17} className="text-slate-400" />
+                                        <span>Shopping Cart</span>
+                                    </div>
+                                    {cartCount > 0 ? (
+                                        <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black">
+                                            {cartCount}
+                                        </span>
+                                    ) : (
+                                        <ChevronRight size={14} className="text-slate-400" />
+                                    )}
+                                </Link>
+
+                                <Link
+                                    href="/wishlist"
+                                    onClick={onClose}
+                                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low transition-all"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Heart size={17} className="text-rose-500" />
+                                        <span>Saved Wishlist</span>
+                                    </div>
+                                    <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                {isAuthenticated && (
+                                    <>
+                                        <div className="pt-2 pb-1">
+                                            <div className="h-px bg-slate-200/70 dark:bg-outline-variant/20" />
+                                        </div>
+
+                                        <Link
+                                            href="/dashboard"
+                                            onClick={onClose}
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low transition-all"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <LayoutDashboard size={17} className="text-blue-600 dark:text-primary" />
+                                                <span>Customer Dashboard</span>
+                                            </div>
+                                            <ChevronRight size={14} className="text-slate-400" />
+                                        </Link>
+
+                                        <Link
+                                            href="/orders"
+                                            onClick={onClose}
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low transition-all"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Package size={17} className="text-emerald-500" />
+                                                <span>My Orders</span>
+                                            </div>
+                                            <ChevronRight size={14} className="text-slate-400" />
+                                        </Link>
+
+                                        <Link
+                                            href="/wallet"
+                                            onClick={onClose}
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low transition-all"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Wallet size={17} className="text-amber-500" />
+                                                <span>InTrust Wallet</span>
+                                            </div>
+                                            <ChevronRight size={14} className="text-slate-400" />
+                                        </Link>
+
+                                        <Link
+                                            href="/profile"
+                                            onClick={onClose}
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-low transition-all"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <User size={17} className="text-slate-400" />
+                                                <span>Profile & Settings</span>
+                                            </div>
+                                            <ChevronRight size={14} className="text-slate-400" />
+                                        </Link>
+                                    </>
+                                )}
+                            </nav>
                         </div>
-                    </motion.div>
+
+                        {/* Drawer Bottom CTA: Merchant Partner & Sign Out */}
+                        <div className="pt-4 border-t border-slate-200 dark:border-outline-variant/20 space-y-3 shrink-0">
+                            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200/80 dark:border-outline-variant/20">
+                                <p className="text-xs font-extrabold text-slate-900 dark:text-on-surface">Become a Merchant</p>
+                                <p className="text-[10px] text-slate-500 dark:text-brand-steel mt-0.5">Sell locally across India with zero gateway fees.</p>
+                                <Link
+                                    href="/merchant-apply"
+                                    onClick={onClose}
+                                    className="mt-2 block w-full py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-center font-bold text-xs transition-opacity hover:opacity-90"
+                                >
+                                    Register Store
+                                </Link>
+                            </div>
+
+                            {isAuthenticated && (
+                                <button
+                                    onClick={() => {
+                                        onClose();
+                                        handleSignOut();
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 border border-red-200/60 dark:border-red-900/30 transition-colors"
+                                >
+                                    <LogOut size={15} />
+                                    <span>Sign Out</span>
+                                </button>
+                            )}
+                        </div>
+                    </motion.aside>
                 </>
             )}
         </AnimatePresence>

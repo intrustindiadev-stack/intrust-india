@@ -1,12 +1,29 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, ChevronRight, User, Moon, Sun, Heart, ShoppingBag } from 'lucide-react';
+import { 
+    Menu, 
+    X, 
+    ChevronDown, 
+    User, 
+    Moon, 
+    Sun, 
+    Heart, 
+    ShoppingCart, 
+    MapPin, 
+    Plus, 
+    LayoutDashboard, 
+    Package, 
+    Wallet, 
+    Settings, 
+    LogOut, 
+    Store,
+    LogIn
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { displayInitial } from '@/lib/auth';
-
+import { displayInitial, displayName } from '@/lib/auth';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
@@ -14,48 +31,76 @@ import MobileNav from './MobileNav';
 import GoldBadge from '@/components/ui/GoldBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import toast from 'react-hot-toast';
 
 export default function Navbar() {
-    const [scrolled, setScrolled] = useState(false);
-    const [menuOpen, setMenuOpen] = useState(false);
+    const [menuOpen, setMobileMenuOpen] = useState(false);
+    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [avatarError, setAvatarError] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
+    const [walletBalance, setWalletBalance] = useState(0);
+    const dropdownRef = useRef(null);
+
     const { isAuthenticated, user, profile } = useAuth();
     const isGold = !!profile?.is_gold_verified;
-
     const { theme, toggleTheme } = useTheme();
+    const isDarkMode = theme === 'dark';
     const router = useRouter();
     const pathname = usePathname();
 
-    useEffect(() => {
-        const handleScroll = () => {
-            const shouldScroll = window.scrollY > 50;
-            setScrolled(prev => {
-                // Only update if value actually changed
-                if (prev !== shouldScroll) {
-                    return shouldScroll;
-                }
-                return prev;
-            });
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    useEffect(() => {
-        if (menuOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [menuOpen]);
-
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    // Fetch Cart & Wallet count for authenticated users
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (!user?.id) return;
+            try {
+                const { data: cartData } = await supabase
+                    .from('shopping_cart')
+                    .select('id, quantity')
+                    .eq('customer_id', user.id);
+                if (cartData) {
+                    const total = cartData.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                    setCartCount(total);
+                }
+
+                const { data: walletData } = await supabase
+                    .from('customer_wallets')
+                    .select('balance_paise')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+                if (walletData) {
+                    setWalletBalance((walletData.balance_paise || 0) / 100);
+                }
+            } catch (err) {
+                console.error('Error fetching navbar user data:', err);
+            }
+        };
+
+        fetchUserData();
+
+        const handleCartUpdate = () => fetchUserData();
+        window.addEventListener('cartUpdated', handleCartUpdate);
+
+        return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+    }, [user?.id]);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setProfileDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Close mobile drawer on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+        setProfileDropdownOpen(false);
+    }, [pathname]);
 
     const handleLogout = () => {
         setShowLogoutModal(true);
@@ -65,12 +110,8 @@ export default function Navbar() {
         setShowLogoutModal(false);
         setIsLoggingOut(true);
         try {
-            // Client-side first: this clears local caches natively, bypassing Safari AJAX redirect bugs.
             await supabase.auth.signOut();
-            
-            await fetch('/auth/logout', {
-                method: 'POST',
-            });
+            await fetch('/auth/logout', { method: 'POST' });
             window.location.href = '/';
         } catch (error) {
             console.error('Logout error:', error);
@@ -80,284 +121,266 @@ export default function Navbar() {
         }
     };
 
-    const menuItems = [
+    const navItems = [
+        { label: 'Home', href: '/' },
+        { label: 'Shop', href: '/shop' },
         { label: 'Services', href: '/services' },
         { label: 'About', href: '/about' },
         { label: 'Contact', href: '/contact' },
     ];
 
-    // Get user display info — delegates to shared helper that filters pseudo-emails
-
-    // Get user display info — delegates to shared helper that filters pseudo-emails
     const hasImage = profile?.avatar_url && !avatarError;
+    const userDisplayName = displayName(profile, user) || 'User';
 
     return (
         <>
-            {/* Premium Floating Navbar */}
-            <nav
-                className={`fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-50 w-[90%] md:w-[85%] max-w-6xl px-0 animate-slideDown`}
-            >
-                <div
-                    className={`
-            bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl rounded-2xl md:rounded-full 
-            px-4 md:px-8 py-2 md:py-2.5
-            shadow-lg border border-gray-200/60 dark:border-gray-700/60
-            transition-all duration-500 ease-out
-            ${scrolled ? 'shadow-2xl bg-white dark:bg-gray-900 border-gray-300/80 dark:border-gray-600/80' : ''}
-          `}
-                >
-                    <div className="flex items-center justify-between">
-                        {/* Logo - Left */}
-                        <Link
-                            href="/"
-                            className="flex items-center gap-2.5 md:gap-3 z-10 group hover:scale-[1.03] active:scale-[0.97] transition-transform"
-                        >
-                            <div className="relative w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-                                <Image
-                                    src="/icon.png"
-                                    alt="INTRUST"
-                                    fill
-                                    sizes="(max-width: 768px) 32px, 40px"
-                                    className="object-contain transition-transform duration-300 group-hover:scale-110"
-                                    priority
+            {/* ── DESKTOP HEADER (Identical style, height, and tokens as Customer Panel) ── */}
+            <header className="fixed top-0 inset-x-0 h-20 bg-white/80 dark:bg-surface-container-lowest/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-outline-variant/20 z-50 transition-all">
+                <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+                    {/* Logo & Platform Tagline */}
+                    <div className="flex items-center gap-3">
+                        <Link href="/" className="flex items-center gap-3 group">
+                            <div className="relative w-10 h-10 rounded-2xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+                                <Image 
+                                    src="/icons/intrustLogo.png" 
+                                    alt="InTrust Logo" 
+                                    width={32} 
+                                    height={32} 
+                                    className="object-contain" 
+                                    priority 
                                 />
                             </div>
-                            <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-[#7A93AC] via-[#92BCEA] to-[#AFB3F7] bg-clip-text text-transparent font-[family-name:var(--font-outfit)] tracking-tight">
-                                INTRUST
-                            </span>
-                        </Link>
-
-                        {/* Desktop Menu - Center */}
-                        <div className="hidden lg:flex flex-1 items-center justify-center gap-4 px-8">
-                            <div className="flex items-center gap-4 mr-2">
-                                {menuItems.map((item) => (
-                                    <Link
-                                        key={item.label}
-                                        href={item.isComingSoon ? '#' : item.href}
-                                        onClick={(e) => {
-                                            if (item.isComingSoon) {
-                                                e.preventDefault();
-                                                toast('We are tailoring something special. The Fashion category is launching soon!', {
-                                                    icon: '✨',
-                                                    style: {
-                                                        background: '#ffffff',
-                                                        color: '#334155',
-                                                        border: '1px solid #e2e8f0',
-                                                        padding: '16px',
-                                                        fontWeight: '500',
-                                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-                                                    }
-                                                });
-                                            }
-                                        }}
-                                        className="
-                        relative px-5 py-2 text-[15px] font-medium 
-                        text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
-                        transition-colors duration-300 rounded-full
-                        group hover:scale-105 active:scale-95
-                      "
-                                    >
-                                        <span className="relative z-10">{item.label}</span>
-                                        {/* Hover background */}
-                                        <div
-                                            className="absolute inset-0 bg-gradient-to-r from-[#92BCEA]/10 to-[#AFB3F7]/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                                        />
-                                        {/* Animated underline */}
-                                        <span
-                                            className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] rounded-full group-hover:w-8 transition-all duration-300"
-                                        />
-                                    </Link>
-                                ))}
+                            <div className="flex flex-col">
+                                <span className="font-black text-xl tracking-tight text-slate-900 dark:text-on-surface leading-none">
+                                    InTrust
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400 dark:text-brand-steel uppercase tracking-widest mt-1">
+                                    InTrust Network • Live
+                                </span>
                             </div>
+                        </Link>
+                    </div>
+
+                    {/* Desktop Navigation Links */}
+                    <nav className="hidden md:flex items-center gap-1.5">
+                        {navItems.map((item) => {
+                            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                            return (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                                        isActive
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black shadow-xs'
+                                            : 'text-slate-600 dark:text-on-surface-variant hover:text-slate-900 dark:hover:text-on-surface hover:bg-slate-100/70 dark:hover:bg-surface-container-high'
+                                    }`}
+                                >
+                                    {item.label}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    {/* Right Utility Controls */}
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        {/* Location Chip */}
+                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-surface-container-low text-slate-700 dark:text-on-surface text-xs font-semibold border border-slate-200/50 dark:border-outline-variant/10">
+                            <MapPin size={14} className="text-blue-600 dark:text-primary" />
+                            <span>India</span>
                         </div>
 
-                        {/* Actions - Right */}
-                        <div className="flex items-center gap-1.5 md:gap-3 z-10">
-                            {/* Wishlist Link */}
-                            <Link
-                                href="/wishlist"
-                                className="p-2.5 rounded-full text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center justify-center"
-                                aria-label="Wishlist"
-                            >
-                                <Heart size={20} />
-                            </Link>
+                        {/* Wishlist Link */}
+                        <Link
+                            href="/wishlist"
+                            className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-rose-500 dark:hover:text-rose-400 transition-colors border border-slate-200/50 dark:border-outline-variant/10"
+                            title="Wishlist"
+                        >
+                            <Heart size={18} />
+                        </Link>
 
-                            {/* Cart Link */}
-                            <Link
-                                href="/shop/cart"
-                                className="p-2.5 rounded-full text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors flex items-center justify-center"
-                                aria-label="Shopping Cart"
-                            >
-                                <ShoppingBag size={20} />
-                            </Link>
+                        {/* Cart Button with Live Badge */}
+                        <Link
+                            href="/shop/cart"
+                            className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-blue-600 dark:hover:text-primary transition-colors border border-slate-200/50 dark:border-outline-variant/10"
+                            title="Shopping Cart"
+                        >
+                            <ShoppingCart size={18} />
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-sm">
+                                    {cartCount}
+                                </span>
+                            )}
+                        </Link>
 
-                            {/* Notifications */}
-                            {isAuthenticated && (
+                        {/* Theme Toggle Button */}
+                        <button
+                            onClick={(e) => toggleTheme(e)}
+                            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                            aria-label="Toggle Theme"
+                            className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-slate-950 dark:hover:text-on-surface flex items-center justify-center transition-all border border-slate-200/50 dark:border-outline-variant/10 active:scale-95"
+                        >
+                            {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-700" />}
+                        </button>
+
+                        {/* Authenticated Controls: Live Wallet Balance Pill & Notification Bell */}
+                        {isAuthenticated && (
+                            <>
+                                <Link
+                                    href="/wallet"
+                                    className="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high border border-slate-200 dark:border-outline-variant/20 transition-all group"
+                                >
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[9px] font-extrabold uppercase text-slate-500 dark:text-brand-steel tracking-wider leading-none">Wallet</span>
+                                        <span className="text-xs font-black text-slate-900 dark:text-on-surface tabular-nums mt-0.5">
+                                            ₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                    <span className="p-1 rounded-lg bg-blue-600 dark:bg-primary text-white group-hover:scale-105 transition-transform">
+                                        <Plus size={12} />
+                                    </span>
+                                </Link>
+
                                 <NotificationBell apiPath="/api/notifications" variant="navbar" />
-                            )}
-                            {/* Theme Toggle */}
-                            <button
-                                onClick={(e) => toggleTheme(e)}
-                                className="p-2.5 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                                aria-label="Toggle Theme"
-                            >
-                                {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
-                            </button>
+                            </>
+                        )}
 
-                            {isAuthenticated ? (
-                                <div className="hidden lg:flex items-center gap-4">
-                                    <Link href="/profile">
-                                        <div className="relative">
-                                            <div
-                                                className={`w-10 h-10 rounded-full p-[2px] cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 ${isGold
-                                                    ? 'bg-gradient-to-br from-[#FFD700] via-[#FDB931] to-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
-                                                    : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
-                                                    }`}
-                                            >
-                                                <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                                    {hasImage ? (
-                                                        <Image
-                                                            src={profile.avatar_url}
-                                                            alt="Profile"
-                                                            fill
-                                                            sizes="40px"
-                                                            className="object-cover rounded-full"
-                                                            onError={() => setAvatarError(true)}
-                                                        />
-                                                    ) : (
-                                                        <span className="font-bold text-[#7A93AC] text-lg">
-                                                            {displayInitial(profile, user)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {isGold && (
-                                                <div className="absolute -bottom-1 -right-1 z-10">
-                                                    <GoldBadge size="sm" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Link>
-
-                                    <button
-                                        onClick={handleLogout}
-                                        className="
-                       px-6 py-2 rounded-full font-semibold text-[15px]
-                       bg-gray-100 text-gray-600 hover:bg-gray-200
-                       dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700
-                       transition-all duration-300 hover:scale-105 active:scale-95
-                     "
-                                    >
-                                        Sign Out
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="hidden lg:flex items-center gap-2">
-                                    <Link
-                                        href="/login"
-                                        className="
-                      px-5 py-2 text-[15px] font-medium 
-                      text-[#617073] dark:text-gray-300 hover:text-[#171A21] dark:hover:text-white 
-                      transition-colors duration-300 rounded-full
-                      hover:bg-gradient-to-r hover:from-[#92BCEA]/10 hover:to-[#AFB3F7]/10
-                      hover:scale-105 active:scale-95
-                    "
-                                    >
-                                        Log In
-                                    </Link>
-                                    <Link
-                                        href="/signup"
-                                        className="
-                      px-6 py-2 rounded-full font-semibold text-[15px]
-                      bg-gradient-to-r from-[#92BCEA] to-[#AFB3F7] 
-                      text-white shadow-md hover:shadow-xl 
-                      transition-all duration-300 hover:scale-105 active:scale-95
-                    "
-                                    >
-                                        Sign Up
-                                    </Link>
-                                </div>
-                            )}
-
-                            {/* Mobile/Tablet Profile Icon - Visible only when authenticated */}
-                            {isAuthenticated && (
-                                <Link href="/profile" className="lg:hidden mr-2">
+                        {/* Profile Dropdown / Guest Auth Buttons */}
+                        {isAuthenticated ? (
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                                    className="flex items-center gap-2 p-1 rounded-2xl hover:bg-slate-100 dark:hover:bg-surface-container-high transition-colors focus:outline-none"
+                                >
                                     <div className="relative">
-                                        <div
-                                            className={`w-9 h-9 rounded-full p-[2px] cursor-pointer transition-all duration-300 active:scale-95 ${isGold
-                                                ? 'bg-gradient-to-br from-[#FFD700] via-[#FDB931] to-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
-                                                : 'bg-gradient-to-br from-[#92BCEA] to-[#AFB3F7]'
-                                                }`}
-                                        >
-                                            <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                        <div className={`w-9 h-9 rounded-full p-[2px] transition-transform ${
+                                            isGold 
+                                                ? 'bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-xs' 
+                                                : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                                        }`}>
+                                            <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                                                 {hasImage ? (
-                                                    <img
-                                                        src={profile.avatar_url}
-                                                        alt="Profile"
-                                                        className="w-full h-full object-cover rounded-full"
-                                                        onError={() => setAvatarError(true)}
-                                                    />
+                                                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="font-bold text-[#7A93AC] text-sm">
+                                                    <span className="text-xs font-black text-slate-700 dark:text-on-surface">
                                                         {displayInitial(profile, user)}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         {isGold && (
-                                            <div className="absolute -bottom-1 -right-1 z-10">
+                                            <div className="absolute -bottom-1 -right-1 z-10 scale-90">
                                                 <GoldBadge size="sm" />
                                             </div>
                                         )}
                                     </div>
-                                </Link>
-                            )}
+                                    <ChevronDown size={14} className={`text-slate-400 transition-transform ${profileDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
 
-                            {/* Mobile Menu Toggle */}
-                            <button
-                                onClick={() => setMenuOpen(!menuOpen)}
-                                className="
-                  lg:hidden p-2 md:p-2.5 rounded-full 
-                  hover:bg-[#92BCEA]/10 
-                  transition-colors duration-200 active:scale-90
-                "
-                                aria-label="Toggle menu"
-                            >
-                                <div
-                                    style={{ transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                                {/* Dropdown Menu */}
+                                {profileDropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-surface-container-lowest rounded-2xl border border-slate-200 dark:border-outline-variant/30 shadow-xl py-2 z-50 animate-fadeIn">
+                                        <div className="px-4 py-2 border-b border-slate-100 dark:border-outline-variant/15">
+                                            <p className="text-xs font-black text-slate-900 dark:text-on-surface truncate">{userDisplayName}</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-brand-steel truncate">{user?.email}</p>
+                                        </div>
+
+                                        <div className="py-1">
+                                            <Link
+                                                href="/dashboard"
+                                                className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-50 dark:hover:bg-surface-container-high transition-colors"
+                                            >
+                                                <LayoutDashboard size={15} className="text-blue-600 dark:text-primary" />
+                                                <span>Dashboard</span>
+                                            </Link>
+                                            <Link
+                                                href="/orders"
+                                                className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-50 dark:hover:bg-surface-container-high transition-colors"
+                                            >
+                                                <Package size={15} className="text-emerald-500" />
+                                                <span>My Orders</span>
+                                            </Link>
+                                            <Link
+                                                href="/wallet"
+                                                className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-50 dark:hover:bg-surface-container-high transition-colors"
+                                            >
+                                                <Wallet size={15} className="text-amber-500" />
+                                                <span>Wallet</span>
+                                            </Link>
+                                            <Link
+                                                href="/profile"
+                                                className="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-on-surface hover:bg-slate-50 dark:hover:bg-surface-container-high transition-colors"
+                                            >
+                                                <Settings size={15} className="text-slate-400" />
+                                                <span>Profile Settings</span>
+                                            </Link>
+                                        </div>
+
+                                        <div className="border-t border-slate-100 dark:border-outline-variant/15 pt-1">
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                                            >
+                                                <LogOut size={15} />
+                                                <span>Sign Out</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="hidden sm:flex items-center gap-2">
+                                <Link
+                                    href={`/login?next=${encodeURIComponent(pathname)}`}
+                                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95"
                                 >
-                                    {menuOpen ? (
-                                        <X size={22} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
-                                    ) : (
-                                        <Menu size={22} className="text-[#171A21] dark:text-gray-100" strokeWidth={2.5} />
-                                    )}
-                                </div>
-                            </button>
-                        </div>
+                                    Sign In
+                                </Link>
+                                <Link
+                                    href="/signup"
+                                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-800 dark:text-on-surface text-xs font-bold transition-all border border-slate-200/60 dark:border-outline-variant/20 active:scale-95"
+                                >
+                                    Register
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Mobile Menu Hamburger Toggle */}
+                        <button
+                            onClick={() => setMobileMenuOpen(true)}
+                            className="md:hidden w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high flex items-center justify-center text-slate-800 dark:text-on-surface transition-colors active:scale-90"
+                            aria-label="Toggle navigation menu"
+                        >
+                            <Menu size={20} />
+                        </button>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            {/* Mobile Menu */}
+            {/* Spacer so page content starts below the fixed h-20 header */}
+            <div className="h-20 w-full" />
+
+            {/* Mobile Navigation Drawer */}
             <MobileNav
                 isOpen={menuOpen}
-                onClose={() => setMenuOpen(false)}
+                onClose={() => setMobileMenuOpen(false)}
                 isAuthenticated={isAuthenticated}
                 profile={profile}
                 user={user}
                 theme={theme}
                 toggleTheme={toggleTheme}
                 handleSignOut={handleLogout}
-                menuItems={menuItems}
+                menuItems={navItems}
                 apiPath="/api/notifications"
+                cartCount={cartCount}
             />
 
+            {/* Logout Confirmation Modal */}
             <ConfirmModal
                 isOpen={showLogoutModal}
                 onConfirm={confirmLogout}
                 onCancel={() => setShowLogoutModal(false)}
                 title="Confirm Logout"
-                message="Are you sure you want to sign out from INTRUST?"
+                message="Are you sure you want to sign out from InTrust?"
                 confirmLabel={isLoggingOut ? "Signing Out..." : "Sign Out"}
                 cancelLabel="Cancel"
             />

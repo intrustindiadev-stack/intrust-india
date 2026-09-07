@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePathname }                       from 'next/navigation';
 import Link                                  from 'next/link';
-import { Home, Wallet, Smartphone, Gift, Sun, ShoppingBag, LayoutGrid, User, Trophy } from 'lucide-react';
+import { LayoutDashboard, Wallet, Smartphone, Gift, Sun, ShoppingBag, LayoutGrid, User, Trophy } from 'lucide-react';
 import { motion, AnimatePresence }           from 'framer-motion';
 import ActiveOrdersOverlay                   from './ActiveOrdersOverlay';
 import RatingPromptModal                     from './RatingPromptModal';
@@ -18,7 +18,7 @@ const servicesList = [
 ];
 
 const navItems = [
-    { icon: Home,         label: 'Home',      href: '/dashboard'   },
+    { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
     { icon: Wallet,       label: 'Wallet',    href: '/wallet'      },
     { icon: LayoutGrid,   label: 'Services',  isMenu: true         },
     { icon: Trophy,       label: 'Rewards',   href: '/rewards'     },

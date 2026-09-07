@@ -15,10 +15,11 @@ function VerifiedStoresNearby({ merchants = [] }) {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight flex items-center gap-2">
-                        <span>🏬 Nearby Verified Stores (Bhopal)</span>
+                        <Store size={22} className="text-primary" />
+                        <span>Verified Stores Nearby</span>
                     </h2>
                     <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
-                        Order online and pick up in 2 hours with direct merchant contact.
+                        Reserve online and pick up locally with direct merchant contact.
                     </p>
                 </div>
                 <Link
