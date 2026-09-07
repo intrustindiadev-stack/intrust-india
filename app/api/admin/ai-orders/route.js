@@ -26,7 +26,7 @@ export async function GET(request) {
             .from('ai_orders')
             .select(`
                 *,
-                merchant:merchant_id (id, full_name, store_name, phone_number)
+                merchant:merchant_id (id, full_name, phone)
             `)
             .order('created_at', { ascending: false });
 
@@ -41,7 +41,13 @@ export async function GET(request) {
 
         return NextResponse.json({
             orders: data,
-            stats: { totalFed, totalActive, totalProfitDistributed }
+            stats: { 
+                totalFed, 
+                totalOrders: totalFed,
+                totalActive, 
+                activeInvestments: totalActive,
+                totalProfitDistributed 
+            }
         });
     } catch (error) {
         console.error('Error fetching AI orders:', error);

@@ -18,14 +18,15 @@ export default function AIVaultPage() {
         const fetchVaultData = async () => {
             if (!merchant) return;
             try {
+                const merchantUserId = merchant.user_id || merchant.id;
                 // Fetch Vault
                 const { data: vaultData, error: vaultError } = await supabase
                     .from('ai_orders_vault')
                     .select('*')
-                    .eq('merchant_id', merchant.id)
-                    .single();
+                    .eq('merchant_id', merchantUserId)
+                    .maybeSingle();
 
-                if (vaultError && vaultError.code !== 'PGRST116') {
+                if (vaultError) {
                     throw vaultError;
                 }
 
@@ -39,7 +40,10 @@ export default function AIVaultPage() {
                         .order('created_at', { ascending: false });
 
                     if (txError) throw txError;
-                    setTransactions(txData);
+                    setTransactions(txData || []);
+                } else {
+                    setVault({ balance_paise: 0, total_profit_paise: 0 });
+                    setTransactions([]);
                 }
             } catch (error) {
                 console.error("Vault fetch error:", error);
@@ -50,7 +54,7 @@ export default function AIVaultPage() {
         };
 
         fetchVaultData();
-    }, [merchant, toast]);
+    }, [merchant]);
 
     if (!merchant) return null;
 
