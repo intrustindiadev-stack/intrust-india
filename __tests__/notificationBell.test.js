@@ -94,18 +94,28 @@ describe('NotificationBell Component & timeAgo Helper', () => {
         });
     });
 
-    describe('Global Portal Role Audit (Admin, Merchant, HRM, CRM, Employee)', () => {
-        const portalApiPaths = [
+    describe('Customer Portal vs Internal Portal Behavior', () => {
+        test('Customer UI (/api/notifications) renders a direct Link to /notifications page', () => {
+            const tree = NotificationBell({ apiPath: '/api/notifications' });
+            expect(tree).toBeDefined();
+            // Should be a Link pointing to /notifications
+            expect(tree.props.href).toBe('/notifications');
+            expect(tree.props.title).toBe('Notifications');
+            // Contains notification icon and badge
+            const children = React.Children.toArray(tree.props.children);
+            expect(children.length).toBeGreaterThan(0);
+        });
+
+        const internalPortals = [
             { role: 'Admin', path: '/api/admin/notifications' },
             { role: 'Merchant', path: '/api/merchant/notifications' },
             { role: 'CRM', path: '/api/crm/notifications' },
             { role: 'HRM', path: '/api/hrm/notifications' },
             { role: 'Employee', path: '/api/employee/notifications' },
-            { role: 'Customer', path: '/api/notifications' },
         ];
 
-        portalApiPaths.forEach(({ role, path }) => {
-            test(`renders closed bell container and button for ${role} (${path})`, () => {
+        internalPortals.forEach(({ role, path }) => {
+            test(`renders closed bell dropdown container for ${role} (${path})`, () => {
                 mockOpen = false;
                 mockNotifications = [];
                 const tree = NotificationBell({ apiPath: path });
@@ -113,7 +123,6 @@ describe('NotificationBell Component & timeAgo Helper', () => {
                 expect(tree.type).toBe('div');
                 expect(tree.props.className).toContain('relative');
 
-                // Inspect button child
                 const [button, dropdown] = React.Children.toArray(tree.props.children);
                 expect(button.type).toBe('button');
                 expect(button.props.title).toBe('Notifications');
@@ -121,7 +130,7 @@ describe('NotificationBell Component & timeAgo Helper', () => {
                 expect(dropdown).toBeFalsy();
             });
 
-            test(`renders open dropdown with z-50 in-DOM for ${role} (${path})`, () => {
+            test(`renders open dropdown with z-50 for ${role} (${path})`, () => {
                 mockOpen = true;
                 mockNotifications = [
                     {

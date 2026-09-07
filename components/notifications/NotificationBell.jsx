@@ -411,6 +411,8 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
         }
     };
 
+    const isCustomer = apiPath === '/api/notifications';
+
     const buttonClass = className || (variant === 'navbar'
         ? 'relative p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
         : variant === 'minimal'
@@ -418,6 +420,25 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             : variant === 'header'
                 ? 'relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200'
                 : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors');
+
+    // In Customer UI, clicking the bell routes directly to the dedicated full-page notifications hub
+    if (isCustomer) {
+        return (
+            <Link
+                href="/notifications"
+                className={buttonClass}
+                title="Notifications"
+                aria-label="Notifications"
+            >
+                <span className="material-icons-round text-slate-600 dark:text-slate-300 text-xl pointer-events-none">notifications</span>
+                {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center leading-none pointer-events-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                )}
+            </Link>
+        );
+    }
 
     return (
         <div ref={containerRef} className="relative inline-flex items-center">
