@@ -20,9 +20,10 @@ import { toast } from 'react-hot-toast';
 import { generateInvoicePDF } from '@/lib/invoiceGenerator';
 
 export default function InvoicePaymentClient({ invoice }) {
+    const initialPhone = (invoice.customer_snapshot?.phone || '').replace(/\D/g, '').slice(-10);
     const [payerName, setPayerName] = useState(invoice.customer_snapshot?.name || '');
     const [payerEmail, setPayerEmail] = useState(invoice.customer_snapshot?.email || '');
-    const [payerMobile, setPayerMobile] = useState(invoice.customer_snapshot?.phone || '');
+    const [payerMobile, setPayerMobile] = useState(initialPhone);
     
     const [loading, setLoading] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -104,8 +105,8 @@ export default function InvoicePaymentClient({ invoice }) {
         }
 
         // Basic phone validation (10 digits)
-        const cleanPhone = payerMobile.replace(/\D/g, '');
-        if (cleanPhone.length < 10) {
+        const cleanPhone = payerMobile.replace(/\D/g, '').slice(-10);
+        if (cleanPhone.length !== 10) {
             toast.error('Please enter a valid 10-digit mobile number');
             return;
         }

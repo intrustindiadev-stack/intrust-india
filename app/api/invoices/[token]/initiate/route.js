@@ -7,6 +7,8 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 
+import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
+
 function failResponse(status, clientMessage, correlationId, internalDetails = null) {
     if (internalDetails) {
         console.error(`[Invoice Initiate][${correlationId}] ${clientMessage}`, internalDetails);
@@ -40,6 +42,10 @@ export async function POST(request, { params }) {
         if (payerValidation.errors.phone) {
             return NextResponse.json({ error: 'INVALID_PAYER_CONTACT', message: payerValidation.errors.phone, field: 'payerMobile' }, { status: 400 });
         }
+
+        const normalizedMobile = normalizePayerMobile(body.payerMobile);
+        const payerEmail = (body.payerEmail || '').trim().toLowerCase();
+        const payerName = (body.payerName || 'Customer').trim();
 
         const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -82,9 +88,9 @@ export async function POST(request, { params }) {
                 status: 'initiated',
                 udf1: udf1,
                 udf2: udf2,
-                payer_email: body.payerEmail || '',
-                payer_mobile: body.payerMobile || '',
-                payer_name: body.payerName || ''
+                payer_email: payerEmail,
+                payer_mobile: normalizedMobile,
+                payer_name: payerName
             });
 
         if (insertError) {
@@ -94,9 +100,9 @@ export async function POST(request, { params }) {
         const orderData = {
             clientTxnId,
             amount: amountStr,
-            payerName: body.payerName,
-            payerEmail: body.payerEmail,
-            payerMobile: body.payerMobile,
+            payerName: payerName,
+            payerEmail: payerEmail,
+            payerMobile: normalizedMobile,
             udf1,
             udf2
         };
