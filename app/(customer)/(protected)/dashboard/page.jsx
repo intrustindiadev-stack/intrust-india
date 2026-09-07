@@ -98,6 +98,8 @@ export default function CustomerDashboardPage() {
         enabled: !loading && !!user
     });
 
+
+
     const processActivityFeed = (coupons, walletTxs) => {
         const normalizedCoupons = (coupons || []).map(c => ({
             id: `coupon-${c.id}`,
@@ -394,7 +396,9 @@ export default function CustomerDashboardPage() {
             {!userData.completedOnboarding && user && (
                 <OnboardingModal
                     userId={user.id}
-                    onComplete={() => setUserData(prev => ({ ...prev, completedOnboarding: true }))}
+                    onComplete={() => {
+                        setUserData(prev => ({ ...prev, completedOnboarding: true }));
+                    }}
                 />
             )}
 
@@ -405,7 +409,7 @@ export default function CustomerDashboardPage() {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
-                                <span className="text-[11px] font-bold text-brand-steel uppercase tracking-widest">Bhopal Hub • Live</span>
+                                <span className="text-[11px] font-bold text-brand-steel uppercase tracking-widest">Marketplace Hub • Live</span>
                             </div>
                             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-on-surface tracking-tight flex items-center gap-2">
                                 <span>Welcome back, {userData.name.split(' ')[0]}!</span>
@@ -416,7 +420,7 @@ export default function CustomerDashboardPage() {
                                 )}
                             </h1>
                             <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-1">
-                                Verified local commerce, essentials, and digital wallet services in Bhopal.
+                                Verified local commerce, essentials, and digital wallet services across India.
                             </p>
                         </div>
                     </div>
