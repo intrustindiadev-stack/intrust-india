@@ -21,10 +21,11 @@ import subprocess
 # ──────────────────────────────────────────────
 #  CONFIG
 # ──────────────────────────────────────────────
-VPS_HOST       = "187.124.98.130"
-VPS_USER       = "intrustindia"
-VPS_PASSWORD   = "Intrustdev@2026"
-VPS_PORT       = 22
+VPS_HOST       = os.environ.get("VPS_HOST", "187.124.98.130")
+VPS_USER       = os.environ.get("VPS_USER", "intrustindia")
+VPS_PASSWORD   = os.environ.get("VPS_PASSWORD", "Intrustdev@2026")
+VPS_PORT       = int(os.environ.get("VPS_PORT", "22"))
+VPS_KEY_PATH   = os.environ.get("VPS_KEY_PATH")
 
 # Paths
 PROJECT_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -113,8 +114,22 @@ def ssh_connect():
     import paramiko
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    c.connect(VPS_HOST, port=VPS_PORT, username=VPS_USER, password=VPS_PASSWORD,
-              timeout=30, allow_agent=False, look_for_keys=False)
+    connect_kwargs = {
+        "hostname": VPS_HOST,
+        "port": VPS_PORT,
+        "username": VPS_USER,
+        "timeout": 30,
+    }
+    if VPS_KEY_PATH and os.path.exists(VPS_KEY_PATH):
+        connect_kwargs["key_filename"] = VPS_KEY_PATH
+        connect_kwargs["look_for_keys"] = True
+        connect_kwargs["allow_agent"] = True
+    elif VPS_PASSWORD:
+        connect_kwargs["password"] = VPS_PASSWORD
+        connect_kwargs["allow_agent"] = True
+        connect_kwargs["look_for_keys"] = True
+
+    c.connect(**connect_kwargs)
     return c
 
 
