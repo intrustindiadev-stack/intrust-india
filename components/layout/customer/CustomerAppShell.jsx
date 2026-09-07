@@ -528,14 +528,11 @@ export default function CustomerAppShell({ children }) {
 
                             {/* Notification Bell on Mobile */}
                             {!isGuest && (
-                                <Link
-                                    href="/notifications"
-                                    aria-label="Notifications"
+                                <NotificationBell
+                                    apiPath="/api/notifications"
+                                    variant="navbar"
                                     className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
-                                >
-                                    <Bell size={16} />
-                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-1 ring-white dark:ring-surface-container-lowest" />
-                                </Link>
+                                />
                             )}
 
                             {/* Theme Toggle */}

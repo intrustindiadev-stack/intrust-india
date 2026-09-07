@@ -94,11 +94,11 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
     const planTier = merchant?.subscription_status === 'active' ? 'pro' : 'free';
 
     return (
-        <div className="relative overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-200/60 p-5 md:p-8 mb-8">
-          {/* Decorative Ambient Blobs for Premium Light Theme */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-100/50 blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-10 -mb-20 w-80 h-80 rounded-full bg-purple-100/40 blur-3xl pointer-events-none"></div>
-          <div className="absolute top-10 left-1/3 w-72 h-72 rounded-full bg-amber-50/60 blur-3xl pointer-events-none"></div>
+        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/80 shadow-sm border border-slate-200/60 dark:border-white/10 p-5 md:p-8 mb-8 backdrop-blur-md">
+          {/* Decorative Ambient Blobs for Premium Light & Dark Theme */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-100/50 dark:bg-blue-950/20 blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-10 -mb-20 w-80 h-80 rounded-full bg-purple-100/40 dark:bg-purple-950/20 blur-3xl pointer-events-none"></div>
+          <div className="absolute top-10 left-1/3 w-72 h-72 rounded-full bg-amber-50/60 dark:bg-amber-950/10 blur-3xl pointer-events-none"></div>
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-8">
         
@@ -106,15 +106,15 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
             <div className="flex-1 min-w-0">
               {/* Greeting */}
               <div className="flex items-center gap-3.5">
-                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white flex items-center justify-center border border-slate-200 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer">
+                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer">
                       {profile?.avatar_url ? (
                           <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
                           <span className="material-icons-round text-slate-400 text-2xl">storefront</span>
                       )}
                   </Link>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate tracking-tight">
-                    Good {getTimeGreeting()}, <span className="text-slate-600">{merchant.business_name || 'Merchant'}</span>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white truncate tracking-tight">
+                    Good {getTimeGreeting()}, <span className="text-slate-600 dark:text-slate-300">{merchant.business_name || 'Merchant'}</span>
                   </h1>
               </div>
         
@@ -123,7 +123,9 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                 <button
                     onClick={() => router.push('/merchant/subscription')}
                     className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border hover:opacity-80 transition-opacity ${
-                      planTier === 'pro' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'
+                      planTier === 'pro' 
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 shadow-sm' 
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                 >
                   {planName}
@@ -132,12 +134,12 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                 {daysLeft !== null && (
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                         expiryColor === 'expired'
-                            ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
+                            ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-sm'
                             : expiryColor === 'urgent'
-                                ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm animate-pulse'
+                                ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-sm animate-pulse'
                                 : daysLeft <= 30
-                                    ? 'bg-amber-50 text-amber-700 border border-amber-200 shadow-sm'
-                                    : 'bg-slate-50 text-slate-500 border border-slate-200'
+                                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 shadow-sm'
+                                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                     }`}>
                         {daysLeft <= 0
                             ? 'Plan Expired'
@@ -148,14 +150,14 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
         
               {/* Portfolio Balance */}
               <div className="mt-8 pl-1">
-                <p className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Portfolio Balance</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Portfolio Balance</p>
                 <div className="flex items-center gap-3">
-                  <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+                  <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
                     {!showBalance ? '••••••' : formatCurrency(animatedRevenue)}
                   </span>
                   <button
                     onClick={() => setShowBalance(!showBalance)}
-                    className="text-slate-400 hover:text-blue-600 transition-colors bg-white hover:bg-blue-50 p-2 rounded-xl border border-slate-100 hover:border-blue-100 shadow-sm"
+                    className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 p-2 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-blue-100 shadow-sm"
                     aria-label={!showBalance ? 'Show balance' : 'Hide balance'}
                   >
                     {!showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -178,7 +180,7 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                 </Link>
                 <Link
                   href="/merchant/wallet"
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-white text-slate-700 text-sm font-bold rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm hover:-translate-y-0.5"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm hover:-translate-y-0.5"
                 >
                   <ArrowUpRight className="w-4 h-4" />
                   Withdraw
@@ -186,21 +188,21 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
               </div>
         
               {/* Operational Toggles */}
-              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start mt-2 sm:mt-0 p-2 bg-slate-50/80 border border-slate-200/80 rounded-2xl">
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start mt-2 sm:mt-0 p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl">
                 <LiveButton />
                 
-                <div className="flex items-center pl-1 pr-2 border-r border-slate-200">
+                <div className="flex items-center pl-1 pr-2 border-r border-slate-200 dark:border-slate-700">
                   <StoreStatusToggle initialStoreData={merchant} compact={true} />
                 </div>
         
                 {/* AI Grow Button */}
                 <button
                   onClick={() => setIsAIGrowModalOpen(true)}
-                  className="relative inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-orange-200 text-orange-600 text-xs font-bold hover:from-amber-100 hover:to-orange-100 transition-all shadow-sm group"
+                  className="relative inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 text-xs font-bold hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/50 dark:hover:to-orange-950/50 transition-all shadow-sm group"
                 >
                   <Sparkles className="w-4 h-4 text-orange-500" />
                   AI Grow
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-sm ring-2 ring-white animate-pulse">
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
                     3
                   </span>
                 </button>

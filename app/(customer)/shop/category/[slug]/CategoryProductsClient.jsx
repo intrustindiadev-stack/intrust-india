@@ -45,6 +45,11 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
     const [cartQuantities, setCartQuantities] = useState({}); // { [productId]: quantity }
     const [cartItemDetails, setCartItemDetails] = useState({}); // { [productId]: { price, mrp } }
     const [justAddedProduct, setJustAddedProduct] = useState(null);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Sync active cart from database on mount if logged in
     useEffect(() => {
@@ -370,6 +375,8 @@ export default function CategoryProductsClient({ initialProducts = [], categoryN
             console.error('URL replace error:', e);
         }
     }, [pathname, router]);
+
+    if (!isMounted) return null;
 
     return (
         <div className="space-y-4">

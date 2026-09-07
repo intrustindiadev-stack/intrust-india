@@ -11,7 +11,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { getProductFallbackImage } from '@/lib/shopping/categories';
 import toast from 'react-hot-toast';
 
-export default function TrendingProductsGrid() {
+function TrendingProductsGrid() {
     const router = useRouter();
     const { user, profile } = useAuth();
     const activeCustomer = profile || user;
@@ -343,3 +343,5 @@ export default function TrendingProductsGrid() {
         </div>
     );
 }
+
+export default React.memo(TrendingProductsGrid);

@@ -1,10 +1,11 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Store, ShieldCheck, ArrowRight, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function FintechGrowthSection({ userData }) {
+function FintechGrowthSection({ userData }) {
     const { kycStatus, merchantStatus, referralCode } = userData || {};
 
     // Only show KYC if not verified/approved
@@ -84,3 +85,5 @@ export default function FintechGrowthSection({ userData }) {
         </div>
     );
 }
+
+export default React.memo(FintechGrowthSection);

@@ -55,25 +55,16 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     const [selectedSubCategory, setSelectedSubCategory] = useState(urlSubCategory || 'all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterOnlyOpen, setFilterOnlyOpen] = useState(false);
-    const [filterOnlyLikedStores, setFilterOnlyLikedStores] = useState(false);
     const [filterMinRating, setFilterMinRating] = useState(0);
     const [products, setProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(true);
     const [addedProductId, setAddedProductId] = useState(null);
     const [visibleProductCount, setVisibleProductCount] = useState(8);
-    const [likedStoreIds, setLikedStoreIds] = useState(new Set());
     const [productWishlistIds, setProductWishlistIds] = useState(new Set());
+    const [isMounted, setIsMounted] = useState(false);
 
-    // Load liked stores from local storage on mount
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem('intrust_liked_stores');
-            if (saved) {
-                setLikedStoreIds(new Set(JSON.parse(saved)));
-            }
-        } catch (e) {
-            console.error('Error loading liked stores:', e);
-        }
+        setIsMounted(true);
     }, []);
 
     // Load product wishlists from DB
@@ -88,27 +79,6 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 });
         }
     }, [activeCustomer?.id]);
-
-    const toggleLikeStore = (e, merchant) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const id = merchant.id || merchant.slug;
-        setLikedStoreIds(prev => {
-            const next = new Set(prev);
-            const willLike = !next.has(id);
-            if (willLike) {
-                next.add(id);
-                toast.success(`Saved ${merchant.business_name} to favorite stores! ❤️`);
-            } else {
-                next.delete(id);
-                toast.success(`Removed ${merchant.business_name} from favorites`);
-            }
-            try {
-                localStorage.setItem('intrust_liked_stores', JSON.stringify(Array.from(next)));
-            } catch (err) {}
-            return next;
-        });
-    };
 
     const toggleProductWishlist = async (e, prod) => {
         e.preventDefault();
@@ -231,13 +201,10 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         fetchProducts();
     }, []);
 
-    // Filter merchants based on search, open status, rating & favorites
+    // Filter merchants based on search, open status & rating
     const filteredMerchants = useMemo(() => {
         return merchants.filter((m) => {
             if (m.id === 'official' || m.slug === 'official' || m.slug === 'intrust-official') return false; // Handled in dedicated hub
-            if (filterOnlyLikedStores && !likedStoreIds.has(m.id) && !likedStoreIds.has(m.slug)) {
-                return false;
-            }
             if (searchQuery && !m.business_name?.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return false;
             }
@@ -246,7 +213,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
             if (filterMinRating > 0 && rating < filterMinRating) return false;
             return true;
         });
-    }, [merchants, searchQuery, filterOnlyOpen, filterMinRating, ratingsMap, filterOnlyLikedStores, likedStoreIds]);
+    }, [merchants, searchQuery, filterOnlyOpen, filterMinRating, ratingsMap]);
 
 
     // Compute dynamic categories based on shopping_categories and active products
@@ -419,6 +386,8 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         setConfirmModalOpen(false);
         setPendingCartProduct(null);
     };
+
+    if (!isMounted) return null;
 
     return (
         <div className="w-full space-y-6 font-body-md text-slate-900 dark:text-on-surface">
@@ -730,21 +699,6 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                 Direct merchant contact with fast local store pickup &amp; 100% InTrust Protection
                             </p>
                         </div>
-
-                        {/* Filter chip for liked stores */}
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setFilterOnlyLikedStores(!filterOnlyLikedStores)}
-                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-xs active:scale-95 ${
-                                    filterOnlyLikedStores
-                                        ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-300'
-                                        : 'bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant border-outline-variant/20'
-                                }`}
-                            >
-                                <Heart size={14} className={filterOnlyLikedStores ? 'fill-rose-500 text-rose-500' : 'text-slate-400'} />
-                                <span>Favorite Stores {likedStoreIds.size > 0 && `(${likedStoreIds.size})`}</span>
-                            </button>
-                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -754,7 +708,6 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             const isOpen = merchant.is_open !== false;
                             const ratingVal = ratingsMap[merchant.id]?.avg_rating;
                             const storeUrl = `/shop/${merchant.slug || merchant.id}`;
-                            const isLiked = likedStoreIds.has(merchant.id) || likedStoreIds.has(merchant.slug);
 
                             // Get ONLY this merchant's products
                             const storeProds = (merchantProductsMap[merchant.id] || []).slice(0, 3);
@@ -790,36 +743,15 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                                 </span>
                                             </div>
 
-                                            {/* Top right: Rating & Like Store Heart */}
-                                            <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                                                {ratingVal != null && (
+                                            {/* Top right: Rating */}
+                                            {ratingVal != null && (
+                                                <div className="absolute top-3 right-3 flex items-center gap-1.5">
                                                     <div className="px-2 py-1 rounded-xl bg-white/95 backdrop-blur-md text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm">
                                                         <Star size={12} className="text-amber-500 fill-amber-500" />
                                                         <span>{Number(ratingVal).toFixed(1)}</span>
                                                     </div>
-                                                )}
-
-                                                {/* Like Store Heart Button */}
-                                                <motion.button
-                                                    type="button"
-                                                    whileTap={{ scale: 1.35 }}
-                                                    whileHover={{ scale: 1.1 }}
-                                                    onClick={(e) => toggleLikeStore(e, merchant)}
-                                                    className={`w-8 h-8 rounded-xl flex items-center justify-center backdrop-blur-md shadow-sm transition-all ${
-                                                        isLiked 
-                                                            ? 'bg-rose-50 text-rose-500 border border-rose-200 shadow-md' 
-                                                            : 'bg-black/40 hover:bg-black/60 text-white border border-white/20'
-                                                    }`}
-                                                    title={isLiked ? "Saved to favorite stores" : "Save store to favorites"}
-                                                >
-                                                    <motion.div
-                                                        animate={isLiked ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                                                        transition={{ duration: 0.3 }}
-                                                    >
-                                                        <Heart size={14} className={isLiked ? "fill-rose-500 text-rose-500" : "currentColor"} />
-                                                    </motion.div>
-                                                </motion.button>
-                                            </div>
+                                                </div>
+                                            )}
 
                                             {merchant.business_address && (
                                                 <div className="absolute bottom-3 left-3 right-3 flex items-center gap-1 text-white text-xs font-semibold truncate">

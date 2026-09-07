@@ -138,14 +138,16 @@ export default function ProductCard({
       setIsWishlisted(false);
       return;
     }
-    const query = supabase
+    // NOTE: Supabase query builder is immutable — each method returns a new object.
+    // Use `let` so we can conditionally chain more filters.
+    let query = supabase
       .from('user_wishlists')
       .select('id')
       .eq('user_id', activeCustomer.id)
       .eq('product_id', product.id);
 
     if (activeVariant?.id) {
-      query.eq('variant_id', activeVariant.id);
+      query = query.eq('variant_id', activeVariant.id);
     }
 
     query.maybeSingle().then(({ data }) => setIsWishlisted(Boolean(data)));
@@ -180,12 +182,14 @@ export default function ProductCard({
         setIsWishlisted(false);
         toast.success('Removed from wishlist');
       } else {
-        const { error } = await supabase.from('user_wishlists').insert({
+        // Use upsert to gracefully handle the case where the row already exists
+        // (unique constraint is on user_id, product_id). This prevents duplicate-save errors.
+        const { error } = await supabase.from('user_wishlists').upsert({
           user_id: activeCustomer.id,
           product_id: product.id,
           variant_id: activeVariant?.id || null,
           is_platform_item: true
-        });
+        }, { onConflict: 'user_id,product_id' });
 
         if (error) throw error;
         setIsWishlisted(true);

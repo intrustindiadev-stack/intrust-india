@@ -1,48 +1,48 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, Zap, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PromoBanners() {
-    const banners = [
-        {
-            id: 1,
-            title: 'Elite Gold',
-            subtitle: 'Unlock Premium Benefits',
-            color: 'from-amber-400 to-orange-500',
-            icon: ShieldCheck,
-            href: '/gold'
-        },
-        {
-            id: 2,
-            title: 'Festive Sale',
-            subtitle: 'Up to 50% Off Electronics',
-            color: 'from-indigo-500 to-purple-600',
-            icon: Zap,
-            href: '/shop'
-        },
-        {
-            id: 3,
-            title: 'Gift Cards',
-            subtitle: 'Perfect for every occasion',
-            color: 'from-emerald-400 to-teal-500',
-            icon: Gift,
-            href: '/gift-cards'
-        }
-    ];
+const PROMO_BANNERS = [
+    {
+        id: 1,
+        title: 'Elite Gold',
+        subtitle: 'Unlock Premium Benefits',
+        color: 'from-amber-400 to-orange-500',
+        icon: ShieldCheck,
+        href: '/gold'
+    },
+    {
+        id: 2,
+        title: 'Festive Sale',
+        subtitle: 'Up to 50% Off Electronics',
+        color: 'from-indigo-500 to-purple-600',
+        icon: Zap,
+        href: '/shop'
+    },
+    {
+        id: 3,
+        title: 'Gift Cards',
+        subtitle: 'Perfect for every occasion',
+        color: 'from-emerald-400 to-teal-500',
+        icon: Gift,
+        href: '/gift-cards'
+    }
+];
 
+function PromoBanners() {
     const [currentBanner, setCurrentBanner] = useState(0);
 
     useEffect(() => {
         const timer = setInterval(() => {
-            setCurrentBanner((prev) => (prev + 1) % banners.length);
+            setCurrentBanner((prev) => (prev + 1) % PROMO_BANNERS.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, [banners.length]);
+    }, []);
 
-    const banner = banners[currentBanner];
+    const banner = PROMO_BANNERS[currentBanner];
 
     return (
         <div className="w-full relative h-[140px] sm:h-[160px] rounded-[2rem] overflow-hidden shadow-lg group">
@@ -103,7 +103,7 @@ export default function PromoBanners() {
             
             {/* Dots */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-                {banners.map((_, idx) => (
+                {PROMO_BANNERS.map((_, idx) => (
                     <button 
                         key={idx}
                         onClick={() => setCurrentBanner(idx)}
@@ -114,3 +114,5 @@ export default function PromoBanners() {
         </div>
     );
 }
+
+export default React.memo(PromoBanners);

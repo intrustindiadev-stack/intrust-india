@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Clock, CheckCircle } from 'lucide-react';
 
-export default function RecentActivity({ orders }) {
+function RecentActivity({ orders }) {
     return (
         <div
             style={{ animationDelay: '400ms', animationFillMode: 'both' }}
@@ -45,3 +45,5 @@ export default function RecentActivity({ orders }) {
         </div>
     );
 }
+
+export default React.memo(RecentActivity);

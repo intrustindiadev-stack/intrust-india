@@ -21,7 +21,7 @@ import GoldBadge from '@/components/ui/GoldBadge';
 import { displayName } from '@/lib/auth';
 
 // ── E-Commerce First Dashboard Components ──
-import EcomHeroCarousel from '@/components/customer/dashboard/EcomHeroCarousel';
+import EcomHeroCarousel, { DEFAULT_SLIDES as HERO_BANNERS } from '@/components/customer/dashboard/EcomHeroCarousel';
 import CategoryQuickPills from '@/components/customer/dashboard/CategoryQuickPills';
 import TrendingProductsGrid from '@/components/customer/dashboard/TrendingProductsGrid';
 import VerifiedStoresNearby from '@/components/customer/dashboard/VerifiedStoresNearby';
@@ -404,7 +404,7 @@ export default function CustomerDashboardPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
                                 <span className="text-[11px] font-bold text-brand-steel uppercase tracking-widest">Bhopal Hub • Live</span>
                             </div>
                             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-on-surface tracking-tight flex items-center gap-2">
@@ -422,7 +422,7 @@ export default function CustomerDashboardPage() {
                     </div>
 
                     {/* E-Commerce Hero Carousel */}
-                    <EcomHeroCarousel />
+                    <EcomHeroCarousel banners={HERO_BANNERS} />
 
                     {/* Category Quick Pills */}
                     <CategoryQuickPills />

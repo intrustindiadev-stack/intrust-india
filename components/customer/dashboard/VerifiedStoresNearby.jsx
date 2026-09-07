@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Store, Star, MapPin, Phone, ShieldCheck, ArrowRight, Clock } from 'lucide-react';
 
-export default function VerifiedStoresNearby({ merchants = [] }) {
+function VerifiedStoresNearby({ merchants = [] }) {
     const router = useRouter();
     if (!merchants || merchants.length === 0) return null;
 
@@ -135,3 +135,5 @@ export default function VerifiedStoresNearby({ merchants = [] }) {
         </div>
     );
 }
+
+export default React.memo(VerifiedStoresNearby);

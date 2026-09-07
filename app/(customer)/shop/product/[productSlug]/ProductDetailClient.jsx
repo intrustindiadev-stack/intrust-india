@@ -58,6 +58,11 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     const activeCustomer = authProfile || customer;
     const activeEmail = activeCustomer?.email || authUser?.email;
     const isDark = theme === 'dark';
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
     const [buyNowLoading, setBuyNowLoading] = useState(false);
@@ -75,32 +80,76 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     const [cartCount, setCartCount] = useState(0);
     const [activeDetailTab, setActiveDetailTab] = useState('highlights');
 
+    // Variant extraction & management
+    const hasVariants = variants && variants.length > 0;
+    const colors = useMemo(() => {
+        return Array.from(new Set(variants?.filter(v => v?.color).map(v => v?.color) || []));
+    }, [variants]);
+
+    const sizes = useMemo(() => {
+        return Array.from(new Set(variants?.filter(v => v?.size).map(v => v?.size) || []));
+    }, [variants]);
+
+    const [selectedColor, setSelectedColor] = useState(colors[0] || '');
+    const [selectedSize, setSelectedSize] = useState(sizes[0] || '');
+
+    useEffect(() => {
+        if (colors.length > 0 && !colors.includes(selectedColor)) {
+            setSelectedColor(colors[0]);
+        }
+    }, [colors, selectedColor]);
+
+    useEffect(() => {
+        if (sizes.length > 0 && !sizes.includes(selectedSize)) {
+            setSelectedSize(sizes[0]);
+        }
+    }, [sizes, selectedSize]);
+
+    const selectedVariant = useMemo(() => {
+        if (!hasVariants) return null;
+        const match = variants?.find(v =>
+            (!selectedColor || v?.color === selectedColor) &&
+            (!selectedSize || v?.size === selectedSize)
+        );
+        return match || variants?.find(v => !selectedColor || v?.color === selectedColor) || variants?.[0] || null;
+    }, [hasVariants, variants, selectedColor, selectedSize]);
+
     // Comprehensive multi-image resolution
     const allImages = useMemo(() => {
         const list = [];
         if (selectedVariant?.fashion_variant_media?.length) {
             selectedVariant.fashion_variant_media.forEach(m => {
-                if (m.image_url && !list.includes(m.image_url)) list.push(m.image_url);
+                if (m?.image_url && !list.includes(m.image_url)) list.push(m.image_url);
             });
         }
-        if (Array.isArray(product.product_images)) {
+        if (Array.isArray(product?.product_images)) {
             product.product_images.forEach(img => {
                 if (img && !list.includes(img)) list.push(img);
             });
         }
-        if (Array.isArray(product.images)) {
+        if (Array.isArray(product?.images)) {
             product.images.forEach(img => {
                 if (img && !list.includes(img)) list.push(img);
             });
         }
-        if (product.image && !list.includes(product.image)) list.push(product.image);
-        if (product.image_url && !list.includes(product.image_url)) list.push(product.image_url);
+        if (product?.image && !list.includes(product.image)) list.push(product.image);
+        if (product?.image_url && !list.includes(product.image_url)) list.push(product.image_url);
 
         if (list.length === 0) {
             list.push(getProductFallbackImage(product));
         }
         return list;
     }, [selectedVariant, product]);
+
+    const variantStock = selectedVariant ? (selectedVariant.inventory_quantity ?? 0) : null;
+    const variantIsOOS = hasVariants && variantStock !== null && variantStock <= 0;
+
+    // Reset image index when variant changes
+    useEffect(() => {
+        if (selectedVariant?.id) {
+            setSelectedImageIndex(0);
+        }
+    }, [selectedVariant?.id]);
 
     // Keyboard navigation for image lightbox
     useEffect(() => {
@@ -135,51 +184,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                 is_fashion: variants && variants.length > 0
             });
         }
-    }, [product.id, product.title, product.category, product.platform_price_paise, product.suggested_retail_price_paise, product.mrp_paise, product.product_images, product.slug, variants]);
-
-    // Variant extraction & management
-    const hasVariants = variants && variants.length > 0;
-    const colors = useMemo(() => {
-        return Array.from(new Set(variants.filter(v => v.color).map(v => v.color)));
-    }, [variants]);
-
-    const sizes = useMemo(() => {
-        return Array.from(new Set(variants.filter(v => v.size).map(v => v.size)));
-    }, [variants]);
-
-    const [selectedColor, setSelectedColor] = useState(colors[0] || '');
-    const [selectedSize, setSelectedSize] = useState(sizes[0] || '');
-
-    useEffect(() => {
-        if (colors.length > 0 && !colors.includes(selectedColor)) {
-            setSelectedColor(colors[0]);
-        }
-    }, [colors, selectedColor]);
-
-    useEffect(() => {
-        if (sizes.length > 0 && !sizes.includes(selectedSize)) {
-            setSelectedSize(sizes[0]);
-        }
-    }, [sizes, selectedSize]);
-
-    const selectedVariant = useMemo(() => {
-        if (!hasVariants) return null;
-        const match = variants.find(v =>
-            (!selectedColor || v.color === selectedColor) &&
-            (!selectedSize || v.size === selectedSize)
-        );
-        return match || variants.find(v => !selectedColor || v.color === selectedColor) || variants[0] || null;
-    }, [hasVariants, variants, selectedColor, selectedSize]);
-
-    const variantStock = selectedVariant ? (selectedVariant.inventory_quantity ?? 0) : null;
-    const variantIsOOS = hasVariants && variantStock !== null && variantStock <= 0;
-
-    // Reset image index when variant changes
-    useEffect(() => {
-        if (selectedVariant?.id) {
-            setSelectedImageIndex(0);
-        }
-    }, [selectedVariant?.id]);
+    }, [product?.id, product?.title, product?.category, product?.platform_price_paise, product?.suggested_retail_price_paise, product?.mrp_paise, product?.product_images, product?.slug, variants]);
 
     // Memoized supabase client — prevents a new instance on every render
     const supabase = useMemo(() => createClient(), []);
@@ -205,7 +210,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     }, [activeCustomer?.id, supabase]);
 
     useEffect(() => {
-        if (!activeCustomer?.id) return;
+        if (!activeCustomer?.id || !product?.id) return;
         supabase
             .from('user_wishlists')
             .select('id')
@@ -213,13 +218,13 @@ export default function ProductDetailClient({ product, inventory, customer, vari
             .eq('product_id', product.id)
             .maybeSingle()
             .then(({ data }) => setIsWishlisted(!!data));
-    }, [activeCustomer?.id, product.id]);
+    }, [activeCustomer?.id, product?.id, supabase]);
 
     // Initialize merchant statuses
     useEffect(() => {
         const statusMap = new Map();
-        inventory.forEach(inv => {
-            if (inv.merchants) {
+        (inventory || []).forEach(inv => {
+            if (inv?.merchants) {
                 statusMap.set(inv.merchants.id, inv.merchants.is_open);
             }
         });
@@ -242,7 +247,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
             .subscribe();
 
         // 2. Sync Merchants in inventory
-        const activeMerchantIds = inventory.map(inv => inv.merchants?.id).filter(Boolean);
+        const activeMerchantIds = (inventory || []).map(inv => inv?.merchants?.id).filter(Boolean);
         if (activeMerchantIds.length === 0) return () => { supabase.removeChannel(platformChannel); };
 
         const merchantChannel = supabase
@@ -266,7 +271,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
             supabase.removeChannel(platformChannel);
             supabase.removeChannel(merchantChannel);
         };
-    }, [inventory]);
+    }, [inventory, supabase]);
 
     const toggleWishlist = async () => {
         if (!activeCustomer?.id) {
@@ -291,10 +296,11 @@ export default function ProductDetailClient({ product, inventory, customer, vari
             } else {
                 const { error } = await supabase.from('user_wishlists').upsert({
                     user_id: activeCustomer.id,
-                    product_id: product.id,
-                    merchant_id: selectedOffer.is_platform_direct ? null : (inventory[0]?.merchant_id || null),
-                    inventory_id: selectedOffer.is_platform_direct ? null : (selectedOffer.id || null),
-                    is_platform_item: !!selectedOffer.is_platform_direct,
+                    product_id: product?.id,
+                    variant_id: selectedVariant?.id || null,
+                    merchant_id: selectedOffer?.is_platform_direct ? null : (inventory?.[0]?.merchant_id || null),
+                    inventory_id: selectedOffer?.is_platform_direct ? null : (selectedOffer?.id || null),
+                    is_platform_item: !!selectedOffer?.is_platform_direct,
                 }, { onConflict: 'user_id,product_id' });
                 if (!error) {
                     setIsWishlisted(true);
@@ -313,48 +319,47 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     const allOffers = useMemo(() => {
         const platformOffer = {
             is_platform_direct: true,
-            retail_price_paise: product.platform_price_paise ?? product.suggested_retail_price_paise,
+            retail_price_paise: product?.platform_price_paise ?? product?.suggested_retail_price_paise ?? 0,
             merchant_name: 'InTrust Official',
-            stock: product.admin_stock
+            stock: product?.admin_stock ?? 0
         };
         return [
             platformOffer,
-            ...inventory.map(inv => ({
+            ...(inventory || []).map(inv => ({
                 id: inv.id,
                 is_platform_direct: false,
-                // For platform-managed rows, use the authoritative price from shopping_products.
-                // retail_price_paise on merchant_inventory can be stale between admin updates.
-                // See migration: 20260514_sync_platform_inventory_retail_price.sql
                 retail_price_paise: inv.is_platform_product
-                    ? (product.suggested_retail_price_paise ?? inv.retail_price_paise)
-                    : inv.retail_price_paise,
+                    ? (product?.suggested_retail_price_paise ?? inv.retail_price_paise ?? 0)
+                    : (inv.retail_price_paise ?? 0),
                 merchant_name: inv.merchants?.business_name || 'Merchant',
                 merchant_location: inv.merchants?.business_address || '',
-                stock: inv.stock_quantity,
-                stock_quantity: inv.stock_quantity,
+                stock: inv.stock_quantity ?? 0,
+                stock_quantity: inv.stock_quantity ?? 0,
                 is_active: inv.is_active
             }))
-        ].sort((a, b) => a.retail_price_paise - b.retail_price_paise);
-    }, [product.platform_price_paise, product.suggested_retail_price_paise, product.admin_stock, inventory]);
+        ].sort((a, b) => (a.retail_price_paise ?? 0) - (b.retail_price_paise ?? 0));
+    }, [product?.platform_price_paise, product?.suggested_retail_price_paise, product?.admin_stock, inventory]);
 
-    const isOfferOOS = useCallback((off) =>
-        off.is_platform_direct ? isPlatformProductOOS(product) : isInventoryRowOOS(off)
-    , [product]);
+    const isOfferOOS = useCallback((off) => {
+        if (!off) return true;
+        return off.is_platform_direct ? isPlatformProductOOS(product) : isInventoryRowOOS(off);
+    }, [product]);
 
     // Memoize derived OOS / selection state
-    const productIsOOS = useMemo(() => isPdpProductOOS({ product, inventory }), [product, inventory]);
-    const defaultOffer = useMemo(() => allOffers.find(o => !isOfferOOS(o)) || allOffers[0], [allOffers, isOfferOOS]);
+    const productIsOOS = useMemo(() => isPdpProductOOS({ product, inventory: inventory || [] }), [product, inventory]);
+    const defaultOffer = useMemo(() => allOffers.find(o => !isOfferOOS(o)) || allOffers[0] || {}, [allOffers, isOfferOOS]);
     const selectedOffer = useMemo(() =>
         allOffers.find(o => (o.is_platform_direct ? selectedOfferId === 'platform' : o.id === selectedOfferId)) || defaultOffer
     , [allOffers, selectedOfferId, defaultOffer]);
     const selectedOfferIsOOS = useMemo(() => isOfferOOS(selectedOffer), [isOfferOOS, selectedOffer]);
     const isOutOfStock = hasVariants ? variantIsOOS : (productIsOOS || selectedOfferIsOOS);
 
-    const isStoreOpen = useMemo(() =>
-        selectedOffer.is_platform_direct
+    const isStoreOpen = useMemo(() => {
+        if (!selectedOffer) return true;
+        return selectedOffer.is_platform_direct
             ? isPlatformOpen
-            : (merchantStatuses.get(inventory.find(i => i.id === selectedOffer.id)?.merchant_id) ?? true)
-    , [selectedOffer, isPlatformOpen, merchantStatuses, inventory]);
+            : (merchantStatuses.get((inventory || []).find(i => i.id === selectedOffer.id)?.merchant_id) ?? true);
+    }, [selectedOffer, isPlatformOpen, merchantStatuses, inventory]);
 
     const triggerClosedAnimation = useCallback(() => {
         setIsClosedAnimation(true);
@@ -372,7 +377,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
         }
         if (!activeCustomer) {
             toast.error('Please login to add to cart');
-            const returnUrl = typeof window !== 'undefined' ? window.location.pathname : `/shop/product/${product.slug}`;
+            const returnUrl = typeof window !== 'undefined' ? window.location.pathname : `/shop/product/${product?.slug || ''}`;
             router.push(`/login?next=${encodeURIComponent(returnUrl)}`);
             return;
         }
@@ -381,11 +386,11 @@ export default function ProductDetailClient({ product, inventory, customer, vari
         try {
             const { data, error } = await supabase.rpc('add_to_shopping_cart', {
                 p_customer_id: activeCustomer.id,
-                p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
-                p_product_id: product.id,
+                p_inventory_id: selectedOffer?.is_platform_direct ? null : selectedOffer?.id,
+                p_product_id: product?.id,
                 p_variant_id: selectedVariant?.id || null,
                 p_quantity: quantity,
-                p_is_platform: selectedOffer.is_platform_direct
+                p_is_platform: selectedOffer?.is_platform_direct
             });
 
             if (error) throw error;
@@ -418,7 +423,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
         }
         if (!activeCustomer) {
             toast.error('Please login to purchase');
-            const returnUrl = typeof window !== 'undefined' ? window.location.pathname : `/shop/product/${product.slug}`;
+            const returnUrl = typeof window !== 'undefined' ? window.location.pathname : `/shop/product/${product?.slug || ''}`;
             router.push(`/login?next=${encodeURIComponent(returnUrl)}`);
             return;
         }
@@ -426,11 +431,11 @@ export default function ProductDetailClient({ product, inventory, customer, vari
         try {
             const { data, error } = await supabase.rpc('add_to_shopping_cart', {
                 p_customer_id: activeCustomer.id,
-                p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
-                p_product_id: product.id,
+                p_inventory_id: selectedOffer?.is_platform_direct ? null : selectedOffer?.id,
+                p_product_id: product?.id,
                 p_variant_id: selectedVariant?.id || null,
                 p_quantity: quantity,
-                p_is_platform: selectedOffer.is_platform_direct
+                p_is_platform: selectedOffer?.is_platform_direct
             });
             if (error) throw error;
             if (data?.message === 'MIXED_SELLER_ERROR') {
@@ -438,11 +443,11 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                 await supabase.from('shopping_cart').delete().eq('customer_id', activeCustomer.id);
                 await supabase.rpc('add_to_shopping_cart', {
                     p_customer_id: activeCustomer.id,
-                    p_inventory_id: selectedOffer.is_platform_direct ? null : selectedOffer.id,
-                    p_product_id: product.id,
+                    p_inventory_id: selectedOffer?.is_platform_direct ? null : selectedOffer?.id,
+                    p_product_id: product?.id,
                     p_variant_id: selectedVariant?.id || null,
                     p_quantity: quantity,
-                    p_is_platform: selectedOffer.is_platform_direct
+                    p_is_platform: selectedOffer?.is_platform_direct
                 });
             }
             router.push('/shop/cart');
@@ -475,10 +480,10 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     const { sellingPrice, finalMrp, savings, savingsPercent } = useMemo(() => {
         const sp = (hasVariants && selectedVariant?.price_paise != null)
             ? selectedVariant.price_paise
-            : selectedOffer.retail_price_paise;
+            : (selectedOffer?.retail_price_paise ?? 0);
         const mrp = (hasVariants && selectedVariant?.compare_at_price_paise != null)
             ? selectedVariant.compare_at_price_paise
-            : (product.mrp_paise || product.suggested_retail_price_paise || sp);
+            : (product?.mrp_paise || product?.suggested_retail_price_paise || sp);
         const fm = mrp > sp ? mrp : sp;
         const sav = fm - sp;
         return {
@@ -487,8 +492,21 @@ export default function ProductDetailClient({ product, inventory, customer, vari
             savings: sav,
             savingsPercent: fm > 0 ? Math.round((sav / fm) * 100) : 0
         };
-    }, [selectedOffer.retail_price_paise, product.mrp_paise, product.suggested_retail_price_paise, hasVariants, selectedVariant]);
-    const categoryName = product.shopping_categories?.name || 'Category';
+    }, [selectedOffer?.retail_price_paise, product?.mrp_paise, product?.suggested_retail_price_paise, hasVariants, selectedVariant]);
+
+    // Defensive guard: all hooks have executed above. Now guard against pre-hydration or missing product
+    if (!isMounted || !product) {
+        return (
+            <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`}>
+                <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <span className="text-xs text-slate-400 font-medium">Loading product...</span>
+                </div>
+            </div>
+        );
+    }
+
+    const categoryName = product.shopping_categories?.name || product.category || 'Category';
 
     return (
         <div className={`min-h-screen relative ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`}>
@@ -574,9 +592,10 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                                     alt={product.title}
                                     fill
                                     sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 540px"
-                                    className={`object-contain relative z-10 transition-transform duration-500 group-hover:scale-105 ${isDark ? '' : 'mix-blend-multiply'}`}
+                                    className={`object-contain relative z-10 transition-transform duration-500 group-hover:scale-105 cursor-pointer ${isDark ? '' : 'mix-blend-multiply'}`}
                                     priority
                                     quality={85}
+                                    onClick={() => setIsZoomed(true)}
                                 />
                             ) : (
                                 <div className={`flex flex-col items-center justify-center ${isDark ? 'text-white/10' : 'text-slate-200'}`}>
@@ -1572,6 +1591,31 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* ====== FULL-SCREEN IMAGE LIGHTBOX OVERLAY ====== */}
+            {isZoomed && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setIsZoomed(false)}
+                >
+                    <button
+                        type="button"
+                        onClick={() => setIsZoomed(false)}
+                        className="absolute top-6 right-6 text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10"
+                        aria-label="Close"
+                    >
+                        <X size={28} />
+                    </button>
+                    {(allImages[selectedImageIndex] || allImages[0]) && (
+                        <img
+                            src={allImages[selectedImageIndex] || allImages[0]}
+                            alt={product.title}
+                            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    )}
+                </div>
+            )}
         </div>
     );
 }

@@ -56,6 +56,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
     const [selectedProductItem, setSelectedProductItem] = useState(null);
+    const [isZoomed, setIsZoomed] = useState(false);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
     const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
@@ -838,20 +839,20 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setSelectedProductItem(null)}
-                            className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 z-[100] backdrop-blur-sm"
+                            onClick={() => { setSelectedProductItem(null); setIsZoomed(false); }}
+                            className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 z-[80] backdrop-blur-sm"
                         />
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 28, stiffness: 250, mass: 0.8 }}
-                            className={`fixed bottom-0 left-0 right-0 z-[110] rounded-t-[2rem] max-h-[85vh] flex flex-col shadow-2xl ${isDark ? 'bg-[#0f111a]' : 'bg-white'}`}
+                            className={`fixed bottom-0 left-0 right-0 z-[90] rounded-t-[2rem] max-h-[85vh] flex flex-col shadow-2xl ${isDark ? 'bg-[#0f111a]' : 'bg-white'}`}
                         >
                             {/* Drag handle */}
                             <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full z-20" />
                             
-                            <button onClick={() => setSelectedProductItem(null)} className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center z-20 shadow-md ${isDark ? 'bg-black/50 text-white backdrop-blur-md' : 'bg-white/80 text-slate-700 backdrop-blur-md border border-slate-100'}`}>
+                            <button onClick={() => { setSelectedProductItem(null); setIsZoomed(false); }} className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center z-20 shadow-md ${isDark ? 'bg-black/50 text-white backdrop-blur-md' : 'bg-white/80 text-slate-700 backdrop-blur-md border border-slate-100'}`}>
                                 <X size={18} />
                             </button>
 
@@ -873,14 +874,18 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                         <div className="flex flex-col md:flex-row w-full max-w-5xl mx-auto md:p-6 md:gap-8">
                                             
                                             {/* Image Area - Edge to edge on mobile, rounded on desktop */}
-                                            <div className={`relative w-full aspect-square md:w-1/2 md:rounded-3xl flex items-center justify-center shrink-0 ${isDark ? 'bg-[#151822]' : 'bg-[#f4f6f9]'}`}>
+                                            <div
+                                                className={`relative w-full aspect-square md:w-1/2 md:rounded-3xl flex items-center justify-center shrink-0 cursor-pointer ${isDark ? 'bg-[#151822]' : 'bg-[#f4f6f9]'}`}
+                                                onClick={() => pProduct.product_images?.[0] && setIsZoomed(true)}
+                                            >
                                                 {pProduct.product_images?.[0] ? (
                                                     <Image
                                                         src={pProduct.product_images[0]}
                                                         alt={pProduct.title}
                                                         fill
                                                         sizes="(max-width: 768px) 100vw, 50vw"
-                                                        className="object-contain p-8 md:p-12 mix-blend-multiply dark:mix-blend-normal"
+                                                        className="object-contain p-8 md:p-12 mix-blend-multiply dark:mix-blend-normal cursor-pointer"
+                                                        onClick={() => setIsZoomed(true)}
                                                     />
                                                 ) : (
                                                     <Package size={80} className={isDark ? 'text-white/10' : 'text-slate-200'} />
@@ -999,6 +1004,31 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                     showHeader={false}
                 />
             </MobileFilterDrawer>
+
+            {/* Full-Screen Image Lightbox */}
+            {isZoomed && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setIsZoomed(false)}
+                >
+                    <button
+                        type="button"
+                        onClick={() => setIsZoomed(false)}
+                        className="absolute top-6 right-6 text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10"
+                        aria-label="Close"
+                    >
+                        <X size={28} />
+                    </button>
+                    {(selectedProductItem?.shopping_products?.product_images?.[0] || selectedProductItem?.product_images?.[0]) && (
+                        <img
+                            src={selectedProductItem.shopping_products?.product_images?.[0] || selectedProductItem.product_images?.[0]}
+                            alt={selectedProductItem.shopping_products?.title || selectedProductItem.title || 'Product zoom'}
+                            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    )}
+                </div>
+            )}
         </div>
     );
 }

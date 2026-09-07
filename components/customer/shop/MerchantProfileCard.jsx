@@ -1,16 +1,15 @@
 'use client';
 
-import { MapPin, BadgeCheck, Star, Heart, Share2, ShieldCheck, Zap, Store, Sparkles } from 'lucide-react';
+import { MapPin, BadgeCheck, Star, Share2, ShieldCheck, Zap, Store, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen = true }) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
-    const [isSaved, setIsSaved] = useState(false);
     
     const isOfficial = merchant?.id === 'official' || merchant?.slug === 'official';
     const bannerImage = isOfficial
@@ -24,18 +23,6 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
     const businessName = isOfficial
         ? 'InTrust Official'
         : (merchant?.business_name || 'Intrust Partner Store');
-
-    useEffect(() => {
-        try {
-            const stored = localStorage.getItem('intrust_liked_stores');
-            if (stored) {
-                const list = JSON.parse(stored);
-                if (list.includes(merchant?.id) || list.includes(merchant?.slug)) {
-                    setIsSaved(true);
-                }
-            }
-        } catch (e) {}
-    }, [merchant?.id, merchant?.slug]);
 
     const handleShare = async () => {
         try {
@@ -54,25 +41,6 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
                 console.error('Error sharing store:', err);
             }
         }
-    };
-
-    const handleToggleSave = () => {
-        const storeId = merchant?.id || merchant?.slug;
-        setIsSaved(prev => {
-            const next = !prev;
-            toast.success(next ? `Saved ${businessName} to your favorites! ❤️` : 'Removed from favorites');
-            try {
-                const stored = localStorage.getItem('intrust_liked_stores');
-                let list = stored ? JSON.parse(stored) : [];
-                if (next) {
-                    if (!list.includes(storeId)) list.push(storeId);
-                } else {
-                    list = list.filter(id => id !== storeId);
-                }
-                localStorage.setItem('intrust_liked_stores', JSON.stringify(list));
-            } catch (e) {}
-            return next;
-        });
     };
     
     return (
@@ -123,25 +91,6 @@ export default function MerchantProfileCard({ merchant, totalItems, isStoreOpen 
                         >
                             <Share2 size={16} />
                         </button>
-                        <motion.button
-                            type="button"
-                            whileTap={{ scale: 1.35 }}
-                            whileHover={{ scale: 1.1 }}
-                            onClick={handleToggleSave}
-                            title="Favorite Store"
-                            className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all active:scale-95 shadow-sm ${
-                                isSaved 
-                                    ? 'bg-rose-50 text-rose-500 border border-rose-200 shadow-md' 
-                                    : 'bg-black/40 hover:bg-black/60 text-white border border-white/20'
-                            }`}
-                        >
-                            <motion.div
-                                animate={isSaved ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <Heart size={16} className={isSaved ? 'fill-rose-500 text-rose-500' : 'text-white'} />
-                            </motion.div>
-                        </motion.button>
                     </div>
                 </div>
 

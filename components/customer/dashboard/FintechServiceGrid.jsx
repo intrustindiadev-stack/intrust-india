@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, Sun, Gift, Smartphone, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-export default function FintechServiceGrid() {
+function FintechServiceGrid() {
     const services = [
         { id: 'shop', label: 'E-Commerce', icon: ShoppingCart, color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30', href: '/shop' },
         { id: 'solar', label: 'PM Solar', icon: Sun, color: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30', href: '/solar' },
@@ -49,3 +49,5 @@ export default function FintechServiceGrid() {
         </div>
     );
 }
+
+export default React.memo(FintechServiceGrid);

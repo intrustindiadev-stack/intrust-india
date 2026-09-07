@@ -51,7 +51,7 @@ function AnimatedCounter({ targetValue, isVisible, duration = 650 }) {
     );
 }
 
-export default function FintechWalletCard({ userData }) {
+function FintechWalletCard({ userData }) {
     const { walletBalance = 0, rewardPoints = 0, totalSavings = 0 } = userData || {};
     // Hidden by default when page opens as requested
     const [isBalanceVisible, setIsBalanceVisible] = useState(false);
@@ -176,3 +176,5 @@ export default function FintechWalletCard({ userData }) {
         </motion.div>
     );
 }
+
+export default React.memo(FintechWalletCard);

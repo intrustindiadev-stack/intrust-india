@@ -21,7 +21,7 @@ const DEFAULT_CATEGORIES = [
     { label: 'Solar Tech', slug: 'solar', image: getCategoryImage('solar'), tint: 'from-yellow-500/10 to-amber-500/5 hover:border-yellow-500/30' },
 ];
 
-export default function CategoryQuickPills() {
+function CategoryQuickPills() {
     const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
 
     useEffect(() => {
@@ -144,3 +144,5 @@ export default function CategoryQuickPills() {
         </section>
     );
 }
+
+export default React.memo(CategoryQuickPills);

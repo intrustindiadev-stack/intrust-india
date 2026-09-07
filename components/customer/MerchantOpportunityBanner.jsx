@@ -18,7 +18,7 @@ import {
 import Link from 'next/link';
 import { MERCHANT_SUBSCRIPTION_PLANS } from '@/lib/constants';
 
-export default function MerchantOpportunityBanner({
+function MerchantOpportunityBanner({
     merchantStatus,
     subscriptionStatus,
     subscriptionExpiresAt,
@@ -194,3 +194,5 @@ export default function MerchantOpportunityBanner({
         </motion.div>
     );
 }
+
+export default React.memo(MerchantOpportunityBanner);

@@ -10,9 +10,9 @@ import { supabase } from '@/lib/supabaseClient';
  */
 
 /**
- * @param {{ apiPath: string; variant?: 'admin' | 'minimal' | 'header' | 'navbar' }} props
+ * @param {{ apiPath: string; variant?: 'admin' | 'minimal' | 'header' | 'navbar'; className?: string }} props
  */
-export default function NotificationBell({ apiPath, variant = 'admin' }) {
+export default function NotificationBell({ apiPath, variant = 'admin', className }) {
     const [open, setOpen] = useState(false);
     /** @type {[Notification[], React.Dispatch<React.SetStateAction<Notification[]>>]} */
     const [notifications, setNotifications] = useState([]);
@@ -399,7 +399,7 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
         <div
             ref={dropdownRef}
             style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 99999 }}
-            className="w-80 sm:w-96 bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            className="w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden"
         >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
@@ -438,34 +438,40 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
                             </span>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <p className={`text-sm font-semibold ${!n.read ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'}`}>{n.title}</p>
-                                        {n.priority === 'URGENT' && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">URGENT</span>}
-                                        {n.priority === 'HIGH' && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">HIGH</span>}
-                                    </div>
-                                    {!n.read && <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#D4AF37] mt-1" />}
+                                    <p className="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate">
+                                        {n.title}
+                                    </p>
+                                    <span className="text-[10px] text-slate-400 flex-shrink-0">
+                                        {timeAgo(n.created_at)}
+                                    </span>
                                 </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{n.body}</p>
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-                                    {new Date(n.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 line-clamp-2">
+                                    {n.body}
                                 </p>
                             </div>
+                            {!n.read && (
+                                <span className="w-2 h-2 rounded-full bg-[#D4AF37] mt-1.5 flex-shrink-0" />
+                            )}
                         </button>
                     ))
                 )}
 
-                {hasMore && (
-                    <div className="p-3 bg-black/[0.01] dark:bg-white/[0.01]">
+                {loadingMore && (
+                    <div className="py-3 text-center">
+                        <span className="material-icons-round text-sm animate-spin text-slate-400">refresh</span>
+                    </div>
+                )}
+
+                {hasMore && !loadingMore && (
+                    <div className="p-2 text-center border-t border-black/5 dark:border-white/5">
                         <button
                             onClick={() => fetchNotifications(true)}
-                            disabled={loadingMore}
-                            className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-[#D4AF37] dark:text-slate-400 transition-colors flex items-center justify-center gap-2"
+                            className="text-xs text-[#D4AF37] hover:underline font-semibold py-1 px-3 w-full"
                         >
                             {loadingMore ? (
-                                <>
-                                    <span className="material-icons-round text-sm animate-spin">refresh</span>
-                                    Loading...
-                                </>
+                                <span className="inline-flex items-center gap-1">
+                                    <span className="material-icons-round text-xs animate-spin">refresh</span> Loading...
+                                </span>
                             ) : (
                                 'View older notifications'
                             )}
@@ -477,13 +483,13 @@ export default function NotificationBell({ apiPath, variant = 'admin' }) {
         document.body
     ) : null;
 
-    const buttonClass = variant === 'navbar'
+    const buttonClass = className || (variant === 'navbar'
         ? 'relative p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
         : variant === 'minimal'
             ? 'relative p-2 rounded-full text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
             : variant === 'header'
                 ? 'relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200'
-                : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors';
+                : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors');
 
     return (
         <>

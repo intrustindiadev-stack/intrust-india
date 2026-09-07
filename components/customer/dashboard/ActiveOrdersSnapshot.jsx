@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Package, Truck, Phone, CheckCircle2, ArrowRight, FileText, Headphones, ShieldCheck, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function ActiveOrdersSnapshot({ userId }) {
+function ActiveOrdersSnapshot({ userId }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -167,3 +167,5 @@ export default function ActiveOrdersSnapshot({ userId }) {
         </div>
     );
 }
+
+export default React.memo(ActiveOrdersSnapshot);

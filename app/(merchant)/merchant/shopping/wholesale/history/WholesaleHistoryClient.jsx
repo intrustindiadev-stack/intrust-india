@@ -92,7 +92,7 @@ function BatchCard({ batch, merchant }) {
         .map((o) => o.shopping_products.product_images[0]);
 
     return (
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900/80 rounded-[2rem] border border-slate-100 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 overflow-hidden">
             {/* Batch Header */}
             <div className="p-6 flex items-center gap-4">
                 {/* Thumbnails */}
@@ -101,19 +101,19 @@ function BatchCard({ batch, merchant }) {
                         thumbnails.map((src, idx) => (
                             <div
                                 key={idx}
-                                className="w-12 h-12 rounded-xl border-2 border-white shadow-md overflow-hidden bg-slate-100 flex-shrink-0"
+                                className="w-12 h-12 rounded-xl border-2 border-white dark:border-slate-800 shadow-md overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0"
                                 style={{ zIndex: thumbnails.length - idx }}
                             >
                                 <img src={src} alt="" className="w-full h-full object-cover" />
                             </div>
                         ))
                     ) : (
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
-                            <Package size={22} className="text-slate-300" />
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <Package size={22} className="text-slate-300 dark:text-slate-600" />
                         </div>
                     )}
                     {batch.items.length > 4 && (
-                        <div className="w-12 h-12 rounded-xl border-2 border-white shadow-md bg-slate-800 flex items-center justify-center flex-shrink-0 text-white text-xs font-black">
+                        <div className="w-12 h-12 rounded-xl border-2 border-white dark:border-slate-800 shadow-md bg-slate-800 flex items-center justify-center flex-shrink-0 text-white text-xs font-black">
                             +{batch.items.length - 4}
                         </div>
                     )}
@@ -122,11 +122,11 @@ function BatchCard({ batch, merchant }) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-black text-slate-900 text-base">
+                        <h3 className="font-black text-slate-900 dark:text-white text-base">
                             {batch.items.length} {batch.items.length === 1 ? 'product' : 'products'} · {totalQty} units
                         </h3>
                         {!batch.batchId && (
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">Legacy</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-700">Legacy</span>
                         )}
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -155,7 +155,7 @@ function BatchCard({ batch, merchant }) {
 
                     <button
                         onClick={() => setExpanded((v) => !v)}
-                        className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors border border-slate-100"
+                        className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors border border-slate-100 dark:border-slate-700"
                     >
                         {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
@@ -172,20 +172,20 @@ function BatchCard({ batch, merchant }) {
 
             {/* Expanded item rows */}
             {expanded && (
-                <div className="border-t border-slate-100 divide-y divide-slate-50">
+                <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-50 dark:divide-slate-800/60">
                     {batch.items.map((order) => {
                         const product = order.shopping_products;
                         return (
                             <div key={order.id} className="px-6 py-4 flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center">
                                     {product?.product_images?.[0] ? (
                                         <img src={product.product_images[0]} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <Package size={18} className="text-slate-300" />
+                                        <Package size={18} className="text-slate-300 dark:text-slate-600" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-slate-900 text-sm truncate">{product?.title || 'Unknown Product'}</p>
+                                    <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{product?.title || 'Unknown Product'}</p>
                                     <p className="text-[10px] text-slate-400 font-bold">{product?.category || 'Uncategorised'}</p>
                                 </div>
                                 <div className="text-right flex-shrink-0 hidden sm:block">
@@ -221,7 +221,7 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
             <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 mb-2 -mx-6 px-6 sm:mx-0 sm:px-0">
                 <Link
                     href="/merchant/shopping/wholesale"
-                    className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all"
+                    className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all"
                 >
                     Buy Stock
                 </Link>
@@ -230,7 +230,7 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
                 </span>
                 <Link
                     href="/merchant/shopping/sales-to-intrust"
-                    className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all"
+                    className="whitespace-nowrap px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all"
                 >
                     Sales to InTrust
                 </Link>
@@ -238,33 +238,33 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100/50">
+                <div className="bg-white dark:bg-slate-900/80 rounded-[2rem] p-6 border border-slate-100 dark:border-white/10 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40">
                         <ShoppingCart size={22} />
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Purchases</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tight">{batches.length}</p>
+                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{batches.length}</p>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100/50">
+                <div className="bg-white dark:bg-slate-900/80 rounded-[2rem] p-6 border border-slate-100 dark:border-white/10 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-900/40">
                         <Package size={22} />
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Units Bought</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tight">{totalUnits.toLocaleString('en-IN')}</p>
+                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{totalUnits.toLocaleString('en-IN')}</p>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100/50">
+                <div className="bg-white dark:bg-slate-900/80 rounded-[2rem] p-6 border border-slate-100 dark:border-white/10 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-900/40">
                         <TrendingDown size={22} />
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Spent</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tight">
+                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                             ₹{(totalSpentPaise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </p>
                     </div>
@@ -273,7 +273,7 @@ export default function WholesaleHistoryClient({ orders = [], merchant }) {
 
             {/* Batches List */}
             {batches.length === 0 ? (
-                <div className="py-32 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
+                <div className="py-32 text-center bg-white dark:bg-slate-900/80 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
                     <Package className="mx-auto text-slate-200 mb-6" size={64} />
                     <h3 className="text-xl font-black text-slate-900 mb-2">No wholesale purchases yet.</h3>
                     <p className="text-slate-500 font-medium mb-8">Head to Buy Stock to restock your inventory.</p>

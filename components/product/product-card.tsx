@@ -77,12 +77,12 @@ export default function ProductCard({ product, viewMode = 'grid', onQuickAdd }: 
         setIsWishlisted(false);
         toast.success('Removed from wishlist');
       } else {
-        const { error } = await supabase.from('user_wishlists').insert({
+        const { error } = await supabase.from('user_wishlists').upsert({
           user_id: activeCustomer.id,
           product_id: product.id,
-          variant_id: displayVariant.id,
+          variant_id: displayVariant?.id || null,
           is_platform_item: true
-        });
+        }, { onConflict: 'user_id,product_id' });
         
         if (error) throw error;
         setIsWishlisted(true);

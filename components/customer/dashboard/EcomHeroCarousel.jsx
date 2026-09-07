@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ChevronRight, ChevronLeft, ArrowRight, Zap, ShieldCheck, Clock, Gift, Percent } from 'lucide-react';
 
-const SLIDES = [
+export const DEFAULT_SLIDES = [
     {
         id: 1,
         tag: 'FESTIVE TECH BONANZA',
@@ -50,23 +50,28 @@ const SLIDES = [
     }
 ];
 
-export default function EcomHeroCarousel() {
+function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
+    const slides = Array.isArray(banners) && banners.length > 0 ? banners : DEFAULT_SLIDES;
     const [currentIdx, setCurrentIdx] = useState(0);
 
     useEffect(() => {
+        if (!slides || slides.length <= 1) return;
         const timer = setInterval(() => {
-            setCurrentIdx((prev) => (prev + 1) % SLIDES.length);
+            setCurrentIdx((prev) => (prev + 1) % slides.length);
         }, 6000);
         return () => clearInterval(timer);
-    }, []);
+    }, [slides.length]);
 
-    const slide = SLIDES[currentIdx];
+    const safeIdx = currentIdx < slides.length ? currentIdx : 0;
+    const slide = slides[safeIdx];
+
+    if (!slide) return null;
 
     return (
         <div className="relative w-full rounded-3xl overflow-hidden shadow-xl border border-outline-variant/30 bg-slate-950">
             <AnimatePresence mode="wait">
                 <motion.div
-                    key={slide.id}
+                    key={slide.id || safeIdx}
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.02 }}
@@ -101,13 +106,13 @@ export default function EcomHeroCarousel() {
 
                         {/* Navigation dots */}
                         <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                            {SLIDES.map((_, idx) => (
+                            {slides.map((_, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setCurrentIdx(idx)}
                                     aria-label={`Slide ${idx + 1}`}
                                     className={`h-2 rounded-full transition-all ${
-                                        idx === currentIdx ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'
+                                        idx === safeIdx ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'
                                     }`}
                                 />
                             ))}
@@ -149,3 +154,5 @@ export default function EcomHeroCarousel() {
         </div>
     );
 }
+
+export default React.memo(EcomHeroCarousel);

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShieldCheck } from 'lucide-react';
 
-export default function DisclaimerNote() {
+function DisclaimerNote() {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -110,3 +110,5 @@ export default function DisclaimerNote() {
         </AnimatePresence>
     );
 }
+
+export default React.memo(DisclaimerNote);

@@ -69,12 +69,12 @@ export default function AdvertisementModal() {
     };
 
     useEffect(() => {
-        const hasSeenAdv = sessionStorage.getItem('intrust_adv_seen');
+        const hasSeenAdv = sessionStorage.getItem('has_seen_promo');
         if (!hasSeenAdv) {
             const timer = setTimeout(() => {
                 setIsOpen(true);
-                sessionStorage.setItem('intrust_adv_seen', 'true');
-            }, 800);
+                sessionStorage.setItem('has_seen_promo', 'true');
+            }, 3500);
             return () => clearTimeout(timer);
         }
     }, []);
@@ -122,7 +122,7 @@ export default function AdvertisementModal() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 sm:backdrop-blur-2xl sm:p-6 pb-0"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 sm:backdrop-blur-2xl sm:p-6 pb-0"
                 >
                     {/* Background Glow */}
                     <motion.div
@@ -134,8 +134,8 @@ export default function AdvertisementModal() {
                         className={`absolute inset-0 bg-gradient-to-br ${currentAd.gradient} blur-[140px] pointer-events-none hidden sm:block`}
                     />
 
-                    {/* Desktop surrounding click-away closure */}
-                    <div className="absolute inset-0 sm:block hidden" onClick={() => setIsOpen(false)}></div>
+                    {/* Backdrop overlay for click-away closure */}
+                    <div className="absolute inset-0" onClick={() => setIsOpen(false)}></div>
 
                     {/* Main Story Container - Full height on mobile, boxed on desktop */}
                     <motion.div
