@@ -5,6 +5,7 @@ export const metadata = {
     description: 'View and reconcile invoice details'
 };
 
-export default function AdminInvoiceDetailPage({ params }) {
-    return <InvoiceDetail invoiceId={params.id} basePath="/admin" />;
+export default async function AdminInvoiceDetailPage({ params }) {
+    const { id } = await params;
+    return <InvoiceDetail invoiceId={id} basePath="/admin" />;
 }

@@ -4,7 +4,7 @@ import { retryInvoiceNotification } from '@/lib/notifications/invoiceNotificatio
 
 export async function POST(request, { params }) {
     try {
-        const { id: invoiceId, notificationId } = params;
+        const { id: invoiceId, notificationId } = await params;
         const supabase = await createServerSupabaseClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 

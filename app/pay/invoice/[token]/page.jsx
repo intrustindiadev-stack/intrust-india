@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default async function InvoicePaymentPage({ params }) {
-    const { token } = params;
+    const { token } = await params;
 
     if (!token || token.length !== 32) {
         notFound();
@@ -39,6 +39,9 @@ export default async function InvoicePaymentPage({ params }) {
         .single();
 
     if (error || !invoice) {
+        if (error) {
+            console.error('[InvoicePaymentPage] Error querying invoice for token:', token, error);
+        }
         notFound();
     }
 

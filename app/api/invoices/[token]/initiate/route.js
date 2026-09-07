@@ -18,7 +18,7 @@ export async function POST(request, { params }) {
     const correlationId = randomUUID();
     
     try {
-        const { token } = params;
+        const { token } = await params;
         if (!token || token.length !== 32) {
             return failResponse(400, 'Invalid invoice token.', correlationId);
         }

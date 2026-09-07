@@ -5,6 +5,7 @@ export const metadata = {
     description: 'View and reconcile invoice details'
 };
 
-export default function CrmInvoiceDetailPage({ params }) {
-    return <InvoiceDetail invoiceId={params.id} basePath="/crm" />;
+export default async function CrmInvoiceDetailPage({ params }) {
+    const { id } = await params;
+    return <InvoiceDetail invoiceId={id} basePath="/crm" />;
 }

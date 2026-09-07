@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabaseServer';
 
 export async function GET(request, { params }) {
     try {
-        const { token } = params;
+        const { token } = await params;
         
         if (!token || token.length !== 32) {
             return NextResponse.json({ error: 'Invalid invoice token' }, { status: 400 });

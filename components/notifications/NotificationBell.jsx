@@ -10,6 +10,30 @@ import { supabase } from '@/lib/supabaseClient';
  */
 
 /**
+ * Helper to display relative time for notifications
+ * @param {string | null | undefined} dateString
+ * @returns {string}
+ */
+export function timeAgo(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (isNaN(diffMs) || diffMs < 0) return 'Just now';
+
+    const diffSecs = Math.floor(diffMs / 1000);
+    if (diffSecs < 60) return 'Just now';
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+/**
  * @param {{ apiPath: string; variant?: 'admin' | 'minimal' | 'header' | 'navbar'; className?: string }} props
  */
 export default function NotificationBell({ apiPath, variant = 'admin', className }) {
@@ -151,15 +175,22 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
     };
 
     const handleOpen = () => {
+        // Full-page notification routes exist for customer (/notifications) and admin (/admin/notifications)
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-            router.push('/notifications');
-            return;
+            if (apiPath === '/api/notifications') {
+                router.push('/notifications');
+                return;
+            }
+            if (apiPath?.includes('/admin')) {
+                router.push('/admin/notifications');
+                return;
+            }
         }
         if (!open && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
             setPos({
                 top: rect.bottom + 8,
-                right: window.innerWidth - rect.right,
+                right: Math.max(12, window.innerWidth - rect.right),
             });
         }
         setOpen(prev => !prev);
@@ -395,7 +426,7 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
         }
     };
 
-    const dropdown = open && mounted ? createPortal(
+    const dropdown = open && mounted && typeof document !== 'undefined' ? createPortal(
         <div
             ref={dropdownRef}
             style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 99999 }}
