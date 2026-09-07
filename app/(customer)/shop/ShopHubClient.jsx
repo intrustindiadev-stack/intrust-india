@@ -61,6 +61,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     const [addedProductId, setAddedProductId] = useState(null);
     const [visibleProductCount, setVisibleProductCount] = useState(8);
     const [productWishlistIds, setProductWishlistIds] = useState(new Set());
+    const [wishlistLoading, setWishlistLoading] = useState(new Set());
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -90,6 +91,10 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
             return;
         }
 
+        if (wishlistLoading.has(prod.id)) return;
+
+        setWishlistLoading(prev => new Set(prev).add(prod.id));
+
         const isSaved = productWishlistIds.has(prod.id);
         if (isSaved) {
             setProductWishlistIds(prev => {
@@ -97,16 +102,51 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 next.delete(prod.id);
                 return next;
             });
-            await supabase.from('user_wishlists').delete().eq('user_id', activeCustomer.id).eq('product_id', prod.id);
-            toast.success('Removed from wishlist');
         } else {
             setProductWishlistIds(prev => new Set([...prev, prod.id]));
-            await supabase.from('user_wishlists').upsert({
-                user_id: activeCustomer.id,
-                product_id: prod.id,
-                is_platform_item: true
-            }, { onConflict: 'user_id,product_id' });
-            toast.success('Saved to wishlist! ♥');
+        }
+
+        try {
+            if (isSaved) {
+                const { error } = await supabase
+                    .from('user_wishlists')
+                    .delete()
+                    .eq('user_id', activeCustomer.id)
+                    .eq('product_id', prod.id);
+
+                if (error) throw error;
+                toast.success('Removed from wishlist');
+            } else {
+                const { error } = await supabase
+                    .from('user_wishlists')
+                    .upsert({
+                        user_id: activeCustomer.id,
+                        product_id: prod.id,
+                        is_platform_item: true
+                    }, { onConflict: 'user_id,product_id' });
+
+                if (error) throw error;
+                toast.success('Saved to wishlist! ♥');
+            }
+        } catch (err) {
+            console.error('Wishlist toggle error:', err);
+            // Rollback optimistic state
+            if (isSaved) {
+                setProductWishlistIds(prev => new Set([...prev, prod.id]));
+            } else {
+                setProductWishlistIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(prod.id);
+                    return next;
+                });
+            }
+            toast.error(err.message || 'Could not update wishlist');
+        } finally {
+            setWishlistLoading(prev => {
+                const next = new Set(prev);
+                next.delete(prod.id);
+                return next;
+            });
         }
     };
 
@@ -950,6 +990,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
 
                         const isAdded = addedProductId === prod.id;
                         const isWishlisted = productWishlistIds.has(prod.id);
+                        const isWishlistBusy = wishlistLoading.has(prod.id);
                         const imageUrl = getProductFallbackImage(prod);
 
                         return (
@@ -980,15 +1021,19 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                                         {/* Animated Wishlist Heart Button */}
                                         <motion.button
                                             type="button"
-                                            whileTap={{ scale: 1.35 }}
-                                            whileHover={{ scale: 1.1 }}
+                                            disabled={isWishlistBusy}
+                                            whileTap={isWishlistBusy ? {} : { scale: 1.35 }}
+                                            whileHover={isWishlistBusy ? {} : { scale: 1.1 }}
                                             onClick={(e) => toggleProductWishlist(e, prod)}
                                             className={`absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all z-10 ${
+                                                isWishlistBusy ? 'opacity-70 cursor-wait' : ''
+                                            } ${
                                                 isWishlisted 
                                                     ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-500 border border-rose-200 dark:border-rose-800 shadow-sm'
                                                     : 'bg-white/80 dark:bg-black/50 text-slate-400 hover:text-rose-500 border border-slate-200/60 dark:border-white/10'
                                             }`}
                                             title={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
+                                            aria-label={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
                                         >
                                             <motion.div
                                                 animate={isWishlisted ? { scale: [1, 1.4, 1] } : { scale: 1 }}
