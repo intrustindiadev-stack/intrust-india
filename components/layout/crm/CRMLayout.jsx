@@ -46,7 +46,7 @@ export default function CRMLayout({ children, userProfile }) {
 
             <div className="lg:pl-72 min-h-screen flex flex-col">
                 {/* Top Bar */}
-                <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm transition-colors duration-300">
+                <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm transition-colors duration-300">
                     <div className="flex items-center justify-between px-4 sm:px-6 py-3.5">
                         {/* Left: Hamburger + Live Clock */}
                         <div className="flex items-center gap-4 flex-1">

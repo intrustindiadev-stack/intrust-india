@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import VendorSidebar from './VendorSidebar';
-import { Menu, Bell, Search } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function VendorLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,7 +16,7 @@ export default function VendorLayout({ children }) {
             {/* Main Content */}
             <div className="lg:pl-72 min-h-screen">
                 {/* Top Bar */}
-                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
+                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between px-4 sm:px-6 py-4">
                         {/* Left: Menu + Search */}
                         <div className="flex items-center gap-4 flex-1">
@@ -42,10 +43,7 @@ export default function VendorLayout({ children }) {
                         {/* Right: Notifications + Profile */}
                         <div className="flex items-center gap-3">
                             {/* Notifications */}
-                            <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
-                                <Bell size={22} className="text-gray-700" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                            </button>
+                            <NotificationBell apiPath="/api/notifications" />
 
                             {/* Profile Badge */}
                             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-100 to-red-100 border border-orange-200">

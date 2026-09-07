@@ -3,7 +3,6 @@ import React from 'react';
 // Mock react hooks
 let mockOpen = false;
 let mockNotifications = [];
-let mockMounted = true;
 
 jest.mock('react', () => {
     const actual = jest.requireActual('react');
@@ -11,12 +10,10 @@ jest.mock('react', () => {
         ...actual,
         useState: jest.fn((init) => {
             if (typeof init === 'boolean') {
-                if (init === false) return [mockOpen, jest.fn()];
-                return [mockMounted, jest.fn()];
+                return [mockOpen, jest.fn()];
             }
             if (Array.isArray(init)) return [mockNotifications, jest.fn()];
-            if (typeof init === 'number') return [1, jest.fn()];
-            if (typeof init === 'object' && init !== null) return [init, jest.fn()];
+            if (typeof init === 'number') return [2, jest.fn()];
             return [init, jest.fn()];
         }),
         useEffect: jest.fn(() => {}),
@@ -24,10 +21,6 @@ jest.mock('react', () => {
         useRef: jest.fn((val) => ({ current: val })),
     };
 });
-
-jest.mock('react-dom', () => ({
-    createPortal: (children) => children,
-}));
 
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -55,12 +48,6 @@ jest.mock('@/lib/supabaseClient', () => ({
 import NotificationBell, { timeAgo } from '../components/notifications/NotificationBell';
 
 describe('NotificationBell Component & timeAgo Helper', () => {
-    beforeAll(() => {
-        if (typeof global.document === 'undefined') {
-            global.document = { body: {} };
-        }
-    });
-
     describe('timeAgo()', () => {
         test('returns empty string for null, undefined or empty input', () => {
             expect(timeAgo(null)).toBe('');
@@ -107,46 +94,56 @@ describe('NotificationBell Component & timeAgo Helper', () => {
         });
     });
 
-    describe('NotificationBell Rendering & Dropdown Evaluation', () => {
-        beforeEach(() => {
-            mockOpen = false;
-            mockNotifications = [];
-        });
+    describe('Global Portal Role Audit (Admin, Merchant, HRM, CRM, Employee)', () => {
+        const portalApiPaths = [
+            { role: 'Admin', path: '/api/admin/notifications' },
+            { role: 'Merchant', path: '/api/merchant/notifications' },
+            { role: 'CRM', path: '/api/crm/notifications' },
+            { role: 'HRM', path: '/api/hrm/notifications' },
+            { role: 'Employee', path: '/api/employee/notifications' },
+            { role: 'Customer', path: '/api/notifications' },
+        ];
 
-        test('can render closed bell button', () => {
-            const result = NotificationBell({ apiPath: '/api/merchant/notifications' });
-            expect(result).toBeDefined();
-        });
+        portalApiPaths.forEach(({ role, path }) => {
+            test(`renders closed bell container and button for ${role} (${path})`, () => {
+                mockOpen = false;
+                mockNotifications = [];
+                const tree = NotificationBell({ apiPath: path });
+                expect(tree).toBeDefined();
+                expect(tree.type).toBe('div');
+                expect(tree.props.className).toContain('relative');
 
-        test('can render open dropdown with notifications without throwing ReferenceError for timeAgo', () => {
-            mockOpen = true;
-            mockNotifications = [
-                {
-                    id: 'notif-1',
-                    title: 'Merchant Order #999',
-                    body: 'Customer placed a new store pickup order',
-                    type: 'order',
-                    reference_type: 'shopping_order',
-                    read: false,
-                    created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-                },
-                {
-                    id: 'notif-2',
-                    title: 'Payout Processed',
-                    body: '₹5,000 sent to your bank account',
-                    type: 'success',
-                    reference_type: 'payout_request',
-                    read: true,
-                    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-                }
-            ];
+                // Inspect button child
+                const [button, dropdown] = React.Children.toArray(tree.props.children);
+                expect(button.type).toBe('button');
+                expect(button.props.title).toBe('Notifications');
+                expect(button.props['aria-expanded']).toBe(false);
+                expect(dropdown).toBeFalsy();
+            });
 
-            let rendered;
-            expect(() => {
-                rendered = NotificationBell({ apiPath: '/api/merchant/notifications' });
-            }).not.toThrow();
+            test(`renders open dropdown with z-50 in-DOM for ${role} (${path})`, () => {
+                mockOpen = true;
+                mockNotifications = [
+                    {
+                        id: 'notif-1',
+                        title: `${role} Alert`,
+                        body: `Test notification for ${role}`,
+                        type: 'info',
+                        reference_type: 'order',
+                        read: false,
+                        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+                    }
+                ];
 
-            expect(rendered).toBeDefined();
+                const tree = NotificationBell({ apiPath: path });
+                expect(tree).toBeDefined();
+
+                const [button, dropdown] = React.Children.toArray(tree.props.children);
+                expect(button.props['aria-expanded']).toBe(true);
+                expect(dropdown).toBeDefined();
+                expect(dropdown.props.className).toContain('absolute');
+                expect(dropdown.props.className).toContain('z-50');
+            });
         });
     });
 });

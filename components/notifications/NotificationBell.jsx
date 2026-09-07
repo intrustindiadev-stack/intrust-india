@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
@@ -45,14 +45,10 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(false);
     const [offset, setOffset] = useState(0);
-    const [pos, setPos] = useState({ top: 0, right: 0 });
-    const [mounted, setMounted] = useState(false);
-    const buttonRef = useRef(null);
+    const containerRef = useRef(null);
     const dropdownRef = useRef(null);
     const pollRef = useRef(null);
     const router = useRouter();
-
-    useEffect(() => { setMounted(true); }, []);
 
     const fetchNotifications = useCallback(async (isLoadMore = false) => {
         try {
@@ -130,21 +126,27 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
         };
     }, []); // Only once on mount
 
-    // Close on outside click
+    // Close on outside click or Escape key
     useEffect(() => {
-        /** @param {MouseEvent} e */
         function handleOutside(e) {
-            const target = /** @type {Node} */ (e.target);
-            if (
-                dropdownRef.current && !dropdownRef.current.contains(target) &&
-                buttonRef.current && !buttonRef.current.contains(target)
-            ) {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setOpen(false);
+            }
+        }
+        function handleKeyDown(e) {
+            if (e.key === 'Escape') {
                 setOpen(false);
             }
         }
         if (open) {
             document.addEventListener('mousedown', handleOutside);
-            return () => document.removeEventListener('mousedown', handleOutside);
+            document.addEventListener('touchstart', handleOutside);
+            window.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.removeEventListener('mousedown', handleOutside);
+                document.removeEventListener('touchstart', handleOutside);
+                window.removeEventListener('keydown', handleKeyDown);
+            };
         }
     }, [open]);
 
@@ -174,25 +176,8 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
         }
     };
 
-    const handleOpen = () => {
-        // Full-page notification routes exist for customer (/notifications) and admin (/admin/notifications)
-        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-            if (apiPath === '/api/notifications') {
-                router.push('/notifications');
-                return;
-            }
-            if (apiPath?.includes('/admin')) {
-                router.push('/admin/notifications');
-                return;
-            }
-        }
-        if (!open && buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect();
-            setPos({
-                top: rect.bottom + 8,
-                right: Math.max(12, window.innerWidth - rect.right),
-            });
-        }
+    const handleToggle = (e) => {
+        e?.stopPropagation?.();
         setOpen(prev => !prev);
     };
 
@@ -426,94 +411,6 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
         }
     };
 
-    const dropdown = open && mounted && typeof document !== 'undefined' ? createPortal(
-        <div
-            ref={dropdownRef}
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 99999 }}
-            className="w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-        >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
-                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">Notifications</span>
-                <div className="flex items-center gap-2">
-                    {unreadCount > 0 && (
-                        <button
-                            onClick={() => markRead(null)}
-                            className="text-xs text-[#D4AF37] hover:underline font-semibold"
-                        >
-                            Mark all read
-                        </button>
-                    )}
-                    <button onClick={() => fetchNotifications(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                        <span className={`material-icons-round text-sm ${(loading && !loadingMore) ? 'animate-spin' : ''}`}>refresh</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* List */}
-            <div className="max-h-96 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 bg-white dark:bg-slate-900">
-                {notifications.length === 0 && !loading ? (
-                    <div className="py-10 text-center">
-                        <span className="material-icons-round text-slate-300 dark:text-slate-600 text-4xl">notifications_none</span>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">No notifications yet</p>
-                    </div>
-                ) : (
-                    notifications.map((n) => (
-                        <button
-                            key={n.id}
-                            onClick={() => handleNotificationClick(n)}
-                            className={`w-full text-left px-4 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors flex gap-3 items-start ${!n.read ? 'bg-[#D4AF37]/5' : ''}`}
-                        >
-                             <span className={`material-icons-round text-lg mt-0.5 flex-shrink-0 ${typeColor(n.type)}`}>
-                                {typeIcon(n.type, n.reference_type)}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                    <p className="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate">
-                                        {n.title}
-                                    </p>
-                                    <span className="text-[10px] text-slate-400 flex-shrink-0">
-                                        {timeAgo(n.created_at)}
-                                    </span>
-                                </div>
-                                <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 line-clamp-2">
-                                    {n.body}
-                                </p>
-                            </div>
-                            {!n.read && (
-                                <span className="w-2 h-2 rounded-full bg-[#D4AF37] mt-1.5 flex-shrink-0" />
-                            )}
-                        </button>
-                    ))
-                )}
-
-                {loadingMore && (
-                    <div className="py-3 text-center">
-                        <span className="material-icons-round text-sm animate-spin text-slate-400">refresh</span>
-                    </div>
-                )}
-
-                {hasMore && !loadingMore && (
-                    <div className="p-2 text-center border-t border-black/5 dark:border-white/5">
-                        <button
-                            onClick={() => fetchNotifications(true)}
-                            className="text-xs text-[#D4AF37] hover:underline font-semibold py-1 px-3 w-full"
-                        >
-                            {loadingMore ? (
-                                <span className="inline-flex items-center gap-1">
-                                    <span className="material-icons-round text-xs animate-spin">refresh</span> Loading...
-                                </span>
-                            ) : (
-                                'View older notifications'
-                            )}
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>,
-        document.body
-    ) : null;
-
     const buttonClass = className || (variant === 'navbar'
         ? 'relative p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
         : variant === 'minimal'
@@ -523,21 +420,144 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
                 : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors');
 
     return (
-        <>
+        <div ref={containerRef} className="relative inline-flex items-center">
             <button
-                ref={buttonRef}
-                onClick={handleOpen}
+                type="button"
+                onClick={handleToggle}
                 className={buttonClass}
                 title="Notifications"
+                aria-label="Notifications"
+                aria-expanded={open}
+                aria-haspopup="true"
             >
-                <span className="material-icons-round text-slate-600 dark:text-slate-300 text-xl">notifications</span>
+                <span className="material-icons-round text-slate-600 dark:text-slate-300 text-xl pointer-events-none">notifications</span>
                 {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center leading-none">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center leading-none pointer-events-none">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
             </button>
-            {dropdown}
-        </>
+
+            {open && (
+                <div
+                    ref={dropdownRef}
+                    className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                    role="region"
+                    aria-label="Notifications Dropdown"
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">Notifications</span>
+                            {unreadCount > 0 && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#D4AF37]/20 text-[#D4AF37] rounded-full">
+                                    {unreadCount} new
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {apiPath?.includes('/admin') && (
+                                <Link
+                                    href="/admin/notifications"
+                                    onClick={() => setOpen(false)}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                                >
+                                    Full page
+                                </Link>
+                            )}
+                            {apiPath === '/api/notifications' && (
+                                <Link
+                                    href="/notifications"
+                                    onClick={() => setOpen(false)}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                                >
+                                    Full page
+                                </Link>
+                            )}
+                            {unreadCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => markRead(null)}
+                                    className="text-xs text-[#D4AF37] hover:underline font-semibold"
+                                >
+                                    Mark all read
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => fetchNotifications(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                title="Refresh notifications"
+                            >
+                                <span className={`material-icons-round text-sm ${(loading && !loadingMore) ? 'animate-spin' : ''}`}>refresh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* List */}
+                    <div className="max-h-96 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 bg-white dark:bg-slate-900">
+                        {notifications.length === 0 && !loading ? (
+                            <div className="py-10 text-center">
+                                <span className="material-icons-round text-slate-300 dark:text-slate-600 text-4xl">notifications_none</span>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">No notifications yet</p>
+                            </div>
+                        ) : (
+                            notifications.map((n) => (
+                                <button
+                                    key={n.id}
+                                    type="button"
+                                    onClick={() => handleNotificationClick(n)}
+                                    className={`w-full text-left px-4 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors flex gap-3 items-start ${!n.read ? 'bg-[#D4AF37]/5' : ''}`}
+                                >
+                                    <span className={`material-icons-round text-lg mt-0.5 flex-shrink-0 ${typeColor(n.type)}`}>
+                                        {typeIcon(n.type, n.reference_type)}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <p className="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate">
+                                                {n.title}
+                                            </p>
+                                            <span className="text-[10px] text-slate-400 flex-shrink-0">
+                                                {timeAgo(n.created_at)}
+                                            </span>
+                                        </div>
+                                        <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5 line-clamp-2">
+                                            {n.body}
+                                        </p>
+                                    </div>
+                                    {!n.read && (
+                                        <span className="w-2 h-2 rounded-full bg-[#D4AF37] mt-1.5 flex-shrink-0" />
+                                    )}
+                                </button>
+                            ))
+                        )}
+
+                        {loadingMore && (
+                            <div className="py-3 text-center">
+                                <span className="material-icons-round text-sm animate-spin text-slate-400">refresh</span>
+                            </div>
+                        )}
+
+                        {hasMore && !loadingMore && (
+                            <div className="p-2 text-center border-t border-black/5 dark:border-white/5">
+                                <button
+                                    type="button"
+                                    onClick={() => fetchNotifications(true)}
+                                    className="text-xs text-[#D4AF37] hover:underline font-semibold py-1 px-3 w-full"
+                                >
+                                    {loadingMore ? (
+                                        <span className="inline-flex items-center gap-1">
+                                            <span className="material-icons-round text-xs animate-spin">refresh</span> Loading...
+                                        </span>
+                                    ) : (
+                                        'View older notifications'
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

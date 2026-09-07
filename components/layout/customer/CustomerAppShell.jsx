@@ -374,7 +374,7 @@ export default function CustomerAppShell({ children }) {
             {/* ── MAIN CONTENT CONTAINER ── */}
             <div className="flex-1 flex flex-col min-h-screen lg:pl-72 w-full">
                 {/* ── DESKTOP HEADER ── */}
-                <header className="hidden lg:flex fixed top-0 left-72 right-0 h-20 bg-white/80 dark:bg-surface-container-lowest/80 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-40 px-8 items-center justify-between gap-6 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
+                <header className="hidden lg:flex fixed top-0 left-72 right-0 h-20 bg-white/80 dark:bg-surface-container-lowest/80 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-50 px-8 items-center justify-between gap-6 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
                     {/* Header Title / Breadcrumb */}
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
@@ -492,7 +492,7 @@ export default function CustomerAppShell({ children }) {
                 </header>
 
                 {/* ── MOBILE HEADER ── */}
-                <header className="lg:hidden sticky top-0 bg-white/95 dark:bg-surface-container-lowest/90 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-40">
+                <header className="lg:hidden sticky top-0 bg-white/95 dark:bg-surface-container-lowest/90 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-50">
                     <div className="h-16 px-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button
