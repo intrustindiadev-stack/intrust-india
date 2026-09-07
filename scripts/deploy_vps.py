@@ -23,7 +23,7 @@ import subprocess
 # ──────────────────────────────────────────────
 VPS_HOST       = os.environ.get("VPS_HOST", "187.124.98.130")
 VPS_USER       = os.environ.get("VPS_USER", "intrustindia")
-VPS_PASSWORD   = os.environ.get("VPS_PASSWORD", "Intrustdev@2026")
+VPS_PASSWORD   = os.environ.get("VPS_PASSWORD", "intrustind@2026")
 VPS_PORT       = int(os.environ.get("VPS_PORT", "22"))
 VPS_KEY_PATH   = os.environ.get("VPS_KEY_PATH")
 
