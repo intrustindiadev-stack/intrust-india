@@ -2,7 +2,7 @@ import paramiko
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASSWORD = "Intrustdev@2026"
+VPS_PASSWORD = "intrustind@2026"
 
 sql = """
 SELECT count(*) FROM crm_lead_activities WHERE actor_id IS NOT NULL AND actor_id NOT IN (SELECT id FROM user_profiles);

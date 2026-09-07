@@ -3,7 +3,7 @@ import json
 
 HOST = "187.124.98.130"
 USER = "intrustindia"
-PASSWORD = "Intrustdev@2026"
+PASSWORD = "intrustind@2026"
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())

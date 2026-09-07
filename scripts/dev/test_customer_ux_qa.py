@@ -3,7 +3,7 @@ import paramiko
 
 host = "187.124.98.130"
 user = "intrustindia"
-password = "Intrustdev@2026"
+password = "intrustind@2026"
 
 def run_db_query(sql):
     client = paramiko.SSHClient()

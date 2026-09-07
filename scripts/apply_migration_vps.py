@@ -4,7 +4,7 @@ import paramiko
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASS = "Intrustdev@2026"
+VPS_PASS = "intrustind@2026"
 REMOTE_FILE = "/tmp/migration.sql"
 
 def apply_migration(local_file):

@@ -3,7 +3,7 @@ import sys
 
 HOST = '187.124.98.130'
 USER = 'intrustindia'
-PASSWORD = 'Intrustdev@2026'
+PASSWORD = 'intrustind@2026'
 
 def main():
     ssh = paramiko.SSHClient()

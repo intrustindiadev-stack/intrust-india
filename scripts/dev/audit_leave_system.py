@@ -6,7 +6,7 @@ import paramiko
 
 host = "187.124.98.130"
 user = "intrustindia"
-password = "Intrustdev@2026"
+password = "intrustind@2026"
 
 def run_query(query, label=""):
     # Escape the query for shell

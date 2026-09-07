@@ -5,7 +5,7 @@ import os
 def sync_env():
     host = '187.124.98.130'
     user = 'intrustindia'
-    password = 'Intrustdev@2026'
+    password = 'intrustind@2026'
     
     local_env_path = '/home/i4yush/Desktop/intrust-india/.env.local'
     remote_env_path = '/var/www/intrustindia.com/app/.env'

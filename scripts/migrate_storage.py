@@ -6,7 +6,7 @@ import paramiko
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASSWORD = "Intrustdev@2026"
+VPS_PASSWORD = "intrustind@2026"
 
 LOCAL_ENV_PATH = "/home/i4yush/Desktop/intrust-india/.env.local"
 PRODUCT_IMAGES_POLICIES_PATH = "/home/i4yush/Desktop/intrust-india/supabase/operational-sql/product_images_storage_policies.sql"

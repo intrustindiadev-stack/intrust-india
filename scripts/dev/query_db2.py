@@ -2,7 +2,7 @@ import paramiko
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASSWORD = "Intrustdev@2026"
+VPS_PASSWORD = "intrustind@2026"
 
 sql = """
 SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'user_profiles';

@@ -4,7 +4,7 @@ import sys
 
 HOST = os.environ.get("VPS_HOST", "187.124.98.130")
 USER = os.environ.get("VPS_USER", "intrustindia")
-PASS = os.environ.get("VPS_PASSWORD", "Intrustdev@2026")
+PASS = os.environ.get("VPS_PASSWORD", "intrustind@2026")
 
 def deploy():
     print("Connecting to VPS...")

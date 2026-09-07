@@ -3,7 +3,7 @@ import sys
 
 host = "187.124.98.130"
 user = "intrustindia"
-password = "Intrustdev@2026"
+password = "intrustind@2026"
 
 cmd = sys.stdin.read()
 

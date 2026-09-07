@@ -25,7 +25,7 @@ import urllib.error
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASSWORD = "Intrustdev@2026"
+VPS_PASSWORD = "intrustind@2026"
 
 SUPABASE_URL = "https://intrustindia.com/api/supabase"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxMzgwMjY3LCJleHAiOjIwOTY3NDAyNjd9.y6NnezLK5TqzHfwRkj4pLZL_JYG-lxFGurhhkqH9gTw"

@@ -4,7 +4,7 @@ import json
 
 HOST = '187.124.98.130'
 USER = 'intrustindia'
-PW = 'Intrustdev@2026'
+PW = 'intrustind@2026'
 
 CUSTOMER_ID = 'f52e322a-e80f-400e-98cf-d950c63b5515'
 MERCHANT_ID = '014b8897-8639-44d2-9323-275822bf3dff'

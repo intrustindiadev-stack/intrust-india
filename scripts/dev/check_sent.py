@@ -2,7 +2,7 @@ import paramiko
 
 host = "187.124.98.130"
 user = "intrustindia"
-password = "Intrustdev@2026"
+password = "intrustind@2026"
 
 query = """
 SELECT u.phone, p.full_name, m.business_name, w.status

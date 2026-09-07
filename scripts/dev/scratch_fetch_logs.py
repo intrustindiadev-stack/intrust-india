@@ -4,7 +4,7 @@ import sys
 def get_vps_logs():
     host = '187.124.98.130'
     user = 'intrustindia'
-    password = 'Intrustdev@2026'
+    password = 'intrustind@2026'
 
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())

@@ -42,9 +42,9 @@ def main():
         sftp.close()
         
         # Use sudo to copy the file to /etc/cron.d/ and fix permissions
-        run_remote(client, "echo 'Intrustdev@2026' | sudo -S cp /tmp/intrustindia_cron /etc/cron.d/intrustindia_jobs")
-        run_remote(client, "echo 'Intrustdev@2026' | sudo -S chmod 644 /etc/cron.d/intrustindia_jobs")
-        run_remote(client, "echo 'Intrustdev@2026' | sudo -S chown root:root /etc/cron.d/intrustindia_jobs")
+        run_remote(client, "echo 'intrustind@2026' | sudo -S cp /tmp/intrustindia_cron /etc/cron.d/intrustindia_jobs")
+        run_remote(client, "echo 'intrustind@2026' | sudo -S chmod 644 /etc/cron.d/intrustindia_jobs")
+        run_remote(client, "echo 'intrustind@2026' | sudo -S chown root:root /etc/cron.d/intrustindia_jobs")
         run_remote(client, "rm /tmp/intrustindia_cron")
         
         print("Successfully created /etc/cron.d/intrustindia_jobs")

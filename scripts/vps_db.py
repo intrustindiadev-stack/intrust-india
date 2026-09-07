@@ -7,7 +7,7 @@ DB_USER = "postgres"
 DB_NAME = "postgres"
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASS = "Intrustdev@2026"
+VPS_PASS = "intrustind@2026"
 
 def execute_query(sql):
     try:

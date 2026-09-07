@@ -6,7 +6,7 @@ import sys
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASSWORD = "Intrustdev@2026"
+VPS_PASSWORD = "intrustind@2026"
 VPS_PORT = 22
 
 MIGRATION_FILE = "/home/i4yush/Desktop/intrust-india/supabase/migrations/20260831_ai_grow_wallet_ledger.sql"

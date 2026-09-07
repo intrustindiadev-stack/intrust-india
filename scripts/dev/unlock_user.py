@@ -3,7 +3,7 @@ import sys
 
 host = "187.124.98.130"
 user = "intrustindia"
-password = "Intrustdev@2026"
+password = "intrustind@2026"
 
 query = "UPDATE auth.users SET banned_until = NULL WHERE email = 'ayushmalviya824@gmail.com';"
 docker_cmd = f'''docker exec supabase-db psql -U postgres -d postgres -c "{query}"'''

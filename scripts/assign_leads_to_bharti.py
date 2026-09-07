@@ -3,7 +3,7 @@ import io
 
 VPS_HOST = "187.124.98.130"
 VPS_USER = "intrustindia"
-VPS_PASSWORD = "Intrustdev@2026"
+VPS_PASSWORD = "intrustind@2026"
 VPS_PORT = 22
 
 ADMIN_ID = "e6442e9b-d5f6-400d-93a9-282f2ed36369"
