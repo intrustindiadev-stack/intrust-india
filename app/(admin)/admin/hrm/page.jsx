@@ -6,18 +6,27 @@ import ContactActions from '@/components/shared/ContactActions';
 import CalendarWidget from '@/components/shared/CalendarWidget';
 import WorkforceDirectory from '@/components/admin/hrm/WorkforceDirectory';
 
-function StatCard({ title, value, sub, gradient, icon: Icon }) {
-    return (
-        <div className={`relative overflow-hidden rounded-3xl p-6 text-white bg-gradient-to-br ${gradient} shadow-lg`}>
+function StatCard({ title, value, sub, gradient, icon: Icon, href }) {
+    const CardContent = (
+        <div className={`relative overflow-hidden rounded-3xl p-5 sm:p-6 text-white bg-gradient-to-br ${gradient} shadow-lg h-full transition-transform group-hover:-translate-y-1 group-hover:shadow-xl`}>
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-bl-full" />
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3 sm:mb-4">
                 <Icon size={20} />
             </div>
-            <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
-            <p className="text-3xl font-black">{value}</p>
-            {sub && <p className="text-white/70 text-xs mt-1">{sub}</p>}
+            <p className="text-white/70 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
+            <p className="text-2xl sm:text-3xl font-black">{value}</p>
+            {sub && <p className="text-white/70 text-[10px] sm:text-xs mt-1">{sub}</p>}
         </div>
     );
+
+    if (href) {
+        return (
+            <Link href={href} className="block h-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-3xl group" aria-label={`View ${title}`}>
+                {CardContent}
+            </Link>
+        );
+    }
+    return CardContent;
 }
 
 const LEAVE_STATUS_STYLE = {
@@ -108,19 +117,19 @@ export default async function AdminHRMPage() {
         <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-4 sm:pb-5">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">HRM Command Overview</h1>
-                        <p className="text-gray-500 text-sm mt-0.5">Manage workforce profiles, team directory, and leave approval workflows.</p>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">HRM Command Overview</h1>
+                        <p className="text-gray-500 text-xs sm:text-sm mt-0.5">Manage workforce profiles, team directory, and leave approval workflows.</p>
                     </div>
 
-                    <Link href="/admin/hrm/leaves" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors self-start sm:self-auto">
+                    <Link href="/admin/hrm/leaves" className="w-full sm:w-auto text-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors self-start sm:self-auto">
                         Open Admin Leave Workspace →
                     </Link>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                     <Link href="/admin/hrm/incentives" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
                         <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Gift size={18} />
@@ -160,11 +169,11 @@ export default async function AdminHRMPage() {
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard title="Total Workforce" value={totalEmp} gradient="from-emerald-600 to-teal-600" icon={Users} />
-                    <StatCard title="HR Managers" value={hrManagers} gradient="from-violet-600 to-purple-600" icon={UserPlus} />
-                    <StatCard title="Awaiting HR Review" value={pendingHRCount} sub="Stage 1 Queue" gradient="from-amber-500 to-orange-500" icon={UserCheck} />
-                    <StatCard title="Awaiting Admin Confirmation" value={pendingAdminCount} sub="Stage 2 Action Required" gradient="from-indigo-600 to-purple-700" icon={ShieldCheck} />
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <StatCard title="Total Workforce" value={totalEmp} gradient="from-emerald-600 to-teal-600" icon={Users} href="/admin/teams" />
+                    <StatCard title="HR Managers" value={hrManagers} gradient="from-violet-600 to-purple-600" icon={UserPlus} href="/admin/teams" />
+                    <StatCard title="Awaiting HR Review" value={pendingHRCount} sub="Stage 1 Queue" gradient="from-amber-500 to-orange-500" icon={UserCheck} href="/admin/hrm/leaves" />
+                    <StatCard title="Awaiting Admin Confirmation" value={pendingAdminCount} sub="Stage 2 Action Required" gradient="from-indigo-600 to-purple-700" icon={ShieldCheck} href="/admin/hrm/leaves" />
                 </div>
 
                 {/* Company Calendar & Events */}
@@ -178,19 +187,19 @@ export default async function AdminHRMPage() {
                 {/* Leave Requests Overview */}
                 {leaveRequests.length > 0 && (
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900">Recent Leave Requests</h2>
                                 {pendingAdminCount > 0 && (
                                     <p className="text-sm text-indigo-600 font-semibold mt-0.5">{pendingAdminCount} awaiting admin confirmation</p>
                                 )}
                             </div>
-                            <Link href="/admin/hrm/leaves" className="px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-xl text-sm hover:bg-indigo-100 transition-colors">
+                            <Link href="/admin/hrm/leaves" className="w-full sm:w-auto text-center px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-xl text-sm hover:bg-indigo-100 transition-colors">
                                 View All Leaves & Policy Workspace →
                             </Link>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
+                        <div className="overflow-x-auto hide-scrollbar">
+                            <table className="w-full text-left whitespace-nowrap">
                                 <thead className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-100">
                                     <tr>
                                         <th className="p-4 pl-6">Employee</th>

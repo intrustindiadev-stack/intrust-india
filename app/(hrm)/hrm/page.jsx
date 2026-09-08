@@ -25,7 +25,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 import WelcomeRoleCelebrationModal from '@/components/shared/WelcomeRoleCelebrationModal';
 
-function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 }) {
+function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0, href }) {
     const COLOR_VARIANTS = {
         emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
         blue: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
@@ -40,11 +40,8 @@ function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 
         violet: 'to-violet-500/5 dark:to-violet-500/10',
     };
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
-            className="relative bg-white dark:bg-gray-800 rounded-[2rem] p-7 border border-gray-100 dark:border-gray-700/50 shadow-xl shadow-gray-200/40 dark:shadow-black/20 hover:-translate-y-1.5 transition-all duration-300 group overflow-hidden"
-        >
+    const innerContent = (
+        <>
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-transparent ${GRADIENT_VARIANTS[color]} rounded-bl-full pointer-events-none transition-opacity opacity-50 group-hover:opacity-100`} />
             
             <div className="relative z-10 flex items-start justify-between mb-6">
@@ -66,6 +63,25 @@ function StatCard({ label, value, icon: Icon, color, subValue, trend, delay = 0 
                     </div>
                 </div>
             </div>
+        </>
+    );
+
+    const cardClasses = "block relative bg-white dark:bg-gray-800 rounded-[2rem] p-5 sm:p-7 border border-gray-100 dark:border-gray-700/50 shadow-xl shadow-gray-200/40 dark:shadow-black/20 hover:-translate-y-1.5 hover:shadow-2xl hover:border-emerald-200 dark:hover:border-emerald-800/50 transition-all duration-300 group overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 h-full";
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+            className="h-full"
+        >
+            {href ? (
+                <Link href={href} className={cardClasses} aria-label={`Navigate to ${label}`}>
+                    {innerContent}
+                </Link>
+            ) : (
+                <div className={cardClasses}>
+                    {innerContent}
+                </div>
+            )}
         </motion.div>
     );
 }
@@ -203,15 +219,15 @@ export default function HRMDashboard() {
                 </motion.div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {isLoading ? (
                     [...Array(4)].map((_, i) => <SkeletonCard key={i} type="stat" />)
                 ) : (
                     <>
-                        <StatCard label="Total Force" value={stats.employees} color="blue" subValue="Active Personnel" trend="+2.4%" delay={0} icon={Users} />
-                        <StatCard label="Attendance" value={stats.presentToday} color="emerald" subValue="Clocked in today" trend="98%" delay={0.1} icon={UserCheck} />
-                        <StatCard label="Pending Leaves" value={stats.pendingLeaves} color="amber" subValue="Action Required" delay={0.2} icon={Calendar} />
-                        <StatCard label="New Leads" value={stats.newApplications} color="violet" subValue="Talent Pipeline" trend="+12" delay={0.3} icon={Briefcase} />
+                        <StatCard label="Total Force" value={stats.employees} color="blue" subValue="Active Personnel" trend="+2.4%" delay={0} icon={Users} href="/hrm/employees" />
+                        <StatCard label="Attendance" value={stats.presentToday} color="emerald" subValue="Clocked in today" trend="98%" delay={0.1} icon={UserCheck} href="/hrm/attendance" />
+                        <StatCard label="Pending Leaves" value={stats.pendingLeaves} color="amber" subValue="Action Required" delay={0.2} icon={Calendar} href="/hrm/leaves" />
+                        <StatCard label="New Leads" value={stats.newApplications} color="violet" subValue="Talent Pipeline" trend="+12" delay={0.3} icon={Briefcase} href="/hrm/recruitment" />
                     </>
                 )}
             </div>

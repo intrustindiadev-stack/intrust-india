@@ -117,8 +117,8 @@ export default function WorkforceDirectory({ initialEmployees }) {
                 </div>
             </div>
             
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
+            <div className="overflow-x-auto hide-scrollbar">
+                <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-gray-50/80 text-xs uppercase tracking-wider text-gray-500 font-semibold border-b border-gray-100">
                         <tr>
                             <th className="p-4 pl-6">Employee</th>

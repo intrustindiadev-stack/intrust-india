@@ -3,10 +3,14 @@ import {
     TrendingUp, Users, Target, Plus
 } from 'lucide-react';
 import ActiveLeadsPipelineClient from '@/components/admin/crm/ActiveLeadsPipelineClient';
+import Link from 'next/link';
 
-function StatCard({ title, value, sub, gradient, icon: Icon }) {
+function StatCard({ title, value, sub, gradient, icon: Icon, href }) {
+    const Component = href ? Link : 'div';
+    const linkStyles = href ? 'cursor-pointer hover:brightness-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2' : '';
+    
     return (
-        <div className={`relative overflow-hidden rounded-[2rem] p-6 sm:p-8 text-white bg-gradient-to-br ${gradient} shadow-xl shadow-indigo-500/10 transition-transform hover:-translate-y-1 hover:shadow-2xl`}>
+        <Component href={href} className={`block relative overflow-hidden rounded-[2rem] p-6 sm:p-8 text-white bg-gradient-to-br ${gradient} shadow-xl shadow-indigo-500/10 transition-all hover:-translate-y-1 hover:shadow-2xl ${linkStyles}`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full backdrop-blur-3xl" />
             <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-black/10 rounded-full blur-2xl" />
             <div className="relative z-10 flex flex-col h-full justify-between gap-6">
@@ -19,7 +23,7 @@ function StatCard({ title, value, sub, gradient, icon: Icon }) {
                     {sub && <p className="text-white/80 text-xs mt-2 font-medium bg-black/10 w-fit px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">{sub}</p>}
                 </div>
             </div>
-        </div>
+        </Component>
     );
 }
 
@@ -85,7 +89,7 @@ export default async function AdminCRMPage() {
             <div className="absolute top-20 right-0 w-96 h-96 bg-purple-200/40 rounded-full blur-[100px] pointer-events-none" />
             <div className="absolute top-40 left-0 w-96 h-96 bg-blue-200/40 rounded-full blur-[100px] pointer-events-none" />
 
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-10 relative z-10">
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-10 relative z-10">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4">
                     <div className="flex flex-col gap-2">
@@ -98,24 +102,28 @@ export default async function AdminCRMPage() {
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatCard title="Total Leads" value={total} gradient="from-blue-600 via-indigo-600 to-violet-700" icon={Users} />
-                    <StatCard title="New This Week" value={newLeads} sub="Uncontacted" gradient="from-amber-400 via-orange-500 to-rose-500" icon={Plus} />
-                    <StatCard title="Active Pipeline" value={activeLeads} sub="Contacted / Proposal" gradient="from-violet-500 via-purple-600 to-fuchsia-700" icon={Target} />
-                    <StatCard title="Conversion Rate" value={`${convRate}%`} sub={`${wonCount} Won`} gradient="from-emerald-400 via-teal-500 to-cyan-600" icon={TrendingUp} />
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <StatCard title="Total Leads" value={total} gradient="from-blue-600 via-indigo-600 to-violet-700" icon={Users} href="/admin/crm/leads" />
+                    <StatCard title="New This Week" value={newLeads} sub="Uncontacted" gradient="from-amber-400 via-orange-500 to-rose-500" icon={Plus} href="/admin/crm/leads?status=new" />
+                    <StatCard title="Active Pipeline" value={activeLeads} sub="Contacted / Proposal" gradient="from-violet-500 via-purple-600 to-fuchsia-700" icon={Target} href="/admin/crm/leads" />
+                    <StatCard title="Conversion Rate" value={`${convRate}%`} sub={`${wonCount} Won`} gradient="from-emerald-400 via-teal-500 to-cyan-600" icon={TrendingUp} href="/admin/crm/leads?status=won" />
                 </div>
 
                 {/* Pipeline Status Breakdown */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/40 p-6 sm:p-8 transition-all hover:shadow-2xl">
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/40 p-4 sm:p-6 lg:p-8 transition-all hover:shadow-2xl">
                     <h2 className="text-xl font-extrabold text-slate-900 mb-6 tracking-tight flex items-center gap-2">
                         Pipeline Breakdown
                     </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                         {['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'].map(s => (
-                            <div key={s} className={`rounded-2xl border p-5 text-center flex flex-col justify-center shadow-sm backdrop-blur-md transition-transform hover:scale-[1.02] ${STATUS_STYLE[s] || 'bg-gray-50 border-gray-200'}`}>
+                            <Link 
+                                href={`/admin/crm/leads?status=${s}`} 
+                                key={s} 
+                                className={`rounded-2xl border p-4 sm:p-5 text-center flex flex-col justify-center shadow-sm backdrop-blur-md transition-all hover:scale-[1.02] hover:shadow-md hover:brightness-95 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 cursor-pointer ${STATUS_STYLE[s] || 'bg-gray-50 border-gray-200'}`}
+                            >
                                 <p className="text-3xl font-black mb-1 drop-shadow-sm">{statusCounts[s] || 0}</p>
                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{s}</p>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

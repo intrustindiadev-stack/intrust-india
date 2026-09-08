@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchTeamLeadsData } from '@/app/actions/admin-crm';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,12 +17,15 @@ const STATUS_CONFIG = {
     lost: { bg: 'bg-rose-100 text-rose-800', dot: 'bg-rose-500' }
 };
 
-export default function AdminTeamLeadsPage() {
+function TeamLeadsContent() {
     const [team, setTeam] = useState([]);
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [expandedRep, setExpandedRep] = useState(null);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    
+    const statusFilter = searchParams.get('status');
 
     useEffect(() => {
         fetchData();
@@ -46,8 +49,10 @@ export default function AdminTeamLeadsPage() {
         }
     };
 
+    const filteredLeads = statusFilter ? leads.filter(l => l.status === statusFilter) : leads;
+
     const getRepStats = (repId) => {
-        const repLeads = leads.filter(l => l.assigned_to === repId);
+        const repLeads = filteredLeads.filter(l => l.assigned_to === repId);
         const wonLeads = repLeads.filter(l => l.status === 'won');
         const openLeads = repLeads.filter(l => !['won', 'lost'].includes(l.status));
         const hotLeads = repLeads.filter(l => l.temperature === 'hot');
@@ -63,6 +68,28 @@ export default function AdminTeamLeadsPage() {
                 <div>
                     <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Team Leads</h1>
                     <p className="text-sm font-bold text-gray-500 mt-1">Admin overview of sales team performance & lead distribution</p>
+                </div>
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <select
+                        value={statusFilter || ''}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                                router.push(`/admin/crm/leads?status=${val}`);
+                            } else {
+                                router.push(`/admin/crm/leads`);
+                            }
+                        }}
+                        className="bg-transparent border-none text-sm font-bold text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer"
+                    >
+                        <option value="">All Statuses</option>
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="qualified">Qualified</option>
+                        <option value="proposal">Proposal</option>
+                        <option value="won">Won</option>
+                        <option value="lost">Lost</option>
+                    </select>
                 </div>
             </div>
 
@@ -168,5 +195,13 @@ export default function AdminTeamLeadsPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function AdminTeamLeadsPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>}>
+            <TeamLeadsContent />
+        </Suspense>
     );
 }
