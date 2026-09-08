@@ -1,30 +1,17 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 
 export async function POST(request, { params }) {
     try {
-        const { id: orderId } = params;
-        const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-                cookies: {
-                    get(name) {
-                        return cookieStore.get(name)?.value;
-                    },
-                },
-            }
-        );
+        const { id: orderId } = await params;
+        const { user, profile, admin: supabaseAdmin } = await getAuthUser(request);
         
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || (user.user_metadata?.role !== 'ADMIN' && user.user_metadata?.role !== 'SUPER_ADMIN')) {
+        if (!user || !['admin', 'super_admin'].includes(profile?.role)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // Fetch the order to get the amounts
-        const { data: order, error: orderError } = await supabase
+        const { data: order, error: orderError } = await supabaseAdmin
             .from('ai_orders')
             .select('*')
             .eq('id', orderId)
@@ -39,7 +26,7 @@ export async function POST(request, { params }) {
         }
 
         // Call atomic RPC
-        const { data: rpcData, error: rpcError } = await supabase.rpc('complete_ai_order_and_credit_vault', {
+        const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc('complete_ai_order_and_credit_vault', {
             p_order_id: orderId,
             p_merchant_id: order.merchant_id,
             p_principal_amount_paise: order.wholesale_price_paise,

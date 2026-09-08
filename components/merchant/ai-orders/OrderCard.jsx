@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Loader2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import toast from 'react-hot-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function OrderCard({ order, onAccepted }) {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -20,18 +21,50 @@ export default function OrderCard({ order, onAccepted }) {
         e.stopPropagation();
         setIsProcessing(true);
         try {
-            const res = await fetch(`/api/merchant/ai-orders/${order.id}/initiate-payment`, {
-                method: 'POST'
+            const clientTxnId = `AIO_${Date.now()}_${order.id.substring(0, 8)}`;
+
+            const res = await fetch('/api/sabpaisa/initiate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    amount: (order.wholesale_price_paise / 100).toFixed(2),
+                    clientTxnId,
+                    payerName: 'AI Order Merchant',
+                    payerEmail: 'merchant@intrust.in',
+                    payerMobile: '9999999998',
+                    udf1: 'AI_ORDER',
+                    udf2: order.id
+                })
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
+            if (!res.ok) throw new Error(data.error || data.message || 'Failed to initiate payment');
+
+            if (!data.encData || !data.paymentUrl || !data.clientCode) {
+                throw new Error('Invalid response from payment server');
+            }
 
             toast.success('Redirecting to secure SabPaisa checkout...');
-            if (data.paymentUrl) {
-                router.push(data.paymentUrl);
-            } else {
-                router.push(`/payment/sabpaisa/checkout?txnId=${data.txnId || 'SP' + Date.now()}&amount=${order.wholesale_price_paise}`);
-            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = data.paymentUrl;
+
+            const encInput = document.createElement('input');
+            encInput.type = 'hidden';
+            encInput.name = 'encData';
+            encInput.value = data.encData;
+            form.appendChild(encInput);
+
+            const ccInput = document.createElement('input');
+            ccInput.type = 'hidden';
+            ccInput.name = 'clientCode';
+            ccInput.value = data.clientCode;
+            form.appendChild(ccInput);
+
+            document.body.appendChild(form);
+            form.submit();
 
             if (onAccepted) onAccepted(order.id);
         } catch (error) {

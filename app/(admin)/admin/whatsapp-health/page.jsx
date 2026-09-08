@@ -14,7 +14,9 @@ import {
     Users,
     Store,
     Calendar,
-    ChevronDown
+    ChevronDown,
+    Sun,
+    Moon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
@@ -337,6 +339,103 @@ export default function AdminWhatsAppHealthPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Daily Automated Broadcasts */}
+                    {data?.daily_broadcasts && (data.daily_broadcasts.morning || data.daily_broadcasts.evening) && (
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                            <div className="border-b border-slate-100 pb-3">
+                                <h4 className="font-extrabold text-slate-800 tracking-tight text-lg">
+                                    Today's Automated Broadcasts
+                                </h4>
+                                <p className="text-xs text-slate-500 font-semibold mt-1">Delivery metrics for the Good Morning and Good Evening crons.</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Morning Broadcast */}
+                                {data.daily_broadcasts.morning && (
+                                    <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-3 opacity-10 text-amber-500"><Sun size={64} /></div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Sun size={18} className="text-amber-500" />
+                                            <h5 className="font-bold text-slate-800">Good Morning</h5>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ml-auto ${
+                                                data.daily_broadcasts.morning.run_status === 'sent' ? 'bg-emerald-100 text-emerald-700' :
+                                                data.daily_broadcasts.morning.run_status === 'skipped' ? 'bg-slate-200 text-slate-600' :
+                                                data.daily_broadcasts.morning.run_status === 'failed' ? 'bg-rose-100 text-rose-700' :
+                                                'bg-amber-100 text-amber-700'
+                                            }`}>
+                                                {data.daily_broadcasts.morning.run_status}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="text-xs font-semibold text-slate-600 mb-4 h-8 flex items-center">
+                                            <p className="line-clamp-2">{data.daily_broadcasts.morning.run_summary.split(']').pop().trim() || data.daily_broadcasts.morning.run_summary}</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-4 gap-2">
+                                            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-slate-400">Total</div>
+                                                <div className="text-sm font-bold text-slate-800">{data.daily_broadcasts.morning.metrics.total}</div>
+                                            </div>
+                                            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-slate-400">Sent</div>
+                                                <div className="text-sm font-bold text-blue-600">{data.daily_broadcasts.morning.metrics.sent}</div>
+                                            </div>
+                                            <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-emerald-600">Delivered</div>
+                                                <div className="text-sm font-bold text-emerald-700">{data.daily_broadcasts.morning.metrics.delivered + data.daily_broadcasts.morning.metrics.read}</div>
+                                            </div>
+                                            <div className="bg-rose-50 p-2 rounded-lg border border-rose-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-rose-600">Failed</div>
+                                                <div className="text-sm font-bold text-rose-700">{data.daily_broadcasts.morning.metrics.failed}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Evening Broadcast */}
+                                {data.daily_broadcasts.evening && (
+                                    <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-3 opacity-10 text-indigo-500"><Moon size={64} /></div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Moon size={18} className="text-indigo-500" />
+                                            <h5 className="font-bold text-slate-800">Good Evening</h5>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ml-auto ${
+                                                data.daily_broadcasts.evening.run_status === 'sent' ? 'bg-emerald-100 text-emerald-700' :
+                                                data.daily_broadcasts.evening.run_status === 'skipped' ? 'bg-slate-200 text-slate-600' :
+                                                data.daily_broadcasts.evening.run_status === 'failed' ? 'bg-rose-100 text-rose-700' :
+                                                'bg-amber-100 text-amber-700'
+                                            }`}>
+                                                {data.daily_broadcasts.evening.run_status}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="text-xs font-semibold text-slate-600 mb-4 h-8 flex items-center">
+                                            <p className="line-clamp-2">{data.daily_broadcasts.evening.run_summary.split(']').pop().trim() || data.daily_broadcasts.evening.run_summary}</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-4 gap-2">
+                                            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-slate-400">Total</div>
+                                                <div className="text-sm font-bold text-slate-800">{data.daily_broadcasts.evening.metrics.total}</div>
+                                            </div>
+                                            <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-slate-400">Sent</div>
+                                                <div className="text-sm font-bold text-blue-600">{data.daily_broadcasts.evening.metrics.sent}</div>
+                                            </div>
+                                            <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-emerald-600">Delivered</div>
+                                                <div className="text-sm font-bold text-emerald-700">{data.daily_broadcasts.evening.metrics.delivered + data.daily_broadcasts.evening.metrics.read}</div>
+                                            </div>
+                                            <div className="bg-rose-50 p-2 rounded-lg border border-rose-100 text-center">
+                                                <div className="text-[9px] font-black uppercase text-rose-600">Failed</div>
+                                                <div className="text-sm font-bold text-rose-700">{data.daily_broadcasts.evening.metrics.failed}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Recent Failures Log */}
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">

@@ -16,6 +16,8 @@ export const revalidate = 0;
  *   - channel: 'all' | 'web' | 'whatsapp' (default: 'all')
  *   - audience: 'all' | 'customer' | 'merchant' (default: 'all')
  *   - stuck_sent_minutes: number (default: 15)
+ * 
+ * Also returns today's automated broadcast status (Good Morning / Good Evening).
  */
 export async function GET(request) {
     try {
@@ -134,6 +136,57 @@ export async function GET(request) {
 
         if (failuresError) throw failuresError;
 
+        // 3. Fetch today's automated broadcasts stats (Good Morning / Good Evening)
+        const todayIST = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+        
+        const fetchBroadcastStats = async (prefix) => {
+            const runTag = `[${prefix}-broadcast-run:${todayIST}]`;
+            const msgTag = `[${prefix}-broadcast:${todayIST}]`;
+
+            const { data: runData } = await admin
+                .from('whatsapp_message_logs')
+                .select('status, content_preview, created_at')
+                .eq('audience', 'customer')
+                .like('content_preview', `${runTag}%`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            const { data: messagesData } = await admin
+                .from('whatsapp_message_logs')
+                .select('status')
+                .eq('audience', 'customer')
+                .eq('content_preview', msgTag);
+
+            if (!runData && (!messagesData || messagesData.length === 0)) {
+                return null;
+            }
+
+            let bSent = 0, bDelivered = 0, bFailed = 0, bRead = 0;
+            for (const msg of (messagesData || [])) {
+                if (msg.status === 'sent') bSent++;
+                if (msg.status === 'delivered') bDelivered++;
+                if (msg.status === 'read') bRead++;
+                if (msg.status === 'failed') bFailed++;
+            }
+
+            return {
+                run_status: runData?.status || 'unknown',
+                run_summary: runData?.content_preview || 'No run audit found',
+                run_time: runData?.created_at || null,
+                metrics: {
+                    sent: bSent,
+                    delivered: bDelivered,
+                    read: bRead,
+                    failed: bFailed,
+                    total: (messagesData || []).length
+                }
+            };
+        };
+
+        const morningBroadcast = await fetchBroadcastStats('gm');
+        const eveningBroadcast = await fetchBroadcastStats('ge');
+
         return NextResponse.json({
             summary: {
                 sent,
@@ -151,6 +204,10 @@ export async function GET(request) {
                 message_type: messageTypeBreakdown,
             },
             recent_failures: failuresData || [],
+            daily_broadcasts: {
+                morning: morningBroadcast,
+                evening: eveningBroadcast
+            }
         });
     } catch (err) {
         console.error('[API] Admin WhatsApp Delivery Health GET Error:', err);

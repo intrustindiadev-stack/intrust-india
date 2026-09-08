@@ -124,12 +124,22 @@ export async function POST(request) {
             );
         }
 
-        // ── Auth header ──
+        // ── Retrieve full session to capture refresh_token for iOS recovery ──
+        const supabaseServer = await createServerSupabaseClient();
+        const { data: { session: fullSession } } = await supabaseServer.auth.getSession();
+
+        // ── Auth header / Session fallback ──
         const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return failResponse(401, 'Missing or invalid authorization header.', correlationId);
+        let token = null;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split('Bearer ')[1];
+        } else if (fullSession && fullSession.access_token) {
+            token = fullSession.access_token;
         }
-        const token = authHeader.split('Bearer ')[1];
+
+        if (!token) {
+            return failResponse(401, 'Missing authorization.', correlationId);
+        }
 
         // ── Verify user via scoped Supabase client ──
         const supabaseContextClient = createClient(
@@ -142,10 +152,6 @@ export async function POST(request) {
         if (authError || !user) {
             return failResponse(401, 'Unauthorized.', correlationId, authError);
         }
-
-        // ── Retrieve full session to capture refresh_token for iOS recovery ──
-        const supabaseServer = await createServerSupabaseClient();
-        const { data: { session: fullSession } } = await supabaseServer.auth.getSession();
         
         const refreshToken = fullSession?.refresh_token || null;
         if (!refreshToken) {
@@ -157,6 +163,19 @@ export async function POST(request) {
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
+
+        if (orderData.udf1 === 'AI_ORDER') {
+            const { data: profile } = await supabaseAdmin
+                .from('user_profiles')
+                .select('email, phone')
+                .eq('id', user.id)
+                .single();
+            
+            if (profile) {
+                if (profile.email) orderData.payerEmail = profile.email;
+                if (profile.phone) orderData.payerMobile = normalizePayerMobile(profile.phone);
+            }
+        }
 
         // ── Canonical Amount Derivation (Security Guard) ──
         let canonicalAmountPaise = 0;
@@ -276,6 +295,40 @@ export async function POST(request) {
                 return failResponse(400, 'Wholesale draft is not in a pending state.', correlationId);
             }
             canonicalAmountPaise = draft.total_amount_paise;
+        } else if (udf1 === 'AI_ORDER') {
+            // udf2 = ai_orders.id
+            const { data: order, error: orderErr } = await supabaseAdmin
+                .from('ai_orders')
+                .select('wholesale_price_paise, status, merchant_id')
+                .eq('id', udf2)
+                .single();
+                
+            if (orderErr || !order) {
+                return failResponse(400, 'Invalid or missing AI order ID.', correlationId, orderErr);
+            }
+            if (order.status !== 'PENDING' && order.status !== 'PAYMENT_PENDING') {
+                return failResponse(400, 'AI order is no longer available for payment.', correlationId);
+            }
+            if (order.merchant_id && order.merchant_id !== user.id) {
+                return failResponse(403, 'Unauthorized: This order is assigned to another merchant.', correlationId);
+            }
+            
+            // Lock the order
+            const { error: lockErr } = await supabaseAdmin
+                .from('ai_orders')
+                .update({ 
+                    status: 'PAYMENT_PENDING', 
+                    merchant_id: user.id,
+                    sabpaisa_txn_id: orderData.clientTxnId,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', udf2);
+                
+            if (lockErr) {
+                return failResponse(409, 'Failed to lock AI order for payment.', correlationId, lockErr);
+            }
+            
+            canonicalAmountPaise = order.wholesale_price_paise;
         } else if (udf1 === 'GOLD_SUBSCRIPTION') {
             // udf2 = packageId (e.g. GOLD_1M, GOLD_3M, GOLD_1Y)
             const plan = GOLD_SUBSCRIPTION_PLANS.find(p => p.key === udf2);
