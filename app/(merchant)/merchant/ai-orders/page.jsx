@@ -17,6 +17,31 @@ export default function AIOrdersMerchantPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState('ALL');
+    const [vault, setVault] = useState(null);
+    const [isBalanceRevealed, setIsBalanceRevealed] = useState(false);
+    
+    // Withdrawal state
+    const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false);
+
+    const fetchVault = async () => {
+        try {
+            const res = await fetch('/api/merchant/vault');
+            if (res.ok) {
+                const data = await res.json();
+                setVault(data.vault);
+            }
+        } catch (e) {
+            console.error('Error fetching vault:', e);
+        }
+    };
+
+    useEffect(() => {
+        if (merchant) {
+            fetchVault();
+        }
+    }, [merchant]);
 
     const fetchOrders = async (silent = false) => {
         if (!silent) setIsLoading(true);
@@ -65,6 +90,45 @@ export default function AIOrdersMerchantPage() {
 
     const pendingOrders = orders.filter(o => o.status === 'PENDING');
     const hasPending = pendingOrders.length > 0;
+    
+    const availableBalance = (vault?.balance_paise != null ? vault.balance_paise / 100 : 0);
+
+    const handleConfirmWithdraw = async (e) => {
+        e.preventDefault();
+        const amt = parseFloat(withdrawAmount);
+        if (!amt || isNaN(amt) || amt <= 0) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
+        if (amt > availableBalance) {
+            toast.error('Withdrawal amount cannot exceed available balance');
+            return;
+        }
+
+        setIsProcessingWithdraw(true);
+        try {
+            const res = await fetch('/api/merchant/vault/withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    merchant_id: vault.merchant_id,
+                    amount_paise: amt * 100
+                })
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error || 'Failed to process withdrawal');
+
+            toast.success(`Withdrawal of ₹${amt.toLocaleString('en-IN')} requested successfully!`);
+            setShowWithdrawModal(false);
+            setWithdrawAmount('');
+            fetchVault(); // Refresh balance
+        } catch (err) {
+            toast.error(err.message || 'An error occurred during withdrawal');
+        } finally {
+            setIsProcessingWithdraw(false);
+        }
+    };
 
     const tabs = [
         { key: 'ALL', label: 'All', count: counts.total || orders.length },
@@ -148,6 +212,67 @@ export default function AIOrdersMerchantPage() {
                 </div>
             </div>
 
+            {/* Merchant Vault Available Balance */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div 
+                    onClick={() => !isBalanceRevealed && setIsBalanceRevealed(true)}
+                    className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between relative transition-all hover:shadow-md cursor-pointer select-none group"
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            <span>Available Balance</span>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                            <Wallet size={20} />
+                        </div>
+                    </div>
+
+                    <div className="my-3">
+                        {!isBalanceRevealed ? (
+                            <div className="space-y-1">
+                                <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-200 tracking-widest font-mono">
+                                    ₹ • • • • •
+                                </div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70 group-hover:bg-emerald-100 transition-colors">
+                                    Tap to reveal
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between">
+                                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    ₹{Math.round(availableBalance).toLocaleString('en-IN')}
+                                </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsBalanceRevealed(false);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                    title="Hide balance"
+                                >
+                                    Hide
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowWithdrawModal(true);
+                            }}
+                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                            Withdraw Funds
+                        </button>
+                        <Link href="/merchant/vault/ai-orders" className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 flex items-center gap-1">
+                            Go to Vault <ArrowRight size={12} />
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
             {/* Section: My AI Orders */}
             <div id="orders-section" className="space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -216,6 +341,66 @@ export default function AIOrdersMerchantPage() {
                     <OrderBoard orders={filteredOrders} onAccepted={() => fetchOrders(true)} activeTab={activeTab} />
                 )}
             </div>
+
+            {/* Withdrawal Modal */}
+            {showWithdrawModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm">
+                    <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <button 
+                            onClick={() => setShowWithdrawModal(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                        >
+                            <span className="material-icons-round text-xl">close</span>
+                        </button>
+                        
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                <Wallet size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight">Withdraw Funds</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Available: ₹{availableBalance.toLocaleString('en-IN')}</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleConfirmWithdraw} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">Amount (₹)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                                    <input 
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={withdrawAmount}
+                                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                                        max={availableBalance}
+                                        className="w-full pl-8 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold focus:outline-hidden focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setWithdrawAmount(availableBalance.toString())}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded-md"
+                                    >
+                                        Max
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                type="submit"
+                                disabled={isProcessingWithdraw || !withdrawAmount || parseFloat(withdrawAmount) > availableBalance}
+                                className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isProcessingWithdraw ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                    <>Withdraw to Wallet <ArrowRight size={16} /></>
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

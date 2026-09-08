@@ -1082,7 +1082,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                                 </div>
                                 <div className="flex items-center justify-center gap-1.5 py-0.5">
                                     <Phone size={13} className="text-slate-400 shrink-0" />
-                                    <a href="tel:18008890199" className="hover:text-blue-600 transition-colors">1800-889-0199</a>
+                                    <a href="tel:18002030052" className="hover:text-blue-600 transition-colors">1800-203-0052</a>
                                 </div>
                             </div>
                         </div>
@@ -1226,7 +1226,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                             <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-xs font-bold text-slate-400">Need assistance?</span>
                                 <a
-                                    href="tel:18008890199"
+                                    href="tel:18002030052"
                                     className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-sm"
                                 >
                                     <Phone size={13} />

@@ -12,6 +12,9 @@ import toast from 'react-hot-toast';
 export default function AIOrderNotificationModal() {
     const [newOrder, setNewOrder] = useState(null);
     const [isAccepting, setIsAccepting] = useState(false);
+    const [showRejectForm, setShowRejectForm] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
     const router = useRouter();
     const { merchant } = useMerchant();
 
@@ -123,9 +126,41 @@ export default function AIOrderNotificationModal() {
         }
     };
 
-    const handleReject = () => {
+    const handleDismiss = () => {
         setNewOrder(null);
+        setShowRejectForm(false);
+        setRejectReason('');
         toast('Order dismissed', { icon: 'ℹ️' });
+    };
+
+    const submitReject = async () => {
+        if (!rejectReason.trim()) {
+            toast.error('Please provide a reason for rejection');
+            return;
+        }
+
+        setIsRejecting(true);
+        try {
+            const res = await fetch(`/api/merchant/ai-orders/${newOrder.id}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejection_reason: rejectReason })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to reject order');
+            }
+
+            toast.success('Order rejected successfully');
+            setNewOrder(null);
+            setShowRejectForm(false);
+            setRejectReason('');
+        } catch (error) {
+            toast.error(error.message || 'An error occurred');
+        } finally {
+            setIsRejecting(false);
+        }
     };
 
     if (!newOrder) return null;
@@ -143,7 +178,9 @@ export default function AIOrderNotificationModal() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs pointer-events-auto"
-                    onClick={() => setNewOrder(null)}
+                    onClick={() => {
+                        if (!isAccepting && !isRejecting) handleDismiss();
+                    }}
                 />
 
                 {/* Floating Notification Card matching Blueprint */}
@@ -164,8 +201,9 @@ export default function AIOrderNotificationModal() {
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-slate-400 font-medium">just now</span>
                             <button
-                                onClick={() => setNewOrder(null)}
+                                onClick={handleDismiss}
                                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                                disabled={isAccepting || isRejecting}
                             >
                                 <X size={16} />
                             </button>
@@ -203,53 +241,102 @@ export default function AIOrderNotificationModal() {
                     </div>
 
                     {/* Financial Metrics Row: Wholesale | Your Profit | ROI */}
-                    <div className="grid grid-cols-3 gap-2 py-3 px-4 rounded-2xl bg-slate-50/90 border border-slate-100 mb-5 text-left">
+                    <div className="grid grid-cols-3 gap-2 py-3 px-2 sm:px-4 rounded-2xl bg-slate-50/90 border border-slate-100 mb-5 text-left">
                         <div>
-                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Wholesale</span>
-                            <div className="text-base font-black text-slate-900 mt-0.5">
+                            <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider">Wholesale</span>
+                            <div className="text-sm sm:text-base font-black text-slate-900 mt-0.5 truncate">
                                 ₹{wholesale.toLocaleString('en-IN')}
                             </div>
                         </div>
-                        <div className="border-l border-slate-200 pl-3">
-                            <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Your Profit</span>
-                            <div className="text-base font-black text-emerald-600 mt-0.5">
+                        <div className="border-l border-slate-200 pl-2 sm:pl-3">
+                            <span className="text-[9px] sm:text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Your Profit</span>
+                            <div className="text-sm sm:text-base font-black text-emerald-600 mt-0.5 truncate">
                                 ₹{profit.toLocaleString('en-IN')}
                             </div>
                         </div>
-                        <div className="border-l border-slate-200 pl-3">
-                            <span className="text-[10px] uppercase font-bold text-blue-600 tracking-wider">ROI</span>
-                            <div className="text-base font-black text-blue-600 mt-0.5">
+                        <div className="border-l border-slate-200 pl-2 sm:pl-3">
+                            <span className="text-[9px] sm:text-[10px] uppercase font-bold text-blue-600 tracking-wider">ROI</span>
+                            <div className="text-sm sm:text-base font-black text-blue-600 mt-0.5 truncate">
                                 {roi}%
                             </div>
                         </div>
                     </div>
 
-                    {/* Actions: Reject & Accept/Pay Buttons */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            type="button"
-                            onClick={handleReject}
-                            disabled={isAccepting}
-                            className="w-full py-3 rounded-2xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-500 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
-                        >
-                            <X size={15} /> Reject
-                        </button>
+                    {/* Actions: Reject & Accept/Pay Buttons OR Reject Form */}
+                    <AnimatePresence mode="wait">
+                        {showRejectForm ? (
+                            <motion.div
+                                key="reject-form"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="space-y-3"
+                            >
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                                        Reason for Rejection <span className="text-rose-500">*</span>
+                                    </label>
+                                    <textarea
+                                        value={rejectReason}
+                                        onChange={(e) => setRejectReason(e.target.value)}
+                                        placeholder="E.g., Margin too low, Currently out of capacity..."
+                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none h-16"
+                                        disabled={isRejecting}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowRejectForm(false)}
+                                        disabled={isRejecting}
+                                        className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={submitReject}
+                                        disabled={isRejecting || !rejectReason.trim()}
+                                        className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                                    >
+                                        {isRejecting ? <Loader2 size={14} className="animate-spin" /> : 'Confirm Reject'}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="action-buttons"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="grid grid-cols-2 gap-3"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRejectForm(true)}
+                                    disabled={isAccepting}
+                                    className="w-full py-3 rounded-2xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-500 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                                >
+                                    <X size={15} /> Reject
+                                </button>
 
-                        <button
-                            type="button"
-                            onClick={handleAcceptAndPay}
-                            disabled={isAccepting}
-                            className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
-                        >
-                            {isAccepting ? (
-                                <Loader2 size={15} className="animate-spin" />
-                            ) : (
-                                <>
-                                    <Check size={16} /> Accept & Pay
-                                </>
-                            )}
-                        </button>
-                    </div>
+                                <button
+                                    type="button"
+                                    onClick={handleAcceptAndPay}
+                                    disabled={isAccepting}
+                                    className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                >
+                                    {isAccepting ? (
+                                        <Loader2 size={15} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Check size={16} /> Accept & Pay
+                                        </>
+                                    )}
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </div>
         </AnimatePresence>

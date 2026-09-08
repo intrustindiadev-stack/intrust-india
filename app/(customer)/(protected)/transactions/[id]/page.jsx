@@ -317,7 +317,7 @@ export default function TransactionDetailPage({ params: paramsPromise }) {
                         <span>Back to Passbook</span>
                     </Link>
                     <a
-                        href="tel:18008890199"
+                        href="tel:18002030052"
                         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs border border-outline-variant/30 transition-all"
                     >
                         <PhoneCall size={14} className="text-amber-500" />
@@ -523,7 +523,7 @@ export default function TransactionDetailPage({ params: paramsPromise }) {
                     </div>
 
                     <a
-                        href="tel:18008890199"
+                        href="tel:18002030052"
                         className="w-full sm:w-auto px-4 py-2 rounded-xl bg-primary hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0"
                     >
                         <PhoneCall size={13} />

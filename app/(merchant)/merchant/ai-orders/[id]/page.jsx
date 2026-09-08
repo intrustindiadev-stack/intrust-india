@@ -14,19 +14,25 @@ import {
     HelpCircle, 
     MessageCircle,
     Lock,
-    ExternalLink
+    ExternalLink,
+    Activity,
+    FileText,
+    Download,
+    X,
+    ArrowRight
 } from 'lucide-react';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseClient';
 
 export default function MerchantOrderDetailPage({ params }) {
-    const resolvedParams = use(params);
-    const { id } = resolvedParams;
+    const { id } = React.use(params);
 
     const [order, setOrder] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isPaying, setIsPaying] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [showRejectForm, setShowRejectForm] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
     const router = useRouter();
 
     const fetchOrderDetail = async () => {
@@ -47,15 +53,13 @@ export default function MerchantOrderDetailPage({ params }) {
     }, [id]);
 
     const handlePayNow = async () => {
-        setIsPaying(true);
+        setIsProcessing(true);
         try {
             const clientTxnId = `AIO_${Date.now()}_${order.id.substring(0, 8)}`;
 
             const res = await fetch('/api/sabpaisa/initiate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     amount: (order.wholesale_price_paise / 100).toFixed(2),
                     clientTxnId,
@@ -94,9 +98,39 @@ export default function MerchantOrderDetailPage({ params }) {
             document.body.appendChild(form);
             form.submit();
         } catch (error) {
-            toast.error(error.message || 'Could not initiate payment');
+            toast.error(error.message || 'Payment initiation failed');
         } finally {
-            setIsPaying(false);
+            setIsProcessing(false);
+        }
+    };
+
+    const submitReject = async () => {
+        if (!rejectReason.trim()) {
+            toast.error('Please provide a reason for rejection');
+            return;
+        }
+
+        setIsRejecting(true);
+        try {
+            const res = await fetch(`/api/merchant/ai-orders/${order.id}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejection_reason: rejectReason })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to reject order');
+            }
+
+            toast.success('Order rejected successfully');
+            setShowRejectForm(false);
+            setRejectReason('');
+            fetchOrderDetail();
+        } catch (error) {
+            toast.error(error.message || 'An error occurred');
+        } finally {
+            setIsRejecting(false);
         }
     };
 
@@ -126,6 +160,7 @@ export default function MerchantOrderDetailPage({ params }) {
 
     const wholesale = (order.wholesale_price_paise || 0) / 100;
     const retail = (order.retail_price_paise || 0) / 100;
+    const tax = (order.gst_amount_paise || 0) / 100;
     const profit = (order.profit_margin_paise || 0) / 100;
     const profitPct = wholesale > 0 ? ((profit / wholesale) * 100).toFixed(0) : '0';
 
@@ -144,12 +179,12 @@ export default function MerchantOrderDetailPage({ params }) {
         if (order.status === 'COMPLETED') return 'COMPLETED';
         if (order.status === 'ACCEPTED') return 'IN PROGRESS';
         if (order.status === 'PAYMENT_PENDING') return 'PAYMENT PENDING';
+        if (order.status === 'REJECTED') return 'REJECTED';
         return 'PENDING';
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-            {/* Breadcrumb & Navigation */}
+        <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-32">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
                     <Link href="/merchant/ai-orders" className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
@@ -159,23 +194,32 @@ export default function MerchantOrderDetailPage({ params }) {
                     <span className="text-slate-900 dark:text-white font-mono">{order.order_code}</span>
                 </div>
 
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                    order.status === 'COMPLETED'
-                        ? 'bg-emerald-500 text-white'
-                        : order.status === 'ACCEPTED'
-                        ? 'bg-blue-600 text-white'
-                        : order.status === 'PAYMENT_PENDING'
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-amber-500 text-white'
-                }`}>
-                    • {getStatusText()}
-                </span>
+                <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                        order.status === 'COMPLETED'
+                            ? 'bg-emerald-500 text-white'
+                            : order.status === 'ACCEPTED'
+                            ? 'bg-blue-600 text-white'
+                            : order.status === 'PAYMENT_PENDING'
+                            ? 'bg-orange-500 text-white'
+                            : order.status === 'REJECTED'
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-amber-500 text-white'
+                    }`}>
+                        • {getStatusText()}
+                    </span>
+                </div>
             </div>
 
-            {/* Top Product Summary & Trust Badges: Screen 5 Blueprint */}
+            {order.status === 'REJECTED' && order.rejection_reason && (
+                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+                    <strong className="block mb-1 font-bold">Order Rejected</strong>
+                    {order.rejection_reason}
+                </div>
+            )}
+
             <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    {/* Thumbnail & Title */}
                     <div className="flex items-center gap-4">
                         <ProductThumbnail
                             src={order.product_image_url}
@@ -193,8 +237,7 @@ export default function MerchantOrderDetailPage({ params }) {
                         </div>
                     </div>
 
-                    {/* 3 Metrics: Wholesale, Retail, Profit */}
-                    <div className="grid grid-cols-3 gap-4 sm:gap-6 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6 w-full md:w-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6 w-full md:w-auto">
                         <div>
                             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Wholesale Price</span>
                             <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
@@ -208,6 +251,12 @@ export default function MerchantOrderDetailPage({ params }) {
                             </div>
                         </div>
                         <div>
+                            <span className="text-[10px] uppercase font-bold text-rose-500 tracking-wider">Tax (GST)</span>
+                            <div className="text-base sm:text-lg font-black text-rose-500 mt-0.5">
+                                ₹{tax.toLocaleString('en-IN')}
+                            </div>
+                        </div>
+                        <div>
                             <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Your Profit</span>
                             <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
                                 ₹{profit.toLocaleString('en-IN')} <span className="text-xs">({profitPct}%)</span>
@@ -216,7 +265,6 @@ export default function MerchantOrderDetailPage({ params }) {
                     </div>
                 </div>
 
-                {/* Trust Badges Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40">
                         <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -240,14 +288,9 @@ export default function MerchantOrderDetailPage({ params }) {
                 </div>
             </div>
 
-            {/* Bottom Grid: 5-Step Order Status (Left) & Payment / Help (Right) */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                {/* Left Column: 5-Step Stepper (7 cols) */}
                 <div className="md:col-span-7 bg-white dark:bg-slate-900 p-6 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                    <h3 className="text-base font-black text-slate-900 dark:text-white mb-6">
-                        Order Status
-                    </h3>
-
+                    <h3 className="text-base font-black text-slate-900 dark:text-white mb-6">Order Status</h3>
                     <div className="relative pl-8 space-y-7 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
                         {/* Step 1: Order Created */}
                         <div className="relative">
@@ -376,21 +419,43 @@ export default function MerchantOrderDetailPage({ params }) {
                         {(order.status === 'PENDING' || order.status === 'PAYMENT_PENDING') && (
                             <button
                                 onClick={handlePayNow}
-                                disabled={isPaying}
+                                disabled={isProcessing}
                                 className="mt-5 w-full py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                             >
-                                {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                                 Pay ₹{wholesale.toLocaleString('en-IN')} Now
                             </button>
                         )}
 
                         {order.status === 'COMPLETED' && (
-                            <Link
-                                href="/merchant/vault/ai-orders"
-                                className="mt-5 w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                            >
-                                View Earnings in Vault <ExternalLink size={14} />
-                            </Link>
+                            <div className="mt-5 space-y-3">
+                                <Link
+                                    href="/merchant/vault/ai-orders"
+                                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                >
+                                    View Earnings in Vault <ExternalLink size={14} />
+                                </Link>
+                                {order.invoice_id && (
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                                        <a
+                                            href={`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}`}
+                                            target="_blank"
+                                            className="w-full px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <FileText size={14} /> View Invoice
+                                        </a>
+                                        <button
+                                            onClick={() => {
+                                                toast.success('Invoice download started');
+                                                window.open(`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}&download=true`, '_blank');
+                                            }}
+                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <Download size={14} /> Download
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
 
@@ -407,7 +472,6 @@ export default function MerchantOrderDetailPage({ params }) {
                                 </p>
                             </div>
                         </div>
-
                         <a
                             href="https://wa.me/919876543210"
                             target="_blank"
@@ -420,6 +484,84 @@ export default function MerchantOrderDetailPage({ params }) {
                     </div>
                 </div>
             </div>
+
+            {/* Sticky Action Footer */}
+            {['PENDING', 'PAYMENT_PENDING'].includes(order.status) && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 z-40 lg:ml-64 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+                    <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="text-center sm:text-left">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Total Investment</p>
+                            <p className="text-xl font-bold text-slate-900 dark:text-white">
+                                ₹{wholesale.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                            </p>
+                        </div>
+
+                        <div className="w-full sm:w-auto">
+                            {order.status === 'PENDING' ? (
+                                showRejectForm ? (
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
+                                        <input
+                                            type="text"
+                                            value={rejectReason}
+                                            onChange={(e) => setRejectReason(e.target.value)}
+                                            placeholder="Rejection reason..."
+                                            className="w-full sm:w-64 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                                            disabled={isRejecting}
+                                        />
+                                        <button
+                                            onClick={() => setShowRejectForm(false)}
+                                            disabled={isRejecting}
+                                            className="w-full sm:w-auto px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={submitReject}
+                                            disabled={isRejecting || !rejectReason.trim()}
+                                            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {isRejecting ? <Loader2 size={18} className="animate-spin" /> : 'Confirm Reject'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-3 w-full sm:w-auto">
+                                        <button
+                                            onClick={() => setShowRejectForm(true)}
+                                            disabled={isProcessing}
+                                            className="flex-1 sm:flex-none px-6 py-3 rounded-2xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-500 font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <X size={18} /> Reject
+                                        </button>
+                                        <button
+                                            onClick={handlePayNow}
+                                            disabled={isProcessing}
+                                            className="flex-1 sm:flex-none px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                        >
+                                            {isProcessing ? (
+                                                <Loader2 size={18} className="animate-spin" />
+                                            ) : (
+                                                <>Accept & Pay <ArrowRight size={18} /></>
+                                            )}
+                                        </button>
+                                    </div>
+                                )
+                            ) : order.status === 'PAYMENT_PENDING' ? (
+                                <button
+                                    onClick={handlePayNow}
+                                    disabled={isProcessing}
+                                    className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                >
+                                    {isProcessing ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        <>Retry Payment <ArrowRight size={18} /></>
+                                    )}
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

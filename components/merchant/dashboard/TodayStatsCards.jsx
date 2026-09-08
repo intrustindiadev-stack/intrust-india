@@ -53,10 +53,11 @@ export default function TodayStatsCards({ todayStats }) {
             {/* 3-Column Today's Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 {/* 1. Today's Sale */}
-                <motion.div
-                    whileHover={{ y: -2 }}
-                    className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md"
-                >
+                <Link href="/merchant/shopping/orders" className="block outline-none">
+                    <motion.div
+                        whileHover={{ y: -2 }}
+                        className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
+                    >
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                             Today&apos;s Sale
@@ -78,11 +79,13 @@ export default function TodayStatsCards({ todayStats }) {
                         </span>
                     </div>
                 </motion.div>
+                </Link>
 
                 {/* 2. Today's Profit */}
+                <Link href="/merchant/wallet" className="block outline-none">
                 <motion.div
                     whileHover={{ y: -2 }}
-                    className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md"
+                    className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
                 >
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -104,11 +107,13 @@ export default function TodayStatsCards({ todayStats }) {
                         </span>
                     </div>
                 </motion.div>
+                </Link>
 
                 {/* 3. Today's Orders / Conversions */}
+                <Link href="/merchant/shopping/orders" className="block outline-none">
                 <motion.div
                     whileHover={{ y: -2 }}
-                    className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md"
+                    className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
                 >
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -133,6 +138,7 @@ export default function TodayStatsCards({ todayStats }) {
                         </span>
                     </div>
                 </motion.div>
+                </Link>
             </div>
         </section>
     );

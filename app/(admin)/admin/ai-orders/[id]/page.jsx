@@ -17,7 +17,10 @@ import {
     Calendar,
     Phone,
     Mail,
-    Share2
+    Share2,
+    Download,
+    FileText,
+    AlertCircle
 } from 'lucide-react';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import toast from 'react-hot-toast';
@@ -29,7 +32,6 @@ export default function AdminOrderDetailPage({ params }) {
     const [order, setOrder] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCompleting, setIsCompleting] = useState(false);
-    const [activeTab, setActiveTab] = useState('TRANSACTION'); // 'TRANSACTION' | 'TIMELINE' | 'NOTES'
     const router = useRouter();
 
     const fetchOrderDetail = async () => {
@@ -95,6 +97,7 @@ export default function AdminOrderDetailPage({ params }) {
 
     const wholesale = (order.wholesale_price_paise || 0) / 100;
     const retail = (order.retail_price_paise || 0) / 100;
+    const tax = (order.gst_amount_paise || 0) / 100;
     const profit = (order.profit_margin_paise || 0) / 100;
     const profitPct = wholesale > 0 ? ((profit / wholesale) * 100).toFixed(0) : '0';
     const totalPayout = wholesale + profit;
@@ -111,7 +114,7 @@ export default function AdminOrderDetailPage({ params }) {
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
             {/* Breadcrumb & Navigation */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
                     <Link href="/admin/ai-orders" className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
                         <ArrowLeft size={14} /> AI Orders
@@ -120,16 +123,18 @@ export default function AdminOrderDetailPage({ params }) {
                     <span className="text-slate-900 dark:text-white font-mono">{order.order_code}</span>
                 </div>
 
-                {order.status === 'ACCEPTED' && (
-                    <button
-                        onClick={handleComplete}
-                        disabled={isCompleting}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
-                    >
-                        {isCompleting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                        Complete & Release Funds
-                    </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {order.status === 'ACCEPTED' && (
+                        <button
+                            onClick={handleComplete}
+                            disabled={isCompleting}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            {isCompleting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                            Complete & Release
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Header Title & Status Banner */}
@@ -139,7 +144,7 @@ export default function AdminOrderDetailPage({ params }) {
                         src={order.product_image_url}
                         alt={order.product_name}
                         category={order.category}
-                        className="w-16 h-16 rounded-2xl shadow-xs"
+                        className="w-16 h-16 rounded-2xl shadow-xs shrink-0"
                     />
                     <div>
                         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
@@ -151,12 +156,14 @@ export default function AdminOrderDetailPage({ params }) {
                     </div>
                 </div>
 
-                <div className="self-start sm:self-center">
+                <div className="self-start sm:self-center shrink-0">
                     <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
                         order.status === 'COMPLETED'
                             ? 'bg-emerald-500 text-white'
                             : order.status === 'ACCEPTED'
                             ? 'bg-blue-600 text-white'
+                            : order.status === 'REJECTED'
+                            ? 'bg-rose-500 text-white'
                             : order.status === 'PAYMENT_PENDING'
                             ? 'bg-orange-500 text-white'
                             : 'bg-amber-500 text-white'
@@ -165,6 +172,16 @@ export default function AdminOrderDetailPage({ params }) {
                     </span>
                 </div>
             </div>
+
+            {order.status === 'REJECTED' && order.rejection_reason && (
+                <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/50 flex items-start gap-3 shadow-xs">
+                    <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">Order Rejected by Merchant</h4>
+                        <p className="text-xs text-rose-700 dark:text-rose-300 mt-1 break-words">{order.rejection_reason}</p>
+                    </div>
+                </div>
+            )}
 
             {/* Top Cards: Product Summary (Left) & Assigned Merchant (Right) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -175,7 +192,7 @@ export default function AdminOrderDetailPage({ params }) {
                             src={order.product_image_url}
                             alt={order.product_name}
                             category={order.category}
-                            className="w-20 h-20 rounded-2xl shadow-xs"
+                            className="w-20 h-20 rounded-2xl shadow-xs shrink-0"
                         />
                         <div className="flex-1">
                             <h3 className="text-lg font-black text-slate-900 dark:text-white">
@@ -187,7 +204,7 @@ export default function AdminOrderDetailPage({ params }) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 pt-6 border-t border-slate-100 dark:border-slate-800/80 mt-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-3 pt-6 border-t border-slate-100 dark:border-slate-800/80 mt-6">
                         <div>
                             <div className="text-[10px] uppercase font-bold text-slate-400">Wholesale Price</div>
                             <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
@@ -201,7 +218,13 @@ export default function AdminOrderDetailPage({ params }) {
                             </div>
                         </div>
                         <div>
-                            <div className="text-[10px] uppercase font-bold text-emerald-500">Guaranteed Profit</div>
+                            <div className="text-[10px] uppercase font-bold text-rose-500">Tax (GST)</div>
+                            <div className="text-base sm:text-lg font-black text-rose-500 mt-0.5">
+                                ₹{tax.toLocaleString('en-IN')}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] uppercase font-bold text-emerald-500">Profit</div>
                             <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
                                 ₹{profit.toLocaleString('en-IN')} <span className="text-xs">({profitPct}%)</span>
                             </div>
@@ -343,41 +366,6 @@ export default function AdminOrderDetailPage({ params }) {
 
                 {/* Right Column: Transaction Details, Timeline, Notes (7 cols) */}
                 <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-6">
-                    {/* Tabs */}
-                    <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <button
-                            onClick={() => setActiveTab('TRANSACTION')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                activeTab === 'TRANSACTION'
-                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                        >
-                            Transaction Details
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('TIMELINE')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                activeTab === 'TIMELINE'
-                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                        >
-                            Timeline
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('NOTES')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                activeTab === 'NOTES'
-                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                        >
-                            Notes
-                        </button>
-                    </div>
-
-                    {activeTab === 'TRANSACTION' && (
                         <div className="space-y-6">
                             {/* SabPaisa Transaction Card */}
                             <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/80">
@@ -467,21 +455,27 @@ export default function AdminOrderDetailPage({ params }) {
                                 </div>
                             </div>
                         </div>
-                    )}
-
-                    {activeTab === 'TIMELINE' && (
-                        <div className="text-xs text-slate-500 space-y-3 py-4">
-                            <p>• Sourced wholesale lot by platform admin.</p>
-                            <p>• Assigned to {order.merchant?.business_name} with priority notification.</p>
-                            <p>• SabPaisa escrow payment confirmed with 256-bit gateway verification.</p>
-                        </div>
-                    )}
-
-                    {activeTab === 'NOTES' && (
-                        <div className="text-xs text-slate-400 py-4">
-                            No internal administrative notes recorded for this cycle.
-                        </div>
-                    )}
+                        
+                        {order.status === 'COMPLETED' && order.invoice_id && (
+                            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <a
+                                    href={`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}`}
+                                    target="_blank"
+                                    className="w-full sm:flex-1 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <FileText size={14} /> View Invoice
+                                </a>
+                                <button
+                                    onClick={() => {
+                                        toast.success('Invoice download started');
+                                        window.open(`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}&download=true`, '_blank');
+                                    }}
+                                    className="w-full sm:flex-1 px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <Download size={14} /> Download Invoice
+                                </button>
+                            </div>
+                        )}
                 </div>
             </div>
         </div>

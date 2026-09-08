@@ -103,15 +103,20 @@ export default function OrderList({
                 );
             case 'COMPLETED':
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-300">
-                        <CheckCircle2 size={12} /> Completed
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        • COMPLETED
                     </span>
                 );
             case 'CANCELLED':
-            case 'REJECTED':
                 return (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/70">
                         • Cancelled
+                    </span>
+                );
+            case 'REJECTED':
+                return (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                        • REJECTED
                     </span>
                 );
             default:
@@ -215,9 +220,15 @@ export default function OrderList({
                                             </span>
                                         </div>
                                     </div>
+                                    
+                                    {order.status === 'REJECTED' && order.rejection_reason && (
+                                        <div className="mt-2 text-[11px] text-rose-600 dark:text-rose-400 font-medium line-clamp-1">
+                                            Reason: {order.rejection_reason}
+                                        </div>
+                                    )}
 
                                     {/* Financial Metrics */}
-                                    <div className="grid grid-cols-3 gap-2 py-2.5 px-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/30 text-left mb-3">
+                                    <div className="grid grid-cols-4 gap-2 py-2.5 px-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/30 text-left mb-3">
                                         <div>
                                             <span className="text-[9px] uppercase font-bold text-slate-400">Wholesale</span>
                                             <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
@@ -231,8 +242,14 @@ export default function OrderList({
                                             </div>
                                         </div>
                                         <div className="border-l border-slate-200 dark:border-slate-700 pl-2">
+                                            <span className="text-[9px] uppercase font-bold text-slate-400">Tax</span>
+                                            <div className="text-xs font-black text-rose-500 mt-0.5">
+                                                ₹{((order.gst_amount_paise || 0) / 100).toLocaleString('en-IN')}
+                                            </div>
+                                        </div>
+                                        <div className="border-l border-slate-200 dark:border-slate-700 pl-2">
                                             <span className="text-[9px] uppercase font-bold text-emerald-500">Profit</span>
-                                            <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                            <div className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
                                                 +₹{profit.toLocaleString('en-IN')}
                                             </div>
                                         </div>
@@ -256,6 +273,15 @@ export default function OrderList({
                                             {completingId === order.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                                             Complete
                                         </button>
+                                    )}
+                                    {(order.status === 'COMPLETED' || order.invoice_id) && (
+                                        <Link
+                                            href={`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}`}
+                                            target="_blank"
+                                            className="flex-1 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                                        >
+                                            <CreditCard size={12} /> Invoice
+                                        </Link>
                                     )}
                                 </div>
                             </div>
@@ -282,6 +308,7 @@ export default function OrderList({
                                 <th className="px-4 py-3.5 whitespace-nowrap">Merchant</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Wholesale</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Retail</th>
+                                <th className="px-4 py-3.5 whitespace-nowrap">Tax</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Profit</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Created At</th>
@@ -359,13 +386,25 @@ export default function OrderList({
                                         </td>
 
                                         {/* Wholesale */}
-                                        <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                            ₹{wholesale.toLocaleString('en-IN')}
+                                        <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                                            <div className="flex flex-col">
+                                                <span>₹{wholesale.toLocaleString('en-IN')}</span>
+                                                {order.status === 'REJECTED' && order.rejection_reason && (
+                                                    <span className="text-[10px] text-rose-500 mt-1 line-clamp-1 max-w-[150px]" title={order.rejection_reason}>
+                                                        Reason: {order.rejection_reason}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         {/* Retail */}
                                         <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                                             ₹{retail.toLocaleString('en-IN')}
+                                        </td>
+
+                                        {/* Tax (GST) */}
+                                        <td className="px-4 py-3 font-semibold text-rose-500 whitespace-nowrap">
+                                            ₹{((order.gst_amount_paise || 0) / 100).toLocaleString('en-IN')}
                                         </td>
 
                                         {/* Profit */}
@@ -415,6 +454,15 @@ export default function OrderList({
                                                             >
                                                                 <CheckCircle2 size={13} /> Complete & Release
                                                             </button>
+                                                        )}
+                                                        {(order.status === 'COMPLETED' || order.invoice_id) && (
+                                                            <Link
+                                                                href={`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}`}
+                                                                target="_blank"
+                                                                className="w-full px-3.5 py-1.5 text-left text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-2"
+                                                            >
+                                                                <CreditCard size={13} /> View Invoice
+                                                            </Link>
                                                         )}
                                                     </div>
                                                 )}

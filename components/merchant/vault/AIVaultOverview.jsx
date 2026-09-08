@@ -191,7 +191,7 @@ export default function AIVaultOverview({
         });
     }, [transactions]);
 
-    const handleConfirmWithdraw = (e) => {
+    const handleConfirmWithdraw = async (e) => {
         e.preventDefault();
         const amt = parseFloat(withdrawAmount);
         if (!amt || isNaN(amt) || amt <= 0) {
@@ -204,12 +204,32 @@ export default function AIVaultOverview({
         }
 
         setIsProcessingWithdraw(true);
-        setTimeout(() => {
-            setIsProcessingWithdraw(false);
+        try {
+            const res = await fetch('/api/merchant/vault/withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    merchant_id: vault.merchant_id,
+                    amount_paise: amt * 100 // converting back to paise
+                })
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error || 'Failed to process withdrawal');
+
+            toast.success(`Withdrawal of ₹${amt.toLocaleString('en-IN')} requested successfully!`);
             setShowWithdrawModal(false);
             setWithdrawAmount('');
-            toast.success(`Withdrawal of ₹${amt.toLocaleString('en-IN')} requested successfully! Funds will credit within 2-4 hours.`);
-        }, 900);
+            
+            // Note: Ideally trigger a refetch of the vault/transactions here
+            if (typeof window !== 'undefined') {
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } catch (err) {
+            toast.error(err.message || 'An error occurred during withdrawal');
+        } finally {
+            setIsProcessingWithdraw(false);
+        }
     };
 
     return (

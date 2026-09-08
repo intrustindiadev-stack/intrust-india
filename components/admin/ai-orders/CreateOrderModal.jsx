@@ -48,6 +48,7 @@ export default function CreateOrderModal({ onCreated }) {
     const [wholesalePrice, setWholesalePrice] = useState('');
     const [retailPrice, setRetailPrice] = useState('');
     const [profitMargin, setProfitMargin] = useState('');
+    const [gstRate, setGstRate] = useState('18');
 
     // Thumbnail upload states
     const [imageInputMode, setImageInputMode] = useState('upload'); // 'upload' | 'url'
@@ -201,6 +202,7 @@ export default function CreateOrderModal({ onCreated }) {
                     wholesale_price_paise: Math.round(wholesaleNum * 100),
                     retail_price_paise: Math.round(retailNum * 100),
                     profit_margin_paise: Math.round(profitNum * 100),
+                    gst_rate_percent: Number(gstRate)
                 })
             });
 
@@ -215,6 +217,7 @@ export default function CreateOrderModal({ onCreated }) {
             setRetailPrice('');
             setProfitMargin('');
             setProductImageUrl('');
+            setGstRate('18');
 
             if (onCreated) onCreated(data.order);
         } catch (error) {
@@ -570,7 +573,7 @@ export default function CreateOrderModal({ onCreated }) {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                                             Guaranteed Profit (₹) <span className="text-red-500">*</span>
@@ -597,7 +600,23 @@ export default function CreateOrderModal({ onCreated }) {
                                             value={`${calculatedMarginPct}%`}
                                             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/60 text-sm text-slate-600 dark:text-slate-300 font-mono font-bold"
                                         />
-                                        <p className="text-[10px] text-slate-400 mt-1">Auto calculated</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                            GST Rate (%) <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            value={gstRate}
+                                            onChange={(e) => setGstRate(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm focus:outline-hidden focus:border-blue-600 text-slate-900 dark:text-white font-medium"
+                                        >
+                                            <option value="0">0%</option>
+                                            <option value="5">5%</option>
+                                            <option value="12">12%</option>
+                                            <option value="18">18%</option>
+                                            <option value="28">28%</option>
+                                        </select>
                                     </div>
                                 </div>
 

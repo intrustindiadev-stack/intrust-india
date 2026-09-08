@@ -763,11 +763,15 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                         )}
 
                         <div className="flex justify-between items-center">
-                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>SGST</span>
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>
+                                SGST {order.shopping_order_items?.[0]?.gst_percentage ? `(${order.shopping_order_items[0].gst_percentage / 2}%)` : ''}
+                            </span>
                             <span>₹{(billDetails.gstTotal / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>CGST</span>
+                            <span className={isDark ? 'text-white/40' : 'text-slate-500'}>
+                                CGST {order.shopping_order_items?.[0]?.gst_percentage ? `(${order.shopping_order_items[0].gst_percentage / 2}%)` : ''}
+                            </span>
                             <span>₹{(billDetails.gstTotal / 200).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
 
@@ -826,11 +830,11 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                                 </a>
                             )}
                             <a
-                                href="tel:18008890199"
+                                href="tel:18002030052"
                                 className="flex-1 sm:flex-initial px-3 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
                             >
                                 <Phone size={13} />
-                                <span>Toll-Free 1800-889-0199</span>
+                                <span>Toll-Free 1800-203-0052</span>
                             </a>
                         </div>
                     </div>

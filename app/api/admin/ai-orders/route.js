@@ -228,7 +228,8 @@ export async function POST(request) {
             wholesale_price_paise, 
             retail_price_paise, 
             profit_margin_paise,
-            product_image_url
+            product_image_url,
+            gst_rate_percent = 18
         } = body;
 
         if (!product_name || !wholesale_price_paise || !retail_price_paise || !profit_margin_paise) {
@@ -240,15 +241,21 @@ export async function POST(request) {
         const orderNum = 1000 + (count || 0) + 1;
         const fallbackCode = `AI-${orderNum}`;
 
+        const wholesaleNum = Math.round(Number(wholesale_price_paise));
+        const gstRateNum = Number(gst_rate_percent);
+        const gstAmountPaise = Math.round(wholesaleNum * (gstRateNum / 100));
+
         const insertPayload = {
             admin_id: user.id,
             merchant_id: merchant_id || null,
             product_name: product_name.trim(),
             category: category || 'Electronics',
             product_image_url: product_image_url || null,
-            wholesale_price_paise: Math.round(Number(wholesale_price_paise)),
+            wholesale_price_paise: wholesaleNum,
             retail_price_paise: Math.round(Number(retail_price_paise)),
             profit_margin_paise: Math.round(Number(profit_margin_paise)),
+            gst_rate_percent: gstRateNum,
+            gst_amount_paise: gstAmountPaise,
             status: 'PENDING',
             order_code: fallbackCode
         };

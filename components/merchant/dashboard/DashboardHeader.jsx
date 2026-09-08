@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import LiveButton from '@/components/merchant/LiveButton';
 import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownRight, Zap, TrendingUp } from 'lucide-react';
 import AIGrowModal from './AIGrowModal';
 
 /* === STEP 0: AUDIT ===
@@ -152,23 +152,35 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
 
               {/* Operational Status & Toggles */}
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap shrink-0">
+                {/* Store Status Group */}
                 <div className="flex items-center gap-3 sm:gap-4 p-1.5 sm:p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-xs">
                   <LiveButton />
-                  
-                  <div className="flex items-center pl-1 pr-2 border-r border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center pl-1 pr-2">
                     <StoreStatusToggle initialStoreData={merchant} compact={true} />
                   </div>
-          
-                  {/* AI Grow Button */}
+                </div>
+                
+                {/* AI Actions Group */}
+                <div className="flex items-center gap-3 sm:gap-4 p-1.5 sm:p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-xs">
+                  {/* AI Orders Button */}
+                  <button
+                    onClick={() => router.push('/merchant/ai-orders')}
+                    className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm"
+                  >
+                    <Zap className="w-4 h-4" />
+                    AI Orders
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900">
+                      1
+                    </span>
+                  </button>
+                  
+                  {/* AI Grow Button (Clean & Green) */}
                   <button
                     onClick={() => setIsAIGrowModalOpen(true)}
-                    className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-orange-600 dark:text-orange-400 text-xs font-bold hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/50 dark:hover:to-orange-950/50 transition-all shadow-sm group"
+                    className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all shadow-sm"
                   >
-                    <Sparkles className="w-4 h-4 text-orange-500" />
+                    <TrendingUp className="w-4 h-4" />
                     AI Grow
-                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
-                      3
-                    </span>
                   </button>
                 </div>
               </div>

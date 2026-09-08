@@ -3,17 +3,21 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowRight, Loader2, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Loader2, ShieldCheck, CheckCircle2, X } from 'lucide-react';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function OrderCard({ order, onAccepted }) {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showRejectForm, setShowRejectForm] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [isRejecting, setIsRejecting] = useState(false);
     const router = useRouter();
 
     const wholesale = (order.wholesale_price_paise || 0) / 100;
     const retail = (order.retail_price_paise || 0) / 100;
+    const tax = (order.gst_amount_paise || 0) / 100;
     const profit = (order.profit_margin_paise || 0) / 100;
     const profitPct = wholesale > 0 ? ((profit / wholesale) * 100).toFixed(0) : '0';
 
@@ -74,6 +78,37 @@ export default function OrderCard({ order, onAccepted }) {
         }
     };
 
+    const submitReject = async (e) => {
+        e.stopPropagation();
+        if (!rejectReason.trim()) {
+            toast.error('Please provide a reason for rejection');
+            return;
+        }
+
+        setIsRejecting(true);
+        try {
+            const res = await fetch(`/api/merchant/ai-orders/${order.id}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejection_reason: rejectReason })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to reject order');
+            }
+
+            toast.success('Order rejected successfully');
+            setShowRejectForm(false);
+            setRejectReason('');
+            if (onAccepted) onAccepted(order.id); // Trigger refresh
+        } catch (error) {
+            toast.error(error.message || 'An error occurred');
+        } finally {
+            setIsRejecting(false);
+        }
+    };
+
     const handleCardClick = () => {
         router.push(`/merchant/ai-orders/${order.id}`);
     };
@@ -102,6 +137,12 @@ export default function OrderCard({ order, onAccepted }) {
                 return (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
                         • COMPLETED
+                    </span>
+                );
+            case 'REJECTED':
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                        • REJECTED
                     </span>
                 );
             default:
@@ -141,17 +182,23 @@ export default function OrderCard({ order, onAccepted }) {
                 </div>
 
                 {/* Financial Summary */}
-                <div className="flex items-end justify-between py-3 px-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/80 mb-4">
+                <div className="grid grid-cols-3 gap-2 py-3 px-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/80 mb-4 text-left">
                     <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Wholesale Price</span>
-                        <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider">Wholesale</span>
+                        <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
                             ₹{wholesale.toLocaleString('en-IN')}
                         </div>
                     </div>
-                    <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Profit</span>
-                        <div className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                            +₹{profit.toLocaleString('en-IN')} <span className="text-xs">({profitPct}%)</span>
+                    <div className="border-l border-slate-200 dark:border-slate-800 pl-2">
+                        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tax</span>
+                        <div className="text-sm font-black text-rose-500 mt-0.5">
+                            ₹{tax.toLocaleString('en-IN')}
+                        </div>
+                    </div>
+                    <div className="border-l border-slate-200 dark:border-slate-800 pl-2">
+                        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Profit</span>
+                        <div className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            +₹{profit.toLocaleString('en-IN')}
                         </div>
                     </div>
                 </div>
@@ -163,21 +210,52 @@ export default function OrderCard({ order, onAccepted }) {
             </div>
 
             {/* Dynamic Primary CTA */}
-            <div>
+            <div onClick={(e) => e.stopPropagation()}>
                 {order.status === 'PENDING' ? (
-                    <button
-                        onClick={handleAcceptAndPay}
-                        disabled={isProcessing}
-                        className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                        {isProcessing ? (
-                            <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                            <>
-                                Accept & Pay <ArrowRight size={14} />
-                            </>
-                        )}
-                    </button>
+                    showRejectForm ? (
+                        <div className="space-y-3">
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="Reason for rejection..."
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500 transition-all resize-none h-14"
+                                disabled={isRejecting}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowRejectForm(false)}
+                                    disabled={isRejecting}
+                                    className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px]"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitReject}
+                                    disabled={isRejecting || !rejectReason.trim()}
+                                    className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                >
+                                    {isRejecting ? <Loader2 size={12} className="animate-spin" /> : 'Confirm'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowRejectForm(true)}
+                                disabled={isProcessing}
+                                className="flex-1 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-500 font-bold text-[11px] flex items-center justify-center gap-1 transition-colors"
+                            >
+                                <X size={14} /> Reject
+                            </button>
+                            <button
+                                onClick={handleAcceptAndPay}
+                                disabled={isProcessing}
+                                className="flex-[2] py-2.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                            >
+                                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <>Accept <ArrowRight size={14} /></>}
+                            </button>
+                        </div>
+                    )
                 ) : order.status === 'PAYMENT_PENDING' ? (
                     <button
                         onClick={handleAcceptAndPay}
@@ -193,12 +271,24 @@ export default function OrderCard({ order, onAccepted }) {
                         )}
                     </button>
                 ) : (
-                    <button
-                        onClick={handleCardClick}
-                        className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
-                    >
-                        View Details <ArrowRight size={14} />
-                    </button>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={handleCardClick}
+                            className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
+                        >
+                            Details <ArrowRight size={14} />
+                        </button>
+                        {order.invoice_id && (
+                            <a
+                                href={`/payment/sabpaisa/checkout?invoice_id=${order.invoice_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] border border-blue-200/50 dark:border-blue-800/30"
+                            >
+                                Invoice
+                            </a>
+                        )}
+                    </div>
                 )}
             </div>
         </motion.div>

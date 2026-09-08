@@ -14,7 +14,8 @@ import {
     Store,
     Activity,
     PieChart as PieIcon,
-    Package
+    Package,
+    ChevronUp
 } from 'lucide-react';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import { 
@@ -45,9 +46,25 @@ export default function AdminAnalyticsSidebar({
         ? categoryDistribution
         : [];
 
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
+
     return (
         <div className="space-y-5">
-            {/* 1. Order Performance Card */}
+            {/* Mobile Toggle Button */}
+            <button 
+                onClick={() => setIsMobileOpen(!isMobileOpen)}
+                className="w-full xl:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs text-sm font-bold text-slate-900 dark:text-white"
+            >
+                <div className="flex items-center gap-2">
+                    <Activity size={18} className="text-blue-500" />
+                    Analytics & Performance
+                </div>
+                {isMobileOpen ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+            </button>
+
+            {/* Sidebar Content (Hidden on mobile unless opened) */}
+            <div className={`space-y-5 ${isMobileOpen ? 'block' : 'hidden xl:block'}`}>
+                {/* 1. Order Performance Card */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">Order Performance</h3>
@@ -252,6 +269,7 @@ export default function AdminAnalyticsSidebar({
                         <span>No recent order activity yet.</span>
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );
