@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { getAuthUser } from '@/lib/apiAuth';
+import { WalletService } from '@/lib/wallet/walletService';
 
 export async function POST(req, { params }) {
     try {
-        const { id } = params;
+        const { id } = await params;
+        const { user, profile, admin: supabaseAdmin } = await getAuthUser(req);
+
+        if (!user || !['admin', 'super_admin'].includes(profile?.role)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         // 1. Get the transaction and verify it's PENDING
-        const { data: tx, error: txError } = await supabase
+        const { data: tx, error: txError } = await supabaseAdmin
             .from('ai_orders_vault_transactions')
             .select(`
                 *,
@@ -17,37 +23,35 @@ export async function POST(req, { params }) {
             .eq('id', id)
             .single();
 
-        if (txError) throw txError;
+        if (txError || !tx) {
+            return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+        }
+
         if (tx.status !== 'PENDING') {
             return NextResponse.json({ error: 'Transaction is not pending' }, { status: 400 });
         }
 
-        const merchantId = tx.ai_orders_vault.merchant_id;
+        const merchantUserId = tx.ai_orders_vault?.merchant_id;
         const amountPaise = tx.amount_paise;
 
-        // 2. Get merchant to update their main wallet_balance_paise
-        const { data: merchant, error: merchantError } = await supabase
-            .from('merchants')
-            .select('wallet_balance_paise')
-            .eq('id', merchantId)
-            .single();
+        if (!merchantUserId || !amountPaise) {
+            return NextResponse.json({ error: 'Invalid transaction record' }, { status: 400 });
+        }
 
-        if (merchantError) throw merchantError;
+        // 2. Credit merchant's main wallet via WalletService
+        const amountRupees = amountPaise / 100;
+        await WalletService.creditWallet(
+            merchantUserId,
+            amountRupees,
+            id,
+            'ai_orders_vault_withdrawal',
+            `AI Orders Vault withdrawal credit (Tx: ${id})`
+        );
 
-        const newWalletBalance = (merchant.wallet_balance_paise || 0) + amountPaise;
-
-        // 3. Update merchant wallet
-        const { error: updateMerchantError } = await supabase
-            .from('merchants')
-            .update({ wallet_balance_paise: newWalletBalance })
-            .eq('id', merchantId);
-
-        if (updateMerchantError) throw updateMerchantError;
-
-        // 4. Update transaction status to COMPLETED
-        const { error: updateTxError } = await supabase
+        // 3. Update transaction status to COMPLETED
+        const { error: updateTxError } = await supabaseAdmin
             .from('ai_orders_vault_transactions')
-            .update({ status: 'COMPLETED', updated_at: new Date().toISOString() })
+            .update({ status: 'COMPLETED' })
             .eq('id', id);
 
         if (updateTxError) throw updateTxError;
@@ -55,6 +59,7 @@ export async function POST(req, { params }) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error approving withdrawal:', error);
-        return NextResponse.json({ error: 'Failed to approve withdrawal' }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Failed to approve withdrawal' }, { status: 500 });
     }
 }
+

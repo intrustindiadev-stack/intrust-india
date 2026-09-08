@@ -1,26 +1,24 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { getAuthUser } from '@/lib/apiAuth';
 
 export async function POST(request, { params }) {
     try {
-        const { id } = params;
-        const supabase = createRouteHandlerClient({ cookies });
-        const { data: { session } } = await supabase.auth.getSession();
+        const { id } = await params;
+        const { user, profile, admin: supabaseAdmin } = await getAuthUser(request);
 
-        if (!session) {
+        if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const body = await request.json();
         const { rejection_reason } = body;
 
-        if (!rejection_reason) {
+        if (!rejection_reason || !rejection_reason.trim()) {
             return NextResponse.json({ error: 'Rejection reason is required' }, { status: 400 });
         }
 
-        // Verify the order belongs to the merchant and is in a state that can be rejected
-        const { data: order, error: orderError } = await supabase
+        // Verify the order exists
+        const { data: order, error: orderError } = await supabaseAdmin
             .from('ai_orders')
             .select('*')
             .eq('id', id)
@@ -30,7 +28,8 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        if (order.merchant_id !== session.user.id && order.merchant_id !== null) {
+        // Allow rejecting if order is assigned to this merchant or is unassigned (merchant_id is null)
+        if (order.merchant_id && order.merchant_id !== user.id) {
             return NextResponse.json({ error: 'Not authorized to reject this order' }, { status: 403 });
         }
 
@@ -39,11 +38,11 @@ export async function POST(request, { params }) {
         }
 
         // Update the order status and reason
-        const { data: updatedOrder, error: updateError } = await supabase
+        const { data: updatedOrder, error: updateError } = await supabaseAdmin
             .from('ai_orders')
             .update({
                 status: 'REJECTED',
-                rejection_reason: rejection_reason,
+                rejection_reason: rejection_reason.trim(),
                 updated_at: new Date().toISOString()
             })
             .eq('id', id)
@@ -58,6 +57,7 @@ export async function POST(request, { params }) {
         return NextResponse.json({ success: true, order: updatedOrder });
     } catch (error) {
         console.error('API Error (reject order):', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
     }
 }
+

@@ -1,36 +1,26 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { getAuthUser } from '@/lib/apiAuth';
 
-export async function GET() {
+export async function GET(request) {
     try {
-        const supabase = await createServerSupabaseClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const { user, admin: supabaseAdmin } = await getAuthUser(request);
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: merchant } = await supabase
-            .from('merchants')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!merchant) {
-            return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
-        }
-
-        const { data: vault, error } = await supabase
+        const { data: vault, error } = await supabaseAdmin
             .from('ai_orders_vault')
             .select('*')
-            .eq('merchant_id', merchant.id)
-            .single();
+            .eq('merchant_id', user.id)
+            .maybeSingle();
 
         if (error) throw error;
 
-        return NextResponse.json({ vault });
+        return NextResponse.json({ vault: vault || null });
     } catch (error) {
         console.error('Error fetching vault:', error);
         return NextResponse.json({ error: 'Failed to fetch vault details' }, { status: 500 });
     }
 }
+
