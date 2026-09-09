@@ -16,6 +16,7 @@ import {
     Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function AdminWithdrawalsPage() {
     const [withdrawals, setWithdrawals] = useState([]);
@@ -47,6 +48,38 @@ export default function AdminWithdrawalsPage() {
 
     useEffect(() => {
         fetchWithdrawals();
+
+        // Real-time Supabase postgres_changes listener for live instant updates
+        const channel = supabase
+            .channel('admin_withdrawals_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders_vault_transactions' }, (payload) => {
+                fetchWithdrawals(true);
+                if (payload.eventType === 'INSERT' && payload.new?.type === 'WITHDRAWAL' && payload.new?.status === 'PENDING') {
+                    const amt = ((payload.new.amount_paise || 0) / 100).toLocaleString('en-IN');
+                    toast((t) => (
+                        <div className="flex items-center gap-3 py-0.5">
+                            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 border border-amber-200/60 dark:border-amber-800/40">
+                                <Wallet size={16} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="font-semibold text-xs text-slate-900 dark:text-white">New Withdrawal Request</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">₹{amt} awaiting administrative review</p>
+                            </div>
+                        </div>
+                    ), { duration: 5000, id: `withdraw-list-${payload.new.id}` });
+                }
+            })
+            .subscribe();
+
+        // Fallback polling every 30 seconds
+        const interval = setInterval(() => {
+            fetchWithdrawals(true);
+        }, 30000);
+
+        return () => {
+            supabase.removeChannel(channel);
+            clearInterval(interval);
+        };
     }, []);
 
     const handleAction = async (id, action) => {
@@ -62,10 +95,14 @@ export default function AdminWithdrawalsPage() {
             
             if (!res.ok) throw new Error(data.error || `Failed to ${action} withdrawal`);
             
-            toast.success(action === 'approve' ? 'Withdrawal approved! Merchant wallet credited.' : 'Withdrawal rejected. Funds refunded to vault.');
+            toast.success(
+                action === 'approve' 
+                    ? 'Withdrawal approved. Merchant wallet credited successfully.' 
+                    : 'Withdrawal rejected. Funds refunded to merchant vault.'
+            );
             fetchWithdrawals(true);
         } catch (error) {
-            toast.error(error.message || `Error trying to ${action}`);
+            toast.error(error.message || `Unable to ${action} withdrawal request`);
         } finally {
             setProcessingId(null);
         }

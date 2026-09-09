@@ -132,11 +132,11 @@ export default function CreateOrderModal({ onCreated }) {
             if (!res.ok) throw new Error(data.error || 'Upload failed');
 
             setProductImageUrl(data.url);
-            toast.success('Thumbnail uploaded successfully!');
+            toast.success('Thumbnail uploaded successfully.');
         } catch (err) {
             console.error('Thumbnail upload warning:', err);
             // Retain local preview as fallback
-            toast('Thumbnail saved for this order session', { icon: '🖼️' });
+            toast.success('Thumbnail saved for this order session.');
         } finally {
             setIsUploadingImage(false);
         }
@@ -209,7 +209,7 @@ export default function CreateOrderModal({ onCreated }) {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to create AI order');
 
-            toast.success('AI Order pushed live!');
+            toast.success('AI order created and published successfully.');
             setOpen(false);
             // Reset form
             setProductName('');
@@ -221,7 +221,7 @@ export default function CreateOrderModal({ onCreated }) {
 
             if (onCreated) onCreated(data.order);
         } catch (error) {
-            toast.error(error.message || 'Failed to create order');
+            toast.error(error.message || 'Failed to create AI order');
         } finally {
             setIsLoading(false);
         }

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { sendEmail } from '@/lib/email';
+import { aiOrderWithdrawalNotificationTemplate } from '@/lib/email/templates/aiOrderWithdrawalNotification';
+import { notifyMerchantPayoutRequested } from '@/lib/notifications/merchantWhatsapp';
 
 export async function POST(req) {
     try {
@@ -58,6 +61,115 @@ export async function POST(req) {
 
         if (txError) throw txError;
 
+        // 4. Notify Admins about the new withdrawal request
+        const amountRupees = parsedAmountPaise / 100;
+        const formattedAmount = amountRupees.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        // Retrieve merchant details for rich notification context
+        let merchantName = profile?.full_name || 'Merchant';
+        let merchantEmail = profile?.email || '';
+        let merchantPhone = profile?.phone || '';
+
+        try {
+            const { data: merchantRecord } = await supabaseAdmin
+                .from('merchants')
+                .select('business_name, business_email, business_phone')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (merchantRecord) {
+                merchantName = merchantRecord.business_name || merchantName;
+                merchantEmail = merchantRecord.business_email || merchantEmail;
+                merchantPhone = merchantRecord.business_phone || merchantPhone;
+            }
+        } catch (mErr) {
+            console.warn('[Withdrawal API] Could not fetch merchant profile details:', mErr?.message);
+        }
+
+        // Insert in-app notifications for all administrators
+        try {
+            const { data: adminProfiles, error: adminQueryErr } = await supabaseAdmin
+                .from('user_profiles')
+                .select('id, email, phone, role')
+                .in('role', ['admin', 'super_admin']);
+
+            if (!adminQueryErr && adminProfiles?.length > 0) {
+                const adminNotifs = adminProfiles.map((ap) => ({
+                    user_id: ap.id,
+                    title: 'AI Orders: Withdrawal Request 💰',
+                    body: `${merchantName} requested a vault withdrawal of ₹${formattedAmount}. Action required.`,
+                    type: 'warning',
+                    priority: 'HIGH',
+                    reference_type: 'ai_orders_withdrawal',
+                    reference_id: txData.id,
+                    action_url: '/admin/ai-orders/withdrawals',
+                    metadata: {
+                        transaction_id: txData.id,
+                        vault_id: vault.id,
+                        merchant_id: user.id,
+                        merchant_name: merchantName,
+                        amount_paise: parsedAmountPaise,
+                        amount_rupees: amountRupees,
+                    }
+                }));
+
+                const { error: notifErr } = await supabaseAdmin.from('notifications').insert(adminNotifs);
+                if (notifErr) {
+                    console.error('[Withdrawal API] Failed to insert admin notifications:', notifErr.message);
+                }
+            }
+        } catch (adminNotifErr) {
+            console.error('[Withdrawal API] Admin notification error:', adminNotifErr?.message);
+        }
+
+        // Best-effort transactional email alert to administration
+        try {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://intrustindia.com';
+            const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.CONTACT_NOTIFICATION_EMAIL || 'hello@intrustindia.com';
+            const emailTemplate = aiOrderWithdrawalNotificationTemplate({
+                merchantName,
+                merchantEmail,
+                merchantPhone,
+                amountRupees,
+                transactionId: txData.id,
+                vaultId: vault.id,
+                remainingBalanceRupees: newBalance / 100,
+                adminPortalUrl: `${appUrl}/admin/ai-orders/withdrawals`,
+                requestedAt: new Date(),
+            });
+
+            await sendEmail({
+                to: adminEmail,
+                subject: emailTemplate.subject,
+                html: emailTemplate.html,
+                text: emailTemplate.text,
+                sender: 'accounts',
+                replyTo: merchantEmail || undefined,
+                category: 'ai_orders_withdrawal_alert',
+                metadata: {
+                    transaction_id: txData.id,
+                    merchant_id: user.id,
+                    amount_paise: parsedAmountPaise,
+                },
+            });
+        } catch (emailErr) {
+            console.warn('[Withdrawal API] Best-effort admin email alert dispatch skipped/failed:', emailErr?.message);
+        }
+
+        // Best-effort WhatsApp receipt dispatch to merchant
+        try {
+            notifyMerchantPayoutRequested({
+                merchantUserId: user.id,
+                amountRs: amountRupees,
+                source: 'AI Orders Vault',
+            }).catch(() => {});
+        } catch (waErr) {
+            console.warn('[Withdrawal API] WhatsApp receipt dispatch skipped:', waErr?.message);
+        }
+
         return NextResponse.json({ success: true, transaction: txData, new_balance_paise: newBalance });
 
     } catch (error) {
@@ -65,4 +177,5 @@ export async function POST(req) {
         return NextResponse.json({ error: error.message || 'Failed to process withdrawal request' }, { status: 500 });
     }
 }
+
 

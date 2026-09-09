@@ -71,7 +71,7 @@ export default function OrderList({
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to complete order');
 
-            toast.success('Order completed and funds released to Vault!');
+            toast.success('Order completed. Funds released to merchant vault.');
             if (onOrderCompleted) onOrderCompleted(id);
         } catch (error) {
             toast.error(error.message || 'Failed to complete order');

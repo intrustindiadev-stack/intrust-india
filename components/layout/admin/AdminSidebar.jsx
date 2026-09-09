@@ -142,6 +142,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
     const pathname = usePathname();
     const router = useRouter();
     const [takeoverCount, setTakeoverCount] = useState(0);
+    const [pendingWithdrawalsCount, setPendingWithdrawalsCount] = useState(0);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const isSuperAdmin = adminProfile?.role === 'super_admin';
@@ -156,26 +157,42 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
         activeGroupTitle
     });
 
-    // REALTIME TAKEOVER COUNT
+    // REALTIME COUNTS: TAKEOVER & PENDING VAULT WITHDRAWALS
     useEffect(() => {
         const supabase = createClient();
 
-        async function fetchCount() {
-            const { count, error } = await supabase
-                .from('shopping_order_groups')
-                .select('*', { count: 'exact', head: true })
-                .eq('settlement_status', 'admin_takeover');
+        async function fetchCounts() {
+            try {
+                const [{ count: takeover }, { count: withdrawals }] = await Promise.all([
+                    supabase
+                        .from('shopping_order_groups')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('settlement_status', 'admin_takeover'),
+                    supabase
+                        .from('ai_orders_vault_transactions')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('type', 'WITHDRAWAL')
+                        .eq('status', 'PENDING')
+                ]);
 
-            if (!error) setTakeoverCount(count || 0);
+                setTakeoverCount(takeover || 0);
+                setPendingWithdrawalsCount(withdrawals || 0);
+            } catch (err) {
+                console.warn('[AdminSidebar] Error fetching counts:', err);
+            }
         }
 
-        fetchCount();
+        fetchCounts();
 
         const channel = supabase
-            .channel('takeover-count-sync')
+            .channel('admin-sidebar-live-counts')
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'shopping_order_groups', filter: 'settlement_status=eq.admin_takeover' },
-                () => fetchCount()
+                () => fetchCounts()
+            )
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'ai_orders_vault_transactions' },
+                () => fetchCounts()
             )
             .subscribe();
 
@@ -296,6 +313,11 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                                         {item.name === 'Priority Takeovers' && takeoverCount > 0 && (
                                                             <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
                                                                 {takeoverCount}
+                                                            </span>
+                                                        )}
+                                                        {item.name === 'Vault Withdrawals' && pendingWithdrawalsCount > 0 && (
+                                                            <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                                                                {pendingWithdrawalsCount}
                                                             </span>
                                                         )}
                                                     </div>

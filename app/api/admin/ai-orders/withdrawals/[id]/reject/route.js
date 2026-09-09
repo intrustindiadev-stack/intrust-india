@@ -28,7 +28,7 @@ export async function POST(req, { params }) {
         const vaultId = tx.vault_id;
         const { data: vault, error: vaultError } = await supabaseAdmin
             .from('ai_orders_vault')
-            .select('id, balance_paise')
+            .select('id, balance_paise, merchant_id')
             .eq('id', vaultId)
             .single();
 
@@ -56,10 +56,55 @@ export async function POST(req, { params }) {
 
         if (updateTxError) throw updateTxError;
 
+        // 4. Notify merchant about rejection and refund
+        const merchantUserId = vault.merchant_id;
+        const amountRupees = amountPaise / 100;
+        const formattedAmount = amountRupees.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        if (merchantUserId) {
+            try {
+                await supabaseAdmin.from('notifications').insert({
+                    user_id: merchantUserId,
+                    title: 'Vault Withdrawal Rejected ❌',
+                    body: `Your AI Orders Vault withdrawal request of ₹${formattedAmount} was rejected. Funds have been refunded to your vault.`,
+                    type: 'error',
+                    priority: 'HIGH',
+                    reference_type: 'ai_orders_withdrawal',
+                    reference_id: id,
+                    action_url: '/merchant/vault/transactions',
+                    metadata: {
+                        transaction_id: id,
+                        amount_paise: amountPaise,
+                        amount_rupees: amountRupees,
+                        rejected_by: user.id
+                    }
+                });
+            } catch (notifErr) {
+                console.warn('[Reject Withdrawal] Merchant in-app notification error:', notifErr?.message);
+            }
+
+            // Best-effort WhatsApp status alert to merchant
+            try {
+                const { notifyMerchantPayoutStatus } = await import('@/lib/notifications/merchantWhatsapp');
+                notifyMerchantPayoutStatus({
+                    merchantUserId,
+                    amountRs: amountRupees,
+                    status: 'REJECTED',
+                    note: 'Refunded to AI Orders Vault'
+                }).catch(() => {});
+            } catch (waErr) {
+                console.warn('[Reject Withdrawal] Merchant WhatsApp alert error:', waErr?.message);
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error rejecting withdrawal:', error);
         return NextResponse.json({ error: error.message || 'Failed to reject withdrawal' }, { status: 500 });
     }
 }
+
 

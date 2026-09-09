@@ -62,10 +62,51 @@ export async function POST(req, { params }) {
 
         if (updateTxError) throw updateTxError;
 
+        // 4. Notify merchant about approval
+        const formattedAmount = amountRupees.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        try {
+            await supabaseAdmin.from('notifications').insert({
+                user_id: merchantUserId,
+                title: 'Vault Withdrawal Approved ✅',
+                body: `Your AI Orders Vault withdrawal of ₹${formattedAmount} has been approved and credited to your wallet.`,
+                type: 'success',
+                priority: 'HIGH',
+                reference_type: 'ai_orders_withdrawal',
+                reference_id: id,
+                action_url: '/merchant/wallet',
+                metadata: {
+                    transaction_id: id,
+                    amount_paise: amountPaise,
+                    amount_rupees: amountRupees,
+                    approved_by: user.id
+                }
+            });
+        } catch (notifErr) {
+            console.warn('[Approve Withdrawal] Merchant in-app notification error:', notifErr?.message);
+        }
+
+        // Best-effort WhatsApp status alert to merchant
+        try {
+            const { notifyMerchantPayoutStatus } = await import('@/lib/notifications/merchantWhatsapp');
+            notifyMerchantPayoutStatus({
+                merchantUserId,
+                amountRs: amountRupees,
+                status: 'APPROVED',
+                note: 'Credited to InTrust Wallet'
+            }).catch(() => {});
+        } catch (waErr) {
+            console.warn('[Approve Withdrawal] Merchant WhatsApp alert error:', waErr?.message);
+        }
+
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Error approving withdrawal:', error);
         return NextResponse.json({ error: error.message || 'Failed to approve withdrawal' }, { status: 500 });
     }
 }
+
 

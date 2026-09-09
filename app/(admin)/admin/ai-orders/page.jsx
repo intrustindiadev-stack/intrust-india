@@ -88,12 +88,12 @@ export default function AIOrdersAdminPage() {
             if (!res.ok) throw new Error(result.error || `Failed to ${action} withdrawal`);
             toast.success(
                 action === 'approve'
-                    ? '✅ Withdrawal approved — merchant wallet credited!'
-                    : '❌ Withdrawal rejected — funds refunded to vault.'
+                    ? 'Withdrawal approved. Merchant wallet credited successfully.'
+                    : 'Withdrawal rejected. Funds refunded to merchant vault.'
             );
             fetchPendingWithdrawals();
         } catch (error) {
-            toast.error(error.message || `Error: could not ${action} withdrawal`);
+            toast.error(error.message || `Unable to ${action} withdrawal`);
         } finally {
             setWithdrawalProcessingId(null);
         }
@@ -109,8 +109,22 @@ export default function AIOrdersAdminPage() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders' }, () => {
                 fetchOrders(true);
             })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders_vault_transactions' }, () => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders_vault_transactions' }, (payload) => {
                 fetchPendingWithdrawals();
+                if (payload.eventType === 'INSERT' && payload.new?.type === 'WITHDRAWAL' && payload.new?.status === 'PENDING') {
+                    const amt = ((payload.new.amount_paise || 0) / 100).toLocaleString('en-IN');
+                    toast((t) => (
+                        <div className="flex items-center gap-3 py-0.5">
+                            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 border border-amber-200/60 dark:border-amber-800/40">
+                                <Wallet size={16} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="font-semibold text-xs text-slate-900 dark:text-white">New Vault Withdrawal Request</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">₹{amt} awaiting administrative review</p>
+                            </div>
+                        </div>
+                    ), { duration: 5000, id: `withdraw-${payload.new.id}` });
+                }
             })
             .subscribe();
 
@@ -258,10 +272,10 @@ export default function AIOrdersAdminPage() {
             link.click();
             document.body.removeChild(link);
 
-            toast.success(`Exported ${filteredOrders.length} AI orders to CSV!`);
+            toast.success(`Exported ${filteredOrders.length} orders successfully.`);
         } catch (err) {
             console.error('Export error:', err);
-            toast.error('Failed to export CSV');
+            toast.error('Failed to export CSV file');
         }
     };
 

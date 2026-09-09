@@ -204,6 +204,8 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             case 'wallet_adjustment': return 'payments';
             case 'payout_request':
             case 'bank_verification': return 'account_balance';
+            case 'ai_orders_withdrawal':
+            case 'ai_vault_withdrawal': return 'account_balance_wallet';
             case 'udhari_request': return 'request_quote';
             case 'udhari_approved':
             case 'udhari_denied':
@@ -298,6 +300,13 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             case 'payout_request':
                 if (isAdmin) router.push('/admin/payouts');
                 else router.push('/merchant/wallet');
+                break;
+
+            // ── AI Orders Vault Withdrawals ────────────────────────────────────
+            case 'ai_orders_withdrawal':
+            case 'ai_vault_withdrawal':
+                if (isAdmin) router.push('/admin/ai-orders/withdrawals');
+                else router.push('/merchant/vault/transactions');
                 break;
 
             // ── Bank verification ────────────────────────────────────────────
