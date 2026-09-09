@@ -161,6 +161,9 @@ export default function OrderList({
                         const wholesale = order.wholesale_price_paise ? order.wholesale_price_paise / 100 : 0;
                         const retail = order.retail_price_paise ? order.retail_price_paise / 100 : (wholesale * 1.1);
                         const profit = order.profit_margin_paise ? order.profit_margin_paise / 100 : (retail - wholesale);
+                        const gstAmount = order.gst_amount_paise ? order.gst_amount_paise / 100 : 0;
+                        const calculatedGstRate = (wholesale > 0 && gstAmount > 0) ? Math.round((gstAmount / wholesale) * 100) : 18;
+                        const displayGstRate = order.gst_rate_percent || calculatedGstRate;
                         const isSelected = selectedOrders.includes(order.id);
 
                         return (
@@ -242,9 +245,9 @@ export default function OrderList({
                                             </div>
                                         </div>
                                         <div className="border-l border-slate-200 dark:border-slate-700 pl-2">
-                                            <span className="text-[9px] uppercase font-bold text-slate-400">Tax</span>
+                                            <span className="text-[9px] uppercase font-bold text-slate-400">GST ({displayGstRate}%)</span>
                                             <div className="text-xs font-black text-rose-500 mt-0.5">
-                                                ₹{((order.gst_amount_paise || 0) / 100).toLocaleString('en-IN')}
+                                                ₹{gstAmount.toLocaleString('en-IN')}
                                             </div>
                                         </div>
                                         <div className="border-l border-slate-200 dark:border-slate-700 pl-2">
@@ -308,7 +311,7 @@ export default function OrderList({
                                 <th className="px-4 py-3.5 whitespace-nowrap">Merchant</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Wholesale</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Retail</th>
-                                <th className="px-4 py-3.5 whitespace-nowrap">Tax</th>
+                                <th className="px-4 py-3.5 whitespace-nowrap">GST</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Profit</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
                                 <th className="px-4 py-3.5 whitespace-nowrap">Created At</th>
@@ -321,6 +324,9 @@ export default function OrderList({
                                 const retail = order.retail_price_paise ? order.retail_price_paise / 100 : (wholesale * 1.1);
                                 const profit = order.profit_margin_paise ? order.profit_margin_paise / 100 : (retail - wholesale);
                                 const profitPct = wholesale > 0 ? Math.round((profit / wholesale) * 100) : 10;
+                                const gstAmount = order.gst_amount_paise ? order.gst_amount_paise / 100 : 0;
+                                const calculatedGstRate = (wholesale > 0 && gstAmount > 0) ? Math.round((gstAmount / wholesale) * 100) : 18;
+                                const displayGstRate = order.gst_rate_percent || calculatedGstRate;
                                 const dateObj = new Date(order.created_at);
                                 const isSelected = selectedOrders.includes(order.id);
 
@@ -403,8 +409,13 @@ export default function OrderList({
                                         </td>
 
                                         {/* Tax (GST) */}
-                                        <td className="px-4 py-3 font-semibold text-rose-500 whitespace-nowrap">
-                                            ₹{((order.gst_amount_paise || 0) / 100).toLocaleString('en-IN')}
+                                        <td className="px-4 py-3 text-rose-500 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold">₹{gstAmount.toLocaleString('en-IN')}</span>
+                                                <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                                    {displayGstRate}% rate
+                                                </span>
+                                            </div>
                                         </td>
 
                                         {/* Profit */}

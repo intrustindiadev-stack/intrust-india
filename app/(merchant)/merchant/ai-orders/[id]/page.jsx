@@ -535,7 +535,7 @@ export default function MerchantOrderDetailPage({ params }) {
                                         <button
                                             onClick={handlePayNow}
                                             disabled={isProcessing}
-                                            className="flex-1 sm:flex-none px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                            className="flex-1 sm:flex-none px-8 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
                                         >
                                             {isProcessing ? (
                                                 <Loader2 size={18} className="animate-spin" />
@@ -549,12 +549,12 @@ export default function MerchantOrderDetailPage({ params }) {
                                 <button
                                     onClick={handlePayNow}
                                     disabled={isProcessing}
-                                    className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                    className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
                                 >
                                     {isProcessing ? (
                                         <Loader2 size={18} className="animate-spin" />
                                     ) : (
-                                        <>Retry Payment <ArrowRight size={18} /></>
+                                        <>Complete Payment <ArrowRight size={18} /></>
                                     )}
                                 </button>
                             ) : null}

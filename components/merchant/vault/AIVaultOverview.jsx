@@ -36,6 +36,7 @@ import {
     Cell 
 } from 'recharts';
 import toast from 'react-hot-toast';
+import VaultWithdrawModal from '@/components/merchant/ai-orders/VaultWithdrawModal';
 
 // Smooth counting animation component
 function AnimatedCounter({ endValue, duration = 1200 }) {
@@ -132,7 +133,7 @@ export default function AIVaultOverview({
                 { name: 'Available Balance', value: 0, color: '#60a5fa', percent: 0 },
                 { name: 'In Progress (Locked)', value: 0, color: '#2563eb', percent: 0 },
                 { name: 'Total Profit', value: 0, color: '#10b981', percent: 0 },
-                { name: 'Reinvested', value: 0, color: '#cbd5e1', percent: 0 }
+                { name: 'Allocated to Orders', value: 0, color: '#cbd5e1', percent: 0 }
             ];
         }
 
@@ -140,7 +141,7 @@ export default function AIVaultOverview({
             { name: 'Available Balance', value: availableBalance, color: '#60a5fa', percent: Math.round((availableBalance / totalValue) * 100) },
             { name: 'In Progress (Locked)', value: activeInOrders, color: '#2563eb', percent: Math.round((activeInOrders / totalValue) * 100) },
             { name: 'Total Profit', value: totalProfit, color: '#10b981', percent: Math.round((totalProfit / totalValue) * 100) },
-            { name: 'Reinvested', value: totalInvested, color: '#cbd5e1', percent: Math.round((totalInvested / totalValue) * 100) }
+            { name: 'Allocated to Orders', value: totalInvested, color: '#cbd5e1', percent: Math.round((totalInvested / totalValue) * 100) }
         ];
     }, [availableBalance, activeInOrders, totalProfit, totalInvested, totalValue]);
 
@@ -171,9 +172,17 @@ export default function AIVaultOverview({
             } else if (tx.type === 'WITHDRAWAL') {
                 displayType = 'Withdrawal';
                 iconType = 'withdrawal';
-                statusLabel = tx.status === 'COMPLETED' ? 'Credited' : 'Processing';
+                if (tx.status === 'COMPLETED') {
+                    statusLabel = 'Credited';
+                } else if (tx.status === 'PENDING') {
+                    statusLabel = 'Pending Admin Approval';
+                } else if (tx.status === 'REJECTED') {
+                    statusLabel = 'Rejected';
+                } else {
+                    statusLabel = 'Processing';
+                }
             } else if (tx.type === 'INVESTMENT') {
-                displayType = 'Investment';
+                displayType = 'Order Allocation';
                 iconType = 'investment';
                 statusLabel = 'Debited';
             }
@@ -248,18 +257,18 @@ export default function AIVaultOverview({
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setShowWithdrawModal(true)}
-                        className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold shadow-xs transition-all active:scale-95"
+                        className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
                     >
-                        <ArrowUp size={16} className="text-blue-600" />
-                        <span>Withdraw Funds</span>
+                        <Wallet size={16} />
+                        <span>Withdraw to Wallet</span>
                     </button>
 
                     <Link
                         href="/merchant/ai-orders"
-                        className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all active:scale-95"
+                        className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold shadow-xs transition-all active:scale-95"
                     >
                         <RefreshCw size={15} />
-                        <span>Reinvest in AI Orders</span>
+                        <span>Allocate to AI Orders</span>
                     </Link>
                 </div>
             </div>
@@ -316,10 +325,10 @@ export default function AIVaultOverview({
                     </div>
                 </div>
 
-                {/* 2. Total Invested */}
+                {/* 2. Total Allocated Value */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Invested</span>
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Allocated</span>
                         <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                             <Coins size={20} />
                         </div>
@@ -389,7 +398,7 @@ export default function AIVaultOverview({
                             <div className="hidden sm:flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                                 <span className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-xs bg-blue-300" />
-                                    Invested
+                                    Allocated Value
                                 </span>
                                 <span className="flex items-center gap-1.5">
                                     <span className="w-2.5 h-2.5 rounded-xs bg-blue-600" />
@@ -440,7 +449,7 @@ export default function AIVaultOverview({
                                     }} 
                                 />
                                 <Tooltip content={<CustomEarningsTooltip />} />
-                                <Bar dataKey="invested" fill="#93c5fd" radius={[3, 3, 0, 0]} barSize={16} name="Invested" />
+                                <Bar dataKey="invested" fill="#93c5fd" radius={[3, 3, 0, 0]} barSize={16} name="Allocated Value" />
                                 <Bar dataKey="profit" fill="#2563eb" radius={[3, 3, 0, 0]} barSize={16} name="Profit Earned" />
                                 <Line 
                                     type="monotone" 
@@ -579,6 +588,16 @@ export default function AIVaultOverview({
                                                         <Clock size={11} /> Processing
                                                     </span>
                                                 )}
+                                                {tx.status === 'Pending Admin Approval' && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
+                                                        <Clock size={11} /> Pending Admin
+                                                    </span>
+                                                )}
+                                                {tx.status === 'Rejected' && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                                                        <X size={11} /> Rejected
+                                                    </span>
+                                                )}
                                                 {tx.status === 'Debited' && (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
                                                         • Debited
@@ -608,7 +627,7 @@ export default function AIVaultOverview({
                         <div className="space-y-2 text-center sm:text-left flex-1">
                             <h3 className="text-base font-bold text-slate-900 dark:text-white">Keep Growing</h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                Reinvest your balance into new AI Orders and earn higher returns with zero extra effort.
+                                Allocate your balance to new AI Orders and fulfill more demand to grow your business.
                             </p>
                             <div className="pt-1">
                                 <Link
@@ -639,105 +658,17 @@ export default function AIVaultOverview({
                 </div>
             </div>
 
-            {/* Withdrawal Modal */}
-            {showWithdrawModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                                    <ArrowUp size={18} />
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Withdraw Funds</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowWithdrawModal(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-1">
-                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Available For Withdrawal</span>
-                            <div className="text-2xl font-black text-slate-900 dark:text-white">
-                                ₹{availableBalance.toLocaleString('en-IN')}
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleConfirmWithdraw} className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                                    Withdrawal Amount (₹)
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3.5 top-2.5 text-sm font-bold text-slate-400">₹</span>
-                                    <input
-                                        type="number"
-                                        min="100"
-                                        max={availableBalance}
-                                        value={withdrawAmount}
-                                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        placeholder="Enter amount"
-                                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm font-bold text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-600"
-                                    />
-                                </div>
-                                {/* Quick amount chips */}
-                                <div className="flex items-center gap-2 mt-2">
-                                    {[2000, 5000, 10000].map(val => (
-                                        <button
-                                            type="button"
-                                            key={val}
-                                            onClick={() => setWithdrawAmount(val.toString())}
-                                            className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-                                        >
-                                            +₹{val.toLocaleString('en-IN')}
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() => setWithdrawAmount(Math.floor(availableBalance).toString())}
-                                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 hover:bg-blue-100"
-                                    >
-                                        Max
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Payout Destination */}
-                            <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                                        <Building2 size={16} />
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-bold text-slate-900 dark:text-white">Primary Bank Account</div>
-                                        <div className="text-[11px] text-slate-400">HDFC Bank •••• 4892</div>
-                                    </div>
-                                </div>
-                                <span className="text-[11px] font-bold text-emerald-600">Verified</span>
-                            </div>
-
-                            <div className="pt-2 flex items-center justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowWithdrawModal(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isProcessingWithdraw}
-                                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all disabled:opacity-50"
-                                >
-                                    {isProcessingWithdraw ? 'Processing...' : 'Confirm Withdrawal'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* Reusable Unified Withdrawal Modal */}
+            <VaultWithdrawModal
+                isOpen={showWithdrawModal}
+                onClose={() => setShowWithdrawModal(false)}
+                availableBalance={availableBalance}
+                onSuccess={() => {
+                    if (typeof window !== 'undefined') {
+                        setTimeout(() => window.location.reload(), 800);
+                    }
+                }}
+            />
         </div>
     );
 }

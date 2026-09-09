@@ -31,6 +31,24 @@ export default function AIOrderNotificationModal() {
 
         const merchantUserId = merchant.user_id || merchant.id;
 
+        const fetchPendingOrder = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('ai_orders')
+                    .select('*')
+                    .eq('status', 'PENDING')
+                    .or(`merchant_id.eq.${merchantUserId},merchant_id.is.null`)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+                
+                if (data) setNewOrder(data);
+            } catch (err) {
+                console.error('Error fetching pending AI order:', err);
+            }
+        };
+        fetchPendingOrder();
+
         // Subscribe to real-time AI orders insertions & updates targeted to this merchant
         const channel = supabase
             .channel(`ai_order_modal_${merchantUserId}`)
@@ -324,7 +342,7 @@ export default function AIOrderNotificationModal() {
                                     type="button"
                                     onClick={handleAcceptAndPay}
                                     disabled={isAccepting}
-                                    className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                                    className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50"
                                 >
                                     {isAccepting ? (
                                         <Loader2 size={15} className="animate-spin" />
