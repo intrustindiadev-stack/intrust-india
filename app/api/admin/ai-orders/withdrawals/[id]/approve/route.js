@@ -14,12 +14,7 @@ export async function POST(req, { params }) {
         // 1. Get the transaction and verify it's PENDING
         const { data: tx, error: txError } = await supabaseAdmin
             .from('ai_orders_vault_transactions')
-            .select(`
-                *,
-                ai_orders_vault (
-                    merchant_id
-                )
-            `)
+            .select('*')
             .eq('id', id)
             .single();
 
@@ -31,7 +26,18 @@ export async function POST(req, { params }) {
             return NextResponse.json({ error: 'Transaction is not pending' }, { status: 400 });
         }
 
-        const merchantUserId = tx.ai_orders_vault?.merchant_id;
+        // Fetch associated vault to retrieve merchant_id
+        const { data: vault, error: vaultError } = await supabaseAdmin
+            .from('ai_orders_vault')
+            .select('id, merchant_id')
+            .eq('id', tx.vault_id)
+            .single();
+
+        if (vaultError || !vault) {
+            return NextResponse.json({ error: 'Associated vault not found' }, { status: 404 });
+        }
+
+        const merchantUserId = vault.merchant_id;
         const amountPaise = tx.amount_paise;
 
         if (!merchantUserId || !amountPaise) {

@@ -3,6 +3,7 @@
 import React from 'react';
 import OrderCard from './OrderCard';
 import { PackageOpen } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 
 export default function OrderBoard({ orders, onAccepted, activeTab = 'ALL' }) {
     if (!orders || orders.length === 0) {
@@ -25,9 +26,11 @@ export default function OrderBoard({ orders, onAccepted, activeTab = 'ALL' }) {
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {orders.map(order => (
-                <OrderCard key={order.id} order={order} onAccepted={onAccepted} />
-            ))}
+            <AnimatePresence mode="popLayout">
+                {orders.map(order => (
+                    <OrderCard key={order.id} order={order} onAccepted={onAccepted} />
+                ))}
+            </AnimatePresence>
         </div>
     );
 }

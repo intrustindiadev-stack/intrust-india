@@ -264,7 +264,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                         Sign In
                                     </Link>
                                     <Link
-                                        href="/register"
+                                        href="/signup"
                                         className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-[11px] font-bold text-center transition-colors border border-slate-200 dark:border-outline-variant/20"
                                     >
                                         Sign Up
@@ -495,7 +495,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                     <span>Login</span>
                                 </Link>
                                 <Link
-                                    href="/register"
+                                    href="/signup"
                                     className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-xs font-bold transition-all border border-slate-200/60 dark:border-outline-variant/20"
                                 >
                                     Sign Up
@@ -668,7 +668,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                                         Sign In
                                                     </Link>
                                                     <Link
-                                                        href="/register"
+                                                        href="/signup"
                                                         className="flex-1 py-1.5 rounded-xl bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-xs font-bold text-center"
                                                     >
                                                         Sign Up

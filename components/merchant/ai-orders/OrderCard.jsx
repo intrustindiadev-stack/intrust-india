@@ -1,9 +1,7 @@
-'use client';
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { ArrowRight, Loader2, ShieldCheck, CheckCircle2, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Loader2, ShieldCheck, CheckCircle2, X, XCircle, Sparkles } from 'lucide-react';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -13,17 +11,21 @@ export default function OrderCard({ order, onAccepted }) {
     const [showRejectForm, setShowRejectForm] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
+    const [actionState, setActionState] = useState(null); // 'accepting' | 'rejected'
     const router = useRouter();
 
     const wholesale = (order.wholesale_price_paise || 0) / 100;
     const retail = (order.retail_price_paise || 0) / 100;
     const tax = (order.gst_amount_paise || 0) / 100;
+    const calculatedGstRate = (wholesale > 0 && tax > 0) ? Math.round((tax / wholesale) * 100) : 18;
+    const displayGstRate = order.gst_rate_percent || calculatedGstRate;
     const profit = (order.profit_margin_paise || 0) / 100;
     const profitPct = wholesale > 0 ? ((profit / wholesale) * 100).toFixed(0) : '0';
 
     const handleAcceptAndPay = async (e) => {
         e.stopPropagation();
         setIsProcessing(true);
+        setActionState('accepting');
         try {
             const clientTxnId = `AIO_${Date.now()}_${order.id.substring(0, 8)}`;
 
@@ -72,6 +74,7 @@ export default function OrderCard({ order, onAccepted }) {
 
             if (onAccepted) onAccepted(order.id);
         } catch (error) {
+            setActionState(null);
             toast.error(error.message || 'Payment initiation failed');
         } finally {
             setIsProcessing(false);
@@ -98,10 +101,13 @@ export default function OrderCard({ order, onAccepted }) {
                 throw new Error(data.error || 'Failed to reject order');
             }
 
+            setActionState('rejected');
             toast.success('Order rejected successfully');
             setShowRejectForm(false);
             setRejectReason('');
-            if (onAccepted) onAccepted(order.id); // Trigger refresh
+            setTimeout(() => {
+                if (onAccepted) onAccepted(order.id);
+            }, 700);
         } catch (error) {
             toast.error(error.message || 'An error occurred');
         } finally {
@@ -190,7 +196,7 @@ export default function OrderCard({ order, onAccepted }) {
                         </div>
                     </div>
                     <div className="border-l border-slate-200 dark:border-slate-800 pl-2">
-                        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tax</span>
+                        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider">GST ({displayGstRate}%)</span>
                         <div className="text-sm font-black text-rose-500 mt-0.5">
                             ₹{tax.toLocaleString('en-IN')}
                         </div>
@@ -209,35 +215,57 @@ export default function OrderCard({ order, onAccepted }) {
                 </div>
             </div>
 
-            {/* Dynamic Primary CTA */}
+            {/* Dynamic Primary CTA with Animations */}
             <div onClick={(e) => e.stopPropagation()}>
-                {order.status === 'PENDING' ? (
+                {actionState === 'rejected' ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/50 flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400"
+                    >
+                        <XCircle size={14} className="text-rose-500" />
+                        <span>Order Rejected</span>
+                    </motion.div>
+                ) : actionState === 'accepting' ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="py-2.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                    >
+                        <Loader2 size={14} className="animate-spin text-emerald-600" />
+                        <span>Securing & Redirecting...</span>
+                    </motion.div>
+                ) : order.status === 'PENDING' ? (
                     showRejectForm ? (
-                        <div className="space-y-3">
+                        <motion.div 
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-3"
+                        >
                             <textarea
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
                                 placeholder="Reason for rejection..."
-                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500 transition-all resize-none h-14"
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-rose-500 transition-all resize-none h-14"
                                 disabled={isRejecting}
                             />
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setShowRejectForm(false)}
                                     disabled={isRejecting}
-                                    className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px]"
+                                    className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={submitReject}
                                     disabled={isRejecting || !rejectReason.trim()}
-                                    className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all active:scale-95"
                                 >
                                     {isRejecting ? <Loader2 size={12} className="animate-spin" /> : 'Confirm'}
                                 </button>
                             </div>
-                        </div>
+                        </motion.div>
                     ) : (
                         <div className="flex gap-2">
                             <button
@@ -250,26 +278,69 @@ export default function OrderCard({ order, onAccepted }) {
                             <button
                                 onClick={handleAcceptAndPay}
                                 disabled={isProcessing}
-                                className="flex-[2] py-2.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                                className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
                             >
-                                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <>Accept <ArrowRight size={14} /></>}
+                                {isProcessing ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <>Accept <ArrowRight size={14} /></>
+                                )}
                             </button>
                         </div>
                     )
                 ) : order.status === 'PAYMENT_PENDING' ? (
-                    <button
-                        onClick={handleAcceptAndPay}
-                        disabled={isProcessing}
-                        className="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                        {isProcessing ? (
-                            <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                            <>
-                                Complete Payment <ArrowRight size={14} />
-                            </>
-                        )}
-                    </button>
+                    showRejectForm ? (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-3"
+                        >
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="Reason for rejection..."
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-rose-500 transition-all resize-none h-14"
+                                disabled={isRejecting}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowRejectForm(false)}
+                                    disabled={isRejecting}
+                                    className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitReject}
+                                    disabled={isRejecting || !rejectReason.trim()}
+                                    className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all active:scale-95"
+                                >
+                                    {isRejecting ? <Loader2 size={12} className="animate-spin" /> : 'Confirm'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowRejectForm(true)}
+                                disabled={isProcessing}
+                                className="flex-1 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-500 font-bold text-[11px] flex items-center justify-center gap-1 transition-colors"
+                            >
+                                <X size={14} /> Reject
+                            </button>
+                            <button
+                                onClick={handleAcceptAndPay}
+                                disabled={isProcessing}
+                                className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+                            >
+                                {isProcessing ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <>Complete Payment <ArrowRight size={14} /></>
+                                )}
+                            </button>
+                        </div>
+                    )
                 ) : (
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button

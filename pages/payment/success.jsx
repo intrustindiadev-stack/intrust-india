@@ -20,6 +20,18 @@ const getConfig = (txnId, transaction, userRole) => {
     const isUdhari = type === 'UDHARI_PAYMENT';
     const isMerchantLockin = txnId?.startsWith('LKN_') || type === 'MERCHANT_LOCKIN';
     const isMerchantAiGrow = txnId?.startsWith('AIG_') || type === 'MERCHANT_AIGROW';
+    const isAiOrder = txnId?.startsWith('AIO_') || type === 'AI_ORDER';
+
+    if (isAiOrder) return {
+        icon: <CheckCircle size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#059669',
+        title: 'AI Order Accepted! 🚀',
+        subtitle: 'Wholesale allocation paid and confirmed! Your high-demand product is now active in your AI Orders pipeline.',
+        redirectTo: '/merchant/ai-orders',
+        redirectDelay: 3500,
+        redirectLabel: 'Go to AI Orders',
+        showConfetti: true,
+    };
 
     if (isMerchantSub) return {
         icon: <Star size={48} className="text-white" strokeWidth={2.5} />,

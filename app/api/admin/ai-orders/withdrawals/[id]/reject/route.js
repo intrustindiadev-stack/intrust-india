@@ -13,13 +13,7 @@ export async function POST(req, { params }) {
         // 1. Get the transaction and verify it's PENDING
         const { data: tx, error: txError } = await supabaseAdmin
             .from('ai_orders_vault_transactions')
-            .select(`
-                *,
-                ai_orders_vault (
-                    id,
-                    balance_paise
-                )
-            `)
+            .select('*')
             .eq('id', id)
             .single();
 
@@ -31,8 +25,18 @@ export async function POST(req, { params }) {
             return NextResponse.json({ error: 'Transaction is not pending' }, { status: 400 });
         }
 
-        const vaultId = tx.ai_orders_vault?.id;
-        const currentVaultBalance = tx.ai_orders_vault?.balance_paise || 0;
+        const vaultId = tx.vault_id;
+        const { data: vault, error: vaultError } = await supabaseAdmin
+            .from('ai_orders_vault')
+            .select('id, balance_paise')
+            .eq('id', vaultId)
+            .single();
+
+        if (vaultError || !vault) {
+            return NextResponse.json({ error: 'Vault not found' }, { status: 404 });
+        }
+
+        const currentVaultBalance = vault.balance_paise || 0;
         const amountPaise = tx.amount_paise;
 
         // 2. Refund the amount back to the vault
