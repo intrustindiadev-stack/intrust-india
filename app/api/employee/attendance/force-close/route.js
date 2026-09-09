@@ -21,10 +21,14 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
+    // Also run auto-absent for unclocked active employees
+    const { data: autoAbsentData } = await admin.rpc('auto_mark_absent_attendance');
+
     const response = NextResponse.json({
       success: true,
-      message: 'Stale shifts reconciled automatically',
-      closed_count: closedCount || 0
+      message: 'Stale shifts reconciled automatically and auto-absent processed',
+      closed_count: closedCount || 0,
+      auto_absent: autoAbsentData || null
     }, { status: 200 });
 
     response.headers.set('Cache-Control', 'no-store, max-age=0');

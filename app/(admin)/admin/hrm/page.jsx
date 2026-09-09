@@ -157,13 +157,13 @@ export default async function AdminHRMPage() {
                             <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Career Apps</p>
                         </div>
                     </Link>
-                    <Link href="/admin/payouts" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
+                    <Link href="/admin/hrm/salary" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all group">
                         <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <DollarSign size={18} />
                         </div>
                         <div className="flex-1">
-                            <h3 className="font-bold text-gray-900 text-sm">Payroll</h3>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Salary & Payouts</p>
+                            <h3 className="font-bold text-gray-900 text-sm">HRM Payroll</h3>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-0.5">Salary Overview</p>
                         </div>
                     </Link>
                 </div>

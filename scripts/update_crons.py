@@ -17,6 +17,9 @@ CRONS_TEMPLATE = """
 
 # Merchant Investment Maturity - Daily at 12:00 IST (06:30 UTC)
 30 6 * * * intrustindia curl -s -X GET https://intrustindia.com/api/cron/investment-maturity -H "Authorization: Bearer {cron_secret}" >> /var/log/intrust-cron.log 2>&1
+
+# HRM Attendance Cutoff & Auto-Absent - Daily at 04:00 IST (22:30 UTC previous day)
+30 22 * * * intrustindia curl -s -X GET https://intrustindia.com/api/cron/auto-absent -H "Authorization: Bearer {cron_secret}" >> /var/log/intrust-cron.log 2>&1
 """
 
 def main():

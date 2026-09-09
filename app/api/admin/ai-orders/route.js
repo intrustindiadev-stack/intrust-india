@@ -1,5 +1,6 @@
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+import { notifyMerchantAiOrderAssigned } from '@/lib/notifications/merchantWhatsapp';
 
 function formatTimeAgo(dateString) {
     if (!dateString) return 'Just now';
@@ -267,6 +268,21 @@ export async function POST(request) {
             .single();
 
         if (error) throw error;
+
+        // Additive WhatsApp notification to the assigned merchant (non-blocking)
+        if (data.merchant_id) {
+            try {
+                await notifyMerchantAiOrderAssigned({
+                    orderId: data.id,
+                    merchantUserId: data.merchant_id,
+                    orderCode: data.order_code,
+                    wholesalePricePaise: data.wholesale_price_paise,
+                    profitMarginPaise: data.profit_margin_paise
+                });
+            } catch (notifyErr) {
+                console.error('[AI Order Create] WhatsApp notification failed (non-blocking):', notifyErr);
+            }
+        }
 
         return NextResponse.json({ order: data }, { status: 201 });
     } catch (error) {

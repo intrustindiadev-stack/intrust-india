@@ -45,7 +45,11 @@ export async function POST(request, { params }) {
         const body = await request.json().catch(() => ({}));
         const notificationType = body.notificationType || 'INVOICE_RESENT';
         const channel = body.channel || 'EMAIL';
-        const recipient = body.recipient ? String(body.recipient).trim() : null;
+        // Enforce that recipient phone numbers must come from trusted invoice data.
+        // Do not accept arbitrary recipient phone numbers from the browser.
+        const recipient = channel === 'WHATSAPP' 
+            ? null 
+            : (body.recipient ? String(body.recipient).trim() : null);
 
         const ALLOWED_TYPES = ['INVOICE_CREATED', 'INVOICE_RESENT', 'PAYMENT_SUCCESS', 'PARTIAL_PAYMENT', 'PAYMENT_FAILED', 'DUE_SOON', 'OVERDUE'];
         const ALLOWED_CHANNELS = ['EMAIL', 'WHATSAPP'];
@@ -58,14 +62,9 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: `Invalid notification channel: ${channel}` }, { status: 400 });
         }
 
-        // Validate recipient format if explicitly overridden
-        if (recipient) {
-            if (channel === 'EMAIL' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-                return NextResponse.json({ error: 'Invalid recipient email format' }, { status: 400 });
-            }
-            if (channel === 'WHATSAPP' && !/^\+?[0-9]{10,15}$/.test(recipient.replace(/[\s-]/g, ''))) {
-                return NextResponse.json({ error: 'Invalid recipient phone number format' }, { status: 400 });
-            }
+        // Validate recipient format if explicitly overridden (EMAIL only)
+        if (recipient && channel === 'EMAIL' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+            return NextResponse.json({ error: 'Invalid recipient email format' }, { status: 400 });
         }
 
         // Eligibility validation
@@ -94,15 +93,27 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: result.reason }, { status: 429 });
         }
 
-        if (!result.success && result.skipped) {
-            return NextResponse.json({ error: result.reason }, { status: 400 });
+        if (!result.success) {
+            if (result.skipped) {
+                return NextResponse.json({ error: result.reason }, { status: 400 });
+            }
+            // Sanitize provider errors so technical details or tokens are not exposed
+            let safeError = result.error || 'Failed to dispatch notification.';
+            if (/template/i.test(safeError) && (/not found/i.test(safeError) || /unapproved/i.test(safeError) || /does not exist/i.test(safeError))) {
+                safeError = 'WhatsApp template is pending approval or not configured in OmniFlow.';
+            } else if (safeError.includes('{') || safeError.includes('token') || safeError.includes('http')) {
+                safeError = 'WhatsApp provider temporarily unavailable. Please try again later.';
+            }
+            return NextResponse.json({ error: safeError }, { status: 500 });
         }
 
         return NextResponse.json({
             success: true,
             notificationId: result.notificationId,
             simulated: result.simulated || false,
-            message: `Notification (${notificationType}) queued for dispatch via ${channel}`
+            message: channel === 'WHATSAPP' 
+                ? 'Invoice sent via InTrust WhatsApp.' 
+                : `Notification (${notificationType}) queued for dispatch via ${channel}`
         });
 
     } catch (err) {

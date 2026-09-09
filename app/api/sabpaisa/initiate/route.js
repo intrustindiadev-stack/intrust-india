@@ -15,6 +15,7 @@ import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 import { isTopupUdf1, WALLET_TOPUP_FALLBACK_MOBILE } from '@/lib/sabpaisa/topupFallback';
 import { normalizePayerMobile, DENIED_PAYER_MOBILES } from '@/lib/merchant/payerContactRules';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { notifyMerchantAiOrderAssigned } from '@/lib/notifications/merchantWhatsapp';
 import crypto from 'crypto';
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -299,7 +300,7 @@ export async function POST(request) {
             // udf2 = ai_orders.id
             const { data: order, error: orderErr } = await supabaseAdmin
                 .from('ai_orders')
-                .select('wholesale_price_paise, status, merchant_id')
+                .select('id, order_code, wholesale_price_paise, profit_margin_paise, status, merchant_id')
                 .eq('id', udf2)
                 .single();
                 
@@ -326,6 +327,19 @@ export async function POST(request) {
                 
             if (lockErr) {
                 return failResponse(409, 'Failed to lock AI order for payment.', correlationId, lockErr);
+            }
+
+            // Additive WhatsApp notification to the assigned merchant (non-blocking)
+            try {
+                await notifyMerchantAiOrderAssigned({
+                    orderId: order.id || udf2,
+                    merchantUserId: user.id,
+                    orderCode: order.order_code,
+                    wholesalePricePaise: order.wholesale_price_paise,
+                    profitMarginPaise: order.profit_margin_paise
+                });
+            } catch (notifyErr) {
+                console.error('[AI Order SabPaisa Initiate] WhatsApp notification failed (non-blocking):', notifyErr);
             }
             
             canonicalAmountPaise = order.wholesale_price_paise;

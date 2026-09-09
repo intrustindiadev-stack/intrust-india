@@ -48,6 +48,7 @@ import {
     Target,
     MessageSquare,
     Wallet,
+    DollarSign,
 } from 'lucide-react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { displayEmail } from '@/lib/auth';
@@ -106,6 +107,7 @@ const navigationGroups = [
             { name: 'Communication Logs', href: '/admin/crm/communications', icon: MessageSquare },
             { name: 'Lead Distribution', href: '/admin/crm/distribution', icon: Network },
             { name: 'HRM Overview', href: '/admin/hrm', icon: UserCheck },
+            { name: 'HRM Payroll', href: '/admin/hrm/salary', icon: DollarSign },
             { name: 'HRM Incentives', href: '/admin/hrm/incentives', icon: Gift },
         ]
     },

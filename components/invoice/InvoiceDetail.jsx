@@ -44,6 +44,7 @@ export default function InvoiceDetail({ invoiceId, basePath = '/admin' }) {
     const [sendChannel, setSendChannel] = useState('EMAIL');
     const [customRecipient, setCustomRecipient] = useState('');
     const [sendingNotif, setSendingNotif] = useState(false);
+    const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
     const [retryingId, setRetryingId] = useState(null);
 
     const fetchDetail = async () => {
@@ -114,16 +115,42 @@ export default function InvoiceDetail({ invoiceId, basePath = '/admin' }) {
         }
     };
 
-    const handleWhatsAppShare = () => {
-        if (!data?.invoice) return;
+    const handleInTrustWhatsAppSend = async () => {
+        if (!data?.invoice || sendingWhatsApp) return;
         const inv = data.invoice;
-        const amountDue = Math.max(0, (inv.grand_total_paise || 0) - (inv.amount_paid_paise || 0));
-        const payableStr = fmt(amountDue > 0 ? amountDue : inv.grand_total_paise);
-        const custName = inv.customer_snapshot?.name || 'Customer';
-        const url = `${process.env.NEXT_PUBLIC_BASE_URL || window.location.origin}/pay/invoice/${inv.public_payment_token}`;
+        if (inv.status === 'CANCELLED' || inv.status === 'VOID') {
+            toast.error('Cannot send notification for cancelled or void invoice');
+            return;
+        }
 
-        const msg = `Dear ${custName},\n\nPlease find your Intrust India Invoice #${inv.invoice_number} for ₹${payableStr}.\n\nYou can view and securely pay online here:\n${url}\n\nThank you,\nIntrust India`;
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+        const notifType = inv.status === 'PAID' 
+            ? 'PAYMENT_SUCCESS' 
+            : (inv.status === 'PARTIALLY_PAID' ? 'DUE_SOON' : 'INVOICE_RESENT');
+
+        setSendingWhatsApp(true);
+        try {
+            const res = await fetch(`/api/invoices/management/${invoiceId}/notify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    notificationType: notifType,
+                    channel: 'WHATSAPP'
+                })
+            });
+
+            const json = await res.json();
+            if (res.ok && json.success) {
+                toast.success('Invoice sent via InTrust WhatsApp.');
+                await fetchDetail();
+            } else {
+                toast.error(json.error || 'Failed to send invoice via InTrust WhatsApp');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Connection error sending invoice via WhatsApp');
+        } finally {
+            setSendingWhatsApp(false);
+        }
     };
 
     const handleSendNotification = async (e) => {
@@ -137,13 +164,13 @@ export default function InvoiceDetail({ invoiceId, basePath = '/admin' }) {
                 body: JSON.stringify({
                     notificationType: sendType,
                     channel: sendChannel,
-                    recipient: customRecipient.trim() || undefined
+                    recipient: sendChannel === 'EMAIL' ? (customRecipient.trim() || undefined) : undefined
                 })
             });
 
             const json = await res.json();
             if (res.ok && json.success) {
-                toast.success(json.message || 'Notification queued successfully');
+                toast.success(json.message || (sendChannel === 'WHATSAPP' ? 'Invoice sent via InTrust WhatsApp.' : 'Notification queued successfully'));
                 setShowSendModal(false);
                 await fetchDetail();
             } else {
@@ -317,13 +344,26 @@ export default function InvoiceDetail({ invoiceId, basePath = '/admin' }) {
                         <Copy size={14} /> {copied ? 'Copied Link' : 'Copy Link'}
                     </button>
 
-                    <button 
-                        onClick={handleWhatsAppShare}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs transition-colors border border-emerald-200"
-                        title="Share on WhatsApp"
-                    >
-                        <MessageSquare size={14} /> WhatsApp
-                    </button>
+                    {invoice.status !== 'CANCELLED' && invoice.status !== 'VOID' && (
+                        <button 
+                            onClick={handleInTrustWhatsAppSend}
+                            disabled={sendingWhatsApp}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs transition-colors border border-emerald-200 disabled:opacity-50"
+                            title="Send invoice via official InTrust WhatsApp Business number"
+                        >
+                            {sendingWhatsApp ? (
+                                <>
+                                    <Loader2 size={14} className="animate-spin text-emerald-700" />
+                                    <span>Sending via InTrust WhatsApp...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <MessageSquare size={14} />
+                                    <span>Send via InTrust WhatsApp</span>
+                                </>
+                            )}
+                        </button>
+                    )}
 
                     {invoice.status === 'ISSUED' && (
                         <button
@@ -852,17 +892,33 @@ export default function InvoiceDetail({ invoiceId, basePath = '/admin' }) {
                                 <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                                     Recipient {sendChannel === 'EMAIL' ? 'Email Address' : 'Mobile Number'}
                                 </label>
-                                <input
-                                    type={sendChannel === 'EMAIL' ? 'email' : 'tel'}
-                                    required
-                                    value={customRecipient}
-                                    onChange={(e) => setCustomRecipient(e.target.value)}
-                                    placeholder={sendChannel === 'EMAIL' ? 'customer@example.com' : '9876543210'}
-                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
-                                />
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                    Defaults to customer snapshot contact details.
-                                </p>
+                                {sendChannel === 'WHATSAPP' ? (
+                                    <div className="space-y-1.5">
+                                        <input
+                                            type="tel"
+                                            readOnly
+                                            value={invoice.customer_snapshot?.phone ? `+91 ${invoice.customer_snapshot.phone.replace(/\D/g, '').slice(-10)}` : 'No phone registered'}
+                                            className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 cursor-not-allowed outline-none"
+                                        />
+                                        <p className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                                            <CheckCircle2 size={11} /> Sent from official InTrust WhatsApp Business number to customer registered phone.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={customRecipient}
+                                            onChange={(e) => setCustomRecipient(e.target.value)}
+                                            placeholder="customer@example.com"
+                                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">
+                                            Defaults to customer snapshot email address.
+                                        </p>
+                                    </>
+                                )}
                             </div>
 
                             {/* Action Buttons */}
