@@ -12,8 +12,7 @@
  * 7. India Standard Time (IST) boundaries are correctly applied regardless of host timezone.
  * 8. Coupon profit and AI order profit remain unaffected.
  */
-
-import { getTodayISTBoundaries, istDateKey } from '../lib/utils/dateIst';
+import { getTodayISTBoundaries, istDateKey } from '../lib/utils/dateIst.js';
 
 describe("Merchant Dashboard Today's Profit Calculation", () => {
     const CURRENT_MERCHANT_ID = '612b1cc3-403e-4093-b8d1-f1c01b5b4c5f';
