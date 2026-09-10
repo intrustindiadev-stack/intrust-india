@@ -1,28 +1,66 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMerchant } from '@/hooks/useMerchant';
 import { supabase } from '@/lib/supabaseClient';
 import OrderBoard from '@/components/merchant/ai-orders/OrderBoard';
 import AIOrderNotificationModal from '@/components/merchant/ai-orders/AIOrderNotificationModal';
 import ProductThumbnail from '@/components/ai-orders/ProductThumbnail';
 import VaultWithdrawModal from '@/components/merchant/ai-orders/VaultWithdrawModal';
+import MerchantAIOrdersKPIs from '@/components/merchant/ai-orders/MerchantAIOrdersKPIs';
 import { Zap, ShieldCheck, ArrowRight, Wallet, RefreshCw, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function AIOrdersMerchantPage() {
+function AIOrdersMerchantContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const { merchant } = useMerchant();
     const [orders, setOrders] = useState([]);
     const [counts, setCounts] = useState({ total: 0, pending: 0, paymentPending: 0, inProgress: 0, completed: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState('ALL');
+    
+    // Initialize activeTab from URL search param if present
+    const initialTab = searchParams?.get('tab')?.toUpperCase();
+    const validTabs = ['ALL', 'PENDING', 'PAYMENT_PENDING', 'IN_PROGRESS', 'COMPLETED'];
+    const [activeTab, setActiveTab] = useState(validTabs.includes(initialTab) ? initialTab : 'ALL');
     const [vault, setVault] = useState(null);
-    const [isBalanceRevealed, setIsBalanceRevealed] = useState(false);
     
     // Withdrawal modal state
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+
+    // Sync tab when searchParams change externally (e.g. back/forward navigation or redirected link)
+    useEffect(() => {
+        const tabParam = searchParams?.get('tab')?.toUpperCase();
+        if (tabParam && validTabs.includes(tabParam)) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
+
+    const handleSelectTab = (tabKey, shouldScroll = true) => {
+        setActiveTab(tabKey);
+        // Update URL query string without reloading page
+        if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            if (tabKey === 'ALL') {
+                url.searchParams.delete('tab');
+            } else {
+                url.searchParams.set('tab', tabKey);
+            }
+            window.history.pushState({}, '', url.toString());
+        }
+
+        if (shouldScroll) {
+            setTimeout(() => {
+                const target = document.getElementById('orders-section');
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 50);
+        }
+    };
 
     const fetchVault = async () => {
         try {
@@ -91,8 +129,6 @@ export default function AIOrdersMerchantPage() {
     
     const availableBalance = (vault?.balance_paise != null ? vault.balance_paise / 100 : 0);
 
-
-
     const tabs = [
         { key: 'ALL', label: 'All', count: counts.total || orders.length },
         { key: 'PENDING', label: 'Pending', count: counts.pending },
@@ -102,11 +138,7 @@ export default function AIOrdersMerchantPage() {
     ];
 
     const handleViewAndAcceptHero = () => {
-        if (hasPending) {
-            setActiveTab('PENDING');
-            const target = document.getElementById('orders-section');
-            if (target) target.scrollIntoView({ behavior: 'smooth' });
-        }
+        handleSelectTab('PENDING', true);
     };
 
     return (
@@ -173,67 +205,14 @@ export default function AIOrdersMerchantPage() {
                 </div>
             </div>
 
-            {/* Merchant Vault Available Balance */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div 
-                    onClick={() => !isBalanceRevealed && setIsBalanceRevealed(true)}
-                    className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between relative transition-all hover:shadow-md cursor-pointer select-none group"
-                >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            <span>Available Balance</span>
-                        </div>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                            <Wallet size={20} />
-                        </div>
-                    </div>
-
-                    <div className="my-3">
-                        {!isBalanceRevealed ? (
-                            <div className="space-y-1">
-                                <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-200 tracking-widest font-mono">
-                                    ₹ • • • • •
-                                </div>
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70 group-hover:bg-emerald-100 transition-colors">
-                                    Tap to reveal
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-between">
-                                <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                                    ₹{Math.round(availableBalance).toLocaleString('en-IN')}
-                                </div>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsBalanceRevealed(false);
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                    title="Hide balance"
-                                >
-                                    Hide
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <button 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowWithdrawModal(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-3 py-1.5 rounded-lg transition-colors"
-                        >
-                            <Wallet size={13} />
-                            <span>Withdraw to Wallet</span>
-                        </button>
-                        <Link href="/merchant/vault/ai-orders" className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 flex items-center gap-1">
-                            Go to Vault <ArrowRight size={12} />
-                        </Link>
-                    </div>
-                </div>
-            </div>
+            {/* 5-Card Interactive KPI Summary Bar with Click Redirection */}
+            <MerchantAIOrdersKPIs
+                counts={counts}
+                activeTab={activeTab}
+                onSelectTab={handleSelectTab}
+                vault={vault}
+                onOpenWithdraw={() => setShowWithdrawModal(true)}
+            />
 
             {/* Section: My AI Orders */}
             <div id="orders-section" className="space-y-5">
@@ -257,7 +236,7 @@ export default function AIOrdersMerchantPage() {
                             <RefreshCw size={16} className={isRefreshing ? 'animate-spin text-blue-600' : ''} />
                         </button>
                         <button
-                            onClick={() => setActiveTab('ALL')}
+                            onClick={() => handleSelectTab('ALL', true)}
                             className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
                         >
                             View All
@@ -272,7 +251,7 @@ export default function AIOrdersMerchantPage() {
                         return (
                             <button
                                 key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
+                                onClick={() => handleSelectTab(tab.key, false)}
                                 className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                                     isActive
                                         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
@@ -312,5 +291,18 @@ export default function AIOrdersMerchantPage() {
                 onSuccess={() => fetchVault()}
             />
         </div>
+    );
+}
+
+export default function AIOrdersMerchantPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-[60vh] flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <p className="text-xs text-slate-400 font-medium">Loading AI Orders...</p>
+            </div>
+        }>
+            <AIOrdersMerchantContent />
+        </Suspense>
     );
 }

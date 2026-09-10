@@ -326,63 +326,79 @@ export default function AIVaultOverview({
                 </div>
 
                 {/* 2. Total Allocated Value */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Allocated</span>
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                            <Coins size={20} />
+                <Link href="/merchant/ai-orders?tab=ALL" className="block outline-none">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer group h-full">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Total Allocated</span>
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center transition-transform group-hover:scale-105">
+                                <Coins size={20} />
+                            </div>
+                        </div>
+
+                        <div className="my-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                            ₹{totalInvested.toLocaleString('en-IN')}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center">
+                                <ArrowUp size={13} className="mr-0.5" /> Live Allocation
+                            </span>
+                            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 inline-flex items-center gap-0.5 transition-colors">
+                                View Orders <ArrowUpRight size={13} />
+                            </span>
                         </div>
                     </div>
-
-                    <div className="my-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                        ₹{totalInvested.toLocaleString('en-IN')}
-                    </div>
-
-                    <div className="flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        <ArrowUp size={13} className="mr-1" />
-                        <span>+18% from last month</span>
-                    </div>
-                </div>
+                </Link>
 
                 {/* 3. Total Profit Earned */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            <span>Total Profit Earned</span>
-                            <Info size={13} className="text-slate-400 hover:text-slate-600" />
+                <Link href="/merchant/vault/transactions" className="block outline-none">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer group h-full">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                <span>Total Profit Earned</span>
+                            </div>
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-105">
+                                <TrendingUp size={20} />
+                            </div>
                         </div>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                            <TrendingUp size={20} />
+
+                        <div className="my-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                            ₹{totalProfit.toLocaleString('en-IN')}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center">
+                                <ArrowUp size={13} className="mr-0.5" /> All-time Net
+                            </span>
+                            <span className="group-hover:text-emerald-600 dark:group-hover:text-emerald-400 inline-flex items-center gap-0.5 transition-colors">
+                                Ledger <ArrowUpRight size={13} />
+                            </span>
                         </div>
                     </div>
-
-                    <div className="my-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                        ₹{totalProfit.toLocaleString('en-IN')}
-                    </div>
-
-                    <div className="flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        <ArrowUp size={13} className="mr-1" />
-                        <span>+22% from last month</span>
-                    </div>
-                </div>
+                </Link>
 
                 {/* 4. Active in Orders */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active in Orders</span>
-                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                            <Clock size={20} />
+                <Link href="/merchant/ai-orders?tab=IN_PROGRESS" className="block outline-none">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer group h-full">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Active in Orders</span>
+                            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-transform group-hover:scale-105">
+                                <Clock size={20} />
+                            </div>
+                        </div>
+
+                        <div className="my-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                            ₹{activeInOrders.toLocaleString('en-IN')}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <span>{activeOrdersCount} in progress</span>
+                            <span className="group-hover:text-amber-600 dark:group-hover:text-amber-400 inline-flex items-center gap-0.5 transition-colors">
+                                View <ArrowUpRight size={13} />
+                            </span>
                         </div>
                     </div>
-
-                    <div className="my-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                        ₹{activeInOrders.toLocaleString('en-IN')}
-                    </div>
-
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        {activeOrdersCount} orders in progress
-                    </div>
-                </div>
+                </Link>
             </div>
 
             {/* Middle Section: Earnings Overview (Bar+Line) & Balance Distribution (Donut) */}

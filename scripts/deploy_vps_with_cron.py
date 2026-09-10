@@ -2,8 +2,8 @@
 InTrust India - Deploy + install morning-greeting cron
 ======================================================
 1. Runs the standard deploy pipeline (build → pack → upload → deploy → verify → cleanup).
-2. After deploy, SSHes back in to install the morning-greeting cron entry at 02:30 UTC
-   (= 08:00 IST) if it isn't already there.
+2. After deploy, SSHes back in to install the morning-greeting cron entry at 00:30 UTC
+   (= 06:00 IST) if it isn't already there.
 """
 
 import os
@@ -232,7 +232,7 @@ def cleanup(client):
 # ──────────────────────────────────────────────
 def install_morning_cron(client):
     """
-    Installs the daily 08:00 IST (02:30 UTC) cron entry that calls:
+    Installs the daily 06:00 IST (00:30 UTC) cron entry that calls:
       GET /api/cron/morning-greeting
     with the CRON_SECRET read from the app's .env on the VPS.
 
@@ -260,7 +260,7 @@ def install_morning_cron(client):
 
     # 2. The cron line to install
     cron_line = (
-        f"30 23 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting "
+        f"30 0 * * * curl -s -X GET https://intrustindia.com/api/cron/morning-greeting "
         f'-H "Authorization: Bearer {cron_secret}" '
         f">> /home/intrustindia/logs/cron.log 2>&1"
         f"  # intrust-morning-greeting"
@@ -277,7 +277,7 @@ def install_morning_cron(client):
         return
 
     # 4. Append to crontab (preserving existing entries)
-    print("\n[7c] Adding morning-greeting cron entry (23:30 UTC = 05:00 IST)...")
+    print("\n[7c] Adding morning-greeting cron entry (00:30 UTC = 06:00 IST)...")
 
     # Write new crontab: existing lines + new line
     # We use a heredoc-safe approach via temp file

@@ -9,6 +9,7 @@ import MerchantDisclaimerNote from '@/components/merchant/dashboard/MerchantDisc
 import DashboardHeader from '@/components/merchant/dashboard/DashboardHeader';
 import QuickAccessGrid from '@/components/merchant/dashboard/QuickAccessGrid';
 import TodayStatsCards from '@/components/merchant/dashboard/TodayStatsCards';
+import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,9 +52,8 @@ export default async function MerchantDashboardPage() {
 
     const adminDb = createAdminClient();
 
-    // Start of current day in local/UTC time for Today's Stats
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    // Start and end of current India business day (IST) for Today's Stats
+    const { start: todayStartIST, end: todayEndIST } = getTodayISTBoundaries();
 
     // 3. Fetch all data in a single parallel batch
     const [
@@ -68,7 +68,10 @@ export default async function MerchantDashboardPage() {
         wholesaleOrdersRes,
         pendingOrdersCountRes,
         todayCouponsRes,
-        todayShoppingGroupsRes
+        todayShoppingGroupsRes,
+        todaySettledTxnsRes,
+        aiOrdersRes,
+        aiVaultRes
     ] = await Promise.all([
         supabase
             .from('coupons')
@@ -104,12 +107,28 @@ export default async function MerchantDashboardPage() {
             .select('merchant_selling_price_paise, merchant_purchase_price_paise, merchant_commission_paise, purchased_at')
             .eq('merchant_id', merchant.id)
             .eq('status', 'sold')
-            .gte('purchased_at', todayStart),
+            .gte('purchased_at', todayStartIST),
         adminDb
             .from('shopping_order_groups')
             .select('id, total_amount_paise, merchant_profit_paise, created_at, delivery_status')
             .eq('merchant_id', merchant.id)
-            .gte('created_at', todayStart)
+            .gte('created_at', todayStartIST),
+        adminDb
+            .from('merchant_transactions')
+            .select('transaction_type, amount_paise, metadata, created_at')
+            .eq('merchant_id', merchant.id)
+            .in('transaction_type', ['sale', 'store_credit_payment'])
+            .gte('created_at', todayStartIST)
+            .lte('created_at', todayEndIST),
+        adminDb
+            .from('ai_orders')
+            .select('id, status, wholesale_price_paise, profit_margin_paise, created_at')
+            .or(`merchant_id.eq.${user.id},and(merchant_id.is.null,status.eq.PENDING)`),
+        adminDb
+            .from('ai_orders_vault')
+            .select('balance_paise, total_profit_paise')
+            .eq('merchant_id', user.id)
+            .maybeSingle()
     ]);
 
     const coupons = couponsRes.data || [];
@@ -125,6 +144,26 @@ export default async function MerchantDashboardPage() {
     const shoppingOrderItems = shoppingOrderItemsRes.data || [];
     const wholesaleOrders = wholesaleOrdersRes.data || [];
     const pendingOrdersCount = pendingOrdersCountRes.count || 0;
+
+    // Process AI Orders data
+    const allAIOrders = aiOrdersRes.data || [];
+    const pendingAIOrders = allAIOrders.filter(o => o.status === 'PENDING');
+    const inProgressAIOrders = allAIOrders.filter(o => o.status === 'ACCEPTED');
+    const completedAIOrders = allAIOrders.filter(o => o.status === 'COMPLETED');
+    const pendingAIOrdersCount = pendingAIOrders.length;
+
+    const aiVaultData = aiVaultRes.data || null;
+    const aiVaultBalance = (aiVaultData?.balance_paise || 0) / 100;
+    const aiTotalProfit = (aiVaultData?.total_profit_paise || 0) / 100;
+
+    const aiStats = {
+        totalOrders: allAIOrders.length,
+        pendingCount: pendingAIOrdersCount,
+        inProgressCount: inProgressAIOrders.length,
+        completedCount: completedAIOrders.length,
+        vaultBalance: aiVaultBalance,
+        totalProfit: aiTotalProfit,
+    };
 
     const shoppingRevenue = shoppingOrderItems
         .reduce((sum, o) => sum + (Number(o.unit_price_paise * o.quantity) || 0), 0);
@@ -149,9 +188,10 @@ export default async function MerchantDashboardPage() {
         lockinBalance: totalLockinPaise / 100,
     };
 
-    // Calculate Today's Stats
+    // Calculate Today's Stats (including completed AI Orders)
     const todayCoupons = todayCouponsRes.data || [];
     const todayShoppingGroups = todayShoppingGroupsRes.data || [];
+    const todayAIOrders = completedAIOrders.filter(o => o.created_at >= todayStartIST);
 
     const todayCouponSales = todayCoupons.reduce((sum, c) => sum + ((c.merchant_selling_price_paise || 0) / 100), 0);
     const todayCouponProfit = todayCoupons.reduce((sum, c) => {
@@ -162,11 +202,25 @@ export default async function MerchantDashboardPage() {
     }, 0);
 
     const todayShoppingSales = todayShoppingGroups.reduce((sum, g) => sum + ((g.total_amount_paise || 0) / 100), 0);
-    const todayShoppingProfit = todayShoppingGroups.reduce((sum, g) => sum + ((g.merchant_profit_paise || 0) / 100), 0);
+    
+    // Authoritative settled shopping profit from merchant ledger
+    const settledTxns = todaySettledTxnsRes.data || [];
+    const todayShoppingProfit = settledTxns.reduce((sum, tx) => {
+        if (tx.transaction_type === 'sale') {
+            return sum + ((tx.amount_paise || 0) / 100);
+        }
+        if (tx.transaction_type === 'store_credit_payment' && tx.metadata?.merchant_profit_paise) {
+            return sum + ((Number(tx.metadata.merchant_profit_paise) || 0) / 100);
+        }
+        return sum;
+    }, 0);
 
-    const todaySales = todayCouponSales + todayShoppingSales;
-    const todayProfit = todayCouponProfit + todayShoppingProfit;
-    const todayOrdersCount = todayCoupons.length + todayShoppingGroups.length;
+    const todayAISales = todayAIOrders.reduce((sum, o) => sum + ((o.wholesale_price_paise || 0) / 100), 0);
+    const todayAIProfit = todayAIOrders.reduce((sum, o) => sum + ((o.profit_margin_paise || 0) / 100), 0);
+
+    const todaySales = todayCouponSales + todayShoppingSales + todayAISales;
+    const todayProfit = todayCouponProfit + todayShoppingProfit + todayAIProfit;
+    const todayOrdersCount = todayCoupons.length + todayShoppingGroups.length + todayAIOrders.length;
     const todayMargin = todaySales > 0 ? Number(((todayProfit / todaySales) * 100).toFixed(1)) : 0;
     const avgOrderValue = todayOrdersCount > 0 ? Math.round(todaySales / todayOrdersCount) : 0;
 
@@ -192,22 +246,31 @@ export default async function MerchantDashboardPage() {
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-24">
-            {/* SECTION 1: Financial & Status Header (replaces yellow banner) */}
-            <DashboardHeader merchant={merchant} profile={profile} walletBalancePaise={merchant.wallet_balance_paise || 0} />
+            {/* SECTION 1: Financial & Status Header with Dynamic AI Orders badge */}
+            <DashboardHeader 
+                merchant={merchant} 
+                profile={profile} 
+                walletBalancePaise={merchant.wallet_balance_paise || 0} 
+                pendingAIOrdersCount={pendingAIOrdersCount}
+            />
             
             {/* SECTION 1.5: Today's Real-time Sales, Profit & Orders Performance */}
             <TodayStatsCards todayStats={todayStats} />
 
             {/* Welcome Card if no sales */}
-            {stats.totalSales === 0 && stats.activeCoupons === 0 && (
+            {stats.totalSales === 0 && stats.activeCoupons === 0 && aiStats.totalOrders === 0 && (
                 <WelcomeCard />
             )}
 
             {/* SECTION 2: Quick Access Grid */}
-            <QuickAccessGrid pendingUdhariCount={pendingUdhariCount} pendingOrdersCount={pendingOrdersCount} />
+            <QuickAccessGrid 
+                pendingUdhariCount={pendingUdhariCount} 
+                pendingOrdersCount={pendingOrdersCount} 
+                pendingAIOrdersCount={pendingAIOrdersCount}
+            />
 
-            {/* Stats List (Great Deals) */}
-            <StatsCards stats={stats} />
+            {/* Performance Metrics / Stats Cards with Direct Redirection & AI Orders */}
+            <StatsCards stats={stats} aiStats={aiStats} />
 
             {/* Recent Transactions */}
             <TransactionsTable coupons={transformedCoupons} />

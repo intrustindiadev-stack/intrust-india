@@ -53,7 +53,7 @@ function getPlanBadgeStyles(tier) {
   }
 }
 
-export default function DashboardHeader({ merchant, profile, walletBalancePaise }) {
+export default function DashboardHeader({ merchant, profile, walletBalancePaise, pendingAIOrdersCount = 0 }) {
     const router = useRouter();
     const [showBalance, setShowBalance] = useState(false);
     const [animatedRevenue, setAnimatedRevenue] = useState(0);
@@ -162,16 +162,18 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise 
                 
                 {/* AI Actions Group */}
                 <div className="flex items-center gap-3 sm:gap-4 p-1.5 sm:p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-xs">
-                  {/* AI Orders Button */}
+                  {/* AI Orders Button with Dynamic Counter and Redirection */}
                   <button
-                    onClick={() => router.push('/merchant/ai-orders')}
-                    className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm"
+                    onClick={() => router.push(pendingAIOrdersCount > 0 ? '/merchant/ai-orders?tab=PENDING' : '/merchant/ai-orders')}
+                    className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm active:scale-95"
                   >
-                    <Zap className="w-4 h-4" />
+                    <Zap className="w-4 h-4 text-amber-500" />
                     AI Orders
-                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900">
-                      1
-                    </span>
+                    {pendingAIOrdersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[9px] font-black shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                        {pendingAIOrdersCount > 99 ? '99+' : pendingAIOrdersCount}
+                      </span>
+                    )}
                   </button>
                   
                   {/* AI Grow Button (Clean & Green) */}

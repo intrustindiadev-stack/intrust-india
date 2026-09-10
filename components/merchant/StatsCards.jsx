@@ -1,95 +1,265 @@
 "use client";
 
+import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { 
+    ShoppingCart, 
+    Package, 
+    Zap, 
+    Wallet, 
+    ArrowUpRight, 
+    ArrowRight,
+    TrendingUp,
+    Clock,
+    ShieldCheck,
+    Coins
+} from 'lucide-react';
 
-export default function StatsCards({ stats }) {
+export default function StatsCards({ stats = {}, aiStats = {} }) {
+    const totalSales = stats?.totalSales ?? 0;
+    const activeCoupons = stats?.activeCoupons ?? 0;
+    const listedCoupons = stats?.listedCoupons ?? 0;
+    const totalRevenue = stats?.totalRevenue ?? 0;
+    const shoppingSpend = stats?.shoppingSpend ?? 0;
+    const totalCommission = stats?.totalCommission ?? 0;
+    const lockinBalance = stats?.lockinBalance ?? 0;
+
+    const aiTotalOrders = aiStats?.totalOrders ?? 0;
+    const aiPendingCount = aiStats?.pendingCount ?? 0;
+    const aiInProgressCount = aiStats?.inProgressCount ?? 0;
+    const aiVaultBalance = aiStats?.vaultBalance ?? 0;
+    const aiTotalProfit = aiStats?.totalProfit ?? 0;
+
     return (
-        <div className="mb-10">
-            <div className="flex items-center justify-between mb-4 px-2">
-                <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-wide">Performance Metrics</h3>
-                <Link href="/merchant/analytics" className="text-xs font-bold text-[#D4AF37] hover:text-[#B8860B]">
-                    View All
+        <div className="space-y-3 mb-8">
+            <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                        Performance Metrics
+                    </h3>
+                </div>
+                <Link 
+                    href="/merchant/analytics" 
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                >
+                    <span>View Analytics</span>
+                    <ArrowUpRight size={13} />
                 </Link>
             </div>
-            
-            <div className="flex flex-col gap-4">
-                {/* Sales & Inventory Card */}
-                <Link href="/merchant/inventory" className="block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-4">
+
+            {/* 4 Responsive Modern KPI Cards with Direct Redirection */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* 1. Sales & Orders Card */}
+                <Link href="/merchant/shopping/orders" className="block outline-none group">
+                    <motion.div 
+                        whileHover={{ y: -2 }}
+                        className="relative h-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs transition-all group-hover:shadow-md group-hover:border-purple-300 dark:group-hover:border-purple-800 flex flex-col justify-between"
+                    >
                         <div>
-                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">Sales & Inventory</h4>
-                            <p className="text-[10px] text-slate-500 font-medium">Lifetime performance • Track record</p>
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                        Sales & Orders
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 font-medium">Customer purchases</p>
+                                </div>
+                                <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100 dark:border-purple-900/40 transition-transform group-hover:scale-105">
+                                    <ShoppingCart size={18} />
+                                </div>
+                            </div>
+
+                            <div className="flex items-baseline gap-2 mb-3">
+                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    {totalSales.toLocaleString('en-IN')}
+                                </span>
+                                <span className="text-xs font-bold text-slate-400">orders</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                                <div>
+                                    <span className="text-slate-400 block font-medium">Est. Revenue</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                                        ₹{Math.round(totalRevenue).toLocaleString('en-IN')}
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-slate-400 block font-medium">Status</span>
+                                    <span className="text-emerald-600 font-bold inline-flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-[#D4AF37]/10 group-hover:text-[#D4AF37] transition-colors border border-slate-100 dark:border-slate-600">
-                            <span className="material-icons-round text-sm">arrow_outward</span>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-purple-600 dark:text-purple-400">
+                            <span>Manage Orders</span>
+                            <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                         </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-medium mb-1">Total Sales</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{stats.totalSales}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-medium mb-1">Active</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{stats.activeCoupons}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-medium mb-1">Listed</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{stats.listedCoupons}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="flex h-2 w-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 mb-3">
-                        <div className="bg-[#D4AF37]" style={{ width: '60%' }}></div>
-                        <div className="bg-emerald-500" style={{ width: '30%' }}></div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                        <span>Last updated today</span>
-                        <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">Active</span>
-                        <span>Since joining</span>
-                    </div>
+                    </motion.div>
                 </Link>
 
-                {/* Financial Overview Card */}
-                <Link href="/merchant/wallet" className="block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-4">
+                {/* 2. Inventory & Stock Card */}
+                <Link href="/merchant/inventory" className="block outline-none group">
+                    <motion.div 
+                        whileHover={{ y: -2 }}
+                        className="relative h-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs transition-all group-hover:shadow-md group-hover:border-indigo-300 dark:group-hover:border-indigo-800 flex flex-col justify-between"
+                    >
                         <div>
-                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">Financial Overview</h4>
-                            <p className="text-[10px] text-slate-500 font-medium">Expenses & Balances • Money flow</p>
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                        Inventory & Stock
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 font-medium">Coupons & products</p>
+                                </div>
+                                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40 transition-transform group-hover:scale-105">
+                                    <Package size={18} />
+                                </div>
+                            </div>
+
+                            <div className="flex items-baseline gap-2 mb-3">
+                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    {activeCoupons.toLocaleString('en-IN')}
+                                </span>
+                                <span className="text-xs font-bold text-slate-400">in stock</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                                <div>
+                                    <span className="text-slate-400 block font-medium">Marketplace Listed</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                                        {listedCoupons} listed
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-slate-400 block font-medium">Available</span>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                        {activeCoupons} ready
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-[#D4AF37]/10 group-hover:text-[#D4AF37] transition-colors border border-slate-100 dark:border-slate-600">
-                            <span className="material-icons-round text-sm">arrow_outward</span>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                            <span>Open Inventory</span>
+                            <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                         </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 mb-4">
+                    </motion.div>
+                </Link>
+
+                {/* 3. AI Orders & Vault Card (Highlights pending orders and redirects) */}
+                <Link 
+                    href={aiPendingCount > 0 ? '/merchant/ai-orders?tab=PENDING' : '/merchant/ai-orders'} 
+                    className="block outline-none group"
+                >
+                    <motion.div 
+                        whileHover={{ y: -2 }}
+                        className={`relative h-full bg-white dark:bg-slate-900/90 border ${
+                            aiPendingCount > 0 
+                                ? 'border-amber-300 dark:border-amber-800/80 shadow-[0_4px_20px_rgba(245,158,11,0.12)]' 
+                                : 'border-slate-200/80 dark:border-white/10'
+                        } rounded-2xl p-5 shadow-xs transition-all group-hover:shadow-md group-hover:border-amber-400 flex flex-col justify-between`}
+                    >
                         <div>
-                            <p className="text-[10px] text-slate-400 font-medium mb-1">Shopping Spend</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">₹{(stats.shoppingSpend || 0).toLocaleString('en-IN')}</p>
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                            AI Orders & Vault
+                                        </h4>
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 font-medium">Automated allocations</p>
+                                </div>
+                                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200/60 dark:border-amber-900/40 transition-transform group-hover:scale-105">
+                                    <Zap size={18} />
+                                </div>
+                            </div>
+
+                            <div className="flex items-baseline gap-2 mb-3">
+                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    {aiTotalOrders.toLocaleString('en-IN')}
+                                </span>
+                                {aiPendingCount > 0 ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 animate-pulse">
+                                        {aiPendingCount} Pending
+                                    </span>
+                                ) : (
+                                    <span className="text-xs font-bold text-slate-400">allocated</span>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                                <div>
+                                    <span className="text-slate-400 block font-medium">Vault Balance</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                        ₹{Math.round(aiVaultBalance).toLocaleString('en-IN')}
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-slate-400 block font-medium">In Progress</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                                        {aiInProgressCount} active
+                                    </span>
+                                </div>
+                            </div>
                         </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                            <span>{aiPendingCount > 0 ? 'Accept Pending Orders' : 'View AI Orders'}</span>
+                            <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        </div>
+                    </motion.div>
+                </Link>
+
+                {/* 4. Financial Overview & Wallet Card */}
+                <Link href="/merchant/wallet" className="block outline-none group">
+                    <motion.div 
+                        whileHover={{ y: -2 }}
+                        className="relative h-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs transition-all group-hover:shadow-md group-hover:border-emerald-300 dark:group-hover:border-emerald-800 flex flex-col justify-between"
+                    >
                         <div>
-                            <p className="text-[10px] text-slate-400 font-medium mb-1">Commission</p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">₹{(stats.totalCommission || 0).toLocaleString('en-IN')}</p>
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                        Wallet & Finances
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 font-medium">Balance & lockin</p>
+                                </div>
+                                <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/40 transition-transform group-hover:scale-105">
+                                    <Wallet size={18} />
+                                </div>
+                            </div>
+
+                            <div className="flex items-baseline gap-2 mb-3">
+                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    ₹{Math.round(lockinBalance).toLocaleString('en-IN')}
+                                </span>
+                                <span className="text-xs font-bold text-slate-400">locked</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                                <div>
+                                    <span className="text-slate-400 block font-medium">Shopping Spend</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                                        ₹{Math.round(shoppingSpend).toLocaleString('en-IN')}
+                                    </span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-slate-400 block font-medium">Commission</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                                        ₹{Math.round(totalCommission).toLocaleString('en-IN')}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-[10px] text-slate-400 font-medium mb-1">Lockin Balance</p>
-                            <p className="text-sm font-bold text-blue-500">₹{(stats.lockinBalance || 0).toLocaleString('en-IN')}</p>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span>Open InTrust Wallet</span>
+                            <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                         </div>
-                    </div>
-                    
-                    <div className="flex h-2 w-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 mb-3">
-                        <div className="bg-orange-400" style={{ width: '40%' }}></div>
-                        <div className="bg-rose-400" style={{ width: '20%' }}></div>
-                        <div className="bg-blue-500" style={{ width: '40%' }}></div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                        <span>Spend</span>
-                        <span className="bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-0.5 rounded-full">Fees</span>
-                        <span>Locked</span>
-                    </div>
+                    </motion.div>
                 </Link>
             </div>
         </div>

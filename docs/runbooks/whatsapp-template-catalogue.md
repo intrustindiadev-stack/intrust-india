@@ -505,8 +505,8 @@ graph TD
 - **Footer**: InTrust India
 - **Buttons**: (none)
 - **Code symbol**: `GM_QUOTE_TEMPLATE` in `lib/omniflow.js`
-- **Fired by**: `broadcastMorningGreeting()` daily at 05:00 IST (scheduled quote or approved fallback)
-- **Cron**: `GET /api/cron/morning-greeting` at 05:00 IST daily
+- **Fired by**: `broadcastMorningGreeting()` daily at 06:00 IST (scheduled quote or approved fallback)
+- **Cron**: `GET /api/cron/morning-greeting` at 06:00 IST daily
 - **Admin UI**: `/admin/marketing/daily-quotes`
 - **Fallback**: If no custom quote is scheduled for today in `daily_quotes`, broadcast automatically selects an approved neutral quote from the fallback pool. Always uses `intrust_gm_quote_v1`.
 - **Author attribution**: Stored in `daily_quotes.author_or_source` for admin reference only; NOT included in the WhatsApp message body

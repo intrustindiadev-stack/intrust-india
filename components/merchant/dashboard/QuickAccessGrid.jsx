@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { Warehouse, Package, ShoppingCart, Gift, Wallet, CreditCard, BarChart3, Bot, ArrowRight } from 'lucide-react';
+import { Warehouse, Package, ShoppingCart, Gift, Wallet, CreditCard, BarChart3, Zap, ArrowRight } from 'lucide-react';
 
-export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount }) {
+export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount, pendingAIOrdersCount = 0 }) {
     const accessItems = [
         {
             icon: <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400" />,
@@ -26,11 +26,12 @@ export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount
             badge: pendingOrdersCount > 0 ? pendingOrdersCount : null,
         },
         {
-            icon: <Gift className="w-6 h-6 text-pink-600 dark:text-pink-400" />,
-            label: 'Gift Cards',
-            href: '/merchant/purchase',
-            bgIcon: 'bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40',
-            hoverGroup: 'hover:border-pink-300 dark:hover:border-pink-700 hover:shadow-[0_8px_30px_rgb(219,39,119,0.12)]',
+            icon: <Zap className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+            label: 'AI Orders',
+            href: pendingAIOrdersCount > 0 ? '/merchant/ai-orders?tab=PENDING' : '/merchant/ai-orders',
+            bgIcon: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200/60 dark:border-amber-900/40',
+            hoverGroup: 'hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-[0_8px_30px_rgb(245,158,11,0.12)]',
+            badge: pendingAIOrdersCount > 0 ? pendingAIOrdersCount : null,
         },
         {
             icon: <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />,
@@ -40,12 +41,19 @@ export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount
             hoverGroup: 'hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-[0_8px_30px_rgb(5,150,105,0.12)]',
         },
         {
-            icon: <CreditCard className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+            icon: <CreditCard className="w-6 h-6 text-rose-600 dark:text-rose-400" />,
             label: 'Credits',
             href: '/merchant/udhari',
-            bgIcon: 'bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40',
-            hoverGroup: 'hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-[0_8px_30px_rgb(217,119,6,0.12)]',
+            bgIcon: 'bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40',
+            hoverGroup: 'hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-[0_8px_30px_rgb(225,29,72,0.12)]',
             badge: pendingUdhariCount > 0 ? pendingUdhariCount : null,
+        },
+        {
+            icon: <Gift className="w-6 h-6 text-pink-600 dark:text-pink-400" />,
+            label: 'Gift Cards',
+            href: '/merchant/purchase',
+            bgIcon: 'bg-pink-50 dark:bg-pink-950/40 border border-pink-100 dark:border-pink-900/40',
+            hoverGroup: 'hover:border-pink-300 dark:hover:border-pink-700 hover:shadow-[0_8px_30px_rgb(219,39,119,0.12)]',
         },
         {
             icon: <BarChart3 className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />,
@@ -53,13 +61,6 @@ export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount
             href: '/merchant/analytics',
             bgIcon: 'bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/40',
             hoverGroup: 'hover:border-cyan-300 dark:hover:border-cyan-700 hover:shadow-[0_8px_30px_rgb(8,145,178,0.12)]',
-        },
-        {
-            icon: <Bot className="w-6 h-6 text-orange-600 dark:text-orange-400" />,
-            label: 'Auto Mode',
-            href: '/merchant/shopping/auto-mode',
-            bgIcon: 'bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/40 dark:to-amber-950/40 border border-orange-100 dark:border-orange-900/40',
-            hoverGroup: 'hover:border-orange-300 dark:hover:border-orange-700 hover:shadow-[0_8px_30px_rgb(234,88,12,0.12)]',
         },
     ];
 

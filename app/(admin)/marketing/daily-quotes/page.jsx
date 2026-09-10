@@ -109,7 +109,7 @@ function AddQuoteForm({ onSuccess }) {
         <div>
           <h2 className="text-base font-semibold text-slate-800">Schedule a Quote</h2>
           <p className="text-sm text-slate-500">
-            Sent at <strong>5:00 AM IST</strong> on the selected date via WhatsApp.
+            Sent at <strong>6:00 AM IST</strong> on the selected date via WhatsApp.
           </p>
         </div>
       </div>
@@ -353,7 +353,7 @@ export default function DailyQuotesPage() {
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Cron: 8:00 AM IST daily
+            Cron: 6:00 AM IST daily
           </span>
         </div>
       </div>

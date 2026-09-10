@@ -59,10 +59,11 @@ export default function TodayStatsCards({ todayStats }) {
                         className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
                     >
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1">
                             Today&apos;s Sale
+                            <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />
                         </span>
-                        <div className="w-9 h-9 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                        <div className="w-9 h-9 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20 transition-transform group-hover:scale-105">
                             <CircleDollarSign size={20} />
                         </div>
                     </div>
@@ -88,10 +89,11 @@ export default function TodayStatsCards({ todayStats }) {
                     className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1">
                             Today&apos;s Profit
+                            <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
                         </span>
-                        <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                        <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 transition-transform group-hover:scale-105">
                             <TrendingUp size={20} />
                         </div>
                     </div>
@@ -110,16 +112,17 @@ export default function TodayStatsCards({ todayStats }) {
                 </Link>
 
                 {/* 3. Today's Orders / Conversions */}
-                <Link href="/merchant/shopping/orders" className="block outline-none">
+                <Link href="/merchant/shopping/orders" className="block outline-none group">
                 <motion.div
                     whileHover={{ y: -2 }}
                     className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1">
                             Today&apos;s Orders
+                            <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-purple-500" />
                         </span>
-                        <div className="w-9 h-9 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20">
+                        <div className="w-9 h-9 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20 transition-transform group-hover:scale-105">
                             <ShoppingBag size={20} />
                         </div>
                     </div>

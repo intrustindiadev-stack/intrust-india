@@ -66,10 +66,10 @@ def main():
     print(f"[OK] CRON_SECRET found (length={len(cron_secret)})")
 
     # ── 2. Build the cron content ─────────────────────────────────────────────
-    # 30 23 * * *  = 23:30 UTC = 05:00 IST
+    # 30 0 * * *  = 00:30 UTC = 06:00 IST
     cron_content = (
-        "# InTrust India — Daily good morning WhatsApp broadcast (05:00 IST = 23:30 UTC)\n"
-        f'30 23 * * * {VPS_USER} curl -s -X GET https://intrustindia.com/api/cron/morning-greeting '
+        "# InTrust India — Daily good morning WhatsApp broadcast (06:00 IST = 00:30 UTC)\n"
+        f'30 0 * * * {VPS_USER} curl -s -X GET https://intrustindia.com/api/cron/morning-greeting '
         f'-H "Authorization: Bearer {cron_secret}" '
         f'>> /home/intrustindia/logs/cron.log 2>&1\n'
     )
@@ -78,44 +78,31 @@ def main():
     print(f"\n[2] Checking if {CRON_FILE} already exists ...")
     out, status = run(client, f"test -f {CRON_FILE} && echo EXISTS || echo NOT_EXISTS")
     if "EXISTS" in out:
-        print(f"[OK] Cron file already exists at {CRON_FILE}.")
-        out, _ = run(client, f"cat {CRON_FILE}")
-        print(f"Contents:\n{out}")
-        client.close()
-        print("\n[DONE] No changes needed.")
-        return
+        current_content, _ = run(client, f"cat {CRON_FILE}")
+        if current_content.strip() == cron_content.strip():
+            print(f"[OK] Cron file already up-to-date at {CRON_FILE}.")
+            print(f"Contents:\n{current_content}")
+            client.close()
+            print("\n[DONE] No changes needed.")
+            return
+        print(f"[INFO] Cron file exists but needs update. Current:\n{current_content}\nUpdating to:\n{cron_content}")
 
     # ── 4. Write to /etc/cron.d/ via sudo ────────────────────────────────────
     # /etc/cron.d/ entries need the username column; format: SCHEDULE USER CMD
-    print(f"\n[3] Writing cron file to {CRON_FILE} via sudo ...")
+    print(f"\n[3] Writing cron file to {CRON_FILE} via SFTP and sudo ...")
+    import tempfile
+    sftp = client.open_sftp()
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
+        tmp.write(cron_content)
+        tmp.flush()
+        sftp.put(tmp.name, "/tmp/intrust_morning_cron")
+    sftp.close()
 
-    # Escape single quotes in cron_content for bash
-    escaped = cron_content.replace("'", "'\\''")
-    write_cmd = f"echo '{escaped}' | sudo -S tee {CRON_FILE} > /dev/null"
-    out, status = run(client, write_cmd, sudo_pass=VPS_PASSWORD)
-    print(f"  stdout: {out!r}  exit={status}")
-
-    if status == 0:
-        # Fix permissions — /etc/cron.d files must be owned root:root, mode 644
-        run(client, f"sudo -S chmod 644 {CRON_FILE}", sudo_pass=VPS_PASSWORD)
-        run(client, f"sudo -S chown root:root {CRON_FILE}", sudo_pass=VPS_PASSWORD)
-        print(f"[OK] Cron file written and permissions set.")
-    else:
-        # Fallback: try writing as user crontab via crontab command with env var method
-        print("[WARN] sudo tee failed. Trying alternative: writing temp file + sudo mv ...")
-        tmp = "/tmp/intrust_cron_tmp"
-        run(client, f"echo '{escaped}' > {tmp}")
-        out2, status2 = run(client, f"sudo -S mv {tmp} {CRON_FILE} && sudo -S chmod 644 {CRON_FILE} && sudo -S chown root:root {CRON_FILE}", sudo_pass=VPS_PASSWORD)
-        print(f"  alt stdout: {out2!r}  exit={status2}")
-        if status2 != 0:
-            print("\n[ERROR] Both sudo approaches failed.")
-            print("Please run this manually on the VPS:")
-            print(f"\n  sudo bash -c 'cat > {CRON_FILE} << EOF")
-            print(cron_content)
-            print("  EOF'")
-            print(f"  sudo chmod 644 {CRON_FILE}")
-            client.close()
-            sys.exit(1)
+    run(client, f"echo '{VPS_PASSWORD}' | sudo -S cp /tmp/intrust_morning_cron {CRON_FILE}")
+    run(client, f"echo '{VPS_PASSWORD}' | sudo -S chmod 644 {CRON_FILE}")
+    run(client, f"echo '{VPS_PASSWORD}' | sudo -S chown root:root {CRON_FILE}")
+    run(client, "rm -f /tmp/intrust_morning_cron")
+    print(f"[OK] Cron file written and permissions set.")
 
     # ── 5. Verify ─────────────────────────────────────────────────────────────
     print(f"\n[4] Verifying {CRON_FILE} ...")
@@ -124,14 +111,13 @@ def main():
 
     # ── 6. Reload cron daemon ─────────────────────────────────────────────────
     print("\n[5] Reloading cron daemon ...")
-    # Try systemctl, then service, then crond
-    out, status = run(client, "sudo -S systemctl reload cron 2>/dev/null || sudo -S systemctl reload crond 2>/dev/null || sudo -S service cron reload 2>/dev/null || echo RELOADED_OR_SKIPPED", sudo_pass=VPS_PASSWORD)
+    out, status = run(client, f"echo '{VPS_PASSWORD}' | sudo -S systemctl reload cron 2>/dev/null || echo '{VPS_PASSWORD}' | sudo -S systemctl reload crond 2>/dev/null || echo '{VPS_PASSWORD}' | sudo -S service cron reload 2>/dev/null || echo RELOADED_OR_SKIPPED")
     print(f"  {out}")
 
     client.close()
     print("\n" + "=" * 55)
     print("  *** CRON INSTALLED SUCCESSFULLY!")
-    print("  Schedule: 23:30 UTC = 05:00 AM IST every day")
+    print("  Schedule: 00:30 UTC = 06:00 AM IST every day")
     print(f"  File: {CRON_FILE}")
     print("=" * 55)
 
