@@ -8,7 +8,12 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { downloadPayslip } from '@/lib/payslipGenerator';
 import { formatPaiseToINR, INCENTIVE_TYPE_LABELS } from '@/lib/hrm/incentives';
-import { calculateMonthWorkingDays, calculateSalaryBreakdown, calculateApprovedLeaveWorkingDays, roundToTwo } from '@/lib/hrm/payroll';
+import {
+  calculateMonthWorkingDays,
+  calculateSalaryBreakdown,
+  classifyMonthAttendanceAndLeaves,
+  roundToTwo,
+} from '@/lib/hrm/payroll';
 import Link from 'next/link';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -17,15 +22,16 @@ function ProcessModal({ record, approvedIncentives = [], attendanceStats = null,
   const totalApprovedIncentivesPaise = approvedIncentives.reduce((acc, i) => acc + (i.amount_paise || 0), 0);
   const totalApprovedIncentivesRupees = roundToTwo(totalApprovedIncentivesPaise / 100);
 
-  const workingDays = attendanceStats?.workingDays || 26;
   const calendarDays = attendanceStats?.calendarDays || 30;
+  const workingDays = attendanceStats?.workingDays || 26;
   const weeklyOffs = attendanceStats?.weeklyOffs || 4;
   const holidays = attendanceStats?.holidays || 0;
   const presentDays = attendanceStats?.present || 0;
   const absentDays = attendanceStats?.absent || 0;
   const halfDayDays = attendanceStats?.half_day || 0;
+  const paidLeaveDays = attendanceStats?.paid_leave || 0;
+  const unpaidLeaveDays = attendanceStats?.unpaid_leave || 0;
   const lateDays = attendanceStats?.late || 0;
-  const approvedLeaveDays = attendanceStats?.approved_leave || 0;
 
   const [form, setForm] = useState({
     base_salary: record?.base_salary || 0,
@@ -40,16 +46,18 @@ function ProcessModal({ record, approvedIncentives = [], attendanceStats = null,
   const [saving, setSaving] = useState(false);
   const up = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // Real-time calculation preview matching authoritative formula
+  // Real-time calculation preview matching authoritative calendar-day formula
   const previewBreakdown = calculateSalaryBreakdown({
     base_salary: Number(form.base_salary) || 0,
+    calendar_days: calendarDays,
+    working_days: workingDays,
+    absent_days: absentDays,
+    half_day_days: halfDayDays,
+    unpaid_leave_days: unpaidLeaveDays,
     hra: Number(form.hra) || 0,
     allowances: Number(form.allowances) || 0,
     approved_incentives_rupees: totalApprovedIncentivesRupees,
     existing_deductions: Number(form.existing_deductions) || 0,
-    working_days: workingDays,
-    absent_days: absentDays,
-    half_day_days: halfDayDays,
     adjustment_type: form.adjustment_type,
     adjustment_amount: Number(form.adjustment_amount) || 0,
     adjustment_reason: form.adjustment_reason,
@@ -190,7 +198,7 @@ function ProcessModal({ record, approvedIncentives = [], attendanceStats = null,
             </div>
 
             {/* Attendance Stat Grid */}
-            <div className="grid grid-cols-2 min-[360px]:grid-cols-4 gap-2 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
               <div className="bg-emerald-100/70 text-emerald-900 rounded-xl p-2 border border-emerald-200/60">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-700">Present</p>
                 <p className="text-base font-black font-mono">{presentDays}</p>
@@ -199,13 +207,17 @@ function ProcessModal({ record, approvedIncentives = [], attendanceStats = null,
                 <p className="text-[9px] font-bold uppercase tracking-wider text-rose-700">Absent</p>
                 <p className="text-base font-black font-mono">{absentDays}</p>
               </div>
-              <div className="bg-violet-100/70 text-violet-900 rounded-xl p-2 border border-violet-200/60">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-violet-700">Half Day</p>
+              <div className="bg-blue-100/70 text-blue-900 rounded-xl p-2 border border-blue-200/60">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-blue-700">Half Day</p>
                 <p className="text-base font-black font-mono">{halfDayDays}</p>
               </div>
+              <div className="bg-teal-100/70 text-teal-900 rounded-xl p-2 border border-teal-200/60">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-teal-700">Paid Leave</p>
+                <p className="text-base font-black font-mono">{paidLeaveDays}</p>
+              </div>
               <div className="bg-amber-100/70 text-amber-900 rounded-xl p-2 border border-amber-200/60">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700">Late</p>
-                <p className="text-base font-black font-mono">{lateDays}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700">Unpaid Leave</p>
+                <p className="text-base font-black font-mono">{unpaidLeaveDays}</p>
               </div>
             </div>
 
@@ -223,12 +235,6 @@ function ProcessModal({ record, approvedIncentives = [], attendanceStats = null,
                 <p className="font-bold text-gray-900 font-mono">{holidays}</p>
               </div>
             </div>
-
-            {approvedLeaveDays > 0 && (
-              <p className="text-[10px] font-bold text-indigo-700 bg-indigo-50 p-1.5 rounded-lg border border-indigo-100">
-                Approved Leave: {approvedLeaveDays} day(s) covered by policy.
-              </p>
-            )}
           </div>
 
           {/* Section 4: Calculation Breakdown */}
@@ -237,16 +243,31 @@ function ProcessModal({ record, approvedIncentives = [], attendanceStats = null,
             <div className="space-y-1.5 text-xs text-gray-700">
               <div className="flex justify-between items-center">
                 <span>Daily Basic Rate:</span>
-                <span className="font-mono font-bold">₹{previewBreakdown.daily_basic_rate.toFixed(2)} <span className="text-[10px] text-gray-400 font-normal">({previewBreakdown.base_salary} / {workingDays})</span></span>
+                <span className="font-mono font-bold">₹{previewBreakdown.daily_basic_rate.toFixed(2)} <span className="text-[10px] text-gray-400 font-normal">({previewBreakdown.base_salary} / {calendarDays} cal days)</span></span>
               </div>
-              <div className="flex justify-between items-center text-rose-600">
-                <span>Attendance Deduction:</span>
-                <span className="font-mono font-bold">-₹{previewBreakdown.attendance_deduction.toFixed(2)}</span>
+              {previewBreakdown.absent_deduction > 0 && (
+                <div className="flex justify-between items-center text-rose-600">
+                  <span>Absent Deduction ({absentDays} day{absentDays === 1 ? '' : 's'}):</span>
+                  <span className="font-mono font-bold">-₹{previewBreakdown.absent_deduction.toFixed(2)}</span>
+                </div>
+              )}
+              {previewBreakdown.unpaid_leave_deduction > 0 && (
+                <div className="flex justify-between items-center text-rose-600">
+                  <span>Unpaid Leave Deduction ({unpaidLeaveDays} day{unpaidLeaveDays === 1 ? '' : 's'}):</span>
+                  <span className="font-mono font-bold">-₹{previewBreakdown.unpaid_leave_deduction.toFixed(2)}</span>
+                </div>
+              )}
+              {previewBreakdown.half_day_deduction > 0 && (
+                <div className="flex justify-between items-center text-rose-600">
+                  <span>Half-Day Deduction ({halfDayDays} day{halfDayDays === 1 ? '' : 's'}):</span>
+                  <span className="font-mono font-bold">-₹{previewBreakdown.half_day_deduction.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-gray-900 font-semibold pt-1 border-t border-gray-200">
+                <span>Total Attendance/Leave Deductions:</span>
+                <span className="font-mono font-bold text-rose-600">-₹{previewBreakdown.attendance_deduction.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center text-gray-500 text-[11px] pl-2 border-l-2 border-rose-200">
-                <span>{absentDays} absent × ₹{previewBreakdown.daily_basic_rate.toFixed(2)} + {halfDayDays} half-day × ₹{(previewBreakdown.daily_basic_rate * 0.5).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center pt-1 border-t border-gray-200 font-semibold">
+              <div className="flex justify-between items-center text-gray-900 font-semibold">
                 <span>Calculated Net Payable:</span>
                 <span className="font-mono font-bold text-gray-900">₹{previewBreakdown.calculated_net_salary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
@@ -378,7 +399,10 @@ export default function SalaryPage() {
         supabase.from('attendance').select('employee_id, status, date, work_date').gte('date', startDate).lte('date', endDate),
         supabase.from('holidays').select('holiday_date, name').gte('holiday_date', startDate).lte('holiday_date', endDate).eq('is_optional', false),
         supabase.from('organization_policy').select('weekend_days').limit(1).maybeSingle(),
-        supabase.from('leave_requests').select('employee_id, from_date, to_date, status').eq('status', 'approved').lte('from_date', endDate).gte('to_date', startDate)
+        supabase.from('leave_requests').select(`
+          employee_id, from_date, to_date, status, leave_type, chargeable_days,
+          policy:leave_policies ( is_paid )
+        `).eq('status', 'approved').lte('from_date', endDate).gte('to_date', startDate)
       ]);
 
       const emps = empRes.data || [];
@@ -403,41 +427,38 @@ export default function SalaryPage() {
 
       const attMap = {};
       emps.forEach(emp => {
-        const workingDaysData = calculateMonthWorkingDays(year, month, emp.joining_date, weeklyOffs, hols);
         const empAtts = atts.filter(a => a.employee_id === emp.id);
+        const empLeaves = leaves.filter(l => l.employee_id === emp.id).map(l => ({
+          from_date: l.from_date,
+          to_date: l.to_date,
+          leave_type: l.leave_type,
+          status: l.status,
+          is_paid: l.policy ? l.policy.is_paid : l.leave_type !== 'unpaid',
+          chargeable_days: l.chargeable_days ? Number(l.chargeable_days) : undefined,
+        }));
 
-        let present = 0;
-        let absent = 0;
-        let half_day = 0;
-        let late = 0;
-
-        empAtts.forEach(a => {
-          if (a.status === 'present' || a.status === 'wfh') present++;
-          else if (a.status === 'absent') absent++;
-          else if (a.status === 'half_day') half_day++;
-          else if (a.status === 'late') {
-            late++;
-            present++;
-          }
+        const classification = classifyMonthAttendanceAndLeaves({
+          year,
+          month,
+          joiningDateStr: emp.joining_date,
+          weeklyOffs,
+          holidays: hols,
+          attendanceRecords: empAtts,
+          leaveRequests: empLeaves,
         });
 
-        // Count approved leaves in this month (chargeable working days only)
-        const empLeaves = leaves.filter(l => l.employee_id === emp.id);
-        const approvedLeaveCount = calculateApprovedLeaveWorkingDays(
-          empLeaves,
-          startDate,
-          endDate,
-          weeklyOffs,
-          hols
-        );
-
         attMap[emp.id] = {
-          ...workingDaysData,
-          present,
-          absent,
-          half_day,
-          late,
-          approved_leave: approvedLeaveCount,
+          calendarDays: classification.calendarDays,
+          workingDays: classification.workingDays,
+          weeklyOffs: classification.weeklyOffs,
+          holidays: classification.holidays,
+          present: classification.presentDays,
+          absent: classification.absentDays,
+          half_day: classification.halfDayDays,
+          paid_leave: classification.paidLeaveDays,
+          unpaid_leave: classification.unpaidLeaveDays,
+          late: classification.lateDays,
+          dateDetails: classification.dateDetails,
         };
       });
       setAttendanceMap(attMap);
@@ -632,7 +653,7 @@ export default function SalaryPage() {
                         <p className="text-xs text-gray-400 font-medium tracking-wide mt-0.5">{emp.department || emp.role}</p>
                         {att && (
                           <p className="text-[11px] text-gray-500 mt-1 font-mono">
-                            {att.workingDays} working days · {att.present} present · {att.absent} absent{att.half_day > 0 ? ` · ${att.half_day} half-day` : ''}
+                            {att.calendarDays} cal days · {att.present} present · {att.absent} absent{att.half_day > 0 ? ` · ${att.half_day} half-day` : ''}{att.paid_leave > 0 ? ` · ${att.paid_leave} paid leave` : ''}{att.unpaid_leave > 0 ? ` · ${att.unpaid_leave} unpaid leave` : ''}
                           </p>
                         )}
                       </div>

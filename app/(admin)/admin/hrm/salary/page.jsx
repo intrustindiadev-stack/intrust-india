@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Download, Calendar as CalendarIcon, RefreshCw, Search, CheckCircle2, AlertCircle, TrendingUp, Users, DollarSign, ArrowLeft, Filter, ShieldCheck, Gift } from 'lucide-react';
 import { downloadPayslip } from '@/lib/payslipGenerator';
-import { calculateMonthWorkingDays, calculateApprovedLeaveWorkingDays } from '@/lib/hrm/payroll';
+import {
+  calculateMonthWorkingDays,
+  classifyMonthAttendanceAndLeaves,
+  roundToTwo,
+} from '@/lib/hrm/payroll';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -67,7 +71,10 @@ export default function AdminSalaryOverviewPage() {
           .limit(1)
           .maybeSingle(),
         supabase.from('leave_requests')
-          .select('employee_id, from_date, to_date, status')
+          .select(`
+            employee_id, from_date, to_date, status, leave_type, chargeable_days,
+            policy:leave_policies ( is_paid )
+          `)
           .eq('status', 'approved')
           .lte('from_date', endDate)
           .gte('to_date', startDate),
@@ -98,35 +105,38 @@ export default function AdminSalaryOverviewPage() {
       // Attendance statistics
       const aMap = {};
       emps.forEach(emp => {
-        const workingData = calculateMonthWorkingDays(year, month, emp.joining_date, weeklyOffs, holidays);
         const empAtts = atts.filter(a => a.employee_id === emp.id);
+        const empLeaves = leaves.filter(l => l.employee_id === emp.id).map(l => ({
+          from_date: l.from_date,
+          to_date: l.to_date,
+          leave_type: l.leave_type,
+          status: l.status,
+          is_paid: l.policy ? l.policy.is_paid : l.leave_type !== 'unpaid',
+          chargeable_days: l.chargeable_days ? Number(l.chargeable_days) : undefined,
+        }));
 
-        let pres = 0;
-        let abs = 0;
-        let hd = 0;
-
-        empAtts.forEach(a => {
-          if (a.status === 'present' || a.status === 'wfh') pres++;
-          else if (a.status === 'absent') abs++;
-          else if (a.status === 'half_day') hd++;
-          else if (a.status === 'late') pres++;
+        const classification = classifyMonthAttendanceAndLeaves({
+          year,
+          month,
+          joiningDateStr: emp.joining_date,
+          weeklyOffs,
+          holidays,
+          attendanceRecords: empAtts,
+          leaveRequests: empLeaves,
         });
 
-        const empLeaves = leaves.filter(l => l.employee_id === emp.id);
-        const approvedLeaveCount = calculateApprovedLeaveWorkingDays(
-          empLeaves,
-          startDate,
-          endDate,
-          weeklyOffs,
-          holidays
-        );
-
         aMap[emp.id] = {
-          ...workingData,
-          present: pres,
-          absent: abs,
-          half_day: hd,
-          approved_leave: approvedLeaveCount,
+          calendarDays: classification.calendarDays,
+          workingDays: classification.workingDays,
+          weeklyOffs: classification.weeklyOffs,
+          holidays: classification.holidays,
+          present: classification.presentDays,
+          absent: classification.absentDays,
+          half_day: classification.halfDayDays,
+          paid_leave: classification.paidLeaveDays,
+          unpaid_leave: classification.unpaidLeaveDays,
+          late: classification.lateDays,
+          dateDetails: classification.dateDetails,
         };
       });
       setAttendanceMap(aMap);
@@ -427,8 +437,8 @@ export default function AdminSalaryOverviewPage() {
                   });
 
                   if (!isProcessed && att) {
-                    const daily = att.workingDays > 0 ? ((sal?.base_salary || emp.base_salary || 0) / att.workingDays) : 0;
-                    attDeductionAmt = (att.absent * daily) + (att.half_day * daily * 0.5);
+                    const daily = att.calendarDays > 0 ? ((sal?.base_salary || emp.base_salary || 0) / att.calendarDays) : 0;
+                    attDeductionAmt = (att.absent * daily) + ((att.unpaid_leave || 0) * daily) + (att.half_day * daily * 0.5);
                   }
 
                   return (
@@ -467,6 +477,18 @@ export default function AdminSalaryOverviewPage() {
                               <>
                                 <span className="text-gray-300">/</span>
                                 <span className="text-violet-600 font-bold" title="Half-Day">{att.half_day}HD</span>
+                              </>
+                            )}
+                            {att.paid_leave > 0 && (
+                              <>
+                                <span className="text-gray-300">/</span>
+                                <span className="text-teal-600 font-bold" title="Paid Leave">{att.paid_leave}PL</span>
+                              </>
+                            )}
+                            {att.unpaid_leave > 0 && (
+                              <>
+                                <span className="text-gray-300">/</span>
+                                <span className="text-amber-600 font-bold" title="Unpaid Leave">{att.unpaid_leave}UL</span>
                               </>
                             )}
                           </div>
