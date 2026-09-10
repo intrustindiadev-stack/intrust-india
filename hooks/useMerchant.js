@@ -25,7 +25,7 @@ export function useMerchant() {
                     .eq('id', user.id)
                     .single();
 
-                const isUserAdmin = profile?.role === 'admin';
+                const isUserAdmin = ['admin', 'super_admin'].includes(profile?.role);
                 setIsAdmin(isUserAdmin);
 
                 if (isUserAdmin) {

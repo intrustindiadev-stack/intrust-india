@@ -17,6 +17,7 @@ import {
     Info, 
     ChevronDown, 
     ArrowRight,
+    ArrowUpRight,
     CheckCircle2,
     X,
     Building2,
@@ -43,6 +44,7 @@ function AnimatedCounter({ endValue, duration = 1200 }) {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
+        const target = Math.max(0, Math.round(Number(endValue) || 0));
         let startTime = null;
         let animationFrameId;
 
@@ -51,13 +53,13 @@ function AnimatedCounter({ endValue, duration = 1200 }) {
             const progress = Math.min((timestamp - startTime) / duration, 1);
             // Ease out cubic
             const easeOut = 1 - Math.pow(1 - progress, 3);
-            const current = Math.floor(easeOut * endValue);
+            const current = Math.floor(easeOut * target);
             setCount(current);
 
             if (progress < 1) {
                 animationFrameId = requestAnimationFrame(animate);
             } else {
-                setCount(endValue);
+                setCount(target);
             }
         };
 
@@ -97,6 +99,11 @@ export default function AIVaultOverview({
     summaryStats = {},
     activeOrdersStats = { count: 3, totalAmount: 60000 }
 }) {
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // Hidden wallet amount state (tap to reveal with counter)
     const [isBalanceRevealed, setIsBalanceRevealed] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -105,11 +112,11 @@ export default function AIVaultOverview({
     const [timeframe, setTimeframe] = useState('6M');
 
     // Real values directly from database
-    const availableBalance = (vault?.balance_paise != null ? vault.balance_paise / 100 : 0);
-    const totalInvested = summaryStats?.totalInvested || 0;
-    const totalProfit = (vault?.total_profit_paise != null ? vault.total_profit_paise / 100 : 0);
-    const activeInOrders = activeOrdersStats?.totalAmount || 0;
-    const activeOrdersCount = activeOrdersStats?.count || 0;
+    const availableBalance = Number(vault?.balance_paise != null ? vault.balance_paise / 100 : 0) || 0;
+    const totalInvested = Number(summaryStats?.totalInvested) || 0;
+    const totalProfit = Number(vault?.total_profit_paise != null ? vault.total_profit_paise / 100 : 0) || 0;
+    const activeInOrders = Number(activeOrdersStats?.totalAmount) || 0;
+    const activeOrdersCount = Number(activeOrdersStats?.count) || 0;
 
     // Total Portfolio Value
     const totalValue = availableBalance + activeInOrders + totalProfit;
@@ -145,17 +152,34 @@ export default function AIVaultOverview({
         ];
     }, [availableBalance, activeInOrders, totalProfit, totalInvested, totalValue]);
 
+    // Pie chart safe dataset (prevent 0/0 radian NaN in recharts)
+    const pieChartData = useMemo(() => {
+        if (totalValue <= 0) {
+            return [{ name: 'No Assets', value: 1, color: '#94a3b8' }];
+        }
+        return distributionData.filter(d => d.value > 0);
+    }, [distributionData, totalValue]);
+
     // Real database transactions
     const displayTransactions = useMemo(() => {
-        if (!transactions || transactions.length === 0) {
+        if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
             return [];
         }
 
         return transactions.slice(0, 5).map(tx => {
             const isDebit = tx.type === 'WITHDRAWAL';
-            const dateObj = new Date(tx.created_at);
-            const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + 
-                ', ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            let formattedDate = '—';
+            try {
+                if (tx.created_at) {
+                    const dateObj = new Date(tx.created_at);
+                    if (!isNaN(dateObj.getTime())) {
+                        formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+                            ', ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    }
+                }
+            } catch {
+                formattedDate = '—';
+            }
 
             let displayType = 'Profit Credit';
             let iconType = 'profit';
@@ -188,12 +212,12 @@ export default function AIVaultOverview({
             }
 
             return {
-                id: tx.id,
+                id: tx.id || Math.random().toString(),
                 date: formattedDate,
                 type: displayType,
                 iconType,
-                orderRef: tx.order_code || (tx.reference_order_id ? `#AI-${tx.reference_order_id.slice(0, 4)}` : '#TX-001'),
-                amount: (tx.amount_paise || 0) / 100,
+                orderRef: tx.order_code || (tx.reference_order_id ? `#AI-${String(tx.reference_order_id).slice(0, 4)}` : '#TX-001'),
+                amount: (Number(tx.amount_paise) || 0) / 100,
                 isDebit,
                 status: statusLabel
             };
@@ -445,38 +469,44 @@ export default function AIVaultOverview({
 
                     {/* Chart Container */}
                     <div className="h-64 sm:h-72 w-full pt-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={monthlyData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis 
-                                    dataKey="month" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontSize: 11 }} 
-                                />
-                                <YAxis 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: '#94a3b8', fontSize: 11 }} 
-                                    tickFormatter={(val) => {
-                                        if (val === 0) return '0';
-                                        if (val >= 100000) return `${(val / 100000).toFixed(1).replace('.0', '')}L`;
-                                        return `${val / 1000}K`;
-                                    }} 
-                                />
-                                <Tooltip content={<CustomEarningsTooltip />} />
-                                <Bar dataKey="invested" fill="#93c5fd" radius={[3, 3, 0, 0]} barSize={16} name="Allocated Value" />
-                                <Bar dataKey="profit" fill="#2563eb" radius={[3, 3, 0, 0]} barSize={16} name="Profit Earned" />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="netBalance" 
-                                    stroke="#10b981" 
-                                    strokeWidth={2.5} 
-                                    dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#ffffff' }} 
-                                    name="Net Balance" 
-                                />
-                            </ComposedChart>
-                        </ResponsiveContainer>
+                        {isMounted ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={monthlyData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis 
+                                        dataKey="month" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#94a3b8', fontSize: 11 }} 
+                                    />
+                                    <YAxis 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#94a3b8', fontSize: 11 }} 
+                                        tickFormatter={(val) => {
+                                            if (val === 0) return '0';
+                                            if (val >= 100000) return `${(val / 100000).toFixed(1).replace('.0', '')}L`;
+                                            return `${val / 1000}K`;
+                                        }} 
+                                    />
+                                    <Tooltip content={<CustomEarningsTooltip />} />
+                                    <Bar dataKey="invested" fill="#93c5fd" radius={[3, 3, 0, 0]} barSize={16} name="Allocated Value" />
+                                    <Bar dataKey="profit" fill="#2563eb" radius={[3, 3, 0, 0]} barSize={16} name="Profit Earned" />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="netBalance" 
+                                        stroke="#10b981" 
+                                        strokeWidth={2.5} 
+                                        dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#ffffff' }} 
+                                        name="Net Balance" 
+                                    />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
+                                Loading chart...
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -487,23 +517,29 @@ export default function AIVaultOverview({
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6 my-auto">
                         {/* Donut Chart with Centered Total Value */}
                         <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={distributionData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={58}
-                                        outerRadius={84}
-                                        paddingAngle={2}
-                                        dataKey="value"
-                                    >
-                                        {distributionData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
+                            {isMounted ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={pieChartData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={58}
+                                            outerRadius={84}
+                                            paddingAngle={totalValue > 0 ? 2 : 0}
+                                            dataKey="value"
+                                        >
+                                            {pieChartData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
+                                    Loading chart...
+                                </div>
+                            )}
 
                             {/* Centered label */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

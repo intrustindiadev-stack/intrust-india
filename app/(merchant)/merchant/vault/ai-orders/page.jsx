@@ -9,7 +9,7 @@ import AIVaultOverview from '@/components/merchant/vault/AIVaultOverview';
 import { ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 
 export default function AIVaultPage() {
-    const { merchant } = useMerchant();
+    const { merchant, loading: merchantLoading } = useMerchant();
     const [vault, setVault] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [summaryStats, setSummaryStats] = useState({ 
@@ -25,9 +25,18 @@ export default function AIVaultPage() {
 
     useEffect(() => {
         const fetchVaultData = async () => {
-            if (!merchant) return;
+            if (merchantLoading) return;
+            if (!merchant) {
+                setIsLoading(false);
+                return;
+            }
+
             try {
                 const merchantUserId = merchant.user_id || merchant.id;
+                if (!merchantUserId) {
+                    setIsLoading(false);
+                    return;
+                }
 
                 // 1. Fetch Vault
                 const { data: vaultData, error: vaultError } = await supabase
@@ -67,7 +76,9 @@ export default function AIVaultPage() {
                 // Create a lookup for order codes
                 const orderCodeMap = {};
                 (allOrders || []).forEach(o => {
-                    orderCodeMap[o.id] = o.order_code || `AI-${o.id.slice(0, 4)}`;
+                    if (o && o.id) {
+                        orderCodeMap[o.id] = o.order_code || `AI-${String(o.id).slice(0, 4)}`;
+                    }
                 });
 
                 if (vaultData) {
@@ -83,7 +94,7 @@ export default function AIVaultPage() {
 
                     const enrichedTx = (txData || []).map(tx => ({
                         ...tx,
-                        order_code: orderCodeMap[tx.reference_order_id] || (tx.reference_order_id ? `#AI-${tx.reference_order_id.slice(0, 4)}` : '—')
+                        order_code: orderCodeMap[tx.reference_order_id] || (tx.reference_order_id ? `#AI-${String(tx.reference_order_id).slice(0, 4)}` : '—')
                     }));
 
                     setTransactions(enrichedTx);
@@ -94,15 +105,25 @@ export default function AIVaultPage() {
             } catch (error) {
                 console.error("Vault fetch error:", error);
                 toast.error('Failed to load vault data');
+                setVault({ balance_paise: 0, total_profit_paise: 0 });
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchVaultData();
-    }, [merchant]);
+    }, [merchant, merchantLoading]);
 
-    if (!merchant) return null;
+    if (!merchantLoading && !merchant) {
+        return (
+            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 text-center py-20">
+                <p className="text-sm font-semibold text-slate-500">Merchant account not found. Please log in with a valid merchant profile.</p>
+                <Link href="/merchant/ai-orders" className="text-xs font-bold text-blue-600 hover:underline">
+                    Go to AI Orders
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -121,7 +142,7 @@ export default function AIVaultPage() {
                 </div>
             </div>
 
-            {isLoading ? (
+            {(merchantLoading || isLoading) ? (
                 <div className="space-y-6 animate-pulse">
                     <div className="h-10 w-64 bg-slate-100 dark:bg-slate-800 rounded-xl" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

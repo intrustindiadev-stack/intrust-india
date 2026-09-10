@@ -18,15 +18,24 @@ import {
 } from 'lucide-react';
 
 export default function VaultTransactionsPage() {
-    const { merchant } = useMerchant();
+    const { merchant, loading: merchantLoading } = useMerchant();
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchTransactions = async () => {
-            if (!merchant) return;
+            if (merchantLoading) return;
+            if (!merchant) {
+                setIsLoading(false);
+                return;
+            }
+
             try {
                 const merchantUserId = merchant.user_id || merchant.id;
+                if (!merchantUserId) {
+                    setIsLoading(false);
+                    return;
+                }
 
                 // 1. Fetch Vault
                 const { data: vaultData, error: vaultError } = await supabase
@@ -47,7 +56,9 @@ export default function VaultTransactionsPage() {
 
                 const orderCodeMap = {};
                 (allOrders || []).forEach(o => {
-                    orderCodeMap[o.id] = o.order_code || `AI-${o.id.slice(0, 4)}`;
+                    if (o && o.id) {
+                        orderCodeMap[o.id] = o.order_code || `AI-${String(o.id).slice(0, 4)}`;
+                    }
                 });
 
                 if (vaultData) {
@@ -62,7 +73,7 @@ export default function VaultTransactionsPage() {
 
                     const enrichedTx = (txData || []).map(tx => ({
                         ...tx,
-                        order_code: orderCodeMap[tx.reference_order_id] || (tx.reference_order_id ? `#AI-${tx.reference_order_id.slice(0, 4)}` : '—')
+                        order_code: orderCodeMap[tx.reference_order_id] || (tx.reference_order_id ? `#AI-${String(tx.reference_order_id).slice(0, 4)}` : '—')
                     }));
 
                     setTransactions(enrichedTx);
@@ -78,14 +89,24 @@ export default function VaultTransactionsPage() {
         };
 
         fetchTransactions();
-    }, [merchant]);
+    }, [merchant, merchantLoading]);
 
     const displayTransactions = useMemo(() => {
+        if (!transactions || !Array.isArray(transactions)) return [];
         return transactions.map(tx => {
             const isDebit = tx.type === 'WITHDRAWAL';
-            const dateObj = new Date(tx.created_at);
-            const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + 
-                ', ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            let formattedDate = '—';
+            try {
+                if (tx.created_at) {
+                    const dateObj = new Date(tx.created_at);
+                    if (!isNaN(dateObj.getTime())) {
+                        formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+                            ', ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    }
+                }
+            } catch {
+                formattedDate = '—';
+            }
 
             let displayType = 'Profit Credit';
             let iconType = 'profit';
@@ -118,19 +139,28 @@ export default function VaultTransactionsPage() {
             }
 
             return {
-                id: tx.id,
+                id: tx.id || Math.random().toString(),
                 date: formattedDate,
                 type: displayType,
                 iconType,
-                orderRef: tx.order_code || (tx.reference_order_id ? `#AI-${tx.reference_order_id.slice(0, 4)}` : '#TX-001'),
-                amount: (tx.amount_paise || 0) / 100,
+                orderRef: tx.order_code || (tx.reference_order_id ? `#AI-${String(tx.reference_order_id).slice(0, 4)}` : '#TX-001'),
+                amount: (Number(tx.amount_paise) || 0) / 100,
                 isDebit,
                 status: statusLabel
             };
         });
     }, [transactions]);
 
-    if (!merchant) return null;
+    if (!merchantLoading && !merchant) {
+        return (
+            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 text-center py-20">
+                <p className="text-sm font-semibold text-slate-500">Merchant account not found. Please log in with a valid merchant profile.</p>
+                <Link href="/merchant/ai-orders" className="text-xs font-bold text-blue-600 hover:underline">
+                    Go to AI Orders
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
