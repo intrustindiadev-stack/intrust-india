@@ -12,6 +12,7 @@ import InvestmentAnalytics from '@/components/merchant/investment/InvestmentAnal
 import AIGrowHowItWorks from '@/components/merchant/investment/AIGrowHowItWorks';
 import FundROICard from '@/components/merchant/investment/FundROICard';
 import { usePayment } from '@/hooks/usePayment';
+import { toast } from 'react-hot-toast';
 
 function AnimatedNumber({ value, decimals = 0, prefix = '₹' }) {
     const [display, setDisplay] = useState(0);
@@ -38,36 +39,41 @@ export default function AIGrowPage() {
     const [investments, setInvestments] = useState([]);
     const [allOrders, setAllOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [isRevealed, setIsRevealed] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [amount, setAmount] = useState('');
     const [desc, setDesc] = useState('');
     const [processing, setProcessing] = useState(false);
-    const [toast, setToast] = useState(null);
     const [selectedInv, setSelectedInv] = useState(null);
     const [mobileTab, setMobileTab] = useState('overview');
     const [user, setUser] = useState(null);
     const { initiatePayment, loading: paymentLoading } = usePayment();
 
-    const showToast = (msg, type = 'success') => {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 3500);
-    };
-
     const fetchData = async () => {
         try {
             setLoading(true);
+            setError(null);
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (authUser) setUser(authUser);
             const res = await fetch('/api/merchant/investments', { headers: { Authorization: `Bearer ${session.access_token}` } });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to load growth plans');
+            }
             const json = await res.json();
             const invs = json.data || [];
             setInvestments(invs);
             setAllOrders(json.allOrders || []);
             if (!selectedInv && invs.length > 0) setSelectedInv(invs[0].id);
-        } catch (e) { console.error(e); } finally { setLoading(false); }
+        } catch (e) {
+            console.error(e);
+            const msg = e instanceof Error ? e.message : 'Failed to load growth plans';
+            setError(msg);
+            toast.error(msg);
+        } finally { setLoading(false); }
     };
 
     useEffect(() => { fetchData(); }, []);
@@ -172,16 +178,22 @@ export default function AIGrowPage() {
                 style={{ clipPath: 'circle(0% at 50% 50%)' }} // SSR fallback
             >
 
-            {/* Toast */}
-            <AnimatePresence>
-                {toast && (
-                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm ${toast.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
-                        {toast.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
-                        {toast.msg}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* ── Error Banner ── */}
+            {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-xs flex items-center justify-between font-bold shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle size={16} />
+                        <span>{error}</span>
+                    </div>
+                    <button
+                        onClick={fetchData}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 rounded-lg text-xs transition-colors flex items-center gap-1 font-semibold"
+                    >
+                        <RefreshCw size={14} />
+                        Retry
+                    </button>
+                </div>
+            )}
 
             {/* ── Page Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -193,7 +205,7 @@ export default function AIGrowPage() {
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-md">Your capital deployed into verified trade orders — earning profit while you focus on business.</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                    <button onClick={fetchData} className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm">
+                    <button onClick={fetchData} aria-label="Refresh AI Grow data" className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all shadow-sm">
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button onClick={() => setShowModal(true)}
@@ -491,15 +503,15 @@ export default function AIGrowPage() {
                                 </div>
                                 <h3 className="text-3xl font-black font-display text-slate-900 dark:text-white tracking-tight">Supply Capital</h3>
                             </div>
-                            <button onClick={() => setShowModal(false)} className="w-9 h-9 bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
+                            <button onClick={() => setShowModal(false)} aria-label="Close modal" className="w-9 h-9 bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all text-sm font-bold">✕</button>
                         </div>
                         
                         <form onSubmit={async (e) => {
                             e.preventDefault();
-                            if (Number(amount) < 10000) return showToast('Minimum ₹10,000 required', 'error');
+                            if (Number(amount) < 10000) return toast.error('Minimum ₹10,000 required');
                             setShowModal(false);
                             
-                            showToast('Redirecting to payment gateway...', 'loading');
+                            const toastId = toast.loading('Redirecting to payment gateway...');
                             try {
                                 await initiatePayment({
                                     amount: Number(amount).toFixed(2),
@@ -509,8 +521,10 @@ export default function AIGrowPage() {
                                     udf1: "MERCHANT_AIGROW",
                                     udf2: desc || 'AI Grow Request'
                                 });
+                                toast.dismiss(toastId);
                             } catch (err) {
-                                showToast(err.message || 'Payment initiation failed', 'error');
+                                toast.dismiss(toastId);
+                                toast.error(err.message || 'Payment initiation failed');
                             }
                         }} className="space-y-6">
                             <div>

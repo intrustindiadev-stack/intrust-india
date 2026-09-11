@@ -30,18 +30,21 @@ export default async function WholesaleHistoryPage() {
     if (ordersError) console.error('Error fetching wholesale history:', ordersError);
 
     return (
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto bg-[#f8f9fb] min-h-screen">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-                <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/5 text-slate-500 text-[10px] font-black uppercase tracking-widest leading-none">
-                        <History size={12} className="text-blue-600" />
-                        Wholesale Purchase Ledger
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+            {/* Consistent Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800/80">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-[11px] font-bold uppercase tracking-wider">
+                            <History size={11} className="text-blue-600 dark:text-blue-400" />
+                            Procurement Ledger
+                        </span>
                     </div>
-                    <h1 className="text-5xl font-black text-slate-950 tracking-tight leading-none font-[family-name:var(--font-outfit)]">
-                        Purchase <span className="text-blue-600">History</span>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                        Purchase History
                     </h1>
-                    <p className="text-slate-400 font-medium text-lg max-w-md">
-                        A complete record of all stock you&apos;ve sourced from the platform wholesale market.
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+                        A complete record of all stock sourced from the platform wholesale market.
                     </p>
                 </div>
             </div>

@@ -299,6 +299,7 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             // ── Payout requests ──────────────────────────────────────────────
             case 'payout_request':
                 if (isAdmin) router.push('/admin/payouts');
+                else if (isMerchant) router.push('/merchant/wallet/withdrawals');
                 else router.push('/merchant/wallet');
                 break;
 
@@ -348,6 +349,13 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             case 'lockin_balance':
                 // Merchant gets notified
                 router.push('/merchant/lockin');
+                break;
+
+            // ── AI Grow / Growth Plans ─────────────────────────────────────────
+            case 'investment':
+            case 'investment_order':
+                if (isAdmin) router.push('/admin/investments');
+                else router.push('/merchant/investments');
                 break;
 
             // ── Loans ────────────────────────────────────────────────────────

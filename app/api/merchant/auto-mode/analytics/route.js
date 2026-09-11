@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { getPeriodBoundary, isValidOrder, isSettledOrder } from '@/lib/merchant/orderMetrics';
 
 export async function GET(request) {
     try {
@@ -29,10 +30,10 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url);
         const days = Math.min(Math.max(parseInt(searchParams.get('days') || '30', 10), 1), 90);
 
-        // ── Use admin client to bypass RLS ────────────────────────────────────
+        // ── Use admin client to bypass RLS safely ────────────────────────────
         const supabase = createAdminClient();
 
-        // Resolve merchant record
+        // Resolve merchant record strictly for authenticated user
         const { data: merchant, error: merchantError } = await supabase
             .from('merchants')
             .select('id')
@@ -45,10 +46,10 @@ export async function GET(request) {
 
         const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-        // ── Fetch orders ──────────────────────────────────────────────────────
+        // ── Fetch orders with full status and financial tracking ─────────────
         const { data: orders, error: ordersError } = await supabase
             .from('shopping_order_groups')
-            .select('id, created_at, delivery_status, payment_method, total_amount_paise, merchant_profit_paise, platform_cut_paise, customer_name, customer_phone')
+            .select('id, created_at, status, delivery_status, payment_status, payment_method, settlement_status, total_amount_paise, merchant_profit_paise, platform_cut_paise, customer_name, customer_phone, delivery_address')
             .eq('merchant_id', merchant.id)
             .gte('created_at', since)
             .order('created_at', { ascending: false })
@@ -61,28 +62,31 @@ export async function GET(request) {
 
         const safeOrders = orders || [];
 
-        // ── Compute summary stats ─────────────────────────────────────────────
+        // ── Authoritative IST Date Boundaries ────────────────────────────────
         const now = new Date();
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
+        const todayStart = getPeriodBoundary('today', now);
+        const weekStart = getPeriodBoundary('7d', now);
+        const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - 7);
+        // Filter valid orders (excludes cancelled, failed, and abandoned drafts)
+        const validOrders = safeOrders.filter(isValidOrder);
+        const deliveredOrders = validOrders.filter(o => o.delivery_status === 'delivered');
+        const settledOrders = validOrders.filter(isSettledOrder);
+        const pendingOrders = validOrders.filter(o => ['pending', 'packed', 'shipped'].includes(o.delivery_status));
+        const cancelledOrders = safeOrders.filter(o => o.delivery_status === 'cancelled' || o.status === 'cancelled');
 
-        const prevWeekStart = new Date(now);
-        prevWeekStart.setDate(prevWeekStart.getDate() - 14);
+        // Revenue and profit figures
+        const totalGrossRevenue = validOrders.reduce((s, o) => s + (o.total_amount_paise || 0), 0);
+        const settledProfit = settledOrders.reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
+        const contingentProfit = validOrders.filter(o => !isSettledOrder(o)).reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
+        const totalPlatformCut = settledOrders.reduce((s, o) => s + (o.platform_cut_paise || 0), 0);
 
-        const delivered = safeOrders.filter(o => o.delivery_status === 'delivered');
-
-        const totalRevenue = delivered.reduce((s, o) => s + (o.total_amount_paise || 0), 0);
-        const totalProfit  = delivered.reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
-        const totalPlatformCut = delivered.reduce((s, o) => s + (o.platform_cut_paise || 0), 0);
-
-        const currentWeekProfit = delivered
+        // Current week vs previous week settled profit for growth
+        const currentWeekProfit = settledOrders
             .filter(o => new Date(o.created_at) >= weekStart)
             .reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
 
-        const prevWeekProfit = delivered
+        const prevWeekProfit = settledOrders
             .filter(o => {
                 const d = new Date(o.created_at);
                 return d >= prevWeekStart && d < weekStart;
@@ -93,20 +97,28 @@ export async function GET(request) {
             ? ((currentWeekProfit - prevWeekProfit) / prevWeekProfit) * 100
             : currentWeekProfit > 0 ? 100 : 0;
 
-        const todayCount = safeOrders.filter(o => new Date(o.created_at) >= todayStart).length;
-        const weekCount  = safeOrders.filter(o => new Date(o.created_at) >= weekStart).length;
+        const todayCount = validOrders.filter(o => new Date(o.created_at) >= todayStart).length;
+        const weekCount = validOrders.filter(o => new Date(o.created_at) >= weekStart).length;
 
-        const successRate = safeOrders.length > 0
-            ? Math.round((delivered.length / safeOrders.length) * 100)
-            : 0;
+        // Terminal orders for honest success rate (delivered vs delivered + cancelled/failed)
+        const terminalOrders = safeOrders.filter(o => ['delivered', 'cancelled', 'failed'].includes(o.delivery_status) || o.status === 'cancelled');
+        const successRate = terminalOrders.length > 0
+            ? Math.round((deliveredOrders.length / terminalOrders.length) * 100)
+            : (validOrders.length > 0 ? 100 : 0);
 
         const summary = {
-            totalOrders: safeOrders.length,
-            deliveredCount: delivered.length,
+            totalOrders: validOrders.length,
+            allRowsCount: safeOrders.length,
+            deliveredCount: deliveredOrders.length,
+            pendingCount: pendingOrders.length,
+            cancelledCount: cancelledOrders.length,
+            settledCount: settledOrders.length,
             todayCount,
             weekCount,
-            totalRevenue,
-            totalProfit,
+            totalGrossRevenue,
+            settledProfit,
+            contingentProfit,
+            totalProfit: settledProfit, // Authoritative settled profit
             totalPlatformCut,
             successRate,
             growth,
@@ -119,3 +131,4 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
+

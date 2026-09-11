@@ -490,7 +490,7 @@ export default function MerchantOrderDetailPage({ params }) {
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 z-40 lg:ml-64 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                     <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="text-center sm:text-left">
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Total Investment</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Order Capital</p>
                             <p className="text-xl font-bold text-slate-900 dark:text-white">
                                 ₹{wholesale.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                             </p>

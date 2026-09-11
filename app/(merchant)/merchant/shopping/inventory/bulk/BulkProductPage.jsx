@@ -8,9 +8,19 @@ import Link from 'next/link';
 import BulkProductTable from './BulkProductTable';
 import BulkCSVUploader from './BulkCSVUploader';
 
-export default function BulkProductPage({ merchantId, isSubscribed = true }) {
-    const [activeTab, setActiveTab] = useState('table');
+export default function BulkProductPage({ merchantId, isSubscribed = true, initialTab = 'table' }) {
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const tabParam = params.get('tab');
+            if (tabParam === 'csv' || tabParam === 'table') {
+                setActiveTab(tabParam);
+            }
+        }
+    }, []);
     const [submitting, setSubmitting] = useState(false);
     const [progressMessage, setProgressMessage] = useState('');
     const [results, setResults] = useState(null); // null | [{index, title, success, error}]

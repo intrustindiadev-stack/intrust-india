@@ -192,7 +192,7 @@ export default function AdjustBalanceModal({ isOpen, onClose, merchant, onSucces
                             {/* Header */}
                             <div className="flex items-start justify-between p-6 border-b border-gray-50">
                                 <div>
-                                    <h2 className="text-lg font-bold text-gray-900">Adjust Investment Wallet</h2>
+                                    <h2 className="text-lg font-bold text-gray-900">Adjust AI Grow Wallet</h2>
                                     <p className="text-sm text-gray-500 mt-0.5">
                                         {merchant.merchant?.business_name}
                                         <span className="mx-1.5 text-gray-300">·</span>

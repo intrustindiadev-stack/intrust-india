@@ -62,7 +62,7 @@ export async function POST(request, { params }) {
                 transaction_type: 'wallet_topup',
                 amount_paise: totalAmountToRelease,
                 balance_after_paise: newBalance,
-                description: 'AI Grow Investment + Profit Released to Wallet',
+                description: 'AI Grow Capital + Profit Released to Wallet',
                 metadata: { reference_id: id, type: 'AI_GROW_RELEASE', principal: investment.amount_paise, profit: totalProfitPaise }
             });
 
@@ -80,8 +80,8 @@ export async function POST(request, { params }) {
         try {
             await supabase.from('notifications').insert({
                 user_id: merchant.user_id,
-                title: 'Investment Released',
-                body: `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including profits) from your AI Grow investment has been released to your portfolio.`,
+                title: 'Growth Plan Released',
+                body: `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including profits) from your AI Grow growth plan has been released to your portfolio.`,
                 type: 'success',
                 reference_id: id,
                 reference_type: 'investment'

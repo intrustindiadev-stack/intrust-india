@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
@@ -100,9 +102,12 @@ export default function WithdrawalsPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to cancel');
+            toast.success('Withdrawal request cancelled successfully');
             await fetchRequests();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Something went wrong');
+            const msg = err instanceof Error ? err.message : 'Something went wrong';
+            setError(msg);
+            toast.error(msg);
         } finally {
             setCancellingId(null);
         }
@@ -116,10 +121,10 @@ export default function WithdrawalsPage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 mt-6 gap-4">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <a href="/merchant/wallet" className="text-sm text-slate-500 hover:text-[#D4AF37] transition-colors flex items-center gap-1 font-medium">
+                        <Link href="/merchant/wallet" className="text-sm text-slate-500 hover:text-[#D4AF37] transition-colors flex items-center gap-1 font-medium">
                             <span className="material-icons-round text-base">arrow_back</span>
                             Wallet
-                        </a>
+                        </Link>
                     </div>
                     <h1 className="font-display text-4xl font-bold text-slate-800 dark:text-slate-100 mb-2">Withdrawals</h1>
                     <p className="text-slate-600 dark:text-slate-400 font-medium">Track your payout requests and their statuses</p>
@@ -128,25 +133,35 @@ export default function WithdrawalsPage() {
                     <button
                         onClick={fetchRequests}
                         disabled={loading}
+                        aria-label="Refresh withdrawal requests"
                         className="p-3 bg-white/40 dark:bg-white/5 merchant-glass hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-colors border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 shadow-sm"
                         title="Refresh"
                     >
                         <span className={`material-icons-round text-lg ${loading ? 'animate-spin text-[#D4AF37]' : ''}`}>refresh</span>
                     </button>
-                    <a
+                    <Link
                         href="/merchant/wallet"
                         className="px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl shadow-lg shadow-[#D4AF37]/20 hover:opacity-90 transition-all flex items-center gap-2 gold-glow"
                     >
                         <span className="material-icons-round text-base">add_circle</span>
                         New Withdrawal
-                    </a>
+                    </Link>
                 </div>
             </div>
 
             {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-center gap-2 font-bold shadow-sm">
-                    <span className="material-icons-round">error_outline</span>
-                    {error}
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-center justify-between font-bold shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <span className="material-icons-round">error_outline</span>
+                        <span>{error}</span>
+                    </div>
+                    <button
+                        onClick={fetchRequests}
+                        className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 rounded-lg text-xs transition-colors flex items-center gap-1 font-semibold"
+                    >
+                        <span className="material-icons-round text-sm">refresh</span>
+                        Retry
+                    </button>
                 </div>
             )}
 
@@ -248,6 +263,37 @@ export default function WithdrawalsPage() {
                                     </td>
                                 </tr>
                             ))}
+                            {loading && requests.length === 0 && (
+                                <>
+                                    {[1, 2, 3].map((i) => (
+                                        <tr key={i} className="animate-pulse">
+                                            <td className="px-6 py-4">
+                                                <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded mb-1.5" />
+                                                <div className="h-3 w-16 bg-slate-100 dark:bg-slate-800 rounded" />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded mb-1.5" />
+                                                <div className="h-3 w-20 bg-slate-100 dark:bg-slate-800 rounded" />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="h-6 w-20 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </>
+                            )}
                             {!loading && requests.length === 0 && (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-20 text-center">

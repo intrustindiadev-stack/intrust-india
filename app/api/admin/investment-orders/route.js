@@ -70,7 +70,7 @@ export async function POST(request) {
             .single();
 
         if (!investment || investment.status !== 'active') {
-            return NextResponse.json({ error: 'Investment must be active to feed orders' }, { status: 400 });
+            return NextResponse.json({ error: 'Growth plan must be active to feed orders' }, { status: 400 });
         }
 
         const { data, error } = await supabase
@@ -101,8 +101,8 @@ export async function POST(request) {
             if (merchant) {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
-                    title: 'Aapki Kamai Aayi! 💸',
-                    body: `${location ? location + ' se ' : ''}${category || 'order'} mein ₹${Number(profitRupees).toLocaleString('en-IN')} ki kamai aayi!`,
+                    title: 'Trade Profit Credited',
+                    body: `₹${Number(profitRupees).toLocaleString('en-IN')} profit credited from ${category || 'trade'} order${location ? ' in ' + location : ''}.`,
                     type: 'success',
                     reference_id: data.id,
                     reference_type: 'investment_order'

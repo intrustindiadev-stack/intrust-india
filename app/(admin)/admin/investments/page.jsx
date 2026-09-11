@@ -176,7 +176,7 @@ export default function AdminInvestmentsPage() {
                                     onClick={() => setViewMode('individual')}
                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${viewMode === 'individual' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                                 >
-                                    Each Investment ({filteredIndividual.length})
+                                    Each Plan ({filteredIndividual.length})
                                 </button>
                                 <button
                                     onClick={() => setViewMode('grouped')}
@@ -216,7 +216,7 @@ export default function AdminInvestmentsPage() {
                                 <table className="w-full text-left whitespace-nowrap">
                                     <thead>
                                         <tr className="bg-white border-b border-slate-100">
-                                            <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Merchant & Investment ID</th>
+                                            <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Merchant & Plan ID</th>
                                             <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount (Capital)</th>
                                             <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profit Paid</th>
                                             <th className="px-6 md:px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Deployed</th>

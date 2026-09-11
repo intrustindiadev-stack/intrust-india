@@ -29,11 +29,9 @@ export default function Header({ setSidebarOpen }) {
 
                 <NotificationBell apiPath="/api/merchant/notifications" />
 
-                <div className="hidden sm:flex items-center space-x-3 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full py-1 pl-1 pr-4">
-                    <div className="w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center">
-                        <span className="material-icons-round text-[#020617] text-sm">payments</span>
-                    </div>
-                    <span className="text-sm font-bold text-[#D4AF37] tracking-wide">₹{displayBalance}</span>
+                <div className="hidden sm:flex items-center gap-2 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-xl py-1.5 px-3">
+                    <span className="material-icons-round text-amber-600 dark:text-[#D4AF37] text-base">payments</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 tracking-tight">₹{displayBalance}</span>
                 </div>
             </div>
         </header>

@@ -282,7 +282,7 @@ export default function WithdrawalForm({ merchant, onSuccess, onCancel, minAmoun
                     {capReached ? (
                         <div className="flex-1 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 flex items-center justify-center gap-2 font-semibold">
                             <span className="material-icons-round text-base">warning</span>
-                            You've reached the maximum of {maxPendingCount} pending requests. Please wait for one to be processed.
+                            You&apos;ve reached the maximum of {maxPendingCount} pending requests. Please wait for one to be processed.
                         </div>
                     ) : (
                         <button

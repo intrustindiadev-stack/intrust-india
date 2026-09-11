@@ -56,7 +56,7 @@ export default function AddInvestmentModal({ onClose }) {
             const result = await res.json();
             if (!res.ok) throw new Error(result.error);
 
-            toast.success('Investment deployed successfully!');
+            toast.success('Capital deployed successfully!');
             onClose(true);
         } catch (err) {
             toast.error(err.message);
@@ -82,7 +82,7 @@ export default function AddInvestmentModal({ onClose }) {
                 <div className="flex justify-between items-start mb-8">
                     <div>
                         <h3 className="text-2xl font-black text-slate-800 tracking-tight">Deploy Capital</h3>
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">Direct Investment to Merchant</p>
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">Direct Capital Allocation</p>
                     </div>
                     <button onClick={() => onClose(false)} className="w-10 h-10 bg-slate-100 rounded-full text-slate-400 hover:text-slate-900 flex items-center justify-center transition-all shrink-0">
                         <X size={18} />
@@ -142,7 +142,7 @@ export default function AddInvestmentModal({ onClose }) {
 
                     {/* Amount */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Investment Amount (₹)</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capital Amount (₹)</label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-indigo-500">
                                 <IndianRupee size={18} />
@@ -169,7 +169,7 @@ export default function AddInvestmentModal({ onClose }) {
                         </button>
                         <button type="submit" disabled={loading || !selectedMerchant}
                             className="flex-[2] bg-slate-900 hover:bg-indigo-600 text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest shadow-xl shadow-slate-200 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50">
-                            {loading ? <Activity size={16} className="animate-spin" /> : <><CheckCircle2 size={16} /> Deploy Investment</>}
+                            {loading ? <Activity size={16} className="animate-spin" /> : <><CheckCircle2 size={16} /> Deploy Capital</>}
                         </button>
                     </div>
                 </form>

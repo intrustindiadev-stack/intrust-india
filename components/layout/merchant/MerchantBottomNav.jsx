@@ -17,10 +17,13 @@ export default function MerchantBottomNav() {
     return (
         <>
             {/* Spacer to prevent content from being hidden behind bottom nav */}
-            <div className="h-28 lg:hidden" />
+            <div className="h-[calc(7rem+env(safe-area-inset-bottom,0px))] lg:hidden" />
 
             {/* Bottom Navigation - Floating Pill - Mobile/Tablet Only */}
-            <nav className="fixed bottom-6 left-4 right-4 z-40 lg:hidden pointer-events-none">
+            <nav 
+                aria-label="Merchant mobile navigation"
+                className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-40 lg:hidden pointer-events-none"
+            >
                 <div className="bg-white/90 dark:bg-navy-800/90 backdrop-blur-xl rounded-full shadow-2xl border border-slate-200/80 dark:border-white/10 p-2 pointer-events-auto flex items-center justify-between mx-auto max-w-md">
                     {navItems.map((item) => {
                         const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -29,6 +32,7 @@ export default function MerchantBottomNav() {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                aria-label={item.label}
                                 className={`relative flex flex-col items-center justify-center h-14 flex-1 rounded-full transition-all duration-300 ${isActive ? 'bg-amber-500/10 dark:bg-white/10 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/60 dark:hover:bg-white/5'}`}
                             >
                                 <span className={`material-icons-round text-[22px] transition-transform ${isActive ? 'scale-110 text-[#D4AF37]' : ''}`}>

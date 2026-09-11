@@ -56,7 +56,7 @@ export default function WalletStatsCards({ wallets = [], totalAdjustments30d = 0
         },
         {
             icon: TrendingUp,
-            label: 'Total Investment Pool',
+            label: 'Total Growth Capital Pool',
             value: formatCurrency(totalPool),
             subtext: `Avg ${formatCurrency(avgBalance)} per wallet`,
             colorClass: 'bg-emerald-100 text-emerald-600',

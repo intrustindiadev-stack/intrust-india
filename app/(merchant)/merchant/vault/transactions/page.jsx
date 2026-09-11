@@ -21,75 +21,80 @@ export default function VaultTransactionsPage() {
     const { merchant, loading: merchantLoading } = useMerchant();
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchTransactions = async () => {
-            if (merchantLoading) return;
-            if (!merchant) {
+    const fetchTransactions = React.useCallback(async () => {
+        if (merchantLoading) return;
+        if (!merchant) {
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            setError(null);
+            const merchantUserId = merchant.user_id || merchant.id;
+            if (!merchantUserId) {
                 setIsLoading(false);
                 return;
             }
 
-            try {
-                const merchantUserId = merchant.user_id || merchant.id;
-                if (!merchantUserId) {
-                    setIsLoading(false);
-                    return;
-                }
+            // 1. Fetch Vault
+            const { data: vaultData, error: vaultError } = await supabase
+                .from('ai_orders_vault')
+                .select('*')
+                .eq('merchant_id', merchantUserId)
+                .maybeSingle();
 
-                // 1. Fetch Vault
-                const { data: vaultData, error: vaultError } = await supabase
-                    .from('ai_orders_vault')
+            if (vaultError) throw vaultError;
+
+            // 2. Fetch all orders for this merchant to map order codes
+            const { data: allOrders, error: ordersError } = await supabase
+                .from('ai_orders')
+                .select('id, order_code')
+                .eq('merchant_id', merchantUserId);
+
+            if (ordersError) throw ordersError;
+
+            const orderCodeMap = {};
+            (allOrders || []).forEach(o => {
+                if (o && o.id) {
+                    orderCodeMap[o.id] = o.order_code || `AI-${String(o.id).slice(0, 4)}`;
+                }
+            });
+
+            if (vaultData) {
+                // 3. Fetch Transactions
+                const { data: txData, error: txError } = await supabase
+                    .from('ai_orders_vault_transactions')
                     .select('*')
-                    .eq('merchant_id', merchantUserId)
-                    .maybeSingle();
+                    .eq('vault_id', vaultData.id)
+                    .order('created_at', { ascending: false });
 
-                if (vaultError) throw vaultError;
+                if (txError) throw txError;
 
-                // 2. Fetch all orders for this merchant to map order codes
-                const { data: allOrders, error: ordersError } = await supabase
-                    .from('ai_orders')
-                    .select('id, order_code')
-                    .eq('merchant_id', merchantUserId);
+                const enrichedTx = (txData || []).map(tx => ({
+                    ...tx,
+                    order_code: orderCodeMap[tx.reference_order_id] || (tx.reference_order_id ? `#AI-${String(tx.reference_order_id).slice(0, 4)}` : '—')
+                }));
 
-                if (ordersError) throw ordersError;
-
-                const orderCodeMap = {};
-                (allOrders || []).forEach(o => {
-                    if (o && o.id) {
-                        orderCodeMap[o.id] = o.order_code || `AI-${String(o.id).slice(0, 4)}`;
-                    }
-                });
-
-                if (vaultData) {
-                    // 3. Fetch Transactions
-                    const { data: txData, error: txError } = await supabase
-                        .from('ai_orders_vault_transactions')
-                        .select('*')
-                        .eq('vault_id', vaultData.id)
-                        .order('created_at', { ascending: false });
-
-                    if (txError) throw txError;
-
-                    const enrichedTx = (txData || []).map(tx => ({
-                        ...tx,
-                        order_code: orderCodeMap[tx.reference_order_id] || (tx.reference_order_id ? `#AI-${String(tx.reference_order_id).slice(0, 4)}` : '—')
-                    }));
-
-                    setTransactions(enrichedTx);
-                } else {
-                    setTransactions([]);
-                }
-            } catch (error) {
-                console.error("Vault tx fetch error:", error);
-                toast.error('Failed to load transactions');
-            } finally {
-                setIsLoading(false);
+                setTransactions(enrichedTx);
+            } else {
+                setTransactions([]);
             }
-        };
-
-        fetchTransactions();
+        } catch (err) {
+            console.error("Vault tx fetch error:", err);
+            const msg = err instanceof Error ? err.message : 'Failed to load transactions';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setIsLoading(false);
+        }
     }, [merchant, merchantLoading]);
+
+    useEffect(() => {
+        fetchTransactions();
+    }, [fetchTransactions]);
 
     const displayTransactions = useMemo(() => {
         if (!transactions || !Array.isArray(transactions)) return [];
@@ -189,6 +194,22 @@ export default function VaultTransactionsPage() {
                     </p>
                 </div>
             </div>
+
+            {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-xs flex items-center justify-between font-bold shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <span className="material-icons-round text-base">error_outline</span>
+                        <span>{error}</span>
+                    </div>
+                    <button
+                        onClick={fetchTransactions}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 rounded-lg text-xs transition-colors flex items-center gap-1 font-semibold"
+                    >
+                        <RefreshCw size={12} />
+                        Retry
+                    </button>
+                </div>
+            )}
 
             {isLoading ? (
                 <div className="space-y-4 animate-pulse">

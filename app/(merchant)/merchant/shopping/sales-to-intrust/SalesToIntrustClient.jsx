@@ -45,88 +45,126 @@ export default function SalesToIntrustClient({ initialOrders, merchant }) {
     const fmt = (paise) => `₹${((paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     return (
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto bg-[#f8f9fb] min-h-screen font-[family-name:var(--font-outfit)]">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-                <div className="space-y-2">
-                    <Link href="/merchant/shopping/wholesale" className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900 transition-colors text-xs font-black uppercase tracking-widest mb-2">
-                        <ChevronLeft size={14} /> Back to Shopping Hub
-                    </Link>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest">
-                        <FileText size={12} />
-                        B2B History
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+            {/* Consistent Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800/80">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-[11px] font-bold uppercase tracking-wider">
+                            <FileText size={11} className="text-blue-600 dark:text-blue-400" />
+                            Procurement Ledger
+                        </span>
                     </div>
-                    <h1 className="text-5xl font-black text-slate-950 tracking-tight leading-none">
-                        Sales to <span className="text-blue-600">InTrust</span>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                        Sales to InTrust
                     </h1>
-                    <p className="text-slate-400 font-medium text-base max-w-md">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                         View orders procured by the platform from your wholesale inventory and download tax invoices.
                     </p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <FileText size={20} />
+            {/* Consistent Segmented Tab Bar */}
+            <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 max-w-full overflow-x-auto no-scrollbar gap-1">
+                <Link
+                    href="/merchant/shopping/wholesale"
+                    className="px-3.5 sm:px-4 py-1.5 rounded-lg font-medium text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all whitespace-nowrap"
+                >
+                    Buy Stock
+                </Link>
+                <Link
+                    href="/merchant/shopping/wholesale/history"
+                    className="px-3.5 sm:px-4 py-1.5 rounded-lg font-medium text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all whitespace-nowrap"
+                >
+                    Purchase History
+                </Link>
+                <span className="px-3.5 sm:px-4 py-1.5 rounded-lg font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs whitespace-nowrap">
+                    Sales to InTrust
+                </span>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 shrink-0">
+                        <FileText size={18} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sales</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">{stats.totalOrders}</p>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Total Sales</p>
+                        <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.totalOrders}</p>
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600 shrink-0">
-                        <Package size={20} />
+                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-900/40 shrink-0">
+                        <Package size={18} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Units Sold</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">{stats.totalUnits}</p>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Units Sold</p>
+                        <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.totalUnits}</p>
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                        <IndianRupee size={20} />
+                <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-900/40 shrink-0">
+                        <IndianRupee size={18} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Earnings</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">{fmt(stats.totalEarningsPaise)}</p>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Total Earnings</p>
+                        <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{fmt(stats.totalEarningsPaise)}</p>
                     </div>
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 mb-8">
-                <div className="relative flex-1 w-full sm:w-auto">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search by invoice number..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-3 rounded-[1.2rem] bg-white border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
-                    />
+            {/* Search toolbar */}
+            <div className="relative max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Search size={16} />
                 </div>
+                <input
+                    type="text"
+                    placeholder="Search by invoice number..."
+                    aria-label="Search by invoice number"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs transition-all"
+                />
+                {search && (
+                    <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        aria-label="Clear search"
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    >
+                        ✕
+                    </button>
+                )}
             </div>
 
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+            {/* Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
                 {filtered.length === 0 ? (
-                    <div className="py-24 text-center">
-                        <FileText className="mx-auto text-slate-100 mb-4" size={56} />
-                        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">
-                            No sales history found
+                    <div className="py-16 text-center">
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
+                            <FileText size={24} />
+                        </div>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                            {search ? 'No orders match your search' : 'No sales recorded yet'}
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-xs font-normal max-w-sm mx-auto">
+                            {search ? `No sales history found for "${search}".` : 'Procurement orders from InTrust will appear here once placed.'}
                         </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-slate-100 bg-slate-50/70">
-                                    <th className="text-left px-5 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Date & Invoice</th>
-                                    <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Items</th>
-                                    <th className="text-right px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Value</th>
-                                    <th className="text-center px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+                                    <th className="text-left px-4 sm:px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date & Invoice</th>
+                                    <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Items</th>
+                                    <th className="text-right px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Value</th>
+                                    <th className="text-center px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                 {filtered.map(order => {
                                     const dateStr = new Date(order.created_at).toLocaleDateString('en-IN', {
                                         day: '2-digit', month: 'short', year: 'numeric',
@@ -136,26 +174,26 @@ export default function SalesToIntrustClient({ initialOrders, merchant }) {
                                     const itemCount = order.platform_procurement_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
                                     return (
-                                        <tr key={order.id} className="hover:bg-blue-50/30 transition-colors group">
-                                            <td className="px-5 py-4">
-                                                <p className="text-sm font-black text-slate-950 tracking-tight">{dateStr}</p>
-                                                <p className="text-[10px] font-black text-blue-600 mt-0.5">{order.invoice_number || 'N/A'}</p>
+                                        <tr key={order.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
+                                            <td className="px-4 sm:px-5 py-3.5">
+                                                <p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white tracking-tight">{dateStr}</p>
+                                                <p className="text-[11px] font-medium text-blue-600 dark:text-blue-400 mt-0.5">{order.invoice_number || 'N/A'}</p>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
-                                                <span className="text-xs font-black text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">
-                                                    {itemCount} unit{itemCount !== 1 ? 's' : ''}
+                                            <td className="px-4 py-3.5 text-center">
+                                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md">
+                                                    {itemCount} {itemCount !== 1 ? 'units' : 'unit'}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4 text-right">
-                                                <p className="text-sm font-black text-blue-600">{fmt(order.total_amount_paise)}</p>
+                                            <td className="px-4 py-3.5 text-right">
+                                                <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{fmt(order.total_amount_paise)}</p>
                                             </td>
-                                            <td className="px-4 py-4 text-center">
+                                            <td className="px-4 py-3.5 text-center">
                                                 <button
                                                     onClick={() => handleDownloadInvoice(order)}
-                                                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-blue-600 text-slate-600 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all mx-auto"
+                                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 font-bold text-xs rounded-lg transition-all border border-blue-200/60 dark:border-blue-900/50"
                                                     title="Download Invoice"
                                                 >
-                                                    <Download size={14} />
+                                                    <Download size={13} />
                                                     Invoice
                                                 </button>
                                             </td>

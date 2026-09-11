@@ -21,7 +21,7 @@ import {
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useConfetti } from '@/components/ui/ConfettiProvider';
 
-export default function InventoryTable({ initialCoupons }) {
+export default function InventoryTable({ initialCoupons = [] }) {
     const router = useRouter();
     const { performAction } = useSubscription();
     const { trigger: triggerConfetti } = useConfetti();
@@ -41,7 +41,7 @@ export default function InventoryTable({ initialCoupons }) {
             try {
                 const { error } = await supabase
                     .from('coupons')
-                    .update({ listed_on_marketplace: false })
+                    .update({ listed_on_marketplace: false, updated_at: new Date().toISOString() })
                     .eq('id', couponId);
 
                 if (error) throw error;

@@ -310,7 +310,7 @@ export default function MerchantPortfolioPage({ params }) {
                                             <div>
                                                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">₹{(inv.amount_paise / 100).toLocaleString('en-IN')}</h3>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                    Invested {new Date(inv.created_at).toLocaleDateString('en-IN')}
+                                                    Deployed {new Date(inv.created_at).toLocaleDateString('en-IN')}
                                                 </p>
                                             </div>
                                             <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${

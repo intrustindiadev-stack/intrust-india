@@ -144,3 +144,141 @@ export async function GET(request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+/**
+ * POST /api/udhari/reminders
+ * Body: { requestId }
+ * Purpose: Allows a merchant to send an on-demand payment reminder for an approved/overdue request.
+ * Enforces a 24-hour rate limit per request to prevent customer harassment.
+ */
+export async function POST(request) {
+    const correlationId = crypto.randomUUID();
+
+    try {
+        const supabase = createAdminClient();
+
+        // 1. Auth check
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader) {
+            return NextResponse.json({ error: 'Missing authorization header' }, { status: 401 });
+        }
+
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !user) {
+            return NextResponse.json({ error: 'Invalid token or user not found' }, { status: 401 });
+        }
+
+        // 2. Verify merchant identity
+        const { data: merchant, error: merchantError } = await supabase
+            .from('merchants')
+            .select('id, business_name, status')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (merchantError || !merchant || merchant.status !== 'approved') {
+            return NextResponse.json({ error: 'Unauthorized. Approved merchant access required.' }, { status: 403 });
+        }
+
+        // 3. Parse request body
+        const { requestId } = await request.json();
+        if (!requestId) {
+            return NextResponse.json({ error: 'Missing requestId parameter' }, { status: 400 });
+        }
+
+        // 4. Fetch the target udhari request
+        const { data: udhariReq, error: reqError } = await supabase
+            .from('udhari_requests')
+            .select('id, customer_id, merchant_id, amount_paise, due_date, status, source_type')
+            .eq('id', requestId)
+            .eq('merchant_id', merchant.id)
+            .maybeSingle();
+
+        if (reqError || !udhariReq) {
+            return NextResponse.json({ error: 'Store credit request not found or does not belong to you' }, { status: 404 });
+        }
+
+        if (udhariReq.status !== 'approved') {
+            return NextResponse.json({ error: `Cannot send reminder. Request is currently "${udhariReq.status}".` }, { status: 400 });
+        }
+
+        // 5. Rate limit: check if a reminder was sent in the last 24 hours
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentReminders, error: recentError } = await supabase
+            .from('udhari_reminders')
+            .select('id, sent_at')
+            .eq('udhari_request_id', requestId)
+            .gte('sent_at', twentyFourHoursAgo)
+            .limit(1);
+
+        if (recentError) {
+            console.error('[Merchant Reminder Rate Check Error]:', recentError);
+        }
+
+        if (recentReminders && recentReminders.length > 0) {
+            return NextResponse.json({
+                error: 'A reminder was already sent for this request in the last 24 hours. Please wait before sending another.'
+            }, { status: 429 });
+        }
+
+        // 6. Build reminder message
+        const now = new Date();
+        const dueDate = udhariReq.due_date ? new Date(udhariReq.due_date) : now;
+        const isOverdue = dueDate < now;
+        const reminderType = isOverdue ? 'overdue' : 'due_day';
+        const amount = (udhariReq.amount_paise / 100).toFixed(2);
+        const merchantName = merchant.business_name || 'the merchant';
+
+        const title = isOverdue 
+            ? 'Payment Overdue 🚨' 
+            : 'Payment Reminder ⏰';
+        const body = isOverdue
+            ? `Your store credit payment of ₹${amount} to ${merchantName} was due on ${dueDate.toLocaleDateString()} and is now OVERDUE. Please settle immediately.`
+            : `Friendly reminder: Your store credit payment of ₹${amount} to ${merchantName} is due on ${dueDate.toLocaleDateString()}. You can pay directly from your store credits dashboard.`;
+
+        // 7. Dispatch customer in-app notification
+        const { error: notifError } = await supabase.from('notifications').insert({
+            user_id: udhariReq.customer_id,
+            title,
+            body,
+            type: isOverdue ? 'error' : 'warning',
+            reference_id: udhariReq.id,
+            reference_type: 'udhari_reminder',
+        });
+
+        if (notifError) {
+            console.error('[Merchant Reminder Notif Insert Error]:', notifError);
+        }
+
+        // 8. Dispatch WhatsApp notification (fire-and-forget safe)
+        try {
+            notifyCustomerUdhariDue({
+                userId: udhariReq.customer_id,
+                merchantName,
+                amount,
+                dueDate: dueDate.toLocaleDateString(),
+                status: isOverdue ? 'Overdue' : 'Due Soon'
+            }).catch(e => console.error('[Merchant Triggered WhatsApp Reminder Error]:', e));
+        } catch (waErr) {
+            console.error('[Merchant Triggered WhatsApp Sync Error]:', waErr);
+        }
+
+        // 9. Record reminder in audit log
+        await supabase.from('udhari_reminders').insert({
+            udhari_request_id: udhariReq.id,
+            reminder_type: reminderType,
+            channel: 'in_app'
+        });
+
+        return NextResponse.json({
+            success: true,
+            message: `Reminder sent successfully to the customer.`,
+            sentAt: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error(JSON.stringify({ correlationId, stage: 'post_merchant_reminder_error', error: error?.message || String(error) }));
+        return NextResponse.json({ error: 'Failed to send reminder. Please try again later.' }, { status: 500 });
+    }
+}
+

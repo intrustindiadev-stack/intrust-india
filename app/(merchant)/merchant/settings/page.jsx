@@ -448,13 +448,16 @@ export default function MerchantSettingsPage() {
             if (profileUpdateError) throw profileUpdateError;
 
             setSuccess('Settings updated successfully!');
+            toast.success('Settings updated successfully!');
             if (focusParam === 'business_phone' || focusParam === 'business_email') {
                 setHighlightedField(null);
             }
             await fetchSettings();
         } catch (error) {
             console.error('Error saving settings:', error);
-            setError(error.message);
+            const msg = error instanceof Error ? error.message : 'Error saving settings';
+            setError(msg);
+            toast.error(msg);
         } finally {
             setSaving(false);
         }
@@ -462,11 +465,15 @@ export default function MerchantSettingsPage() {
 
     const handleSaveBank = async () => {
         if (!bankData.account_holder_name || !bankData.account_number || !bankData.ifsc) {
-            setError('Account holder name, account number, and IFSC are required.');
+            const msg = 'Account holder name, account number, and IFSC are required.';
+            setError(msg);
+            toast.error(msg);
             return;
         }
         if (bankData.account_number !== bankData.confirm_account_number) {
-            setError('Account numbers do not match.');
+            const msg = 'Account numbers do not match.';
+            setError(msg);
+            toast.error(msg);
             return;
         }
         setSavingBank(true);
@@ -494,9 +501,12 @@ export default function MerchantSettingsPage() {
             if (!response.ok) throw new Error(result.error || 'Failed to save bank details');
 
             setSuccess('Bank details saved! Pending admin verification.');
+            toast.success('Bank details saved! Pending admin verification.');
             await fetchSettings();
         } catch (err) {
-            setError(err.message);
+            const msg = err instanceof Error ? err.message : 'Failed to save bank details';
+            setError(msg);
+            toast.error(msg);
         } finally {
             setSavingBank(false);
         }

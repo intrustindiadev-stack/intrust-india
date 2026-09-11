@@ -1,810 +1,1026 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Power, Crown, CheckCircle2, ChevronRight, Activity, Wallet,
+    Power, CheckCircle2, ChevronRight, Activity, Wallet,
     ShieldCheck, Zap, Truck, Package, Clock, TrendingUp, BarChart2,
-    ArrowLeft, TrendingDown, IndianRupee, Star, AlertTriangle, Sparkles, PlusCircle
+    ArrowLeft, IndianRupee, AlertTriangle, Sparkles, PlusCircle,
+    Check, X, RefreshCw, AlertCircle, ExternalLink, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import LiveButton from '@/components/merchant/LiveButton';
 import { getPricingSettings } from '@/app/(admin)/admin/settings/actions';
+import { toast } from 'react-hot-toast';
+import { formatPaise, isValidOrder, isSettledOrder } from '@/lib/merchant/orderMetrics';
 
-// ─── Mini Bar Chart ──────────────────────────────────────────────────────────
-function MiniBarChart({ data }) {
-    // Find the max value across all bars (profits and cuts) to scale correctly
-    const max = Math.max(...data.flatMap(d => [d.profit, d.cut]), 1);
-    const [hovered, setHovered] = useState(null);
+// ─── Stat Card Component ──────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, sub, accent = 'indigo', trend = null, tooltip = null }) {
+    const accents = {
+        indigo: 'bg-indigo-50/80 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30',
+        emerald: 'bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30',
+        amber: 'bg-amber-50/80 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30',
+        violet: 'bg-violet-50/80 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-900/30',
+    };
 
     return (
-        <div className="relative">
-            <AnimatePresence>
-                {hovered !== null && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 10, x: '-50%' }}
-                        animate={{ opacity: 1, scale: 1, y: 0, x: '-50%' }}
-                        exit={{ opacity: 0, scale: 0.9, y: 10, x: '-50%' }}
-                        className="absolute -top-16 left-1/2 bg-slate-900 shadow-2xl text-white text-[10px] font-black px-3 py-2 rounded-xl whitespace-nowrap z-30 pointer-events-none flex flex-col items-center border border-white/10"
-                    >
-                        <span className="text-[8px] text-slate-400 uppercase tracking-widest leading-none mb-1.5">{data[hovered]?.label}</span>
-                        <div className="flex gap-3">
-                            <div className="flex flex-col items-center">
-                                <span className="text-emerald-400">₹{(data[hovered]?.profit / 100).toLocaleString('en-IN')}</span>
-                                <span className="text-[7px] text-slate-500 uppercase tracking-tighter">Profit</span>
-                            </div>
-                            <div className="w-px h-4 bg-white/10 self-center" />
-                            <div className="flex flex-col items-center">
-                                <span className="text-rose-400">₹{(data[hovered]?.cut / 100).toLocaleString('en-IN')}</span>
-                                <span className="text-[7px] text-slate-500 uppercase tracking-tighter">Fees</span>
-                            </div>
-                        </div>
-                    </motion.div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden transition-all hover:border-slate-300 dark:hover:border-slate-700">
+            <div className="flex items-start justify-between gap-2 mb-3">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 ${accents[accent]}`}>
+                    <Icon size={17} />
+                </div>
+                {trend !== null && (
+                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-black px-2 py-0.5 rounded-full ${trend >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'}`}>
+                        {trend >= 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(0)}%
+                    </span>
                 )}
-            </AnimatePresence>
-            <div className="flex items-end gap-[6px] h-28 pt-4">
-                {data.map((d, i) => (
-                    <div key={i} className="flex-1 flex items-end justify-center gap-[2px] h-full cursor-pointer group"
-                        onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
-                        {/* Profit Bar */}
-                        <motion.div
-                            initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
-                            transition={{ delay: i * 0.02, duration: 0.5, ease: 'circOut' }}
-                            style={{
-                                height: `${Math.max((d.profit / max) * 100, 4)}%`,
-                                originY: 1
-                            }}
-                            className={`flex-1 min-w-[4px] rounded-t-sm transition-all duration-200 bg-emerald-500 ${hovered === i ? 'opacity-100 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'opacity-60 group-hover:opacity-80'}`}
-                        />
-                        {/* Cut Bar */}
-                        <motion.div
-                            initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
-                            transition={{ delay: i * 0.02 + 0.1, duration: 0.5, ease: 'circOut' }}
-                            style={{
-                                height: `${Math.max((d.cut / max) * 100, 4)}%`,
-                                originY: 1
-                            }}
-                            className={`flex-1 min-w-[4px] rounded-t-sm transition-all duration-200 bg-rose-500 ${hovered === i ? 'opacity-100 shadow-[0_0_8px_rgba(244,63,94,0.4)]' : 'opacity-40 group-hover:opacity-60'}`}
+            </div>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-tight">
+                {label}
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1.5 tracking-tight">
+                {value}
+            </p>
+            {sub && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium truncate">
+                    {sub}
+                </p>
+            )}
+        </div>
+    );
+}
+
+// ─── Mini Bar Chart Component ────────────────────────────────────────────────
+function DailyVolumeChart({ orders, period = 7 }) {
+    const chartData = useMemo(() => {
+        const days = [];
+        for (let i = period - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            d.setHours(0, 0, 0, 0);
+            const next = new Date(d);
+            next.setDate(next.getDate() + 1);
+
+            const dayOrders = orders.filter(o => {
+                const t = new Date(o.created_at);
+                return t >= d && t < next && isValidOrder(o);
+            });
+
+            const dayProfit = dayOrders
+                .filter(isSettledOrder)
+                .reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
+
+            days.push({
+                label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+                count: dayOrders.length,
+                profit: dayProfit,
+            });
+        }
+        return days;
+    }, [orders, period]);
+
+    const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-end gap-2 h-24 pt-2">
+                {chartData.map((d, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
+                        <div className="text-[8px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap absolute -top-4">
+                            {d.count} ord
+                        </div>
+                        <div
+                            style={{ height: `${Math.max((d.count / maxCount) * 100, 8)}%` }}
+                            className="w-full max-w-[20px] bg-indigo-500 dark:bg-indigo-600 rounded-t-md transition-all group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500"
                         />
                     </div>
                 ))}
             </div>
-            <div className="flex justify-between mt-3 px-1 border-t border-slate-50 pt-2">
-                {data.filter((_, i) => i === 0 || i === Math.floor(data.length / 2) || i === data.length - 1).map((d, i) => (
-                    <span key={i} className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{d.label}</span>
+            <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-2 px-1">
+                {chartData.filter((_, i) => i === 0 || i === Math.floor(chartData.length / 2) || i === chartData.length - 1).map((d, i) => (
+                    <span key={i} className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                        {d.label}
+                    </span>
                 ))}
             </div>
         </div>
     );
 }
 
-// ─── Stat Card ───────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, sub, accent = 'indigo', delay = 0, trend = null }) {
-    const colors = {
-        indigo: 'bg-indigo-50 text-indigo-600',
-        emerald: 'bg-emerald-50 text-emerald-600',
-        amber: 'bg-amber-50 text-amber-600',
-        violet: 'bg-violet-50 text-violet-600',
-    };
-    return (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
-            className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${colors[accent]}`}>
-                <Icon size={16} />
-            </div>
-            {trend !== null && (
-                <div className={`absolute top-4 right-4 flex items-center gap-0.5 text-[10px] font-black ${trend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {trend >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                    {Math.abs(trend).toFixed(0)}%
-                </div>
-            )}
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">{label}</p>
-            <p className="text-xl font-black text-slate-800 mt-1 leading-none">{value}</p>
-            {sub && <p className="text-[10px] text-slate-400 mt-1">{sub}</p>}
-        </motion.div>
-    );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Auto Mode Page ──────────────────────────────────────────────────────
 export default function AutoModePage() {
     const { performAction } = useSubscription();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [merchant, setMerchant] = useState(null);
     const [pricing, setPricing] = useState({ autoFirst: 999, autoRenewal: 1999 });
     const [orders, setOrders] = useState([]);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
+    const [analyticsSummary, setAnalyticsSummary] = useState(null);
     const [walletBalance, setWalletBalance] = useState(0);
     const [timeLeft, setTimeLeft] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [showWarningModal, setShowWarningModal] = useState(false);
+    const [showDeactivationModal, setShowDeactivationModal] = useState(false);
     const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders'
     const [chartPeriod, setChartPeriod] = useState(7); // 7 | 14 | 30
+    const [lastUpdated, setLastUpdated] = useState(null);
 
-    const fetchData = async () => {
+    // ── Fetch Server-Authoritative State ──
+    const fetchData = useCallback(async (isSilent = false) => {
         try {
-            setLoading(true);
+            if (!isSilent) setLoading(true);
+            else setRefreshing(true);
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
-            const { data: merchantData } = await supabase
-                .from('merchants')
-                .select('*, auto_mode, auto_mode_months_paid, auto_mode_valid_until, subscription_expires_at')
-                .eq('user_id', session.user.id)
-                .single();
+            // 1. Fetch Authoritative Auto Mode Status via API
+            const statusRes = await fetch('/api/merchant/auto-mode', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+                cache: 'no-store'
+            });
 
-            setMerchant(merchantData);
+            if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                setMerchant(prev => ({
+                    ...prev,
+                    id: statusData.merchant_id,
+                    business_name: statusData.business_name,
+                    auto_mode: statusData.auto_mode,
+                    auto_mode_status: statusData.auto_mode_status,
+                    auto_mode_valid_until: statusData.valid_until,
+                    auto_mode_months_paid: statusData.months_paid,
+                    is_active: statusData.is_active,
+                    has_valid_sub: statusData.has_valid_sub,
+                }));
+                if (statusData.pricing) {
+                    setPricing({
+                        autoFirst: statusData.pricing.autoFirst,
+                        autoRenewal: statusData.pricing.autoRenewal,
+                    });
+                }
+                setWalletBalance(statusData.wallet_balance_paise / 100);
+            } else {
+                // Fallback to direct merchant query
+                const { data: mData } = await supabase
+                    .from('merchants')
+                    .select('id, user_id, business_name, auto_mode, auto_mode_status, auto_mode_months_paid, auto_mode_valid_until, wallet_balance_paise')
+                    .eq('user_id', session.user.id)
+                    .single();
+                if (mData) {
+                    setMerchant(mData);
+                    setWalletBalance((mData.wallet_balance_paise || 0) / 100);
+                }
+            }
 
-            // Use server-side API (admin client) to bypass RLS on shopping_order_groups
+            // 2. Fetch Authoritative Analytics & Orders
             const analyticsRes = await fetch('/api/merchant/auto-mode/analytics?days=90', {
                 headers: { Authorization: `Bearer ${session.access_token}` },
                 cache: 'no-store',
             });
+
             if (analyticsRes.ok) {
                 const analyticsData = await analyticsRes.json();
                 setOrders(analyticsData.orders || []);
+                setAnalyticsSummary(analyticsData.summary || null);
             }
 
+            // 3. Dynamic pricing fallback if not returned by status API
             const pricingSettings = await getPricingSettings();
-            setPricing(pricingSettings);
-
-            const walletRes = await fetch('/api/wallet/balance', {
-                headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store'
-            });
-            if (walletRes.ok) {
-                const w = await walletRes.json();
-                setWalletBalance(parseFloat(w.wallet?.balance || 0));
+            if (pricingSettings) {
+                setPricing({
+                    autoFirst: pricingSettings.autoFirst || 999,
+                    autoRenewal: pricingSettings.autoRenewal || 1999
+                });
             }
+
+            setLastUpdated(new Date());
         } catch (err) {
-            setError('Failed to load auto mode data.');
+            console.error('[AutoMode] Error fetching data:', err);
+            toast.error('Failed to load Auto Mode data');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    };
+    }, []);
 
-    const hasValidSub = merchant?.auto_mode_valid_until && new Date(merchant.auto_mode_valid_until) > new Date();
-
-    useEffect(() => { fetchData(); }, []);
-
-    // Countdown timer for Auto Mode feature specifically
     useEffect(() => {
-        if (!merchant?.auto_mode_valid_until) return;
+        fetchData();
+    }, [fetchData]);
 
-        const calculateTimeLeft = () => {
+    // ── Expiration & Countdown Logic ──
+    const hasValidSub = useMemo(() => {
+        if (!merchant?.auto_mode_valid_until) return false;
+        return new Date(merchant.auto_mode_valid_until) > new Date();
+    }, [merchant?.auto_mode_valid_until]);
+
+    const isAutoModeActive = useMemo(() => {
+        return Boolean(merchant?.auto_mode === true && hasValidSub);
+    }, [merchant?.auto_mode, hasValidSub]);
+
+    const isExpired = useMemo(() => {
+        if (!merchant?.auto_mode_valid_until) return false;
+        return new Date(merchant.auto_mode_valid_until) <= new Date();
+    }, [merchant?.auto_mode_valid_until]);
+
+    useEffect(() => {
+        if (!merchant?.auto_mode_valid_until) {
+            setTimeLeft('');
+            return;
+        }
+
+        const updateTimer = () => {
             const difference = new Date(merchant.auto_mode_valid_until) - new Date();
             if (difference > 0) {
                 const days = Math.floor(difference / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
                 const minutes = Math.floor((difference / 1000 / 60) % 60);
-                const seconds = Math.floor((difference / 1000) % 60);
-                setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+                setTimeLeft(`${days}d ${hours}h ${minutes}m left`);
             } else {
                 setTimeLeft('Expired');
             }
         };
 
-        calculateTimeLeft();
-        const timer = setInterval(calculateTimeLeft, 1000);
-
-        return () => clearInterval(timer);
+        updateTimer();
+        const interval = setInterval(updateTimer, 60000);
+        return () => clearInterval(interval);
     }, [merchant?.auto_mode_valid_until]);
 
-    // ── Derived stats ──
+    // ── Metric Calculations ──
     const stats = useMemo(() => {
-        const now = new Date();
-        const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-        const weekStart = new Date(now); weekStart.setDate(weekStart.getDate() - 7);
-        const prevWeekStart = new Date(now); prevWeekStart.setDate(prevWeekStart.getDate() - 14);
+        if (analyticsSummary) {
+            return {
+                todayCount: analyticsSummary.todayCount || 0,
+                deliveredCount: analyticsSummary.deliveredCount || 0,
+                successRate: analyticsSummary.successRate || 0,
+                totalProfitPaise: analyticsSummary.settledProfit || 0,
+                contingentProfitPaise: analyticsSummary.contingentProfit || 0,
+                totalGrossRevenuePaise: analyticsSummary.totalGrossRevenue || 0,
+                totalOrdersCount: analyticsSummary.totalOrders || 0,
+                pendingCount: analyticsSummary.pendingCount || 0,
+                cancelledCount: analyticsSummary.cancelledCount || 0,
+                growth: analyticsSummary.growth || 0
+            };
+        }
 
-        const delivered = orders.filter(o => o.delivery_status === 'delivered');
-        const pending = orders.filter(o => ['pending', 'packed'].includes(o.delivery_status));
+        // Client fallback calculation using pure orderMetrics logic
+        const validOrders = orders.filter(isValidOrder);
+        const delivered = validOrders.filter(o => o.delivery_status === 'delivered');
+        const settled = validOrders.filter(isSettledOrder);
+        const pending = validOrders.filter(o => ['pending', 'packed', 'shipped'].includes(o.delivery_status));
         const cancelled = orders.filter(o => o.delivery_status === 'cancelled');
 
-        const totalRevenue = delivered.reduce((s, o) => s + (o.total_amount_paise || 0), 0);
-        const totalProfit = delivered.reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
-        const totalPlatformCut = delivered.reduce((s, o) => s + (o.platform_cut_paise || 0), 0);
-
-        const currentWeekProfit = delivered
-            .filter(o => new Date(o.created_at) >= weekStart)
-            .reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
-
-        const prevWeekProfit = delivered
-            .filter(o => {
-                const d = new Date(o.created_at);
-                return d >= prevWeekStart && d < weekStart;
-            })
-            .reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
-
-        const growth = prevWeekProfit > 0
-            ? ((currentWeekProfit - prevWeekProfit) / prevWeekProfit) * 100
-            : currentWeekProfit > 0 ? 100 : 0;
-
-        const todayOrders = orders.filter(o => new Date(o.created_at) >= todayStart);
-        const weekOrders = orders.filter(o => new Date(o.created_at) >= weekStart);
-        const pendingRevenue = pending.reduce((s, o) => s + (o.total_amount_paise || 0), 0);
+        const settledProfit = settled.reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
+        const contingentProfit = validOrders.filter(o => !isSettledOrder(o)).reduce((s, o) => s + (o.merchant_profit_paise || 0), 0);
+        const totalGrossRevenue = validOrders.reduce((s, o) => s + (o.total_amount_paise || 0), 0);
 
         return {
-            totalOrders: orders.length,
+            todayCount: validOrders.filter(o => {
+                const d = new Date(o.created_at);
+                const today = new Date();
+                return d.toDateString() === today.toDateString();
+            }).length,
             deliveredCount: delivered.length,
+            successRate: validOrders.length > 0 ? Math.round((delivered.length / validOrders.length) * 100) : 0,
+            totalProfitPaise: settledProfit,
+            contingentProfitPaise: contingentProfit,
+            totalGrossRevenuePaise: totalGrossRevenue,
+            totalOrdersCount: validOrders.length,
             pendingCount: pending.length,
             cancelledCount: cancelled.length,
-            totalRevenue,
-            totalProfit,
-            totalPlatformCut,
-            growth,
-            todayCount: todayOrders.length,
-            weekCount: weekOrders.length,
-            pendingRevenue,
-            successRate: orders.length > 0 ? Math.round((delivered.length / orders.length) * 100) : 0,
+            growth: 0
         };
-    }, [orders]);
+    }, [analyticsSummary, orders]);
 
-    // ── Chart Data ──
-    const chartData = useMemo(() => {
-        const days = [];
-        for (let i = chartPeriod - 1; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            d.setHours(0, 0, 0, 0);
-            const next = new Date(d); next.setDate(next.getDate() + 1);
-            const dayOrders = orders.filter(o => {
-                const t = new Date(o.created_at);
-                return t >= d && t < next;
-            });
-            days.push({
-                label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-                profit: dayOrders.reduce((s, o) => s + (o.merchant_profit_paise || 0), 0),
-                cut: dayOrders.reduce((s, o) => s + (o.platform_cut_paise || 0), 0),
-                count: dayOrders.length,
-            });
-        }
-        return days;
-    }, [orders, chartPeriod]);
-
-    const isAutoModeActive = merchant?.auto_mode === true;
     const isFirstMonth = (merchant?.auto_mode_months_paid || 0) === 0;
     const subscriptionPrice = isFirstMonth ? pricing.autoFirst : pricing.autoRenewal;
 
-    const handleToggleAutoMode = async () => {
-        performAction(async () => {
-            if (isAutoModeActive) {
-                // Turning OFF logic -> show warning modal first
-                setShowWarningModal(true);
-            } else {
-                // Turning ON -> skip payment modal since subscription handles it now, just confirm or turn on immediately
-                confirmActivation();
-            }
-        });
-    };
-    const confirmDeactivation = async () => {
-        setProcessing(true);
-        setShowWarningModal(false);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/merchant/auto-mode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ action: 'deactivate' })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to update Auto Mode status');
+    // ── Toggle Activation ──
+    const handleActivateToggle = async () => {
+        if (processing) return;
 
-            setSuccess('Auto Mode has been deactivated.');
-            await fetchData();
-            setTimeout(() => setSuccess(null), 4000);
-        } catch (err) {
-            setError(err.message); setTimeout(() => setError(null), 5000);
-        } finally { setProcessing(false); }
+        if (hasValidSub) {
+            // Re-activate existing active subscription
+            await executeActivation();
+        } else {
+            // Needs subscription payment
+            setShowPaymentModal(true);
+        }
     };
 
-    const confirmActivation = async () => {
+    const executeActivation = async () => {
+        if (processing) return;
         setProcessing(true);
-        setError(null);
-        setSuccess(null);
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch('/api/merchant/auto-mode', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
                 body: JSON.stringify({ action: 'activate' })
             });
-            const data = await res.json();
 
+            const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'Failed to update Auto Mode status');
+                throw new Error(data.error || 'Failed to activate Auto Mode');
             }
 
-            setSuccess('Auto Mode activated successfully! Your storefront is now automated.');
-            await fetchData();
+            toast.success('Auto Mode enabled');
             setShowPaymentModal(false);
-            setTimeout(() => setSuccess(null), 4000);
+            await fetchData(true);
         } catch (err) {
-            console.error('Activation error:', err);
-            setError(err.message || 'Failed to activate. Please try again.');
-            setTimeout(() => setError(null), 5000);
+            const msg = err instanceof Error ? err.message : "Couldn't update Auto Mode. Please try again.";
+            toast.error(msg);
         } finally {
             setProcessing(false);
         }
     };
 
-    const getStatusStyle = (status) => ({
-        delivered: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        cancelled: 'bg-red-100 text-red-700 border-red-200',
-        shipped: 'bg-blue-100 text-blue-700 border-blue-200',
-        packed: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-        pending: 'bg-amber-100 text-amber-700 border-amber-200',
-    }[status] || 'bg-slate-100 text-slate-600 border-slate-200');
+    // ── Toggle Deactivation ──
+    const executeDeactivation = async () => {
+        if (processing) return;
+        setProcessing(true);
+        setShowDeactivationModal(false);
 
-    const fmt = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/merchant/auto-mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ action: 'deactivate' })
+            });
 
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to deactivate Auto Mode');
+            }
+
+            toast.success('Auto Mode disabled');
+            await fetchData(true);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Couldn't update Auto Mode. Please try again.";
+            toast.error(msg);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // ── Helper to format order activity status badge ──
+    const getDeliveryStatusBadge = (status) => {
+        switch (status) {
+            case 'delivered':
+                return {
+                    label: 'Delivered',
+                    bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40',
+                    icon: CheckCircle2
+                };
+            case 'shipped':
+                return {
+                    label: 'Shipped',
+                    bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/40',
+                    icon: Truck
+                };
+            case 'packed':
+                return {
+                    label: 'Packed',
+                    bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/40',
+                    icon: Package
+                };
+            case 'cancelled':
+                return {
+                    label: 'Cancelled',
+                    bg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/40',
+                    icon: X
+                };
+            default:
+                return {
+                    label: 'Pending',
+                    bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/40',
+                    icon: Clock
+                };
+        }
+    };
+
+    // ── Skeleton Loader ──
     if (loading) {
         return (
-            <div className="flex h-[70vh] items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-[3px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                    <p className="text-slate-400 text-sm font-bold">Loading Auto Mode...</p>
+            <div className="space-y-6 pb-24 animate-pulse">
+                <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl w-48" />
+                <div className="h-44 bg-slate-200 dark:bg-slate-800 rounded-2xl w-full" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-28 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+                    ))}
                 </div>
+                <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl w-full" />
             </div>
         );
     }
 
+    const recentOrders = orders.filter(isValidOrder).slice(0, 5);
+
     return (
-        <div className="space-y-4 pb-20">
-            {/* Toast */}
-            <AnimatePresence>
-                {(error || success) && (
-                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl text-xs font-black shadow-xl border flex items-center gap-2 max-w-xs text-center ${error ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                        {error ? <AlertTriangle size={13} /> : <CheckCircle2 size={13} />}{error || success}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ── Hero Card ── */}
-            <div className={`relative rounded-[2rem] overflow-hidden flex flex-col items-center justify-center py-10 px-6 min-h-[360px] shadow-2xl transition-all duration-700 ${isAutoModeActive ? 'bg-[#0a140f]' : 'bg-[#0f111a]'}`}>
-                {/* Animated bg glow */}
-                {isAutoModeActive && (
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
-                    </div>
-                )}
-
-                {/* Top bar */}
-                <div className="absolute top-4 w-full px-5 flex justify-between items-center z-10">
-                    <Link href="/merchant/dashboard" className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white backdrop-blur-md">
-                        <ArrowLeft size={15} />
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <LiveButton />
-                        <Link href="/merchant/wallet" className="flex items-center gap-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-full px-3 py-1.5 text-[11px] font-black text-white">
-                            <Wallet size={12} className="text-[#D4AF37]" /> ₹{walletBalance.toFixed(2)}
+        <div className="space-y-6 pb-24 text-slate-800 dark:text-slate-100">
+            {/* ── HEADER ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-5">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Link
+                            href="/merchant/dashboard"
+                            className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                        >
+                            <ArrowLeft size={12} /> Retail Management
                         </Link>
-                        {!isAutoModeActive && (
-                            <div className="flex items-center gap-1 bg-[#D4AF37]/20 border border-[#D4AF37]/30 text-[#D4AF37] px-2.5 py-1.5 rounded-full text-[9px] font-black tracking-widest">
-                                <Crown size={10} /> PRO
-                            </div>
-                        )}
                     </div>
+                    <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Auto Mode
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        Let your store handle eligible orders automatically with zero manual overhead.
+                    </p>
                 </div>
 
-                {/* Status pulse dots */}
-                <div className="flex gap-2 mb-4 mt-6">
-                    {[0, 1, 2].map(i => (
-                        <div key={i} className={`w-2 h-2 rounded-full ${isAutoModeActive ? 'bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse' : 'bg-slate-700'}`}
-                            style={{ animationDelay: `${i * 0.3}s` }} />
-                    ))}
-                </div>
-
-                <motion.h1 key={isAutoModeActive ? 'on' : 'off'} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                    className="text-white text-2xl font-black tracking-tight text-center">
-                    {isAutoModeActive ? 'Autopilot Active' : 'Standby Mode'}
-                </motion.h1>
-                <p className="text-slate-400 mt-1.5 text-[11px] text-center max-w-[200px] leading-relaxed">
-                    {isAutoModeActive ? 'Your shop runs on auto. Orders handled automatically.' : 'Activate to run your shop on autopilot.'}
-                </p>
-
-                {hasValidSub && (
-                    <div className="mt-3 flex flex-col items-center gap-1.5 border border-white/10 p-2 px-4 rounded-xl bg-white/5 backdrop-blur-md">
-                        <span className={`text-[10px] font-black px-3 py-1 rounded-full border ${isAutoModeActive ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-slate-400 bg-slate-500/10 border-slate-500/20'}`}>
-                            Plan Valid Until: {new Date(merchant.auto_mode_valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        </span>
-                        <span className={`${isAutoModeActive ? 'text-emerald-300' : 'text-slate-400'} font-mono text-[10px]`}>{timeLeft}</span>
-                    </div>
-                )}
-
-                {/* Power toggle */}
-                <div className="relative mt-7 z-10">
-                    {isAutoModeActive && (
-                        <>
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-28 h-28 bg-emerald-500/10 rounded-full animate-ping opacity-75" style={{ animationDuration: '2.5s' }} />
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-40 h-40 bg-emerald-500/5 rounded-full border border-emerald-500/10 animate-ping" style={{ animationDuration: '4s' }} />
-                            </div>
-                        </>
-                    )}
-                    <button disabled={processing}
-                        onClick={() => {
-                            if (isAutoModeActive) {
-                                setShowWarningModal(true);
-                            } else {
-                                if (hasValidSub) {
-                                    confirmActivation();
-                                } else {
-                                    setShowPaymentModal(true);
-                                }
-                            }
-                        }}
-                        className={`relative w-20 h-20 rounded-full flex items-center justify-center border-2 transition-all duration-500 hover:scale-105 active:scale-95 disabled:opacity-70 shadow-2xl ${isAutoModeActive
-                            ? 'bg-emerald-500/20 border-emerald-500 shadow-emerald-500/30'
-                            : 'bg-slate-800 border-slate-600'}`}>
-                        {processing
-                            ? <Activity size={24} className="animate-spin text-[#D4AF37]" />
-                            : <Power size={26} className={isAutoModeActive ? 'text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]' : 'text-slate-400'} />
-                        }
+                <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                    <button
+                        onClick={() => fetchData(true)}
+                        disabled={refreshing}
+                        aria-label="Refresh Auto Mode Data"
+                        className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all disabled:opacity-50"
+                        title={lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString('en-IN')}` : 'Refresh'}
+                    >
+                        <RefreshCw size={15} className={refreshing ? 'animate-spin text-indigo-600' : ''} />
                     </button>
+
+                    <LiveButton />
+
+                    <Link
+                        href="/merchant/wallet"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-slate-300 transition-all shadow-xs"
+                    >
+                        <Wallet size={13} className="text-amber-500" />
+                        <span>₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </Link>
                 </div>
             </div>
 
-            {/* ── Active: Stats + Chart ── */}
-            {isAutoModeActive && (
-                <>
-                    {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard icon={IndianRupee} label="Net Profit" value={fmt(stats.totalProfit)} sub="After fees" accent="emerald" delay={0.05} trend={stats.growth} />
-                        <StatCard icon={TrendingUp} label="Gross Rev" value={fmt(stats.totalRevenue)} sub="90d Volume" accent="indigo" delay={0.1} />
-                        <StatCard icon={Package} label="Today's Orders" value={stats.todayCount} sub={`${stats.weekCount} this week`} accent="amber" delay={0.15} />
-                        <StatCard icon={Star} label="Success Rate" value={`${stats.successRate}%`} sub={`${stats.deliveredCount} delivered`} accent="violet" delay={0.2} />
+            {/* ── AUTOMATION STATUS CARD ── */}
+            <div className={`rounded-2xl border p-5 sm:p-6 shadow-xs transition-all relative overflow-hidden ${
+                isAutoModeActive
+                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50'
+                    : isExpired
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+            }`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                    <div className="space-y-2 max-w-xl">
+                        <div className="flex items-center gap-2.5">
+                            {isAutoModeActive ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Auto Mode Active
+                                </span>
+                            ) : isExpired ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                    <AlertTriangle size={12} />
+                                    Plan Expired
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+                                    <span className="w-2 h-2 rounded-full bg-slate-400" />
+                                    Auto Mode Off
+                                </span>
+                            )}
+
+                            {hasValidSub && timeLeft && (
+                                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                    <Clock size={12} /> {timeLeft}
+                                </span>
+                            )}
+                        </div>
+
+                        <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                            {isAutoModeActive
+                                ? 'Eligible orders are being handled automatically.'
+                                : isExpired
+                                    ? 'Your Auto Mode plan has expired. Renew to restore automated order handling.'
+                                    : 'Auto Mode is currently paused. Activate to enable automated store fulfillment.'}
+                        </h2>
+
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            {isAutoModeActive
+                                ? 'New customer orders are instantly processed, inventory is automatically checked, and deliveries are routed to logistics partners.'
+                                : 'When paused or inactive, incoming orders require manual merchant acceptance and dispatch.'}
+                        </p>
+
+                        {/* Metadata strip */}
+                        <div className="pt-2 flex items-center gap-4 sm:gap-6 text-[11px] font-bold text-slate-600 dark:text-slate-400 flex-wrap">
+                            <span className="flex items-center gap-1.5">
+                                <Package size={13} className="text-slate-400" />
+                                {stats.todayCount} order{stats.todayCount === 1 ? '' : 's'} today
+                            </span>
+                            {merchant?.auto_mode_valid_until && (
+                                <span className="flex items-center gap-1.5">
+                                    <Clock size={13} className="text-slate-400" />
+                                    Valid until: {new Date(merchant.auto_mode_valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                            )}
+                            <span className="flex items-center gap-1.5">
+                                <ShieldCheck size={13} className="text-emerald-500" />
+                                Storefront Protected
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Revenue Ecosystem / Split */}
-                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
-                        className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm overflow-hidden relative">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full" />
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest flex items-center gap-2">
-                                    <Sparkles size={14} className="text-indigo-600" /> Revenue Ecosystem
-                                </h3>
-                                <p className="text-[10px] text-slate-400 mt-1 font-medium italic">How your earnings are distributed</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                            <div className="space-y-5">
-                                <div>
-                                    <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                        <span>Merchant Share</span>
-                                        <span className="text-emerald-600">{((stats.totalProfit / Math.max(stats.totalRevenue, 1)) * 100).toFixed(0)}%</span>
-                                    </div>
-                                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${(stats.totalProfit / Math.max(stats.totalRevenue, 1)) * 100}%` }}
-                                            className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-                                    </div>
-                                    <p className="text-lg font-black text-slate-800 mt-2">{fmt(stats.totalProfit)}</p>
-                                </div>
-                                <div>
-                                    <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                        <span>Platform Cut</span>
-                                        <span className="text-rose-500">{((stats.totalPlatformCut / Math.max(stats.totalRevenue, 1)) * 100).toFixed(0)}%</span>
-                                    </div>
-                                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${(stats.totalPlatformCut / Math.max(stats.totalRevenue, 1)) * 100}%` }}
-                                            className="h-full bg-rose-500 rounded-full" />
-                                    </div>
-                                    <p className="text-lg font-black text-rose-500 mt-2">{fmt(stats.totalPlatformCut)}</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Merchant Insights</p>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-[11px] font-bold">
-                                        <span className="text-slate-400">Profit Margin</span>
-                                        <span className="text-slate-800">{((stats.totalProfit / Math.max(stats.totalRevenue, 1)) * 100).toFixed(1)}%</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[11px] font-bold">
-                                        <span className="text-slate-400">Avg. Order Value</span>
-                                        <span className="text-slate-800">{fmt(stats.totalRevenue / Math.max(stats.totalOrders, 1))}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[11px] font-bold">
-                                        <span className="text-slate-400">Success Integrity</span>
-                                        <span className="text-emerald-600 flex items-center gap-1"><ShieldCheck size={10} /> High</span>
-                                    </div>
-                                    <div className="h-px bg-slate-200/50 my-1" />
-                                    <p className="text-[10px] text-indigo-600 font-black italic">
-                                        {stats.growth > 0
-                                            ? `🚀 Profit is up ${stats.growth.toFixed(0)}% vs last week!`
-                                            : stats.growth < 0
-                                                ? `⚠️ Profit is down ${Math.abs(stats.growth).toFixed(0)}% vs last week.`
-                                                : "✨ Steady performance this week."
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    {/* Profit Chart */}
-                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                        className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
-                                    <BarChart2 size={15} className="text-indigo-500" /> Daily Profit
-                                </h3>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Merchant earnings per day</p>
-                            </div>
-                            <div className="flex gap-1">
-                                {[7, 14, 30].map(p => (
-                                    <button key={p} onClick={() => setChartPeriod(p)}
-                                        className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all ${chartPeriod === p ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                                        {p}d
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <MiniBarChart data={chartData} />
-                        <div className="flex justify-between mt-3 pt-3">
-                            <div className="text-center">
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Max Day</p>
-                                <p className="text-xs font-black text-slate-700 mt-0.5">{fmt(Math.max(...chartData.map(d => d.profit), 0))}</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Avg Profit</p>
-                                <p className="text-xs font-black text-slate-700 mt-0.5">{fmt(chartData.reduce((s, d) => s + d.profit, 0) / Math.max(chartData.filter(d => d.profit > 0).length, 1))}</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Total Profit</p>
-                                <p className="text-xs font-black text-indigo-700 mt-0.5">{fmt(chartData.reduce((s, d) => s + d.profit, 0))}</p>
-                            </div>
-                        </div>
-                        <div className="mt-4 flex items-center justify-center gap-4 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Merchant Profit</span>
-                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500 opacity-50" /> Platform Fees</span>
-                        </div>
-                    </motion.div>
-
-                    {/* Order Status Breakdown */}
-                    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                        className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <h3 className="font-black text-slate-800 text-sm mb-3 flex items-center gap-2">
-                            <Activity size={15} className="text-indigo-500" /> Order Status
-                        </h3>
-                        <div className="space-y-2.5">
-                            {[
-                                { label: 'Delivered', count: stats.deliveredCount, color: 'bg-emerald-500' },
-                                { label: 'Pending / Packed', count: stats.pendingCount, color: 'bg-amber-400' },
-                                { label: 'Cancelled', count: stats.cancelledCount, color: 'bg-red-400' },
-                            ].map(({ label, count, color }) => (
-                                <div key={label}>
-                                    <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
-                                        <span>{label}</span><span>{count}</span>
-                                    </div>
-                                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${(count / Math.max(stats.totalOrders, 1)) * 100}%` }}
-                                            transition={{ duration: 0.7, ease: 'easeOut' }}
-                                            className={`h-full rounded-full ${color}`} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {stats.pendingRevenue > 0 && (
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[11px] text-slate-400 font-bold flex items-center gap-1.5">
-                                    <Clock size={11} className="text-amber-500" /> Pending Revenue
-                                </span>
-                                <span className="text-sm font-black text-amber-600">{fmt(stats.pendingRevenue)}</span>
-                            </div>
+                    {/* Action Button */}
+                    <div className="shrink-0 flex items-center gap-3">
+                        {isAutoModeActive ? (
+                            <button
+                                onClick={() => setShowDeactivationModal(true)}
+                                disabled={processing}
+                                aria-label="Turn Off Auto Mode"
+                                className="px-5 py-2.5 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-black tracking-wider uppercase transition-all shadow-xs disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <Power size={14} />
+                                Turn Off
+                            </button>
+                        ) : hasValidSub ? (
+                            <button
+                                onClick={executeActivation}
+                                disabled={processing}
+                                aria-label="Resume Auto Mode"
+                                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black tracking-wider uppercase transition-all shadow-xs shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {processing ? <Activity size={14} className="animate-spin" /> : <Power size={14} />}
+                                Resume Auto Mode
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setShowPaymentModal(true)}
+                                disabled={processing}
+                                aria-label="Activate Auto Mode"
+                                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black tracking-wider uppercase transition-all shadow-xs shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <Zap size={14} />
+                                {isExpired ? `Renew — ₹${subscriptionPrice}/mo` : `Turn On — ₹${subscriptionPrice}/mo`}
+                            </button>
                         )}
-                    </motion.div>
+                    </div>
+                </div>
+            </div>
 
-                    {/* Tabs */}
-                    <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl">
-                        {[{ id: 'overview', label: 'Overview' }, { id: 'orders', label: 'Orders Feed' }].map(tab => (
-                            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+            {/* ── ERROR / WARNING ALERT IF ATTENTION REQUIRED ── */}
+            {stats.cancelledCount > 0 && (
+                <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                        <div>
+                            <p className="text-xs font-black text-amber-900 dark:text-amber-200">
+                                Auto Mode Notice: {stats.cancelledCount} order{stats.cancelledCount === 1 ? '' : 's'} could not be completed
+                            </p>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                Review recent order reasons to prevent future stock or delivery cancellations.
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/merchant/shopping/orders"
+                        className="text-xs font-black text-amber-800 dark:text-amber-300 hover:underline flex items-center gap-1 shrink-0"
+                    >
+                        View Orders <ChevronRight size={13} />
+                    </Link>
+                </div>
+            )}
+
+            {/* ── KEY METRICS GRID ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <StatCard
+                    icon={Package}
+                    label="Orders Today"
+                    value={stats.todayCount}
+                    sub="Valid orders in IST"
+                    accent="amber"
+                />
+                <StatCard
+                    icon={CheckCircle2}
+                    label="Successfully Processed"
+                    value={stats.deliveredCount}
+                    sub={`₹${formatPaise(stats.totalGrossRevenuePaise, false)} total sales`}
+                    accent="indigo"
+                />
+                <StatCard
+                    icon={ShieldCheck}
+                    label="Success Rate"
+                    value={`${stats.successRate}%`}
+                    sub={`${stats.deliveredCount} delivered`}
+                    accent="violet"
+                />
+                <StatCard
+                    icon={IndianRupee}
+                    label="Settled Profit"
+                    value={`₹${formatPaise(stats.totalProfitPaise, false)}`}
+                    sub={stats.contingentProfitPaise > 0 ? `+₹${formatPaise(stats.contingentProfitPaise, false)} in-flight` : 'Credited to wallet'}
+                    accent="emerald"
+                    trend={stats.growth !== 0 ? stats.growth : null}
+                />
+            </div>
+
+            {/* ── TWO-COLUMN OPERATIONAL DASHBOARD LAYOUT ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* LEFT COLUMN: Activity & Orders (7 cols) */}
+                <div className="lg:col-span-7 space-y-6">
+                    {/* Navigation Tabs */}
+                    <div className="flex gap-2 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-2xl">
+                        {[
+                            { id: 'overview', label: 'Recent Activity' },
+                            { id: 'orders', label: `All Orders (${orders.length})` }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                                    activeTab === tab.id
+                                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                }`}
+                            >
                                 {tab.label}
                             </button>
                         ))}
                     </div>
 
                     {activeTab === 'overview' ? (
-                        /* Recent activity summary */
-                        <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-50">
-                                <h3 className="font-black text-slate-800 text-sm">Recent Activity</h3>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Last 5 orders</p>
-                            </div>
-                            {orders.slice(0, 5).map(order => (
-                                <Link key={order.id} href={`/merchant/shopping/orders/${order.id}`}
-                                    className="flex items-center justify-between px-5 py-3.5 border-b border-slate-50 hover:bg-slate-50 transition-colors group">
-                                    <div>
-                                        <p className="text-sm font-black text-slate-800">{fmt(order.total_amount_paise || 0)}</p>
-                                        <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
-                                            Profit: {fmt(order.merchant_profit_paise || 0)}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${getStatusStyle(order.delivery_status)}`}>
-                                            {order.delivery_status}
-                                        </span>
-                                        <ChevronRight size={13} className="text-slate-300 group-hover:text-slate-500" />
-                                    </div>
-                                </Link>
-                            ))}
-                            {orders.length === 0 && (
-                                <div className="py-10 text-center">
-                                    <Package size={28} className="mx-auto text-slate-200 mb-2" />
-                                    <p className="text-sm font-bold text-slate-400">No orders yet</p>
+                        /* Recent Activity Feed */
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+                            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                                        Recent Live Activity
+                                    </h3>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                        Real-time events processed through your storefront
+                                    </p>
                                 </div>
-                            )}
-                        </motion.div>
-                    ) : (
-                        /* Full Orders Feed */
-                        <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
-                                <h3 className="font-black text-slate-800 text-sm">All Orders</h3>
-                                <span className="text-[10px] text-slate-400 font-bold">{orders.length} in last 90d</span>
+                                <Link
+                                    href="/merchant/shopping/orders"
+                                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
+                                >
+                                    Full Order Feed →
+                                </Link>
                             </div>
-                            {orders.length === 0 ? (
-                                <div className="py-14 text-center">
-                                    <Package size={32} className="mx-auto text-slate-200 mb-3" />
-                                    <p className="font-bold text-slate-500">No orders yet</p>
+
+                            {recentOrders.length === 0 ? (
+                                <div className="py-12 text-center">
+                                    <Package size={32} className="mx-auto text-slate-300 dark:text-slate-700 mb-2" />
+                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
+                                        No recent Auto Mode activity
+                                    </p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
+                                        Incoming customer orders from your store will automatically appear here.
+                                    </p>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-slate-50">
-                                    {orders.map(order => (
-                                        <Link key={order.id} href={`/merchant/shopping/orders/${order.id}`}
-                                            className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors group">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                                                    <Package size={15} className="text-indigo-500" />
+                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {recentOrders.map(order => {
+                                        const badge = getDeliveryStatusBadge(order.delivery_status);
+                                        const BadgeIcon = badge.icon;
+                                        return (
+                                            <Link
+                                                key={order.id}
+                                                href={`/merchant/shopping/orders/${order.id}`}
+                                                className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700">
+                                                        <BadgeIcon size={15} className="text-slate-600 dark:text-slate-300" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-xs font-black text-slate-900 dark:text-white">
+                                                                Order #{order.id.slice(0, 8).toUpperCase()}
+                                                            </p>
+                                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${badge.bg}`}>
+                                                                {badge.label}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
+                                                            <Clock size={10} />
+                                                            {new Date(order.created_at).toLocaleDateString('en-IN', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-black text-slate-800">{fmt(order.total_amount_paise || 0)}</p>
-                                                    <p className="text-[10px] text-emerald-600 font-bold">+{fmt(order.merchant_profit_paise || 0)} profit</p>
-                                                    <p className="text-[9px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
-                                                        <Clock size={8} />
-                                                        {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
+
+                                                <div className="text-right flex items-center gap-3">
+                                                    <div>
+                                                        <p className="text-xs font-black text-slate-900 dark:text-white">
+                                                            ₹{formatPaise(order.total_amount_paise || 0, false)}
+                                                        </p>
+                                                        <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                            +₹{formatPaise(order.merchant_profit_paise || 0, false)} profit
+                                                        </p>
+                                                    </div>
+                                                    <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5" />
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${getStatusStyle(order.delivery_status)}`}>
-                                                    {order.delivery_status || 'pending'}
-                                                </span>
-                                                <ChevronRight size={13} className="text-slate-300 group-hover:text-slate-500" />
-                                            </div>
-                                        </Link>
-                                    ))}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             )}
-                        </motion.div>
-                    )}
-                </>
-            )}
-
-            {/* ── Inactive CTA ── */}
-            {!isAutoModeActive && (
-                <div className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 p-6 text-center shadow-sm">
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-3">
-                        <Zap size={22} className="text-indigo-600" />
-                    </div>
-                    <h3 className="font-black text-slate-800 text-base mb-1">Unlock Auto Mode</h3>
-                    <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto leading-relaxed">
-                        Orders, inventory and deliveries handled automatically. Zero manual work.
-                    </p>
-                    {hasValidSub ? (
-                        <button onClick={confirmActivation} disabled={processing}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-200 text-sm">
-                            {processing ? 'Activating...' : 'Resume Auto Mode'}
-                        </button>
+                        </div>
                     ) : (
-                        <button onClick={() => setShowPaymentModal(true)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 text-sm">
-                            Activate — ₹{subscriptionPrice}/mo
-                        </button>
+                        /* Complete Orders Tab */
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+                            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                                    All Storefront Orders
+                                </h3>
+                                <span className="text-[11px] font-bold text-slate-400">
+                                    {orders.length} orders in last 90 days
+                                </span>
+                            </div>
+
+                            {orders.length === 0 ? (
+                                <div className="py-14 text-center">
+                                    <Package size={32} className="mx-auto text-slate-300 dark:text-slate-700 mb-2" />
+                                    <p className="text-sm font-bold text-slate-500">No orders recorded</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[420px] overflow-y-auto">
+                                    {orders.map(order => {
+                                        const badge = getDeliveryStatusBadge(order.delivery_status);
+                                        return (
+                                            <Link
+                                                key={order.id}
+                                                href={`/merchant/shopping/orders/${order.id}`}
+                                                className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                                        #{order.id.slice(0, 8).toUpperCase()}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-400">
+                                                        {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${badge.bg}`}>
+                                                        {badge.label}
+                                                    </span>
+                                                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                                                        ₹{formatPaise(order.total_amount_paise || 0, false)}
+                                                    </span>
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
-            )}
 
-            {/* ── Capital Deployment CTA ── */}
-            <div className={`rounded-2xl border p-5 shadow-sm relative overflow-hidden transition-all ${isAutoModeActive ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200'}`}>
-                <div className="absolute top-0 right-0 w-40 h-40 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 pointer-events-none" />
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
-                            <Clock size={16} className="text-amber-500" /> Growth Portfolio
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
-                            Back INTRUST Mart operations with your deployed capital and fuel growth powered by {merchant?.business_name || 'your business'}.
-                        </p>
+                {/* RIGHT COLUMN: How Auto Mode Works & Volume Chart (5 cols) */}
+                <div className="lg:col-span-5 space-y-6">
+                    {/* How It Works Card */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Sparkles size={16} className="text-indigo-600 dark:text-indigo-400" />
+                            <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                                How Auto Mode Works
+                            </h3>
+                        </div>
+
+                        <div className="space-y-3.5">
+                            {[
+                                {
+                                    step: '1',
+                                    title: 'Eligible order arrives',
+                                    desc: 'A customer completes checkout on an item mapped to your store inventory.'
+                                },
+                                {
+                                    step: '2',
+                                    title: 'Availability & pricing checked',
+                                    desc: 'Automated verification ensures real-time stock integrity and wholesale margin.'
+                                },
+                                {
+                                    step: '3',
+                                    title: 'Fulfillment & routing',
+                                    desc: 'The order is assigned for packing, dispatch, and partner courier pickup.'
+                                },
+                                {
+                                    step: '4',
+                                    title: 'Direct wallet settlement',
+                                    desc: 'Upon verified delivery, your net profit is credited automatically to your wallet.'
+                                },
+                            ].map(({ step, title, desc }) => (
+                                <div key={step} className="flex items-start gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 text-[10px] font-black text-slate-700 dark:text-slate-300">
+                                        {step}
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 leading-tight">
+                                            {title}
+                                        </h4>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                            {desc}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <Link href="/merchant/lockin"
-                        className="self-start md:self-auto bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black tracking-widest px-6 py-2.5 rounded-xl uppercase transition-all shadow-md shadow-amber-500/20 whitespace-nowrap text-center">
-                        View Deployments
-                    </Link>
+
+                    {/* Weekly Order Volume Chart */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <BarChart2 size={16} className="text-indigo-600 dark:text-indigo-400" />
+                                <h3 className="font-black text-slate-900 dark:text-white text-sm">
+                                    Order Volume Trend
+                                </h3>
+                            </div>
+                            <div className="flex gap-1">
+                                {[7, 14].map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setChartPeriod(p)}
+                                        className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all ${
+                                            chartPeriod === p
+                                                ? 'bg-indigo-600 text-white'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                        }`}
+                                    >
+                                        {p}d
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mb-3">Daily completed and processing orders</p>
+                        <DailyVolumeChart orders={orders} period={chartPeriod} />
+                    </div>
+
+                    {/* Growth Portfolio Promo Banner */}
+                    <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                                Capital Deployment
+                            </p>
+                            <h4 className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
+                                Growth Portfolio
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                                Fuel store operations with deployed capital and secure returns.
+                            </p>
+                        </div>
+                        <Link
+                            href="/merchant/lockin"
+                            className="shrink-0 px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[11px] font-black uppercase tracking-wider transition-all hover:opacity-90"
+                        >
+                            View
+                        </Link>
+                    </div>
                 </div>
             </div>
 
-            {/* ── Payment Modal ── */}
+            {/* ── PAYMENT & ACTIVATION MODAL ── */}
             <AnimatePresence>
-                {showPaymentModal && !isAutoModeActive && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex flex-col justify-end p-4 bg-black/60 backdrop-blur-sm">
+                {showPaymentModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+                    >
                         <div className="absolute inset-0" onClick={() => !processing && setShowPaymentModal(false)} />
-                        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-                            className="bg-[#1f222b] border border-white/10 rounded-[2rem] p-6 w-full max-w-sm mx-auto shadow-2xl relative z-10">
-                            <div className="flex justify-between items-center mb-5">
-                                <h3 className="text-white font-black text-lg flex items-center gap-2">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-sm mx-auto shadow-2xl relative z-10"
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-slate-900 dark:text-white font-black text-base flex items-center gap-2">
+                                    <Zap size={18} className="text-amber-500" />
                                     Activate Auto Mode
-                                    {isFirstMonth && <span className="bg-[#D4AF37]/20 text-[#D4AF37] text-[9px] uppercase font-black px-2 py-0.5 rounded">TRIAL</span>}
                                 </h3>
-                                <button onClick={() => setShowPaymentModal(false)} className="w-8 h-8 bg-white/5 rounded-full text-white/50 hover:text-white flex items-center justify-center">✕</button>
+                                <button
+                                    onClick={() => setShowPaymentModal(false)}
+                                    className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                            <div className="flex items-baseline gap-2 mb-5">
-                                <span className="text-3xl font-black text-[#D4AF37]">₹{subscriptionPrice}</span>
-                                <span className="text-slate-400 text-xs">/month</span>
+
+                            <div className="flex items-baseline gap-1.5 mb-4">
+                                <span className="text-3xl font-black text-slate-900 dark:text-white">₹{subscriptionPrice}</span>
+                                <span className="text-slate-400 text-xs font-bold">/month (30 days)</span>
+                                {isFirstMonth && (
+                                    <span className="ml-2 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 text-[9px] uppercase font-black px-2 py-0.5 rounded">
+                                        FIRST MONTH
+                                    </span>
+                                )}
                             </div>
-                            <ul className="space-y-3 mb-6">
+
+                            <ul className="space-y-2.5 mb-5">
                                 {[
-                                    [ShieldCheck, 'Automated pricing & stock'],
-                                    [Zap, 'Instant order acceptance'],
-                                    [Activity, 'Zero manual dashboard work'],
-                                    [Truck, 'Hands-free delivery routing'],
-                                ].map(([Icon, text]) => (
-                                    <li key={text} className="flex items-center gap-3 text-slate-300 text-xs font-medium">
-                                        <Icon size={14} className="text-[#D4AF37] shrink-0" /> {text}
+                                    'Automated inventory checking and reservation',
+                                    'Zero-delay order routing to logistics',
+                                    'Enrolled in central Admin Auto Mode Hub',
+                                    'Direct wallet credit on verified delivery'
+                                ].map((text, idx) => (
+                                    <li key={idx} className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                        <Check size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                                        <span>{text}</span>
                                     </li>
                                 ))}
                             </ul>
-                            <p className="text-xs text-slate-400 mb-3">Wallet: <span className="text-white font-black">₹{walletBalance.toFixed(2)}</span></p>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-3 mb-5 flex items-center justify-between text-xs">
+                                <span className="text-slate-500 dark:text-slate-400 font-bold">Wallet Balance:</span>
+                                <span className="font-black text-slate-900 dark:text-white">
+                                    ₹{walletBalance.toFixed(2)}
+                                </span>
+                            </div>
 
                             {walletBalance < subscriptionPrice ? (
-                                <Link href="/merchant/wallet"
-                                    className="w-full bg-[#1e293b] hover:bg-[#334155] border border-white/10 text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
-                                    <PlusCircle size={16} className="text-rose-400" />
+                                <Link
+                                    href="/merchant/wallet"
+                                    className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-sm"
+                                >
+                                    <PlusCircle size={15} />
                                     Add ₹{(subscriptionPrice - walletBalance).toFixed(0)} to Wallet
                                 </Link>
                             ) : (
-                                <button onClick={confirmActivation} disabled={processing}
-                                    className="w-full bg-[#D4AF37] hover:bg-[#c49f2d] text-black font-black py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(212,175,55,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
-                                    {processing ? <Activity size={16} className="animate-spin" /> : <>Pay & Activate <ChevronRight size={16} strokeWidth={3} /></>}
+                                <button
+                                    onClick={executeActivation}
+                                    disabled={processing}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl transition-all shadow-sm shadow-indigo-600/30 disabled:opacity-50 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                                >
+                                    {processing ? <Activity size={15} className="animate-spin" /> : <>Pay & Activate Auto Mode</>}
                                 </button>
                             )}
-                            {isFirstMonth && <p className="text-center text-slate-500 text-[10px] uppercase tracking-wider font-bold mt-3">Renews at ₹{pricing.autoRenewal}/month</p>}
+
+                            {isFirstMonth && (
+                                <p className="text-center text-slate-400 dark:text-slate-500 text-[10px] mt-3 font-medium">
+                                    Renews at ₹{pricing.autoRenewal}/month after 30 days
+                                </p>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* ── Deactivation Modal ── */}
+            {/* ── DEACTIVATION MODAL ── */}
             <AnimatePresence>
-                {showWarningModal && isAutoModeActive && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-                        <div className="absolute inset-0" onClick={() => !processing && setShowWarningModal(false)} />
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-[#1a1c23] border border-white/10 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative z-10 text-center">
-                            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
-                                <Power size={20} className="text-red-400" />
+                {showDeactivationModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+                    >
+                        <div className="absolute inset-0" onClick={() => !processing && setShowDeactivationModal(false)} />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative z-10 text-center"
+                        >
+                            <div className="w-11 h-11 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/40 flex items-center justify-center mx-auto mb-3">
+                                <Power size={18} className="text-rose-500" />
                             </div>
-                            <h3 className="text-white font-black text-base mb-2">Deactivate Auto Mode?</h3>
-                            <p className="text-slate-400 text-xs mb-5 leading-relaxed">You'll need to manually manage all orders after this.</p>
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowWarningModal(false)}
-                                    className="flex-1 bg-white/5 text-white border border-white/10 font-bold py-3 rounded-xl text-xs hover:bg-white/10 transition-all">Cancel</button>
-                                <button onClick={confirmDeactivation} disabled={processing}
-                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl text-xs flex justify-center items-center gap-1.5 transition-all">
-                                    {processing ? <Activity size={14} className="animate-spin" /> : 'Deactivate'}
+                            <h3 className="text-slate-900 dark:text-white font-black text-base mb-1.5">
+                                Pause Auto Mode?
+                            </h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs mb-5 leading-relaxed">
+                                You will need to manually accept and fulfill incoming customer orders. You can resume at any time during your active plan.
+                            </p>
+                            <div className="flex gap-2.5">
+                                <button
+                                    onClick={() => setShowDeactivationModal(false)}
+                                    disabled={processing}
+                                    className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={executeDeactivation}
+                                    disabled={processing}
+                                    className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5 transition-all disabled:opacity-50"
+                                >
+                                    {processing ? <Activity size={14} className="animate-spin" /> : 'Turn Off'}
                                 </button>
                             </div>
                         </motion.div>
@@ -813,6 +1029,4 @@ export default function AutoModePage() {
             </AnimatePresence>
         </div>
     );
-
 }
-

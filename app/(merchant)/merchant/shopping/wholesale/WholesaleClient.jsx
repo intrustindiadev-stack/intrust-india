@@ -28,75 +28,62 @@ const PARTNERS = [
     { name: 'FLIPKART', color: 'from-blue-500 to-sky-600', text: 'text-white', logo: '/logos/flipkart.svg', desc: 'Wholesale', tag: 'Value' },
 ];
 
-function PartnerCard({ partner, i }) {
+function PartnerCard({ partner }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: (i % PARTNERS.length) * 0.1 }}
-            whileHover={{ 
-                y: -12,
-                transition: { duration: 0.4, ease: "easeOut" }
-            }}
-            className="flex-shrink-0 group cursor-pointer snap-center"
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="flex-shrink-0 group cursor-default"
         >
-            <div className="relative w-[180px] sm:w-[220px] p-7 rounded-[3rem] bg-white dark:bg-[#0c0e16] border border-slate-100 dark:border-white/[0.05] shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] dark:shadow-none dark:hover:bg-white/[0.03] transition-all duration-500 overflow-hidden">
-                {/* Premium Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                
-                {/* Ambient Glow Background */}
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors" />
-                
+            <div className="relative w-[150px] sm:w-[165px] p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between overflow-hidden">
                 {/* Logo Area */}
-                <div className="relative mb-6">
-                    <div className="w-20 h-20 rounded-[2rem] bg-white dark:bg-white flex items-center justify-center p-4 shadow-2xl shadow-black/10 group-hover:rotate-3 transition-transform duration-500 relative z-10 overflow-hidden">
+                <div className="relative mb-2.5 flex items-center justify-between">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-50 dark:bg-slate-800/60 flex items-center justify-center p-2 relative overflow-hidden border border-slate-100 dark:border-slate-700/60 shadow-xs">
                         {imgFailed ? (
-                            <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-black text-2xl rounded-full">
+                            <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-bold text-base rounded-lg">
                                 {partner.name ? partner.name[0] : ''}
                             </div>
                         ) : (
-                            <Image 
-                                src={partner.logo} 
-                                alt={partner.name} 
+                            <Image
+                                src={partner.logo}
+                                alt={partner.name}
                                 fill
-                                sizes="80px"
-                                className="object-contain"
+                                sizes="48px"
+                                className="object-contain p-1"
                                 onError={() => setImgFailed(true)}
                             />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                     </div>
                     
-                    <div className="absolute -bottom-1 -right-1 z-20">
-                        <div className="relative flex h-6 w-6">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-20" />
-                            <div className="relative bg-emerald-500 w-6 h-6 rounded-full border-[5px] border-white dark:border-[#0c0e16] shadow-xl" />
-                        </div>
+                    {/* Live dot */}
+                    <div className="flex items-center gap-1">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-40" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                        </span>
                     </div>
                 </div>
 
                 {/* Text Info */}
-                <div className="space-y-1.5 relative z-10">
-                    <div className="flex items-center gap-2">
-                        <h3 className="font-black text-lg text-slate-900 dark:text-white tracking-tight">{partner.name}</h3>
-                        <div className="bg-blue-500/10 p-0.5 rounded-md">
-                            <BadgeCheck size={14} className="text-blue-600 dark:text-blue-400" />
-                        </div>
+                <div className="space-y-0.5 mb-2.5">
+                    <div className="flex items-center gap-1">
+                        <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white tracking-tight truncate">{partner.name}</h3>
+                        <BadgeCheck size={13} className="text-blue-600 dark:text-blue-400 shrink-0" />
                     </div>
-                    <p className="text-[13px] font-bold text-slate-500 dark:text-white/40 tracking-tight leading-tight">{partner.desc}</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 tracking-tight leading-tight truncate">{partner.desc}</p>
                 </div>
 
-                {/* Tag Overlay */}
-                <div className="mt-6 pt-6 border-t border-dashed border-slate-100 dark:border-white/5 flex items-center justify-between relative z-10">
-                    <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.2em] mb-0.5">Status</span>
-                        <span className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{partner.tag}</span>
-                    </div>
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                        <Plus size={18} />
-                    </div>
+                {/* Status Tag & Action */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-800/50 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                        {partner.tag}
+                    </span>
+                    <span className="text-slate-400 group-hover:text-blue-600 transition-colors">
+                        <Plus size={13} strokeWidth={2.5} />
+                    </span>
                 </div>
             </div>
         </motion.div>
@@ -104,51 +91,46 @@ function PartnerCard({ partner, i }) {
 }
 
 function PartnerCarousel() {
-    // Duplicate partners for seamless loop
     const marqueePartners = [...PARTNERS, ...PARTNERS, ...PARTNERS];
 
     return (
-        <div className="space-y-6 mb-12 mt-2 overflow-hidden">
+        <div className="space-y-2.5 mb-4">
             <style jsx>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
                 
                 @keyframes marquee {
                     0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
+                    100% { transform: translateX(-33.33%); }
                 }
                 .animate-marquee {
                     display: flex;
                     width: max-content;
-                    animation: marquee 40s linear infinite;
+                    animation: marquee 35s linear infinite;
                 }
                 .animate-marquee:hover {
                     animation-play-state: paused;
                 }
             `}</style>
 
-            <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-3">
-                    <div className="w-2 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full shadow-lg shadow-blue-500/20" />
-                    <div>
-                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Global Partners</h2>
-                        <p className="text-[10px] font-bold text-slate-400 dark:text-white/30 uppercase tracking-[0.2em] mt-1">Live Sourcing Network</p>
-                    </div>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
+                    <BadgeCheck size={14} className="text-blue-600 dark:text-blue-400" />
+                    <span>Verified Platform Sourcing Partners</span>
                 </div>
             </div>
             
-            <div className="relative group">
-                {/* Fade Gradients for Edge Softening */}
-                <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#f7f8fa] dark:from-[#080a10] to-transparent z-20 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#f7f8fa] dark:from-[#080a10] to-transparent z-20 pointer-events-none" />
+            <div className="relative overflow-hidden py-1">
+                {/* Subtle edge fades */}
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#f8f9fb] dark:from-[#080a10] to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#f8f9fb] dark:from-[#080a10] to-transparent z-10 pointer-events-none" />
 
-                <div className="flex items-center gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-4">
-                    <div className="animate-marquee hover:pause flex items-center gap-6">
+                <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar">
+                    <div className="animate-marquee flex items-center gap-3.5">
                         {marqueePartners.map((partner, i) => (
                             <PartnerCard
                                 key={`${partner.name}-${i}`}
                                 partner={partner}
-                                i={i}
                             />
                         ))}
                     </div>
@@ -595,76 +577,69 @@ export default function WholesaleClient({
             />
 
             <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-8 xl:items-start">
-                <div className="min-w-0 space-y-6">
-                    {/* Page Header */}
-                <div className="relative group">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white shadow-xl dark:shadow-none dark:bg-white/[0.02] border border-slate-100 dark:border-white/10 p-8 rounded-3xl backdrop-blur-md">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-500/30">
-                                    <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <h1 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">Wholesale Hub</h1>
-                            </div>
-                            <p className="text-slate-500 dark:text-gray-400 text-sm font-medium pl-1 hidden sm:block">Source premium inventory from global partners and restock your digital shelves.</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Products Area */}
-                <div className="space-y-6">
+                <div className="min-w-0 space-y-5">
                     {/* Auto Mode Indicator */}
                     {isAutoModeActive && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-[#0a1f16]/90 border border-emerald-500/30 rounded-3xl p-5 md:p-6 mb-6 relative overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] group flex items-center gap-4"
-                        >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/20 to-transparent opacity-50 blur-xl"></div>
-                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 relative z-10">
-                                <Sparkles className="text-emerald-400" size={24} />
+                        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl p-3 sm:p-4 flex items-center gap-3 shadow-xs">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                <Sparkles size={16} />
                             </div>
-                            <div className="relative z-10">
-                                <h3 className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 drop-shadow-md">Auto Mode Active</h3>
-                                <p className="text-emerald-100/70 text-xs md:text-sm font-medium tracking-tight">Focus on your business. Intrust AI is automatically managing your wholesale inventory & restocking when low.</p>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Auto Mode Active</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                </div>
+                                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-normal mt-0.5">
+                                    InTrust AI is automatically managing your wholesale inventory & restocking when low.
+                                </p>
                             </div>
-                        </motion.div>
+                        </div>
                     )}
 
                     {/* Partner Carousel Area */}
                     <PartnerCarousel />
 
-                    {/* Premium Sticky Search Bar */}
-                    <div className="sticky top-[80px] pt-4 sm:pt-8 pb-4 z-[40] bg-[#f8f9fb]/90 dark:bg-[#0b0e14]/90 backdrop-blur-2xl -mx-4 px-4 sm:-mx-8 sm:px-8 transition-all">
+                    {/* Compact Sticky Search Bar */}
+                    <div className="sticky top-[72px] z-30 py-2 bg-[#f8f9fb]/95 dark:bg-[#0b0e14]/95 backdrop-blur-md transition-all">
                         <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <Search className="text-slate-400" size={20} />
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <Search size={16} />
                             </div>
                             <input
                                 type="text"
-                                placeholder="Search inventory..."
+                                placeholder="Search products..."
+                                aria-label="Search products"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 shadow-sm transition-all"
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs transition-all"
                             />
+                            {searchTerm && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchTerm('')}
+                                    aria-label="Clear search"
+                                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                                >
+                                    ✕
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {/* Tab Bar */}
-                    <div className="flex items-center gap-3 flex-wrap mt-2">
-                        <span className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-slate-900 text-white shadow-lg shadow-slate-900/20">
+                    {/* Primary Segmented Navigation Tabs */}
+                    <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 max-w-full overflow-x-auto no-scrollbar gap-1">
+                        <span className="px-3.5 sm:px-4 py-1.5 rounded-lg font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs whitespace-nowrap">
                             Buy Stock
                         </span>
                         <Link
                             href="/merchant/shopping/wholesale/history"
-                            className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all"
+                            className="px-3.5 sm:px-4 py-1.5 rounded-lg font-medium text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all whitespace-nowrap"
                         >
                             Purchase History
                         </Link>
                         <Link
                             href="/merchant/shopping/sales-to-intrust"
-                            className="px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-all"
+                            className="px-3.5 sm:px-4 py-1.5 rounded-lg font-medium text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all whitespace-nowrap"
                         >
                             Sales to InTrust
                         </Link>
@@ -672,13 +647,14 @@ export default function WholesaleClient({
 
                     {/* Category Filters */}
                     {categories.length > 0 && (
-                        <div className="flex items-center gap-2 overflow-x-auto py-4 custom-scrollbar">
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
                             <button
                                 onClick={() => handleCategoryChange('All')}
-                                className={`whitespace-nowrap px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex-shrink-0 ${selectedCategory === 'All'
-                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg shadow-slate-900/20 dark:shadow-white/20'
-                                    : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
-                                    }`}
+                                className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all flex-shrink-0 border ${
+                                    selectedCategory === 'All'
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                                }`}
                             >
                                 All
                             </button>
@@ -686,12 +662,13 @@ export default function WholesaleClient({
                                 <button
                                     key={cat.id}
                                     onClick={() => handleCategoryChange(cat.name)}
-                                    className={`whitespace-nowrap px-5 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 flex-shrink-0 ${selectedCategory === cat.name
-                                        ? 'bg-white dark:bg-black text-slate-900 dark:text-white shadow-lg ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-[#f8f9fb] dark:ring-offset-[#0b0e14]'
-                                        : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
-                                        }`}
+                                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 flex-shrink-0 border ${
+                                        selectedCategory === cat.name
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                                    }`}
                                 >
-                                    <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${cat.color_gradient}`} />
+                                    <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${cat.color_gradient || 'from-blue-500 to-indigo-600'}`} />
                                     {cat.name}
                                 </button>
                             ))}
@@ -700,18 +677,18 @@ export default function WholesaleClient({
 
                     {/* Dynamic Sub-Category Filter */}
                     {getSubCategories(selectedCategory).length > 0 && (
-                        <div className="flex items-center gap-2 mt-1 overflow-x-auto pb-1 scrollbar-none">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">
-                                {selectedCategory === 'Fashion' ? 'Department' : 'Sub-Category'}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">
+                                {selectedCategory === 'Fashion' ? 'Department:' : 'Sub-Category:'}
                             </span>
                             {getSubCategories(selectedCategory).map(sub => (
                                 <button
                                     key={sub}
                                     onClick={() => handleSubCategoryChange(sub)}
-                                    className={`whitespace-nowrap px-4 py-2 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex-shrink-0 ${
+                                    className={`px-2.5 py-1 rounded-md font-medium text-xs transition-all flex-shrink-0 border ${
                                         selectedSubCategory === sub
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                                            : 'bg-white dark:bg-white/5 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:border-blue-300 hover:text-blue-600'
+                                            ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-xs'
+                                            : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300'
                                     }`}
                                 >
                                     {sub === 'Men' ? '👔 ' : sub === 'Women' ? '👗 ' : sub === 'Kids' ? '🧒 ' : ''}{sub}
@@ -720,7 +697,7 @@ export default function WholesaleClient({
                             {selectedSubCategory && (
                                 <button
                                     onClick={() => handleSubCategoryChange(selectedSubCategory)}
-                                    className="text-[10px] font-black text-slate-400 hover:text-red-500 transition-colors ml-1 uppercase tracking-widest shrink-0"
+                                    className="text-[11px] font-bold text-slate-400 hover:text-red-500 transition-colors ml-1 uppercase tracking-wider shrink-0"
                                 >
                                     ✕ Clear
                                 </button>
@@ -729,48 +706,66 @@ export default function WholesaleClient({
                     )}
 
                     {/* Products Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
+                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 pb-4">
                         {filteredProducts.length === 0 ? (
-                            <div className="col-span-2 py-20 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
-                                <Package className="mx-auto text-slate-200 mb-4" size={56} />
-                                <h3 className="text-lg font-black text-slate-900 mb-1">No products found</h3>
-                                <p className="text-slate-400 text-sm font-medium">Try selecting a different category.</p>
+                            <div className="col-span-full py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
+                                    <Package size={24} />
+                                </div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                                    {searchTerm ? 'No products match your search' : 'No products available'}
+                                </h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-xs font-normal max-w-sm mx-auto mb-5">
+                                    {searchTerm
+                                        ? `No wholesale items found matching "${searchTerm}".`
+                                        : selectedCategory !== 'All'
+                                            ? `No products currently available in "${selectedCategory}".`
+                                            : 'No wholesale stock available at this time.'}
+                                </p>
+                                {(searchTerm || selectedCategory !== 'All') && (
+                                    <button
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            handleCategoryChange('All');
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all"
+                                    >
+                                        Clear All Filters
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             filteredProducts.map((product) => {
-                                const categoryDetails = categories.find(c => c.name === product.category);
-                                const gradientClass = categoryDetails?.color_gradient || 'from-slate-100 to-slate-200';
                                 const qty = cart[product.id] || 0;
+                                const isOutOfStock = product.admin_stock <= 0;
+                                const isLowStock = product.admin_stock > 0 && product.admin_stock <= 5;
 
                                 return (
-                                    <motion.div
+                                    <div
                                         key={product.id}
-                                        layout
-                                        className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-600/8 transition-all duration-500 flex flex-col group overflow-hidden"
+                                        className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col group overflow-hidden"
                                     >
                                         {/* Product Image */}
                                         <div
-                                            className={`aspect-[4/3] relative bg-gradient-to-br ${gradientClass} p-1 cursor-pointer`}
+                                            className="aspect-[4/3] relative bg-slate-50 dark:bg-slate-800/40 p-3 flex items-center justify-center cursor-pointer overflow-hidden border-b border-slate-100 dark:border-slate-800/60"
                                             onClick={() => setSelectedProduct(product)}
                                         >
-                                            <div className="w-full h-full bg-white rounded-[1.7rem] overflow-hidden relative">
-                                                {product.product_images?.[0] ? (
-                                                    <Image
-                                                        src={product.product_images[0]}
-                                                        alt={product.title}
-                                                        fill
-                                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                                        className="object-cover group-hover:scale-105 transition-transform duration-700"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <Package size={40} className="text-slate-300" />
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {product.product_images?.[0] ? (
+                                                <Image
+                                                    src={product.product_images[0]}
+                                                    alt={product.title}
+                                                    fill
+                                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Package size={32} className="text-slate-300 dark:text-slate-600" />
+                                                </div>
+                                            )}
 
                                             {/* Category badge */}
-                                            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-900 shadow-sm">
+                                            <div className="absolute top-2.5 left-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider border border-slate-200/80 dark:border-slate-700 shadow-xs">
                                                 {product.category || 'Standard'}
                                             </div>
 
@@ -781,56 +776,80 @@ export default function WholesaleClient({
                                                         initial={{ scale: 0, opacity: 0 }}
                                                         animate={{ scale: 1, opacity: 1 }}
                                                         exit={{ scale: 0, opacity: 0 }}
-                                                        className="absolute top-3 right-3 w-7 h-7 bg-[#1e3a5f] rounded-full text-white text-xs font-black flex items-center justify-center shadow-lg"
+                                                        className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold shadow-xs flex items-center gap-1"
                                                     >
-                                                        {qty}
+                                                        <span>{qty}</span>
+                                                        <span className="text-[9px] uppercase tracking-wider opacity-80">in cart</span>
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>
 
-                                        {/* Info */}
-                                        <div className="p-4 flex-1 flex flex-col">
-                                            <h3 className="text-sm font-black text-slate-900 line-clamp-1 mb-0.5 tracking-tight">
-                                                {product.title}
-                                            </h3>
-                                            <p className="text-slate-400 text-xs mb-3 line-clamp-2 flex-1">
-                                                {product.description}
-                                            </p>
-
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div>
-                                                    <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest">Wholesale</p>
-                                                    <p className="text-base font-black text-blue-600">
-                                                        ₹{(product.wholesale_price_paise / 100).toLocaleString('en-IN')}
+                                        {/* Product Information */}
+                                        <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <h3
+                                                    onClick={() => setSelectedProduct(product)}
+                                                    className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                    title={product.title}
+                                                >
+                                                    {product.title}
+                                                </h3>
+                                                {product.description && (
+                                                    <p className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs mt-1 line-clamp-1 font-normal">
+                                                        {product.description}
                                                     </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest">Stock</p>
-                                                    <p className="text-sm font-bold text-slate-500">{product.admin_stock}</p>
-                                                </div>
+                                                )}
                                             </div>
 
-                                            {/* Qty controls */}
-                                            <div className="flex items-center bg-[#1e3a5f] rounded-2xl p-1 shadow-lg shadow-blue-900/15">
-                                                <button
-                                                    onClick={(e) => updateQuantity(e, product, -1)}
-                                                    className="flex-1 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 text-white transition-colors"
-                                                >
-                                                    <Minus size={16} />
-                                                </button>
-                                                <span className="w-8 text-center font-black text-white text-base">
-                                                    {qty}
-                                                </span>
-                                                <button
-                                                    onClick={(e) => updateQuantity(e, product, 1)}
-                                                    className="flex-1 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 text-white transition-colors"
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
+                                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+                                                {/* Price & Stock Row */}
+                                                <div className="flex items-baseline justify-between">
+                                                    <div>
+                                                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-none">Wholesale</span>
+                                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 block leading-tight">
+                                                            ₹{(product.wholesale_price_paise / 100).toLocaleString('en-IN')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-none">Stock</span>
+                                                        <div className="flex items-center justify-end gap-1 mt-1">
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${isOutOfStock ? 'bg-slate-400' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                                            <span className={`text-xs font-semibold ${isOutOfStock ? 'text-slate-400' : isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                                {product.admin_stock} {product.admin_stock === 1 ? 'unit' : 'units'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Compact Quantity Control */}
+                                                <div className="flex items-center justify-between border border-slate-200 dark:border-slate-700/80 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-800/40">
+                                                    <button
+                                                        onClick={(e) => updateQuantity(e, product, -1)}
+                                                        disabled={qty === 0}
+                                                        aria-label={`Decrease quantity of ${product.title}`}
+                                                        className="w-9 h-8 sm:w-10 sm:h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs hover:bg-slate-100 dark:hover:bg-slate-600 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                                    >
+                                                        <Minus size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <span 
+                                                        className={`flex-1 text-center font-bold text-xs sm:text-sm ${qty > 0 ? 'text-blue-600 dark:text-blue-400 font-black' : 'text-slate-400 dark:text-slate-500'}`}
+                                                        aria-label={`Current quantity ${qty}`}
+                                                    >
+                                                        {qty}
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => updateQuantity(e, product, 1)}
+                                                        disabled={qty >= product.admin_stock || product.admin_stock === 0}
+                                                        aria-label={`Increase quantity of ${product.title}`}
+                                                        className="w-9 h-8 sm:w-10 sm:h-8 flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                                    >
+                                                        <Plus size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 );
                             })
                         )}
@@ -846,7 +865,6 @@ export default function WholesaleClient({
                         />
                     </div>
                 </div>
-            </div>
 
             {/* Cart — desktop sticky sidebar & mobile FAB */}
                 <aside>

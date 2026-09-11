@@ -97,10 +97,10 @@ const getConfig = (txnId, transaction, userRole) => {
         icon: <TrendingUp size={48} className="text-white" strokeWidth={2.5} />,
         color: '#0891b2',
         title: 'AI Grow Request Submitted! 🤖',
-        subtitle: 'Your AI Grow investment is being processed. Track its progress from your investments dashboard.',
+        subtitle: 'Your AI Grow growth plan is being activated. Track its progress from your AI Grow dashboard.',
         redirectTo: '/merchant/investments',
         redirectDelay: 4000,
-        redirectLabel: 'View Investments',
+        redirectLabel: 'View AI Grow',
         showConfetti: true,
     };
     // Default: Wallet Topup or generic

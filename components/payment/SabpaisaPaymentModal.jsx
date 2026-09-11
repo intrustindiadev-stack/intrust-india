@@ -167,14 +167,14 @@ export default function SabpaisaPaymentModal({
             body: JSON.stringify({
               type: metadata.type,
               amount: paymentAmount,
-              description: metadata.description || productInfo?.title || 'Investment',
+              description: metadata.description || productInfo?.title || 'AI Grow Request',
               idempotencyKey: walletIdempotencyKeyRef.current
             }),
           });
 
           const result = await response.json();
           if (!response.ok) {
-            throw new Error(result.error || "Failed to process investment via wallet");
+            throw new Error(result.error || "Failed to process request via wallet");
           }
 
           await fetchBalance();

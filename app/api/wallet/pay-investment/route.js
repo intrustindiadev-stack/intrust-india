@@ -28,7 +28,7 @@ export async function POST(request) {
         }
 
         if (type !== 'merchant_lockin' && type !== 'merchant_aigrow') {
-            return NextResponse.json({ error: 'Invalid investment type' }, { status: 400 });
+            return NextResponse.json({ error: 'Invalid product type' }, { status: 400 });
         }
 
         if (!idempotencyKey) {
@@ -55,10 +55,10 @@ export async function POST(request) {
         // Pre-check Idempotency
         if (type === 'merchant_lockin') {
             const { data: existing } = await supabaseAdmin.from('merchant_lockin_balances').select('id').eq('gateway_txn_id', referenceId).maybeSingle();
-            if (existing) return NextResponse.json({ success: true, txnId: referenceId, message: 'Investment already processed' });
+            if (existing) return NextResponse.json({ success: true, txnId: referenceId, message: 'Request already processed' });
         } else {
             const { data: existing } = await supabaseAdmin.from('merchant_investments').select('id').eq('gateway_txn_id', referenceId).maybeSingle();
-            if (existing) return NextResponse.json({ success: true, txnId: referenceId, message: 'Investment already processed' });
+            if (existing) return NextResponse.json({ success: true, txnId: referenceId, message: 'Request already processed' });
         }
         
         const debitResult = await WalletService.debitWallet(
@@ -66,7 +66,7 @@ export async function POST(request) {
             amount,
             referenceId,
             referenceType,
-            description || `Investment via Wallet`
+            description || `Growth Plan via Wallet`
         );
 
         if (!debitResult || (debitResult.error && !debitResult.success)) {
@@ -130,7 +130,7 @@ export async function POST(request) {
             
             if (aiGrowErr) {
                 // Rollback debit
-                await WalletService.creditWallet(user.id, amount, `${referenceId}_ROLLBACK`, 'REFUND', `Rollback for failed AI Grow investment`);
+                await WalletService.creditWallet(user.id, amount, `${referenceId}_ROLLBACK`, 'REFUND', `Rollback for failed AI Grow plan`);
                 
                 if (aiGrowErr.code === '23505') {
                     console.warn(`[WalletInvestment] Unique constraint hit for txn ${referenceId} - concurrent duplicate suppressed and rolled back.`);
@@ -143,10 +143,10 @@ export async function POST(request) {
         return NextResponse.json({
             success: true,
             txnId: walletTxnId,
-            message: 'Investment processed successfully'
+            message: 'Growth plan processed successfully'
         });
     } catch (error) {
-        console.error('Wallet Investment Error:', error);
+        console.error('Wallet Growth Plan Error:', error);
         return NextResponse.json({ error: error.message }, { status: 400 });
     }
 }

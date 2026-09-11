@@ -105,11 +105,11 @@ export default function AIGrowWalletsPage() {
                             <ChevronRight size={12} />
                             <span>AI Grow</span>
                             <ChevronRight size={12} />
-                            <span className="text-gray-600 font-medium">Investment Wallets</span>
+                            <span className="text-gray-600 font-medium">AI Grow Wallets</span>
                         </div>
-                        <h1 className="text-xl font-bold text-gray-900">Merchant Investment Wallets</h1>
+                        <h1 className="text-xl font-bold text-gray-900">Merchant AI Grow Wallets</h1>
                         <p className="text-sm text-gray-500 mt-0.5">
-                            Manage and audit AI Grow investment balances across all merchants
+                            Manage and audit AI Grow trade capital balances across all merchants
                         </p>
                     </div>
                 </div>

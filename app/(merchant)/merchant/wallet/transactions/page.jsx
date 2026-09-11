@@ -12,12 +12,14 @@ function TransactionsContent() {
     const searchParams = useSearchParams();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
     const [hasMore, setHasMore] = useState(true);
     const [userId, setUserId] = useState(null);
 
     const fetchTransactions = useCallback(async (pageNum) => {
         setLoading(true);
+        setError(null);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
@@ -27,7 +29,7 @@ function TransactionsContent() {
                 headers: { Authorization: `Bearer ${session.access_token}` }
             });
 
-            if (!res.ok) throw new Error('Failed to fetch');
+            if (!res.ok) throw new Error('Failed to fetch transactions');
             const data = await res.json();
 
             if (pageNum === 1) {
@@ -39,6 +41,7 @@ function TransactionsContent() {
             setHasMore((data.transactions || []).length === 50);
         } catch (err) {
             console.error('Fetch transactions error:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load transactions');
         } finally {
             setLoading(false);
         }
@@ -119,6 +122,22 @@ function TransactionsContent() {
                 </div>
             </div>
 
+            {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-xs flex items-center justify-between font-bold shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <span className="material-icons-round text-base">error_outline</span>
+                        <span>{error}</span>
+                    </div>
+                    <button
+                        onClick={() => { setError(null); fetchTransactions(1); }}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 rounded-lg text-xs transition-colors flex items-center gap-1 font-semibold"
+                    >
+                        <span className="material-icons-round text-sm">refresh</span>
+                        Retry
+                    </button>
+                </div>
+            )}
+
             <div className="flex flex-col gap-4">
                 {groupedTransactions.map((tx, index) => (
                     <motion.div
@@ -189,7 +208,7 @@ function TransactionsContent() {
                     </div>
                 )}
 
-                {!loading && transactions.length === 0 && (
+                {!loading && !error && transactions.length === 0 && (
                     <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-[3rem] p-20 flex flex-col items-center text-center">
                         <div className="w-24 h-24 bg-black/5 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center mb-6">
                             <span className="material-icons-round text-slate-300 dark:text-slate-600 text-5xl">receipt_long</span>

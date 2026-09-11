@@ -25,7 +25,7 @@ jest.mock('react', () => {
 import WishlistClient from '../app/(customer)/(protected)/wishlist/WishlistClient';
 import OrdersClient from '../app/(customer)/(protected)/orders/OrdersClient';
 import TransactionsPage from '../app/(customer)/(protected)/transactions/page';
-import InventoryPage from '../app/(merchant)/merchant/inventory/page';
+import InventoryPage from '../app/(merchant)/merchant/inventory/giftcards/page';
 
 // Mock Next.js navigation
 jest.mock('next/navigation', () => ({

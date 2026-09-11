@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import WalletTopup from '@/components/wallet/WalletTopup';
 import WithdrawalForm from '@/components/wallet/WithdrawalForm'; // Assuming this component exists
@@ -193,9 +194,18 @@ function WalletContent() {
 
             {/* Error */}
             {error && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-[11px] sm:text-xs flex items-center space-x-3 font-bold shadow-sm">
-                    <span className="material-icons-round text-lg">error_outline</span>
-                    <span>{error}</span>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-[11px] sm:text-xs flex items-center justify-between font-bold shadow-sm">
+                    <div className="flex items-center space-x-3">
+                        <span className="material-icons-round text-lg">error_outline</span>
+                        <span>{error}</span>
+                    </div>
+                    <button
+                        onClick={fetchWalletData}
+                        className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 rounded-lg text-xs transition-colors flex items-center gap-1 font-semibold"
+                    >
+                        <span className="material-icons-round text-sm">refresh</span>
+                        Retry
+                    </button>
                 </motion.div>
             )}
 
@@ -354,13 +364,13 @@ function WalletContent() {
                                         <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm mx-auto">
                                             To withdraw funds, please submit your bank details and wait for admin verification.
                                         </p>
-                                        <a
+                                        <Link
                                             href="/merchant/settings?tab=bank"
                                             className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all"
                                         >
                                             <span className="material-icons-round text-base">verified</span>
                                             Add Bank Details
-                                        </a>
+                                        </Link>
                                     </div>
                                 );
                             }
@@ -375,13 +385,13 @@ function WalletContent() {
                                             (account number, IFSC, or account holder name). Please update your
                                             bank details before withdrawing.
                                         </p>
-                                        <a
+                                        <Link
                                             href="/merchant/settings?tab=bank"
                                             className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#D4AF37] text-[#020617] font-bold rounded-xl hover:opacity-90 transition-all"
                                         >
                                             <span className="material-icons-round text-base">edit</span>
                                             Complete Bank Details
-                                        </a>
+                                        </Link>
                                     </div>
                                 );
                             }
@@ -467,6 +477,26 @@ function WalletContent() {
                             </div>
                         </div>
                     ))}
+
+                    {loading && filteredTransactions.length === 0 && (
+                        <div className="flex flex-col gap-3">
+                            {[1, 2, 3].map((i) => (
+                                <div
+                                    key={i}
+                                    className="bg-white/60 dark:bg-[#1a1c23]/80 backdrop-blur-md p-4 flex items-center border border-black/5 dark:border-white/5 rounded-2xl animate-pulse"
+                                >
+                                    <div className="w-12 h-12 rounded-[1rem] bg-slate-200 dark:bg-slate-800 shrink-0" />
+                                    <div className="ml-4 flex-1">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="h-4 w-36 bg-slate-200 dark:bg-slate-700 rounded" />
+                                            <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                                        </div>
+                                        <div className="h-3 w-24 bg-slate-100 dark:bg-slate-800 rounded" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {!loading && filteredTransactions.length === 0 && (
                         <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-3xl p-10 mt-4 flex flex-col items-center text-center">

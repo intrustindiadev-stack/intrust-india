@@ -5,7 +5,10 @@ import { Store, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
-export default function StoreStatusToggle({ initialStoreData, compact = false }) {
+import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
+
+export default function StoreStatusToggle({ initialStoreData, compact = false, variant = 'default' }) {
     const supabase = createClient();
     const [isOpen, setIsOpen] = useState(initialStoreData?.is_open ?? true);
     const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +57,73 @@ export default function StoreStatusToggle({ initialStoreData, compact = false })
             setIsLoading(false);
         }
     };
+
+    if (variant === 'header') {
+        const storeHref = initialStoreData?.slug ? `/shop/${initialStoreData.slug}` : '/shop';
+        return (
+            <div className="relative bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl p-3 sm:px-4 sm:py-3 shadow-xs flex items-center justify-between gap-4 sm:gap-6 transition-all hover:border-slate-300 dark:hover:border-white/20 shrink-0 w-full sm:w-auto min-w-fit">
+                <div className="flex items-center gap-3 shrink-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        isOpen
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-slate-100 dark:bg-white/5 text-slate-400'
+                    }`}>
+                        <Store size={20} />
+                    </div>
+                    <div className="flex flex-col shrink-0 min-w-max">
+                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight whitespace-nowrap">
+                            Store Status
+                        </span>
+                        <p className={`text-[11px] font-semibold whitespace-nowrap mt-0.5 ${
+                            isOpen ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'
+                        }`}>
+                            {isOpen ? 'Currently Live' : 'Not Accepting Orders'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={isOpen}
+                            onChange={(e) => {
+                                const val = e.target.checked;
+                                setIsOpen(val);
+                                handleSave(val);
+                            }}
+                            disabled={isLoading}
+                            aria-label="Toggle store open status"
+                        />
+                        <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                            isOpen ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'
+                        } peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500/40 shadow-inner`}>
+                            <span className={`absolute top-[2px] left-[2px] bg-white rounded-full h-5 w-5 transition-transform duration-200 ease-in-out shadow-xs ${
+                                isOpen ? 'translate-x-5' : 'translate-x-0'
+                            }`} />
+                        </div>
+                    </label>
+
+                    <Link
+                        href={storeHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors whitespace-nowrap"
+                    >
+                        <span>View Store</span>
+                        <ArrowUpRight size={13} />
+                    </Link>
+                </div>
+
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white/70 dark:bg-slate-950/70 backdrop-blur-[2px] rounded-2xl flex items-center justify-center z-10">
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     if (compact) {
         return (

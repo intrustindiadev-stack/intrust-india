@@ -6,7 +6,12 @@ import { POST } from '@/app/api/sabpaisa/initiate/route';
 
 // Mocks
 jest.mock('@/lib/supabaseServer', () => ({
-    createAdminClient: jest.fn()
+    createAdminClient: jest.fn(),
+    createServerSupabaseClient: jest.fn().mockResolvedValue({
+        auth: {
+            getSession: jest.fn().mockResolvedValue({ data: { session: null } })
+        }
+    })
 }));
 
 jest.mock('@supabase/supabase-js', () => {

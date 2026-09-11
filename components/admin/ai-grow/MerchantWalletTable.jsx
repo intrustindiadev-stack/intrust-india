@@ -125,7 +125,7 @@ export default function MerchantWalletTable({ wallets = [], onAdjust, onHistory 
                                     onClick={() => toggleSort('balance')}
                                     className="flex items-center gap-1 hover:text-gray-800 transition-colors"
                                 >
-                                    Investment Balance
+                                    AI Grow Balance
                                     <ArrowUpDown size={12} className={sortField === 'balance' ? 'text-indigo-500' : ''} />
                                 </button>
                             </th>

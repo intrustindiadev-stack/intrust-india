@@ -4,8 +4,10 @@ import BulkProductPage from './BulkProductPage';
 
 export const dynamic = 'force-dynamic';
 
-export default async function BulkAddProductsPage() {
+export default async function BulkAddProductsPage({ searchParams }) {
     const supabase = await createServerSupabaseClient();
+    const params = await searchParams;
+    const initialTab = params?.tab === 'csv' ? 'csv' : 'table';
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect('/login');
@@ -25,5 +27,5 @@ export default async function BulkAddProductsPage() {
         merchant.subscription_expires_at &&
         new Date(merchant.subscription_expires_at) > now;
 
-    return <BulkProductPage merchantId={merchant.id} isSubscribed={isSubscribed} />;
+    return <BulkProductPage merchantId={merchant.id} isSubscribed={isSubscribed} initialTab={initialTab} />;
 }

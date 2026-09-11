@@ -58,8 +58,8 @@ export async function POST(request, { params }) {
             try {
                 await supabase.from('notifications').insert({
                     user_id: merchant.user_id,
-                    title: 'Investment Settled',
-                    body: `Your AI Grow investment of ₹${(totalSettledPaise / 100).toLocaleString('en-IN')} (including profits) has been settled in cash.`,
+                    title: 'Growth Plan Settled',
+                    body: `Your AI Grow growth plan of ₹${(totalSettledPaise / 100).toLocaleString('en-IN')} (including profits) has been settled in cash.`,
                     type: 'success',
                     reference_id: id,
                     reference_type: 'investment'

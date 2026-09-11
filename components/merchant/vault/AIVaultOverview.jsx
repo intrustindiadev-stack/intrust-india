@@ -274,7 +274,7 @@ export default function AIVaultOverview({
                         AI Orders Vault
                     </h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Your earnings, secured and ready for what's next.
+                        Your earnings, secured and ready for what&apos;s next.
                     </p>
                 </div>
 
