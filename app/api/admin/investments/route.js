@@ -37,7 +37,16 @@ export async function GET(request) {
             return { ...inv, total_profit_paid_paise: totalPaid, order_count: invOrders.length };
         });
 
-        return NextResponse.json({ data: enriched });
+        const { data: walletsData } = await supabase
+            .from('ai_grow_wallets')
+            .select('merchant_id, balance');
+
+        const mappedWallets = (walletsData || []).map(w => ({
+            merchant_id: w.merchant_id,
+            balance_paise: Math.round((w.balance || 0) * 100)
+        }));
+
+        return NextResponse.json({ data: enriched, wallets: mappedWallets });
     } catch (err) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }

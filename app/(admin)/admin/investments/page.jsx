@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import {
     Search, RefreshCw, Plus, CheckCircle, XCircle,
@@ -9,6 +9,8 @@ import {
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import AddInvestmentModal from '@/components/admin/investment/AddInvestmentModal';
+import FeedOrderModal from '@/components/admin/investment/FeedOrderModal';
+import SettleConfirmModal from '@/components/admin/investment/SettleConfirmModal';
 import GrowthAnalytics from '@/components/admin/investment/GrowthAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
@@ -22,12 +24,63 @@ const STATUS_CHIP = {
 
 export default function AdminInvestmentsPage() {
     const [investments, setInvestments] = useState([]);
+    const [wallets, setWallets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [activeTab, setActiveTab] = useState('all');
     const [viewMode, setViewMode] = useState('individual'); // 'individual' or 'grouped'
+    const [processingId, setProcessingId] = useState(null);
+    const [showFeedModal, setShowFeedModal] = useState(false);
+    const [selectedInvestment, setSelectedInvestment] = useState(null);
+    const [confirmModalData, setConfirmModalData] = useState(null);
     const router = useRouter();
+
+    const handleReleaseInvestment = async (id) => {
+        setProcessingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/admin/investments/${id}/release`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (!res.ok) throw new Error((await res.json()).error);
+            toast.success('Plan released to portfolio');
+            setConfirmModalData(null);
+            fetchInvestments();
+        } catch (err) { toast.error(err.message); } finally { setProcessingId(null); }
+    };
+
+    const handleUpdateStatus = async (id, newStatus) => {
+        if (!confirm(`Are you sure you want to mark this request as ${newStatus}?`)) return;
+        setProcessingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/admin/investments`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ id, status: newStatus })
+            });
+            if (!res.ok) throw new Error((await res.json()).error);
+            toast.success(`Marked as ${newStatus}`);
+            fetchInvestments();
+        } catch (err) { toast.error(err.message); } finally { setProcessingId(null); }
+    };
+
+    const handleSettleCash = async (id) => {
+        setProcessingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/admin/investments/${id}/settle-cash`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (!res.ok) throw new Error((await res.json()).error);
+            toast.success('Settled in cash successfully');
+            setConfirmModalData(null);
+            fetchInvestments();
+        } catch (err) { toast.error(err.message); } finally { setProcessingId(null); }
+    };
 
     const fetchInvestments = async () => {
         setLoading(true);
@@ -38,6 +91,7 @@ export default function AdminInvestmentsPage() {
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Failed to load');
             setInvestments(result.data || []);
+            setWallets(result.wallets || []);
         } catch (err) {
             toast.error(err.message);
         } finally {
@@ -92,12 +146,38 @@ export default function AdminInvestmentsPage() {
         return matchesSearch && matchesTab;
     });
 
-    const stats = {
-        totalAUM: investments.filter(i => i.status === 'active').reduce((s, i) => s + i.amount_paise, 0) / 100,
-        totalActive: investments.filter(i => i.status === 'active').length,
-        totalPending: investments.filter(i => i.status === 'pending').length,
-        totalPaid: investments.reduce((s, i) => s + (i.total_profit_paid_paise || 0), 0) / 100,
-    };
+    const stats = useMemo(() => {
+        // Find all unique merchant IDs from investments and wallets
+        const mIds = new Set([...investments.map(i => i.merchant_id), ...wallets.map(w => w.merchant_id)]);
+        
+        let totalAUM = 0;
+        let activePlans = 0;
+        let pendingPlans = 0;
+        let totalPaid = 0;
+
+        for (const mId of mIds) {
+            if (!mId) continue;
+            const mWallets = wallets.find(w => w.merchant_id === mId);
+            const mInv = investments.filter(i => i.merchant_id === mId);
+            
+            const activeInv = mInv.filter(i => i.status === 'active');
+            const planTotal = activeInv.reduce((s, i) => s + i.amount_paise, 0);
+            const walletBalPaise = (mWallets?.balance_paise || 0);
+            
+            totalAUM += Math.max(planTotal, walletBalPaise);
+            
+            activePlans += mInv.filter(i => i.status === 'active').length;
+            pendingPlans += mInv.filter(i => i.status === 'pending').length;
+            totalPaid += mInv.reduce((s, i) => s + (i.total_profit_paid_paise || 0), 0);
+        }
+
+        return {
+            totalAUM: totalAUM / 100,
+            totalActive: activePlans,
+            totalPending: pendingPlans,
+            totalPaid: totalPaid / 100,
+        };
+    }, [investments, wallets]);
 
     return (
         <div className="p-4 md:p-6 bg-[#f8fafc] min-h-screen">
@@ -261,10 +341,26 @@ export default function AdminInvestmentsPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 md:px-8 py-5 text-right">
-                                                        <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/portfolio/${inv.merchant_id}`); }}
-                                                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm">
-                                                            <Eye size={14} /> View Portfolio
-                                                        </button>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {inv.status === 'pending' && (
+                                                                <>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateStatus(inv.id, 'active'); }} disabled={processingId === inv.id} title="Approve" className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all"><CheckCircle size={14}/></button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateStatus(inv.id, 'rejected'); }} disabled={processingId === inv.id} title="Reject" className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all"><XCircle size={14}/></button>
+                                                                </>
+                                                            )}
+                                                            {inv.status === 'active' && (
+                                                                <>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setSelectedInvestment(inv); setShowFeedModal(true); }} disabled={processingId === inv.id} title="Feed Orders" className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"><Activity size={14}/></button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' }); }} disabled={processingId === inv.id} title="Release to Wallet" className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Wallet size={14}/></button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' }); }} disabled={processingId === inv.id} title="Settle in Cash" className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Briefcase size={14}/></button>
+                                                                </>
+                                                            )}
+                                                            <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/portfolio/${inv.merchant_id}`); }}
+                                                                title="View Full Portfolio"
+                                                                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                                                <Eye size={14} /> View
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </motion.tr>
                                             ))}
@@ -343,6 +439,25 @@ export default function AdminInvestmentsPage() {
             <AnimatePresence>
                 {showAddModal && (
                     <AddInvestmentModal onClose={(refresh) => { setShowAddModal(false); if (refresh) fetchInvestments(); }} />
+                )}
+                {showFeedModal && selectedInvestment && (
+                    <FeedOrderModal 
+                        investment={selectedInvestment} 
+                        onClose={(refresh) => { setShowFeedModal(false); setSelectedInvestment(null); if (refresh) fetchInvestments(); }} 
+                    />
+                )}
+                {confirmModalData && (
+                    <SettleConfirmModal
+                        item={confirmModalData.item}
+                        type={confirmModalData.type}
+                        action={confirmModalData.action}
+                        loading={processingId === confirmModalData.item.id}
+                        onClose={() => setConfirmModalData(null)}
+                        onConfirm={() => {
+                            if (confirmModalData.action === 'wallet') handleReleaseInvestment(confirmModalData.item.id);
+                            else handleSettleCash(confirmModalData.item.id);
+                        }}
+                    />
                 )}
             </AnimatePresence>
         </div>

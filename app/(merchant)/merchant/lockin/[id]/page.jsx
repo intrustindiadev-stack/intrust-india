@@ -96,52 +96,6 @@ export default function MerchantLockinDetailPage({ params }) {
         projectionData.push({ month: label, value: principal + interest });
     }
 
-    const handleClaim = async () => {
-        let interestPaise = lockin.accumulated_interest_paise || 0;
-        if (lockin.status === 'matured' || lockin.status === 'active') {
-            const start = new Date(lockin.start_date);
-            const end = lockin.end_date ? new Date(lockin.end_date) : new Date();
-            const boundedEnd = Math.min(new Date().getTime(), end.getTime());
-            const days = Math.max(0, boundedEnd - start.getTime()) / (1000 * 60 * 60 * 24);
-            const calcInterest = Math.round(lockin.amount_paise * (lockin.interest_rate / 100 / 365) * days);
-            interestPaise = Math.max(interestPaise, calcInterest);
-        }
-        const totalAmount = (lockin.amount_paise + interestPaise) / 100;
-
-        const confirm = window.confirm(`Request release of ₹${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} to your bank account?`);
-        if (!confirm) return;
-
-        setLoading(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch('/api/merchant/payout-request', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({
-                    amount: totalAmount,
-                    source: 'growth_fund',
-                    reference_id: id
-                })
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Request failed');
-
-            toast.success('Payout request submitted successfully!');
-            router.refresh();
-            // Refetch data
-            const { data: updated } = await supabase.from('merchant_lockin_balances').select('*').eq('id', id).single();
-            setLockin(updated);
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const statusConfig = {
         active: 'bg-blue-50 text-blue-700 border-blue-200/70 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30',
         matured: 'bg-emerald-50 text-emerald-700 border-emerald-200/70 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
@@ -206,17 +160,6 @@ export default function MerchantLockinDetailPage({ params }) {
 
                     {/* Progress & Growth Chart */}
                     <div className="lg:col-span-8 space-y-8 min-w-0">
-                        {lockin.status === 'matured' && (
-                            <button
-                                type="button"
-                                onClick={handleClaim}
-                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-5 rounded-2xl font-bold text-base shadow-lg shadow-emerald-600/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3"
-                            >
-                                <ArrowUpRight size={22} />
-                                Release Funds to Bank
-                            </button>
-                        )}
-
                         <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
                             <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-slate-900 dark:text-white text-sm">Unlock Progress</h3>
@@ -310,7 +253,7 @@ export default function MerchantLockinDetailPage({ params }) {
                             <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
                                 <div className="flex items-center justify-between text-[10px]">
                                     <span className="text-slate-400 font-bold uppercase tracking-wider">Disbursement</span>
-                                    <span className="text-blue-400 font-black">Bank Transfer</span>
+                                    <span className="text-blue-400 font-black">Wallet Auto-Deposit</span>
                                 </div>
                                 <div className="flex items-center justify-between text-[10px]">
                                     <span className="text-slate-400 font-bold uppercase tracking-wider">Assurance</span>
@@ -332,7 +275,7 @@ export default function MerchantLockinDetailPage({ params }) {
                                     { label: 'Initiated', date: startDate, active: true },
                                     { label: 'Growth Active', date: 'In Progress', active: progressPercent > 0 && progressPercent < 100 },
                                     { label: 'Fund Unlocked', date: endDate, active: progressPercent >= 100 },
-                                    { label: 'Disbursement', date: lockin.status === 'paid_out' ? 'Completed' : 'Pending', active: lockin.status === 'paid_out' }
+                                    { label: 'Wallet Auto-Deposit', date: lockin.status === 'matured' ? 'Completed' : 'Pending', active: lockin.status === 'matured' }
                                 ].map((step, idx) => (
                                     <div key={idx} className="relative flex items-start gap-4">
                                         <div className={`absolute -left-5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ring-4 transition-all duration-500 ${step.active ? 'bg-blue-600 ring-blue-50 dark:ring-blue-950 scale-125' : 'bg-slate-300 dark:bg-slate-700 ring-slate-100 dark:ring-slate-800'
@@ -356,7 +299,7 @@ export default function MerchantLockinDetailPage({ params }) {
                                 <div className="space-y-1">
                                     <h5 className="text-[10px] font-black text-amber-900 dark:text-amber-300 uppercase tracking-widest leading-none">Reward Policy</h5>
                                     <p className="text-[10px] text-amber-800 dark:text-amber-300/80 font-medium leading-relaxed">
-                                        Retention bonuses are calculated based on the net term. Manual pre-mature release is not available to ensure fund integrity.
+                                        Funds are automatically released to your wallet upon maturity. Admins may process pre-mature releases, but only the principal capital will be refunded with 0% interest.
                                     </p>
                                 </div>
                             </div>

@@ -38,6 +38,8 @@ const MOBILE_TABS = [
 export default function AIGrowPage() {
     const [investments, setInvestments] = useState([]);
     const [allOrders, setAllOrders] = useState([]);
+    const [wallet, setWallet] = useState(null); // ai_grow_wallets ledger row — authoritative balance
+    const [walletTxns, setWalletTxns] = useState([]); // ai_grow_wallet_transactions — admin adjustments
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isRevealed, setIsRevealed] = useState(false);
@@ -67,6 +69,9 @@ export default function AIGrowPage() {
             const invs = json.data || [];
             setInvestments(invs);
             setAllOrders(json.allOrders || []);
+            // wallet comes from ai_grow_wallets — the authoritative admin-managed ledger
+            setWallet(json.wallet || null);
+            setWalletTxns(json.walletTxns || []);
             if (!selectedInv && invs.length > 0) setSelectedInv(invs[0].id);
         } catch (e) {
             console.error(e);
@@ -87,11 +92,19 @@ export default function AIGrowPage() {
     }, [searchParams]);
 
     const stats = useMemo(() => {
-        const active = investments.filter(i => i.status === 'active');
-        const totalDeployed = active.reduce((s, i) => s + i.amount_paise / 100, 0);
+        // Include only 'active' plans in deployed capital.
+        // Once a plan is completed, its principal is returned to the vault.
+        const deployed = investments.filter(i => i.status === 'active');
+        const totalDeployed = deployed.reduce((s, i) => s + i.amount_paise / 100, 0);
         const totalProfit = allOrders.reduce((s, o) => s + (o.profit_paise || 0), 0) / 100;
-        return { totalDeployed, totalProfit, activeCount: active.length, totalFunds: investments.length };
-    }, [investments, allOrders]);
+        const activeCount = investments.filter(i => i.status === 'active').length;
+        // vaultTotal: prefer wallet.balance when admin has set it higher (manual top-ups),
+        // but always show at least totalDeployed + totalProfit from actual plans.
+        const walletBal = parseFloat(wallet?.balance ?? 0);
+        const planTotal = totalDeployed + totalProfit;
+        const vaultTotal = Math.max(walletBal, planTotal);
+        return { totalDeployed, totalProfit, activeCount, totalFunds: investments.length, vaultTotal };
+    }, [investments, allOrders, wallet]);
 
     const currentOrders = useMemo(() => {
         if (!selectedInv) return allOrders;
@@ -262,8 +275,9 @@ export default function AIGrowPage() {
                                 ) : (
                                     <motion.div key="revealed" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-baseline gap-2">
                                         <span className="text-xl font-bold text-slate-400 align-top mt-1">₹</span>
+                                        {/* Vault = max(wallet.balance, totalDeployed + totalProfit) */}
                                         <h2 className="text-5xl md:text-6xl font-extrabold tracking-tighter">
-                                            <AnimatedValue value={stats.totalDeployed + stats.totalProfit} isRevealed={isRevealed} showTotal={true} />
+                                            <AnimatedValue value={stats.vaultTotal} isRevealed={isRevealed} showTotal={true} />
                                         </h2>
                                     </motion.div>
                                 )}
@@ -274,7 +288,8 @@ export default function AIGrowPage() {
                             <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Deployed Capital</p>
                                 <p className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                                    {isRevealed ? <AnimatedNumber value={stats.totalDeployed} prefix="₹" /> : '• • • • • •'}
+                                    {/* Sum of active + completed investment plans */}
+                                    {isRevealed ? <AnimatedNumber value={stats.totalDeployed} prefix="₹" decimals={2} /> : '• • • • • •'}
                                 </p>
                             </div>
                             <div className="space-y-2">
@@ -419,68 +434,123 @@ export default function AIGrowPage() {
                     )}
                 </div>
 
-                {/* Activity Feed */}
+                {/* Activity Feed — unified timeline of wallet adjustments + trade orders */}
                 <div className="lg:col-span-7">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-slate-50 dark:border-slate-800/50 flex items-center justify-between">
-                            <div>
-                                <h3 className="font-extrabold text-slate-900 dark:text-white">Capital Activity Feed</h3>
-                                <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                                    {selectedInv ? 'Showing selected plan orders' : 'All plan orders'}
-                                </p>
-                            </div>
-                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{currentOrders.length} Orders</span>
-                        </div>
+                    {(() => {
+                        // Build unified timeline: wallet txns + all trade orders, newest first
+                        const txnItems = walletTxns.map(t => ({ ...t, _kind: 'wallet_txn', _ts: new Date(t.created_at) }));
+                        const orderItems = allOrders.map(o => ({ ...o, _kind: 'trade_order', _ts: new Date(o.order_date) }));
+                        const unified = [...txnItems, ...orderItems].sort((a, b) => b._ts - a._ts);
 
-                        <div className="max-h-[480px] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800/50">
-                            {currentOrders.length === 0 ? (
-                                <div className="p-20 text-center flex flex-col items-center gap-4">
-                                    <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-[2rem] flex items-center justify-center">
-                                        <Sparkles size={28} className="text-indigo-400" />
-                                    </div>
+                        const txnColors = {
+                            credit: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', label: 'Credited', sign: '+', amount: 'text-emerald-600 dark:text-emerald-400' },
+                            debit:  { dot: 'bg-rose-400',    badge: 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400',           label: 'Debited',  sign: '−', amount: 'text-rose-600 dark:text-rose-400' },
+                            admin_adjustment: { dot: 'bg-indigo-400', badge: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400', label: 'Override', sign: '=', amount: 'text-indigo-500 dark:text-indigo-400' },
+                        };
+
+                        return (
+                            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] shadow-sm overflow-hidden">
+                                <div className="p-6 border-b border-slate-50 dark:border-slate-800/50 flex items-center justify-between">
                                     <div>
-                                        <h4 className="font-black text-slate-800 dark:text-slate-100">
-                                            {investments.length === 0 ? 'Start Your AI Grow Journey' : 'Select a Plan to View Orders'}
-                                        </h4>
-                                        <p className="text-slate-400 text-sm font-medium mt-1 max-w-[240px] mx-auto leading-relaxed">
-                                            {investments.length === 0
-                                                ? 'Create your first plan request to start earning.'
-                                                : 'Tap on a plan card to see its trade orders.'}
+                                        <h3 className="font-extrabold text-slate-900 dark:text-white">Capital Activity Feed</h3>
+                                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                                            Wallet adjustments &amp; trade orders
                                         </p>
                                     </div>
+                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{unified.length} Events</span>
                                 </div>
-                            ) : (
-                                currentOrders.map(order => (
-                                    <div key={order.id} className="p-5 hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-4">
-                                        <div className="flex-1 min-w-0 space-y-1">
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{order.order_details}</p>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                {order.category && (
-                                                    <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{order.category}</span>
-                                                )}
-                                                {order.location && (
-                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
-                                                        <span className="relative flex h-2 w-2 mr-1">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                        </span>
-                                                        {order.location}
-                                                    </span>
-                                                )}
-                                                <span className="text-[10px] font-bold text-slate-400">
-                                                    {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                </span>
+
+                                <div className="max-h-[480px] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800/50">
+                                    {unified.length === 0 ? (
+                                        <div className="p-20 text-center flex flex-col items-center gap-4">
+                                            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-[2rem] flex items-center justify-center">
+                                                <Sparkles size={28} className="text-indigo-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-black text-slate-800 dark:text-slate-100">No activity yet</h4>
+                                                <p className="text-slate-400 text-sm font-medium mt-1 max-w-[240px] mx-auto leading-relaxed">
+                                                    Wallet adjustments and trade profits will appear here.
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="text-right shrink-0 space-y-0.5">
-                                <p className="text-sm font-black text-emerald-600">+₹{(order.profit_paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">profit</p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
+                                    ) : (
+                                        unified.map(item => {
+                                            if (item._kind === 'wallet_txn') {
+                                                const c = txnColors[item.transaction_type] || txnColors.credit;
+                                                const amtNum = parseFloat(item.amount);
+                                                const displayAmt = amtNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                                const newBal = parseFloat(item.new_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                                                return (
+                                                    <div key={`txn-${item.id}`} className="p-5 hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors flex items-start gap-4">
+                                                        {/* Icon */}
+                                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${c.badge}`}>
+                                                            <ShieldCheck size={16} />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0 space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Admin Wallet {c.label}</p>
+                                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${c.badge}`}>{c.label}</span>
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">{item.reason}</p>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-[10px] font-bold text-slate-400">
+                                                                    {new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                </span>
+                                                                <span className="text-[10px] font-semibold text-slate-400">→ Balance: ₹{newBal}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right shrink-0 space-y-0.5">
+                                                            <p className={`text-sm font-black ${c.amount}`}>{c.sign}₹{displayAmt}</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">vault</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            // trade order
+                                            const order = item;
+                                            return (
+                                                <div key={`order-${order.id}`} className="p-5 hover:bg-slate-50/60 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-4">
+                                                    <div className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                                                        <BarChart2 size={15} className="text-slate-400" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 space-y-1">
+                                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{order.order_details}</p>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            {order.category && (
+                                                                <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{order.category}</span>
+                                                            )}
+                                                            {order.location && (
+                                                                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
+                                                                    <span className="relative flex h-2 w-2 mr-1">
+                                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                    </span>
+                                                                    {order.location}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-[10px] font-bold text-slate-400">
+                                                                {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+                                                        <div className="text-right hidden sm:block">
+                                                            <p className="text-xs font-bold text-slate-500">₹{(order.amount_paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">volume</p>
+                                                        </div>
+                                                        <div className="text-right sm:border-l sm:border-slate-100 sm:dark:border-slate-800 sm:pl-6">
+                                                            <p className="text-sm font-black text-emerald-600">+₹{(order.profit_paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">profit</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </motion.div>

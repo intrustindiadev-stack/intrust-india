@@ -53,6 +53,22 @@ export async function POST(request, { params }) {
 
         if (updateInvError) throw updateInvError;
 
+        // 2. Decrement AI Grow Wallet Ledger
+        // Since the principal is leaving the AI Grow system, we must reduce the master ledger
+        const { data: aiWallet } = await supabase
+            .from('ai_grow_wallets')
+            .select('balance_paise')
+            .eq('merchant_id', investment.merchant_id)
+            .single();
+
+        if (aiWallet) {
+            const newAiBalance = Math.max(0, aiWallet.balance_paise - investment.amount_paise);
+            await supabase
+                .from('ai_grow_wallets')
+                .update({ balance_paise: newAiBalance })
+                .eq('merchant_id', investment.merchant_id);
+        }
+
         // 3. Send notification
         if (merchant?.user_id) {
             try {

@@ -25,10 +25,6 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Already released or matured' }, { status: 400 });
         }
 
-        if (lockin.end_date && new Date() < new Date(lockin.end_date)) {
-            return NextResponse.json({ error: 'Cannot release before maturity date' }, { status: 400 });
-        }
-
         // Fetch merchant
         const { data: merchant, error: merError } = await supabase
             .from('merchants')
@@ -44,13 +40,18 @@ export async function POST(request, { params }) {
         const principalPaise = lockin.amount_paise;
         const rate = (lockin.interest_rate || lockin.interest_rate_percent || 0) / 100;
         let interestPaise = 0;
-        if (lockin.start_date) {
+        let isPremature = false;
+        
+        if (lockin.end_date && new Date() < new Date(lockin.end_date)) {
+            isPremature = true;
+        } else if (lockin.start_date) {
             const startDate = new Date(lockin.start_date);
             const endDate = lockin.end_date ? new Date(lockin.end_date) : new Date();
             const boundedEnd = Math.min(new Date().getTime(), endDate.getTime());
             const daysElapsed = Math.max(0, boundedEnd - startDate.getTime()) / (1000 * 60 * 60 * 24);
             interestPaise = Math.round(principalPaise * (rate / 365) * daysElapsed);
         }
+        
         const totalAmountToRelease = principalPaise + interestPaise;
 
         // 1. Update merchant wallet balance
@@ -70,7 +71,7 @@ export async function POST(request, { params }) {
                 transaction_type: 'wallet_topup',
                 amount_paise: totalAmountToRelease,
                 balance_after_paise: newBalance,
-                description: 'Lockin + Interest Released to Wallet',
+                description: isPremature ? 'Lockin Capital Pre-maturely Released to Wallet' : 'Lockin + Interest Released to Wallet',
                 metadata: { reference_id: id, type: 'LOCKIN_RELEASE', principal: principalPaise, interest: interestPaise }
             });
 
@@ -86,10 +87,15 @@ export async function POST(request, { params }) {
 
         // 4. Send notification
         try {
+            let notifBody = `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including interest) from your Lockin has been released to your portfolio.`;
+            if (isPremature) {
+                notifBody = `Your Lockin has been pre-maturely released to your wallet. Only your principal capital of ₹${(principalPaise / 100).toLocaleString('en-IN')} was released (0% interest).`;
+            }
+
             await supabase.from('notifications').insert({
                 user_id: merchant.user_id,
                 title: 'Lockin Released',
-                body: `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including interest) from your Lockin has been released to your portfolio.`,
+                body: notifBody,
                 type: 'success',
                 reference_id: id,
                 reference_type: 'lockin_balance'

@@ -47,17 +47,29 @@ export async function GET(request, { params }) {
 
         if (lError) throw lError;
 
+        // 5. Fetch AI Grow Wallet
+        const { data: aiGrowWallet } = await supabase
+            .from('ai_grow_wallets')
+            .select('balance')
+            .eq('merchant_id', merchantId)
+            .single();
+
+        const aiWalletBalance = Math.round((aiGrowWallet?.balance || 0) * 100);
+
         // Calculate totals
         const activeAiGrowAmount = aiGrow.filter(i => i.status === 'active').reduce((sum, i) => sum + i.amount_paise, 0);
         const activeLockinAmount = lockin.filter(l => l.status === 'active').reduce((sum, l) => sum + l.amount_paise, 0);
+        
+        const finalAiGrowAmount = Math.max(aiWalletBalance, activeAiGrowAmount);
 
         return NextResponse.json({
             data: {
                 merchant: {
                     ...merchant,
-                    total_active_capital_paise: activeAiGrowAmount + activeLockinAmount,
-                    total_ai_grow_paise: activeAiGrowAmount,
-                    total_lockin_paise: activeLockinAmount
+                    total_active_capital_paise: finalAiGrowAmount + activeLockinAmount,
+                    total_ai_grow_paise: finalAiGrowAmount,
+                    total_lockin_paise: activeLockinAmount,
+                    ai_grow_wallet_balance: aiWalletBalance
                 },
                 investments: aiGrow || [],
                 lockins: lockin || []

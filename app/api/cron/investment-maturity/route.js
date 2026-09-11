@@ -18,12 +18,62 @@ export async function GET(request) {
 
         let sent = 0, skipped = 0, failed = 0;
 
-        // 1. Check merchant_lockin_balances
+        // 1. Auto-settle matured lockins
+        const { data: maturedLockins, error: maturedError } = await supabase
+            .from('merchant_lockin_balances')
+            .select('*, merchants!inner(user_id, wallet_balance_paise)')
+            .eq('status', 'active')
+            .not('end_date', 'is', null)
+            .lte('end_date', now.toISOString());
+
+        if (maturedError) throw maturedError;
+
+        for (const lockin of maturedLockins || []) {
+            try {
+                const principalPaise = lockin.amount_paise;
+                const rate = (lockin.interest_rate || lockin.interest_rate_percent || 0) / 100;
+                const startDate = new Date(lockin.start_date);
+                const endDate = new Date(lockin.end_date);
+                const daysElapsed = Math.max(0, endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+                const interestPaise = Math.round(principalPaise * (rate / 365) * daysElapsed);
+                const totalAmountToRelease = principalPaise + interestPaise;
+
+                const newBalance = (lockin.merchants.wallet_balance_paise || 0) + totalAmountToRelease;
+                
+                await supabase.from('merchants').update({ wallet_balance_paise: newBalance }).eq('id', lockin.merchant_id);
+                
+                await supabase.from('merchant_transactions').insert({
+                    merchant_id: lockin.merchant_id,
+                    transaction_type: 'wallet_topup',
+                    amount_paise: totalAmountToRelease,
+                    balance_after_paise: newBalance,
+                    description: 'Lockin Auto-Released to Wallet',
+                    metadata: { reference_id: lockin.id, type: 'LOCKIN_RELEASE', principal: principalPaise, interest: interestPaise }
+                });
+                
+                await supabase.from('merchant_lockin_balances').update({ status: 'matured' }).eq('id', lockin.id);
+                
+                await supabase.from('notifications').insert({
+                    user_id: lockin.merchants.user_id,
+                    title: 'Lockin Auto-Released',
+                    body: `₹${(totalAmountToRelease / 100).toLocaleString('en-IN')} (including interest) from your matured Lockin has been automatically released to your portfolio.`,
+                    type: 'success',
+                    reference_id: lockin.id,
+                    reference_type: 'lockin_balance'
+                });
+                sent++;
+            } catch (err) {
+                console.error(`[Investment Cron] auto-settle failed for lockin ${lockin.id}`, err);
+                failed++;
+            }
+        }
+
+        // 2. Check merchant_lockin_balances for upcoming maturity
         const { data: lockins, error: lockinError } = await supabase
             .from('merchant_lockin_balances')
             .select('*, merchants!inner(user_id)')
             .eq('status', 'active')
-            .gte('end_date', now.toISOString())
+            .gt('end_date', now.toISOString())
             .lte('end_date', sevenDaysFromNow.toISOString());
 
         if (lockinError) throw lockinError;

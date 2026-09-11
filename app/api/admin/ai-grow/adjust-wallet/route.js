@@ -115,6 +115,46 @@ export async function POST(request) {
         }
 
         // ── 6. SUCCESS ────────────────────────────────────────────────────────
+        // Insert an in-app notification for the merchant (non-blocking)
+        try {
+            // Look up the merchant's auth user_id so we can target the notification
+            const { data: merchantRow } = await supabase
+                .from('merchants')
+                .select('user_id')
+                .eq('id', payload.merchant_id)
+                .single();
+
+            if (merchantRow?.user_id) {
+                const txType = payload.adjustment_type;
+                const amt = `₹${payload.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                const titleMap = {
+                    credit: 'AI Grow Wallet Credited',
+                    debit: 'AI Grow Wallet Debited',
+                    admin_adjustment: 'AI Grow Balance Updated',
+                };
+                const bodyMap = {
+                    credit: `${amt} has been credited to your AI Grow vault. Reason: ${payload.reason}`,
+                    debit: `${amt} has been debited from your AI Grow vault. Reason: ${payload.reason}`,
+                    admin_adjustment: `Your AI Grow vault balance has been set to ${amt}. Reason: ${payload.reason}`,
+                };
+                const typeMap = { credit: 'success', debit: 'warning', admin_adjustment: 'info' };
+
+                const { error: notifError } = await supabase.from('notifications').insert({
+                    user_id: merchantRow.user_id,
+                    title: titleMap[txType] || 'AI Grow Wallet Updated',
+                    body: bodyMap[txType] || `Your AI Grow vault was adjusted by admin. Reason: ${payload.reason}`,
+                    type: typeMap[txType] || 'info',
+                    reference_id: data?.transaction_id || null,
+                    reference_type: 'ai_grow_wallet_adjustment',
+                });
+                if (notifError) {
+                    console.error('[ai-grow/adjust-wallet] Notification insert failed:', notifError.message);
+                }
+            }
+        } catch (notifErr) {
+            console.error('[ai-grow/adjust-wallet] Notification error (non-fatal):', notifErr);
+        }
+
         return NextResponse.json({ success: true, data });
 
     } catch (err) {

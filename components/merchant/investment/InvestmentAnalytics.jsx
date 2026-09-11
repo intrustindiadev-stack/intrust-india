@@ -51,12 +51,13 @@ export default function InvestmentAnalytics({ orders, investments = [] }) {
     const profitData = useMemo(() => {
         const daily = {};
         filteredOrders.forEach(o => {
-            const date = new Date(o.order_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-            if (!daily[date]) daily[date] = { name: date, Profit: 0, Volume: 0 };
+            const dateObj = new Date(o.order_date);
+            const date = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+            if (!daily[date]) daily[date] = { name: date, Profit: 0, Volume: 0, timestamp: dateObj.getTime() };
             daily[date].Profit += (o.profit_paise || 0) / 100;
             daily[date].Volume += (o.amount_paise || 0) / 100;
         });
-        return Object.values(daily);
+        return Object.values(daily).sort((a, b) => a.timestamp - b.timestamp);
     }, [filteredOrders]);
 
     // Portfolio donut

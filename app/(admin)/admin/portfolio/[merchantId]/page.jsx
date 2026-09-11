@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import FeedOrderModal from '@/components/admin/investment/FeedOrderModal';
+import SettleConfirmModal from '@/components/admin/investment/SettleConfirmModal';
 import { 
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
     AreaChart, Area, XAxis, YAxis, CartesianGrid
@@ -25,6 +26,7 @@ export default function MerchantPortfolioPage({ params }) {
     // For Modals
     const [showFeedModal, setShowFeedModal] = useState(false);
     const [selectedInvestment, setSelectedInvestment] = useState(null);
+    const [confirmModalData, setConfirmModalData] = useState(null);
 
     const RealtimeAssetTicker = ({ items, type = 'lockin', color = 'text-white' }) => {
         const [now, setNow] = useState(Date.now());
@@ -85,21 +87,11 @@ export default function MerchantPortfolioPage({ params }) {
         fetchPortfolio();
     }, [merchantId, router]);
 
-    const handleReleaseInvestment = async (id, type) => {
-        const confirmMsg = type === 'lockin' 
-            ? 'Are you sure you want to release this Lockin back to the merchant portfolio?'
-            : 'Are you sure you want to release this AI Grow Plan back to the merchant portfolio?';
-            
-        if (!confirm(confirmMsg)) return;
-        
+    const handleReleaseLockin = async (id) => {
         setProcessingId(id);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const endpoint = type === 'lockin' 
-                ? `/api/admin/lockin/${id}/release`
-                : `/api/admin/investments/${id}/release`;
-                
-            const res = await fetch(endpoint, {
+            const res = await fetch(`/api/admin/lockin/${id}/release`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${session.access_token}` },
             });
@@ -107,7 +99,30 @@ export default function MerchantPortfolioPage({ params }) {
                 const d = await res.json();
                 throw new Error(d.error);
             }
-            toast.success(`${type === 'lockin' ? 'Lockin' : 'Plan'} released to portfolio`);
+            toast.success('Lockin released to portfolio');
+            setConfirmModalData(null);
+            fetchPortfolio();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleReleaseInvestment = async (id) => {
+        setProcessingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/admin/investments/${id}/release`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (!res.ok) {
+                const d = await res.json();
+                throw new Error(d.error);
+            }
+            toast.success('Plan released to portfolio');
+            setConfirmModalData(null);
             fetchPortfolio();
         } catch (err) {
             toast.error(err.message);
@@ -148,8 +163,6 @@ export default function MerchantPortfolioPage({ params }) {
     };
 
     const handleSettleCash = async (id, type) => {
-        if (!confirm(`Are you sure you want to settle this ${type === 'lockin' ? 'Lockin' : 'Plan'} in cash? This will mark it as completed without crediting the merchant's wallet.`)) return;
-        
         setProcessingId(id);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -166,6 +179,7 @@ export default function MerchantPortfolioPage({ params }) {
                 throw new Error(d.error);
             }
             toast.success(`Settled in cash successfully`);
+            setConfirmModalData(null);
             fetchPortfolio();
         } catch (err) {
             toast.error(err.message);
@@ -227,8 +241,14 @@ export default function MerchantPortfolioPage({ params }) {
                         <div className="bg-slate-900 rounded-[2rem] p-6 text-white relative overflow-hidden shadow-xl">
                             <div className="absolute right-4 top-4 opacity-10"><Briefcase size={64} /></div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Deployed Capital</p>
-                            <p className="text-3xl font-black tracking-tight">
-                                <RealtimeAssetTicker items={[...lockins, ...investments]} type="mixed" color="text-slate-400" />
+                            <p className="text-3xl font-black tracking-tight flex items-baseline">
+                                <span>₹{(merchant.total_ai_grow_paise / 100).toLocaleString('en-IN')}</span>
+                                {lockins.filter(l => l.status === 'active').length > 0 && (
+                                    <>
+                                        <span className="mx-2 text-slate-500 font-medium text-lg">+</span>
+                                        <RealtimeAssetTicker items={lockins} type="lockin" color="text-slate-400" />
+                                    </>
+                                )}
                             </p>
                         </div>
                         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
@@ -239,7 +259,7 @@ export default function MerchantPortfolioPage({ params }) {
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI Grow Funds</p>
                             </div>
                             <p className="text-2xl font-black text-slate-900 tracking-tight">
-                                <RealtimeAssetTicker items={investments} type="aigrow" color="text-indigo-400" />
+                                ₹{(merchant.total_ai_grow_paise / 100).toLocaleString('en-IN')}
                             </p>
                         </div>
                         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
@@ -333,14 +353,14 @@ export default function MerchantPortfolioPage({ params }) {
                                                         <Activity size={14} /> Feed Orders
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleReleaseInvestment(inv.id, 'ai_grow')}
+                                                        onClick={() => setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' })}
                                                         disabled={processingId === inv.id}
                                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
                                                     >
                                                         {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleSettleCash(inv.id, 'ai_grow')}
+                                                        onClick={() => setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' })}
                                                         disabled={processingId === inv.id}
                                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
                                                     >
@@ -472,14 +492,14 @@ export default function MerchantPortfolioPage({ params }) {
                                                 {lockin.status === 'active' && (
                                                     <>
                                                         <button 
-                                                            onClick={() => handleReleaseInvestment(lockin.id, 'lockin')}
+                                                            onClick={() => setConfirmModalData({ item: lockin, action: 'wallet', type: 'lockin' })}
                                                             disabled={processingId === lockin.id}
                                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
                                                         >
                                                             {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release Lockin to Wallet
                                                         </button>
                                                         <button 
-                                                            onClick={() => handleSettleCash(lockin.id, 'lockin')}
+                                                            onClick={() => setConfirmModalData({ item: lockin, action: 'cash', type: 'lockin' })}
                                                             disabled={processingId === lockin.id}
                                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
                                                         >
@@ -506,6 +526,24 @@ export default function MerchantPortfolioPage({ params }) {
                         setSelectedInvestment(null);
                         if (refresh) fetchPortfolio();
                     }} 
+                />
+            )}
+            
+            {confirmModalData && (
+                <SettleConfirmModal
+                    item={confirmModalData.item}
+                    type={confirmModalData.type}
+                    action={confirmModalData.action}
+                    loading={processingId === confirmModalData.item.id}
+                    onClose={() => setConfirmModalData(null)}
+                    onConfirm={() => {
+                        if (confirmModalData.action === 'wallet') {
+                            if (confirmModalData.type === 'lockin') handleReleaseLockin(confirmModalData.item.id);
+                            else handleReleaseInvestment(confirmModalData.item.id);
+                        } else {
+                            handleSettleCash(confirmModalData.item.id, confirmModalData.type);
+                        }
+                    }}
                 />
             )}
         </div>

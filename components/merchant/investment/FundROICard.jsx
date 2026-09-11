@@ -10,7 +10,7 @@ const STATUS_COLORS = {
     rejected: { bg: 'bg-red-50 dark:bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-100 dark:border-red-500/20', dot: 'bg-red-400' },
 };
 
-const STATUS_LABELS = { pending: 'Under Review', active: 'Active', completed: 'Completed', rejected: 'Rejected' };
+const STATUS_LABELS = { pending: 'Under Review', active: 'Active', completed: 'Settled', rejected: 'Rejected' };
 
 // SVG circular progress ring
 function ROIRing({ pct, size = 72, stroke = 6, color = '#10B981' }) {
