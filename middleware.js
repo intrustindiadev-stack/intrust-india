@@ -110,79 +110,17 @@ export async function middleware(request) {
     let userRole = null;
     let isSuspended = false;
 
-    // ─── AUTH_DIAG: Chunk-level cookie diagnostic ────────────────────────────
-    // Logs ONLY metadata — never cookie values, JWTs, or tokens.
-    // Covers every protected path to answer:
-    //   1. Did the browser send the auth cookie?
-    //   2. Did the browser send BOTH chunks (.0 and .1)?
-    //   3. Did getSession() successfully reconstruct/validate the session?
-    //   4. If getSession() failed, what error did Supabase report?
-    //   5. Did the middleware response issue Max-Age=0 deletion cookies?
-    const COOKIE_BASE = 'sb-intrustindia-auth-token';
-    const incomingCookies = request.cookies.getAll();
-    const cookieNames = incomingCookies.map(c => c.name);
-    const diagChunk0 = cookieNames.includes(`${COOKIE_BASE}.0`);
-    const diagChunk1 = cookieNames.includes(`${COOKIE_BASE}.1`);
-    const diagCookieHeaderPresent = request.headers.has('cookie');
-    const diagCookieCount = incomingCookies.length;
-    const diagUA = request.headers.get('user-agent') || 'unknown';
-    // ────────────────────────────────────────────────────────────────────────────
-
-    let sessionError = null;
     try {
-        const { data, error } = await supabase.auth.getSession()
+        const { data } = await supabase.auth.getSession()
         session = data?.session ?? null
-        sessionError = error ?? null
         userRole = session?.user?.user_metadata?.role ?? null
         isSuspended = session?.user?.user_metadata?.is_suspended ?? false
     } catch (err) {
         // Cookie reading should never fail, but if it does — do NOT redirect.
         // Fail safe: let the request through; the layout will re-verify.
         console.warn('[MIDDLEWARE] getSession error, passing through:', err?.message)
-
-        console.log('[AUTH_DIAG]', {
-            path: pathname,
-            ua: diagUA.substring(0, 120),
-            cookieHeaderPresent: diagCookieHeaderPresent,
-            cookieCount: diagCookieCount,
-            chunk0: diagChunk0,
-            chunk1: diagChunk1,
-            sessionSuccess: false,
-            userPresent: false,
-            sessionError: err?.message ?? 'thrown',
-            deletionCookieIssued: 'N/A (threw before setAll)',
-        });
-
         return response
     }
-
-    // Determine whether supabase.auth.getSession() caused a Max-Age=0 deletion
-    // to be queued on the response via setAll(). We check this AFTER getSession()
-    // completes, by inspecting what cookies the middleware response now carries.
-    const responseCookies = response.cookies.getAll();
-    const deletionChunk0 = responseCookies.some(
-        c => c.name === `${COOKIE_BASE}.0` && (c.maxAge === 0 || c.value === '')
-    );
-    const deletionChunk1 = responseCookies.some(
-        c => c.name === `${COOKIE_BASE}.1` && (c.maxAge === 0 || c.value === '')
-    );
-
-    // Emit the AUTH_DIAG log for ALL protected paths (isProtected check below
-    // happens after this, so we log for every path including public ones).
-    console.log('[AUTH_DIAG]', {
-        path: pathname,
-        ua: diagUA.substring(0, 120),
-        cookieHeaderPresent: diagCookieHeaderPresent,
-        cookieCount: diagCookieCount,
-        chunk0: diagChunk0,
-        chunk1: diagChunk1,
-        sessionSuccess: !!session,
-        userPresent: !!session?.user,
-        sessionError: sessionError ? (sessionError.message ?? sessionError.status ?? 'error') : null,
-        deletionChunk0,
-        deletionChunk1,
-    });
-    // ────────────────────────────────────────────────────────────────────────────
 
     const user = session?.user ?? null
 

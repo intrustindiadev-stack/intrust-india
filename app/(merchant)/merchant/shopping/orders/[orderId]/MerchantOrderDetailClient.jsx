@@ -376,7 +376,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
 
                     {/* Gross Transaction Card */}
                     <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 shadow-sm">
-                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Gross Revenue</p>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Customer Paid</p>
                         <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-none">
                             ₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}
                         </p>
@@ -384,7 +384,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
 
                     {/* Sales Profit Card */}
                     <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 shadow-sm">
-                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Sales Profit</p>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Gross Margin</p>
                         <p className="text-lg font-black text-blue-600 dark:text-blue-400 tracking-tight leading-none">
                             ₹{(orderGrossProfit / 100).toLocaleString("en-IN")}
                         </p>
@@ -407,7 +407,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
 
                     {/* Cost Card */}
                     <div className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 shadow-sm">
-                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Inventory Cost</p>
+                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">Wholesale Cost</p>
                         <p className="text-lg font-black text-red-600 dark:text-red-400 tracking-tight leading-none">
                             ₹{(orderTotalCost / 100).toLocaleString("en-IN")}
                         </p>
@@ -417,7 +417,7 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                     <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
                         <div className="flex items-center gap-1.5 mb-1.5">
                             <Sparkles size={10} className="text-emerald-500" />
-                            <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Pure Margin</p>
+                            <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Merchant Margin</p>
                         </div>
                         <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">
                             ₹{(orderPureProfit / 100).toLocaleString("en-IN")}
@@ -427,13 +427,19 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                     {/* Net Payout Card */}
                     <div className="sm:col-span-2 p-4 rounded-2xl bg-slate-900 dark:bg-white/10 border border-slate-800 dark:border-white/10 flex items-center justify-between shadow-lg shadow-slate-900/10">
                         <div>
-                            <p className="text-[9px] text-slate-400 dark:text-gray-400 font-black uppercase tracking-widest mb-1">Final Net Payout</p>
+                            <p className="text-[9px] text-slate-400 dark:text-gray-400 font-black uppercase tracking-widest mb-1">
+                                {order.settlement_status === 'settled' || order.settlement_status === 'admin_takeover'
+                                    ? 'Settled Payout'
+                                    : 'Expected Payout'}
+                            </p>
                             <p className="text-[10px] text-emerald-500/80 font-bold italic">
                                 {order.settlement_status === 'settled'
                                     ? 'Settled to wallet'
+                                    : order.settlement_status === 'admin_takeover'
+                                    ? 'Takeover (30% share settled)'
                                     : order.settlement_status === 'settled_zero'
                                     ? 'Settled (₹0 payout)'
-                                    : 'Pending settlement'}
+                                    : 'Pending settlement (contingent)'}
                             </p>
                         </div>
                         <div className="text-right">

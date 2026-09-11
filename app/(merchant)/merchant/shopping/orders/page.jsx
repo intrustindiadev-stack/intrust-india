@@ -1,6 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from "@/lib/supabaseServer";
 import { redirect } from "next/navigation";
 import MerchantOrdersClient from "./MerchantOrdersClient";
+import { calculateMerchantOrderKPIs } from "@/lib/merchant/orderMetrics";
 
 export const dynamic = 'force-dynamic';
 
@@ -69,25 +70,33 @@ export default async function MerchantOrdersPage() {
 
   console.log("[ORDERS] Loaded", orders.length, "orders for merchant:", merchant.id, fetchError ? `(error: ${fetchError})` : "");
 
-  // Stats
+  // Authoritative initial KPIs calculated via tested orderMetrics utility
+  const initialKPIs = calculateMerchantOrderKPIs(orders, 'all');
+
+  // Retain legacy stats shape for backward compatibility
   const stats = {
-    totalOrders: orders.length,
-    pendingOrders: orders.filter(o => o.delivery_status === "pending").length,
+    totalOrders: initialKPIs.validOrdersCount,
+    pendingOrders: initialKPIs.pendingOrdersCount,
     deliveredOrders: orders.filter(o => o.delivery_status === "delivered").length,
-    totalRevenue: orders.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
-    totalGrossProfit: orders.reduce((sum, o) =>
-      sum + (o.items || []).reduce((s, i) => s + (i.gross_profit_paise || 0), 0), 0),
+    totalRevenue: initialKPIs.totalSalesPaise,
     totalCommission: orders.reduce((sum, o) =>
       sum + (o.platform_cut_paise || (o.items || []).reduce((s, i) => s + (i.commission_amount_paise || 0), 0)), 0),
-    totalNetProfit: orders.reduce((sum, o) =>
-      sum + (o.merchant_profit_paise || (o.items || []).reduce((s, i) => s + (i.net_profit_paise || 0), 0)), 0),
+    totalNetProfit: initialKPIs.settledEarningsPaise,
+    get totalGrossProfit() { return this.totalNetProfit + this.totalCommission; },
   };
 
   return (
     <div className="relative">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Comment 7: Pass error prop to client component for user-friendly error display */}
-        <MerchantOrdersClient orders={orders} stats={stats} merchantId={merchant.id} merchantInfo={merchant} error={fetchError} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Pass authoritative initialKPIs and error prop to client component */}
+        <MerchantOrdersClient 
+          orders={orders} 
+          initialKPIs={initialKPIs} 
+          stats={stats} 
+          merchantId={merchant.id} 
+          merchantInfo={merchant} 
+          error={fetchError} 
+        />
       </main>
     </div>
   );
