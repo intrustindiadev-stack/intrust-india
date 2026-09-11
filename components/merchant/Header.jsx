@@ -10,12 +10,13 @@ export default function Header({ setSidebarOpen }) {
     const displayBalance = loading ? "..." : (balance?.balance_paise !== undefined ? (balance.balance_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00");
 
     return (
-        <header className="sticky top-0 h-20 merchant-glass border-b border-white/5 dark:border-white/5 flex items-center justify-between px-4 sm:px-8 z-50 w-full transition-all duration-300">
+        <header className="sticky top-0 h-20 merchant-glass border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between px-4 sm:px-8 z-50 w-full transition-all duration-300">
             <div className="flex items-center gap-4 flex-1">
                 {/* Mobile Menu Button */}
                 <button
                     onClick={() => setSidebarOpen(true)}
-                    className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    aria-label="Open sidebar navigation"
                 >
                     <span className="material-icons-round text-xl">menu</span>
                 </button>
