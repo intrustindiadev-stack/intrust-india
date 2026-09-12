@@ -97,7 +97,8 @@ export default async function AdminMerchantDetailPage({ params }) {
         const { data: orders } = await supabase
             .from('shopping_order_groups')
             .select('total_amount_paise, platform_cut_paise, merchant_profit_paise, status')
-            .eq('merchant_id', id);
+            .eq('merchant_id', id)
+            .in('delivery_status', ['packed', 'shipped', 'delivered']);
         
         if (orders) {
             shopStats = orders.reduce((acc, order) => {

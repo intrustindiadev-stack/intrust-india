@@ -18,9 +18,9 @@ import {
 
 export default function StatsCards({ stats = {}, aiStats = {} }) {
     const totalSales = stats?.totalSales ?? 0;
+    const pendingOrders = stats?.pendingOrders ?? 0;
     const activeCoupons = stats?.activeCoupons ?? 0;
     const listedCoupons = stats?.listedCoupons ?? 0;
-    const totalRevenue = stats?.totalRevenue ?? 0;
     const shoppingSpend = stats?.shoppingSpend ?? 0;
     const totalCommission = stats?.totalCommission ?? 0;
     const lockinBalance = stats?.lockinBalance ?? 0;
@@ -79,9 +79,9 @@ export default function StatsCards({ stats = {}, aiStats = {} }) {
 
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
                                 <div>
-                                    <span className="text-slate-400 block font-medium">Est. Revenue</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                                        ₹{Math.round(totalRevenue).toLocaleString('en-IN')}
+                                    <span className="text-slate-400 block font-medium">Pending Orders</span>
+                                    <span className={`font-bold ${pendingOrders > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                        {pendingOrders} {pendingOrders === 1 ? 'order' : 'orders'}
                                     </span>
                                 </div>
                                 <div className="text-right">

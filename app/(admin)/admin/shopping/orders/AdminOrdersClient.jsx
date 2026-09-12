@@ -64,7 +64,7 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
         inProgress: orders.filter(o => ['packed', 'shipped'].includes(o.delivery_status)).length,
         delivered: orders.filter(o => o.delivery_status === 'delivered').length,
         cancelled: orders.filter(o => o.delivery_status === 'cancelled').length,
-        totalRevenue: orders.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
+        totalRevenue: orders.filter(o => o.delivery_status !== 'cancelled').reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
     }), [orders]);
 
     const filteredOrders = useMemo(() => orders.filter(order => {

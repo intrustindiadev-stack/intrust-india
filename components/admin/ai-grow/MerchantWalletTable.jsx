@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, ArrowUpDown, History, PenSquare } from 'lucide-react';
+import { Search, SlidersHorizontal, ArrowUpDown, History, PenSquare, X } from 'lucide-react';
 import { WALLET_STATUS_COLORS } from '@/types/ai-grow';
 
 function formatCurrency(amount) {
@@ -31,7 +31,7 @@ function StatusBadge({ status }) {
     const colors = WALLET_STATUS_COLORS[status] || WALLET_STATUS_COLORS.active;
     const labels = { active: 'Active', frozen: 'Frozen', suspended: 'Suspended' };
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${colors.bg} ${colors.text} ${colors.border}`}>
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold border shrink-0 ${colors.bg} ${colors.text} ${colors.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
             {labels[status] || status}
         </span>
@@ -74,31 +74,46 @@ export default function MerchantWalletTable({ wallets = [], onAdjust, onHistory 
         }
     }
 
+    const resetFilters = () => {
+        setSearch('');
+        setStatusFilter('all');
+    };
+
     return (
-        <div className="bg-white rounded-2xl border border-[#EAEFF4] shadow-sm overflow-hidden">
-            {/* Toolbar */}
-            <div className="p-5 border-b border-gray-50 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                <div className="relative flex-1 max-w-sm">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="bg-white rounded-2xl border border-[#EAEFF4] shadow-xs overflow-hidden">
+            {/* Responsive Toolbar */}
+            <div className="p-3.5 sm:p-5 border-b border-gray-100 flex flex-col gap-3">
+                {/* Search Bar */}
+                <div className="relative w-full">
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search by name, email, or merchant ID…"
+                        placeholder="Search by business, owner, or ID…"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all"
+                        className="w-full pl-9 pr-9 py-2 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all placeholder:text-gray-400"
                     />
+                    {search && (
+                        <button
+                            onClick={() => setSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                            aria-label="Clear search"
+                        >
+                            <X size={15} />
+                        </button>
+                    )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <SlidersHorizontal size={15} className="text-gray-400" />
-                    <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+                {/* Filters and Sort Row */}
+                <div className="flex items-center justify-between gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+                    <div className="flex items-center gap-1.5 shrink-0 bg-gray-100/80 p-1 rounded-xl">
                         {STATUS_FILTERS.map(s => (
                             <button
                                 key={s}
                                 onClick={() => setStatusFilter(s)}
-                                className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all ${
+                                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium capitalize transition-all shrink-0 ${
                                     statusFilter === s
-                                        ? 'bg-white text-gray-800 shadow-sm'
+                                        ? 'bg-white text-gray-900 shadow-xs font-semibold'
                                         : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
@@ -106,121 +121,224 @@ export default function MerchantWalletTable({ wallets = [], onAdjust, onHistory 
                             </button>
                         ))}
                     </div>
+
+                    {/* Quick Sort Options */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                            onClick={() => toggleSort('balance')}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                                sortField === 'balance'
+                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                            <span>Balance</span>
+                            <ArrowUpDown size={11} className={sortField === 'balance' ? 'text-indigo-600' : 'text-gray-400'} />
+                            {sortField === 'balance' && (
+                                <span className="text-[10px]">{sortDir === 'desc' ? '↓' : '↑'}</span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => toggleSort('updated_at')}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                                sortField === 'updated_at'
+                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                            <span>Updated</span>
+                            <ArrowUpDown size={11} className={sortField === 'updated_at' ? 'text-indigo-600' : 'text-gray-400'} />
+                            {sortField === 'updated_at' && (
+                                <span className="text-[10px]">{sortDir === 'desc' ? '↓' : '↑'}</span>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full">
-                    <thead>
-                        <tr className="border-b border-gray-50 bg-gray-50/50">
-                            <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                Merchant
-                            </th>
-                            <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                <button
-                                    onClick={() => toggleSort('balance')}
-                                    className="flex items-center gap-1 hover:text-gray-800 transition-colors"
-                                >
-                                    AI Grow Balance
-                                    <ArrowUpDown size={12} className={sortField === 'balance' ? 'text-indigo-500' : ''} />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                <button
-                                    onClick={() => toggleSort('updated_at')}
-                                    className="flex items-center gap-1 hover:text-gray-800 transition-colors"
-                                >
-                                    Last Updated
-                                    <ArrowUpDown size={12} className={sortField === 'updated_at' ? 'text-indigo-500' : ''} />
-                                </button>
-                            </th>
-                            <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {filtered.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
-                                    {search || statusFilter !== 'all'
-                                        ? 'No wallets match your filters.'
-                                        : 'No AI Grow wallets found.'}
-                                </td>
-                            </tr>
-                        ) : (
-                            filtered.map(wallet => (
-                                <tr key={wallet.id} className="hover:bg-gray-50/50 transition-colors group">
-                                    {/* Merchant Info */}
-                                    <td className="px-6 py-4">
-                                        <div>
-                                            <p className="font-semibold text-gray-900 text-sm">
-                                                {wallet.merchant?.business_name || '—'}
-                                            </p>
-                                            <p className="text-xs text-gray-500 mt-0.5">
-                                                {wallet.merchant?.owner_name}
-                                            </p>
-                                            <p className="text-xs text-gray-400">
-                                                {wallet.merchant?.email}
-                                            </p>
-                                        </div>
-                                    </td>
+            {/* Empty State */}
+            {filtered.length === 0 ? (
+                <div className="py-12 px-4 text-center">
+                    <p className="text-gray-500 font-medium text-sm">No wallets match your filters.</p>
+                    <p className="text-xs text-gray-400 mt-1">Try changing your search term or status filter.</p>
+                    {(search || statusFilter !== 'all') && (
+                        <button
+                            onClick={resetFilters}
+                            className="mt-3 inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                        >
+                            Reset filters
+                        </button>
+                    )}
+                </div>
+            ) : (
+                <>
+                    {/* Mobile Card View (md:hidden) */}
+                    <div className="block md:hidden divide-y divide-gray-100">
+                        {filtered.map(wallet => (
+                            <div key={wallet.id} className="p-3.5 space-y-3 bg-white">
+                                {/* Top: Business Name & Status */}
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-bold text-gray-900 text-sm truncate">
+                                            {wallet.merchant?.business_name || '—'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                            {wallet.merchant?.owner_name} {wallet.merchant?.email ? `· ${wallet.merchant?.email}` : ''}
+                                        </p>
+                                    </div>
+                                    <StatusBadge status={wallet.status} />
+                                </div>
 
-                                    {/* Status */}
-                                    <td className="px-4 py-4">
-                                        <StatusBadge status={wallet.status} />
-                                    </td>
-
-                                    {/* Balance */}
-                                    <td className="px-4 py-4">
-                                        <span className="font-mono tabular-nums text-sm font-semibold text-gray-900">
-                                            {formatCurrency(wallet.balance)}
+                                {/* Center: Metrics Box */}
+                                <div className="p-2.5 bg-slate-50/90 rounded-xl border border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                            AI Grow Balance
                                         </span>
-                                        <span className="ml-1 text-xs text-gray-400">{wallet.currency || 'INR'}</span>
-                                    </td>
-
-                                    {/* Last Updated */}
-                                    <td className="px-4 py-4 text-sm text-gray-500">
-                                        {formatRelativeTime(wallet.updated_at)}
-                                    </td>
-
-                                    {/* Actions */}
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2">
-                                            {onAdjust && (
-                                                <button
-                                                    onClick={() => onAdjust(wallet)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm hover:shadow"
-                                                >
-                                                    <PenSquare size={13} />
-                                                    Adjust
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => onHistory(wallet)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-                                            >
-                                                <History size={13} />
-                                                History
-                                            </button>
+                                        <div className="flex items-baseline gap-1 mt-0.5">
+                                            <span className="font-mono text-base font-bold text-gray-900 tabular-nums">
+                                                {formatCurrency(wallet.balance)}
+                                            </span>
+                                            <span className="text-[10px] font-semibold text-gray-400">{wallet.currency || 'INR'}</span>
                                         </div>
-                                    </td>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                            Updated
+                                        </span>
+                                        <span className="text-xs text-gray-600 font-medium mt-0.5 inline-block">
+                                            {formatRelativeTime(wallet.updated_at)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Bottom: Action Buttons */}
+                                <div className="flex items-center gap-2 pt-0.5">
+                                    {onAdjust && (
+                                        <button
+                                            onClick={() => onAdjust(wallet)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-600 active:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+                                        >
+                                            <PenSquare size={13} />
+                                            <span>Adjust</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => onHistory(wallet)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-gray-100 active:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors"
+                                    >
+                                        <History size={13} />
+                                        <span>History</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View (hidden md:block) */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-100 bg-gray-50/50">
+                                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Merchant
+                                    </th>
+                                    <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <button
+                                            onClick={() => toggleSort('balance')}
+                                            className="flex items-center gap-1 hover:text-gray-800 transition-colors"
+                                        >
+                                            AI Grow Balance
+                                            <ArrowUpDown size={12} className={sortField === 'balance' ? 'text-indigo-500' : ''} />
+                                        </button>
+                                    </th>
+                                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <button
+                                            onClick={() => toggleSort('updated_at')}
+                                            className="flex items-center gap-1 hover:text-gray-800 transition-colors"
+                                        >
+                                            Last Updated
+                                            <ArrowUpDown size={12} className={sortField === 'updated_at' ? 'text-indigo-500' : ''} />
+                                        </button>
+                                    </th>
+                                    <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filtered.map(wallet => (
+                                    <tr key={wallet.id} className="hover:bg-gray-50/50 transition-colors group">
+                                        {/* Merchant Info */}
+                                        <td className="px-6 py-4">
+                                            <div>
+                                                <p className="font-semibold text-gray-900 text-sm">
+                                                    {wallet.merchant?.business_name || '—'}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    {wallet.merchant?.owner_name}
+                                                </p>
+                                                <p className="text-xs text-gray-400">
+                                                    {wallet.merchant?.email}
+                                                </p>
+                                            </div>
+                                        </td>
+
+                                        {/* Status */}
+                                        <td className="px-4 py-4">
+                                            <StatusBadge status={wallet.status} />
+                                        </td>
+
+                                        {/* Balance */}
+                                        <td className="px-4 py-4">
+                                            <span className="font-mono tabular-nums text-sm font-semibold text-gray-900">
+                                                {formatCurrency(wallet.balance)}
+                                            </span>
+                                            <span className="ml-1 text-xs text-gray-400">{wallet.currency || 'INR'}</span>
+                                        </td>
+
+                                        {/* Last Updated */}
+                                        <td className="px-4 py-4 text-sm text-gray-500">
+                                            {formatRelativeTime(wallet.updated_at)}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-2">
+                                                {onAdjust && (
+                                                    <button
+                                                        onClick={() => onAdjust(wallet)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-xs hover:shadow"
+                                                    >
+                                                        <PenSquare size={13} />
+                                                        Adjust
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => onHistory(wallet)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                                                >
+                                                    <History size={13} />
+                                                    History
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
 
             {/* Footer count */}
             {filtered.length > 0 && (
-                <div className="px-6 py-3 border-t border-gray-50 bg-gray-50/50">
-                    <p className="text-xs text-gray-400">
-                        Showing {filtered.length} of {wallets.length} merchants
+                <div className="px-4 sm:px-6 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                    <p className="text-xs text-gray-500">
+                        Showing <span className="font-semibold text-gray-700">{filtered.length}</span> of {wallets.length} merchants
                     </p>
                 </div>
             )}

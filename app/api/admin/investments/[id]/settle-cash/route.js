@@ -6,8 +6,8 @@ export async function POST(request, { params }) {
         const { id } = await params;
         const { user, profile, admin: supabase } = await getAuthUser(request);
         
-        if (!user || !['admin', 'super_admin'].includes(profile?.role)) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user || profile?.role !== 'super_admin') {
+            return NextResponse.json({ error: 'Access denied. Super admin role required.' }, { status: 403 });
         }
 
         // Fetch investment details

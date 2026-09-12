@@ -10,6 +10,7 @@ import DashboardHeader from '@/components/merchant/dashboard/DashboardHeader';
 import QuickAccessGrid from '@/components/merchant/dashboard/QuickAccessGrid';
 import TodayStatsCards from '@/components/merchant/dashboard/TodayStatsCards';
 import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
+import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,20 +67,14 @@ export default async function MerchantDashboardPage() {
         lockinRes,
         shoppingOrderItemsRes,
         wholesaleOrdersRes,
-        pendingOrdersCountRes,
+        pendingOrdersRes,
         todayCouponsRes,
         todayShoppingGroupsRes,
         todaySettledTxnsRes,
         aiOrdersRes,
         aiVaultRes
     ] = await Promise.all([
-        supabase
-            .from('coupons')
-            .select('*')
-            .eq('merchant_id', merchant.id)
-            .eq('is_merchant_owned', true)
-            .order('created_at', { ascending: false })
-            .limit(10),
+        supabase.from('coupons').select('id, brand, face_value_paise, merchant_purchase_price_paise, merchant_selling_price_paise, merchant_commission_paise, status, listed_on_marketplace, image_url').eq('merchant_id', merchant.id).order('created_at', { ascending: false }),
 
         supabase
             .from('coupons')
@@ -99,7 +94,7 @@ export default async function MerchantDashboardPage() {
             .eq('buyer_type', 'merchant')
             .eq('order_type', 'wholesale'),
         adminDb.from('shopping_order_groups')
-            .select('*', { count: 'exact', head: true })
+            .select('id, delivery_status, status, payment_status, payment_method')
             .eq('merchant_id', merchant.id)
             .eq('delivery_status', 'pending'),
         supabase
@@ -110,9 +105,11 @@ export default async function MerchantDashboardPage() {
             .gte('purchased_at', todayStartIST),
         adminDb
             .from('shopping_order_groups')
-            .select('id, total_amount_paise, merchant_profit_paise, created_at, delivery_status')
+            .select('id, total_amount_paise, merchant_profit_paise, created_at, updated_at, delivery_status, packed_at')
             .eq('merchant_id', merchant.id)
-            .gte('created_at', todayStartIST),
+            .in('delivery_status', ['packed', 'shipped', 'delivered'])
+            .gte('packed_at', todayStartIST)
+            .lte('packed_at', todayEndIST),
         adminDb
             .from('merchant_transactions')
             .select('transaction_type, amount_paise, metadata, created_at')
@@ -143,7 +140,8 @@ export default async function MerchantDashboardPage() {
 
     const shoppingOrderItems = shoppingOrderItemsRes.data || [];
     const wholesaleOrders = wholesaleOrdersRes.data || [];
-    const pendingOrdersCount = pendingOrdersCountRes.count || 0;
+    const pendingOrders = (pendingOrdersRes.data || []).filter(isPendingActionOrder);
+    const pendingOrdersCount = pendingOrders.length;
 
     // Process AI Orders data
     const allAIOrders = aiOrdersRes.data || [];
@@ -179,6 +177,7 @@ export default async function MerchantDashboardPage() {
 
     const stats = {
         totalSales: soldSoldCount + shoppingOrderItems.length,
+        pendingOrders: pendingOrdersCount,
         activeCoupons: activeCount,
         listedCoupons: listedCount,
         totalRevenue: couponRevenue + (shoppingRevenue / 100),
@@ -201,7 +200,8 @@ export default async function MerchantDashboardPage() {
         return sum + (sp - pp - comm);
     }, 0);
 
-    const todayShoppingSales = todayShoppingGroups.reduce((sum, g) => sum + ((g.total_amount_paise || 0) / 100), 0);
+    const packedShoppingGroups = todayShoppingGroups.filter(g => ['packed', 'shipped', 'delivered'].includes(g.delivery_status));
+    const todayShoppingSales = packedShoppingGroups.reduce((sum, g) => sum + ((g.total_amount_paise || 0) / 100), 0);
     
     // Authoritative settled shopping profit from merchant ledger
     const settledTxns = todaySettledTxnsRes.data || [];
@@ -220,16 +220,18 @@ export default async function MerchantDashboardPage() {
 
     const todaySales = todayCouponSales + todayShoppingSales + todayAISales;
     const todayProfit = todayCouponProfit + todayShoppingProfit + todayAIProfit;
-    const todayOrdersCount = todayCoupons.length + todayShoppingGroups.length + todayAIOrders.length;
+    const todayOrdersCount = todayCoupons.length + packedShoppingGroups.length + todayAIOrders.length;
     const todayMargin = todaySales > 0 ? Number(((todayProfit / todaySales) * 100).toFixed(1)) : 0;
     const avgOrderValue = todayOrdersCount > 0 ? Math.round(todaySales / todayOrdersCount) : 0;
 
     const todayStats = {
         todaySales,
         todayProfit,
+        todayRevenue: todayProfit,
         todayOrdersCount,
         todayMargin,
         avgOrderValue,
+        pendingOrdersCount,
     };
 
     const transformedCoupons = coupons.map(c => ({

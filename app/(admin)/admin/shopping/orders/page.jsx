@@ -31,7 +31,7 @@ export default async function AdminOrdersPage() {
         inProgress: orders.filter(o => ['packed', 'shipped'].includes(o.delivery_status)).length,
         delivered: orders.filter(o => o.delivery_status === 'delivered').length,
         cancelled: orders.filter(o => o.delivery_status === 'cancelled').length,
-        totalRevenue: orders.reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
+        totalRevenue: orders.filter(o => o.delivery_status !== 'cancelled').reduce((sum, o) => sum + (o.total_amount_paise || 0), 0),
         platformOrders: orders.filter(o => o.is_platform_order).length,
         merchantOrders: orders.filter(o => !o.is_platform_order).length,
     };

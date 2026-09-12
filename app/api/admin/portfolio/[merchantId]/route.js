@@ -69,13 +69,14 @@ export async function GET(request, { params }) {
                     total_active_capital_paise: finalAiGrowAmount + activeLockinAmount,
                     total_ai_grow_paise: finalAiGrowAmount,
                     total_lockin_paise: activeLockinAmount,
-                    ai_grow_wallet_balance: aiWalletBalance
+                    ai_grow_wallet_balance: aiWalletBalance,
+                    ai_grow_vault_balance_rupees: Number(aiGrowWallet?.balance || 0),
                 },
                 investments: aiGrow || [],
-                lockins: lockin || []
+                lockins: lockin || [],
+                is_super_admin: profile?.role === 'super_admin'
             }
         });
-
     } catch (err) {
         console.error('Portfolio API error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });

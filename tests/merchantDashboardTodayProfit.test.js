@@ -36,8 +36,9 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
             return sum + (sp - pp - comm);
         }, 0);
 
-        // Shopping sales (GMV of placed orders)
-        const todayShoppingSales = todayShoppingGroups.reduce((sum, g) => sum + ((g.total_amount_paise || 0) / 100), 0);
+        // Shopping sales: only orders marked as packed (delivery_status in packed, shipped, delivered)
+        const packedShoppingGroups = todayShoppingGroups.filter(g => ['packed', 'shipped', 'delivered'].includes(g.delivery_status));
+        const todayShoppingSales = packedShoppingGroups.reduce((sum, g) => sum + ((g.total_amount_paise || 0) / 100), 0);
 
         // Authoritative settled shopping profit from merchant ledger
         const todayShoppingProfit = todaySettledTxns
@@ -59,7 +60,7 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
 
         const todaySales = todayCouponSales + todayShoppingSales + todayAISales;
         const todayProfit = todayCouponProfit + todayShoppingProfit + todayAIProfit;
-        const todayOrdersCount = todayCoupons.length + todayShoppingGroups.length + todayAIOrders.length;
+        const todayOrdersCount = todayCoupons.length + packedShoppingGroups.length + todayAIOrders.length;
         const todayMargin = todaySales > 0 ? Number(((todayProfit / todaySales) * 100).toFixed(1)) : 0;
         const avgOrderValue = todayOrdersCount > 0 ? Math.round(todaySales / todayOrdersCount) : 0;
 
@@ -100,7 +101,7 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
     describe('Order Status & Settlement Scenarios', () => {
         const { start: todayStartIST } = getTodayISTBoundaries(new Date('2026-09-10T10:00:00.000Z'));
 
-        test('Case 1: Pending (unaccepted) order placed today contributes ₹0 to Today\'s Profit', () => {
+        test('Case 1: Pending (unaccepted/unpacked) order placed today contributes ₹0 to Today\'s Profit and ₹0 to Today\'s Sale', () => {
             const pendingOrder = {
                 id: 'ord-pending-1',
                 merchant_id: CURRENT_MERCHANT_ID,
@@ -111,7 +112,7 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
                 created_at: '2026-09-10T02:00:00.000Z'
             };
 
-            // Pending order exists in shopping_order_groups, but has NO merchant_transactions entry
+            // Pending order exists in shopping_order_groups, but is not marked as packed
             const stats = calculateTodayStats({
                 merchantId: CURRENT_MERCHANT_ID,
                 todayShoppingGroups: [pendingOrder],
@@ -121,11 +122,12 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
 
             expect(stats.todayShoppingProfit).toBe(0);
             expect(stats.todayProfit).toBe(0);
-            // Placed order still counts towards today's sales GMV
-            expect(stats.todaySales).toBe(3243.7);
+            // Pending unfulfilled order does NOT count towards today's sales
+            expect(stats.todaySales).toBe(0);
+            expect(stats.todayOrdersCount).toBe(0);
         });
 
-        test('Case 2: Order accepted & settled today includes profit in Today\'s Profit', () => {
+        test('Case 2: Order marked packed & settled today includes profit in Today\'s Profit and sales in Today\'s Sale', () => {
             const acceptedOrder = {
                 id: 'f5bb1957-9fcd-4eb7-95d6-dd86fd1f811d',
                 merchant_id: CURRENT_MERCHANT_ID,
@@ -154,9 +156,11 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
 
             expect(stats.todayShoppingProfit).toBe(35.7);
             expect(stats.todayProfit).toBe(35.7);
+            expect(stats.todaySales).toBe(3243.7);
+            expect(stats.todayOrdersCount).toBe(1);
         });
 
-        test('Case 3: Order placed yesterday but settled today includes profit today', () => {
+        test('Case 3: Order placed yesterday but marked packed & settled today includes profit and sales today', () => {
             // Placed yesterday at 11:30 PM IST (18:00 UTC yesterday)
             const yesterdayPlacedOrder = {
                 id: 'ord-yesterday-1',
@@ -165,10 +169,11 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
                 merchant_profit_paise: 2500,
                 delivery_status: 'packed',
                 settlement_status: 'settled',
-                created_at: '2026-09-09T18:00:00.000Z' // yesterday
+                created_at: '2026-09-09T18:00:00.000Z', // yesterday
+                packed_at: '2026-09-10T03:30:00.000Z'   // marked packed today
             };
 
-            // But merchant accepted it TODAY at 9:00 AM IST (03:30 UTC today)
+            // But merchant accepted & packed it TODAY at 9:00 AM IST (03:30 UTC today)
             const todaySettledTxn = {
                 id: 'tx-yesterday-order',
                 merchant_id: CURRENT_MERCHANT_ID,
@@ -179,16 +184,18 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
 
             const stats = calculateTodayStats({
                 merchantId: CURRENT_MERCHANT_ID,
-                todayShoppingGroups: [], // placed yesterday, not today
+                todayShoppingGroups: [yesterdayPlacedOrder], // packed today, so included in today's groups
                 todaySettledTxns: [todaySettledTxn],
                 todayStartIST
             });
 
             expect(stats.todayShoppingProfit).toBe(25);
             expect(stats.todayProfit).toBe(25);
+            expect(stats.todaySales).toBe(1000);
+            expect(stats.todayOrdersCount).toBe(1);
         });
 
-        test('Case 4: Cancelled order placed today contributes ₹0 to Today\'s Profit', () => {
+        test('Case 4: Cancelled order placed today contributes ₹0 to Today\'s Profit and ₹0 to Today\'s Sale', () => {
             const cancelledOrder = {
                 id: 'ord-cancelled-1',
                 merchant_id: CURRENT_MERCHANT_ID,
@@ -199,7 +206,7 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
                 created_at: '2026-09-10T04:00:00.000Z'
             };
 
-            // Cancelled order has no merchant_transactions row
+            // Cancelled order has no merchant_transactions row and is not packed
             const stats = calculateTodayStats({
                 merchantId: CURRENT_MERCHANT_ID,
                 todayShoppingGroups: [cancelledOrder],
@@ -209,6 +216,8 @@ describe("Merchant Dashboard Today's Profit Calculation", () => {
 
             expect(stats.todayShoppingProfit).toBe(0);
             expect(stats.todayProfit).toBe(0);
+            expect(stats.todaySales).toBe(0);
+            expect(stats.todayOrdersCount).toBe(0);
         });
 
         test('Case 5: Admin takeover reflects actual reduced merchant settlement, not original contingent profit', () => {

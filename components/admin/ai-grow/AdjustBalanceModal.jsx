@@ -181,19 +181,19 @@ export default function AdjustBalanceModal({ isOpen, onClose, merchant, onSucces
                     />
 
                     {/* Modal */}
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                            initial={{ opacity: 0, scale: 0.96, y: 24 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 24 }}
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                            className="pointer-events-auto w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+                            className="pointer-events-auto w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-gray-100 max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden"
                         >
                             {/* Header */}
-                            <div className="flex items-start justify-between p-6 border-b border-gray-50">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900">Adjust AI Grow Wallet</h2>
-                                    <p className="text-sm text-gray-500 mt-0.5">
+                            <div className="flex items-start justify-between p-4 sm:p-6 border-b border-gray-100 shrink-0">
+                                <div className="min-w-0 flex-1 pr-2">
+                                    <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">Adjust AI Grow Wallet</h2>
+                                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">
                                         {merchant.merchant?.business_name}
                                         <span className="mx-1.5 text-gray-300">·</span>
                                         <span className="font-mono text-xs">{merchant.merchant_id?.slice(0, 8)}…</span>
@@ -201,13 +201,13 @@ export default function AdjustBalanceModal({ isOpen, onClose, merchant, onSucces
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <div className="p-6 space-y-5">
+                            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
                                 {/* Tabs */}
                                 <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
                                     {TABS.map(t => (
@@ -277,7 +277,7 @@ export default function AdjustBalanceModal({ isOpen, onClose, merchant, onSucces
                                             value={amount}
                                             onChange={e => setAmount(e.target.value)}
                                             placeholder="0.00"
-                                            className={`w-full pl-8 pr-4 py-2.5 text-sm border rounded-xl font-mono focus:outline-none focus:ring-2 transition-all ${
+                                            className={`w-full pl-8 pr-4 py-2.5 text-base sm:text-sm border rounded-xl font-mono focus:outline-none focus:ring-2 transition-all ${
                                                 isDebitOverflow
                                                     ? 'border-red-300 focus:ring-red-500/20 bg-red-50/50'
                                                     : `border-gray-200 ${tab.theme.ring} bg-gray-50`
@@ -304,7 +304,7 @@ export default function AdjustBalanceModal({ isOpen, onClose, merchant, onSucces
                                         rows={3}
                                         maxLength={500}
                                         placeholder="Provide a detailed reason for this adjustment (min. 10 characters)…"
-                                        className={`w-full px-3.5 py-2.5 text-sm border rounded-xl resize-none focus:outline-none focus:ring-2 transition-all ${
+                                        className={`w-full px-3.5 py-2.5 text-base sm:text-sm border rounded-xl resize-none focus:outline-none focus:ring-2 transition-all ${
                                             reason.length > 0 && reason.trim().length < 10
                                                 ? 'border-amber-300 focus:ring-amber-500/20 bg-amber-50/30'
                                                 : `border-gray-200 ${tab.theme.ring} bg-gray-50`

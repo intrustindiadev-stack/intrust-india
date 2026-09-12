@@ -329,24 +329,41 @@ export default function AdminShoppingClient({
                 </div>
             </div>
 
-            {/* Top Stats - Mobile Horizontal Scroll */}
-            <div className="flex overflow-x-auto pb-6 -mx-6 px-6 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-10 hide-scrollbar snap-x snap-mandatory">
+            {/* Top Stats - Responsive Cards */}
+            <div className="flex overflow-x-auto pb-6 -mx-6 px-6 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-10 hide-scrollbar snap-x snap-mandatory">
                 {[
-                    { label: "Total Products", value: stats.totalProducts, icon: Package, color: "text-slate-700", bg: "bg-slate-100" },
-                    { label: "Platform Items", value: stats.platformProducts, icon: ShoppingBag, color: "text-blue-600", bg: "bg-blue-50" },
-                    { label: "Custom Items", value: stats.customProducts, icon: Store, color: "text-violet-600", bg: "bg-violet-50" },
-                    { label: "Status Active", value: stats.activeProducts, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-                    { label: "Total Orders", value: stats.totalOrders, icon: ClipboardList, color: "text-indigo-600", bg: "bg-indigo-50" },
-                    { label: "Pending Disp.", value: stats.pendingOrders, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-                    { label: "Total Revenue", value: `₹${((stats.totalRevenue || 0) / 100).toLocaleString('en-IN')}`, icon: DollarSign, color: "text-teal-600", bg: "bg-teal-50" },
+                    { label: "Total Products", value: (stats.totalProducts || 0).toLocaleString('en-IN'), icon: Package, color: "text-slate-700", bg: "bg-slate-100" },
+                    { label: "Platform Items", value: (stats.platformProducts || 0).toLocaleString('en-IN'), icon: ShoppingBag, color: "text-blue-600", bg: "bg-blue-50" },
+                    { label: "Custom Items", value: (stats.customProducts || 0).toLocaleString('en-IN'), icon: Store, color: "text-violet-600", bg: "bg-violet-50" },
+                    { label: "Status Active", value: (stats.activeProducts || 0).toLocaleString('en-IN'), icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { label: "Total Orders", value: (stats.totalOrders || 0).toLocaleString('en-IN'), icon: ClipboardList, color: "text-indigo-600", bg: "bg-indigo-50" },
+                    { label: "Pending Disp.", value: (stats.pendingOrders || 0).toLocaleString('en-IN'), icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                    { 
+                        label: "Total Revenue", 
+                        value: `₹${Math.round((stats.totalRevenue || 0) / 100).toLocaleString('en-IN')}`, 
+                        fullValue: `₹${((stats.totalRevenue || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+                        icon: DollarSign, 
+                        color: "text-teal-600", 
+                        bg: "bg-teal-50" 
+                    },
                 ].map((stat) => (
-                    <div key={stat.label} className="snap-center shrink-0 w-[45vw] sm:w-auto bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 cursor-default">
-                        <div className={`w-9 h-9 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0`}>
-                            <stat.icon size={16} />
+                    <div 
+                        key={stat.label} 
+                        title={stat.fullValue || stat.label} 
+                        className="snap-center shrink-0 w-[140px] sm:w-auto bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all duration-200 group cursor-default"
+                    >
+                        <div className="flex items-center justify-between mb-2.5">
+                            <div className={`w-8 h-8 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm`}>
+                                <stat.icon size={16} />
+                            </div>
                         </div>
                         <div className="min-w-0">
-                            <p className="text-lg font-black text-slate-900 truncate leading-none tracking-tighter">{stat.value}</p>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 truncate">{stat.label}</p>
+                            <p className="text-base sm:text-lg font-black text-slate-950 tracking-tight leading-none">
+                                {stat.value}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1.5 leading-snug whitespace-normal">
+                                {stat.label}
+                            </p>
                         </div>
                     </div>
                 ))}

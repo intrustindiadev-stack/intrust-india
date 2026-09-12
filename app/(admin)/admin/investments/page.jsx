@@ -34,6 +34,7 @@ export default function AdminInvestmentsPage() {
     const [showFeedModal, setShowFeedModal] = useState(false);
     const [selectedInvestment, setSelectedInvestment] = useState(null);
     const [confirmModalData, setConfirmModalData] = useState(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const router = useRouter();
 
     const handleReleaseInvestment = async (id) => {
@@ -87,6 +88,14 @@ export default function AdminInvestmentsPage() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
+
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+            setIsSuperAdmin(profile?.role === 'super_admin');
+
             const res = await fetch('/api/admin/investments', { headers: { Authorization: `Bearer ${session.access_token}` } });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Failed to load');
@@ -342,7 +351,7 @@ export default function AdminInvestmentsPage() {
                                                     </td>
                                                     <td className="px-6 md:px-8 py-5 text-right">
                                                         <div className="flex items-center justify-end gap-2">
-                                                            {inv.status === 'pending' && (
+                                                            {isSuperAdmin && inv.status === 'pending' && (
                                                                 <>
                                                                     <button onClick={(e) => { e.stopPropagation(); handleUpdateStatus(inv.id, 'active'); }} disabled={processingId === inv.id} title="Approve" className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all"><CheckCircle size={14}/></button>
                                                                     <button onClick={(e) => { e.stopPropagation(); handleUpdateStatus(inv.id, 'rejected'); }} disabled={processingId === inv.id} title="Reject" className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all"><XCircle size={14}/></button>
@@ -351,8 +360,12 @@ export default function AdminInvestmentsPage() {
                                                             {inv.status === 'active' && (
                                                                 <>
                                                                     <button onClick={(e) => { e.stopPropagation(); setSelectedInvestment(inv); setShowFeedModal(true); }} disabled={processingId === inv.id} title="Feed Orders" className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"><Activity size={14}/></button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' }); }} disabled={processingId === inv.id} title="Release to Wallet" className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Wallet size={14}/></button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' }); }} disabled={processingId === inv.id} title="Settle in Cash" className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Briefcase size={14}/></button>
+                                                                    {isSuperAdmin && (
+                                                                        <>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' }); }} disabled={processingId === inv.id} title="Release to Wallet" className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Wallet size={14}/></button>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' }); }} disabled={processingId === inv.id} title="Settle in Cash" className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Briefcase size={14}/></button>
+                                                                        </>
+                                                                    )}
                                                                 </>
                                                             )}
                                                             <button onClick={(e) => { e.stopPropagation(); router.push(`/admin/portfolio/${inv.merchant_id}`); }}

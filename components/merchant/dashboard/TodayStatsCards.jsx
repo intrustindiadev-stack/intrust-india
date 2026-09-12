@@ -16,9 +16,11 @@ export default function TodayStatsCards({ todayStats }) {
     const {
         todaySales = 0,
         todayProfit = 0,
+        todayRevenue = todayProfit,
         todayOrdersCount = 0,
         todayMargin = 0,
         avgOrderValue = 0,
+        pendingOrdersCount = 0,
     } = todayStats || {};
 
     const formatCurrency = (val) => {
@@ -73,7 +75,7 @@ export default function TodayStatsCards({ todayStats }) {
                         </span>
                     </div>
                     <div className="mt-2.5 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <span>{todayOrdersCount} orders placed today</span>
+                        <span>{todayOrdersCount} {todayOrdersCount === 1 ? 'order' : 'orders'} packed today</span>
                         <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
                             <Zap size={12} />
                             Live
@@ -82,7 +84,7 @@ export default function TodayStatsCards({ todayStats }) {
                 </motion.div>
                 </Link>
 
-                {/* 2. Today's Profit */}
+                {/* 2. Today's Revenue */}
                 <Link href="/merchant/wallet" className="block outline-none">
                 <motion.div
                     whileHover={{ y: -2 }}
@@ -90,7 +92,7 @@ export default function TodayStatsCards({ todayStats }) {
                 >
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                            Today&apos;s Profit
+                            Today&apos;s Revenue
                             <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500" />
                         </span>
                         <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 transition-transform group-hover:scale-105">
@@ -99,7 +101,7 @@ export default function TodayStatsCards({ todayStats }) {
                     </div>
                     <div className="flex items-baseline gap-2">
                         <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                            {formatCurrency(todayProfit)}
+                            {formatCurrency(todayRevenue ?? todayProfit)}
                         </span>
                     </div>
                     <div className="mt-2.5 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -133,6 +135,11 @@ export default function TodayStatsCards({ todayStats }) {
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                             completed
                         </span>
+                        {pendingOrdersCount > 0 && (
+                            <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                                {pendingOrdersCount} pending
+                            </span>
+                        )}
                     </div>
                     <div className="mt-2.5 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
                         <span>Average ticket size</span>

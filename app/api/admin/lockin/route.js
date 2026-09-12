@@ -11,8 +11,8 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!['admin', 'super_admin'].includes(adminProfile?.role)) {
-            return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        if (adminProfile?.role !== 'super_admin') {
+            return NextResponse.json({ error: 'Access denied. Super admin role required.' }, { status: 403 });
         }
 
         // 2. Body Validation
@@ -94,7 +94,7 @@ export async function GET(request) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single();
-        if (!['admin', 'super_admin'].includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (profile?.role !== 'super_admin') return NextResponse.json({ error: 'Access denied. Super admin role required.' }, { status: 403 });
 
         const { data, error } = await supabase
             .from('merchant_lockin_balances')
@@ -115,8 +115,8 @@ export async function GET(request) {
 export async function PATCH(request) {
     try {
         const { user, profile, admin: supabase } = await getAuthUser(request);
-        if (!user || !['admin', 'super_admin'].includes(profile?.role)) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user || profile?.role !== 'super_admin') {
+            return NextResponse.json({ error: 'Access denied. Super admin role required.' }, { status: 403 });
         }
 
         const { id, status } = await request.json();

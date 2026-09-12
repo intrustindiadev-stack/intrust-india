@@ -75,7 +75,7 @@ const navigationGroups = [
             { name: 'AI Grow Wallets', href: '/admin/ai-grow/wallets', icon: Wallet, superAdminOnly: true },
             { name: 'AI Orders', href: '/admin/ai-orders', icon: Sparkles },
             { name: 'Vault Withdrawals', href: '/admin/ai-orders/withdrawals', icon: Wallet },
-            { name: 'Lockin', href: '/admin/lockin', icon: ShieldCheck },
+            { name: 'Lockin', href: '/admin/lockin', icon: ShieldCheck, superAdminOnly: true },
         ]
     },
     {

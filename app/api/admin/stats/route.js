@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabaseServer';
 import { getAmountPaise, COMPLETED_STATUSES } from '@/lib/utils/transactionHelpers';
+import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
+import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,12 +34,12 @@ export async function GET(request) {
         let result = {};
 
         if (group === 'all' || group === 'revenue') {
-            const today = new Date().toISOString().split('T')[0];
+            const { start: todayStartIST, end: todayEndIST } = getTodayISTBoundaries();
             const [txnsAll, groupsAll, txnsToday, groupsToday] = await Promise.all([
                 supabase.from('transactions').select('total_paid_paise, amount').in('status', COMPLETED_STATUSES),
-                supabase.from('shopping_order_groups').select('total_amount_paise').eq('status', 'completed'),
-                supabase.from('transactions').select('id, total_paid_paise, amount').in('status', COMPLETED_STATUSES).gte('created_at', today),
-                supabase.from('shopping_order_groups').select('id, total_amount_paise').eq('status', 'completed').gte('created_at', today),
+                supabase.from('shopping_order_groups').select('total_amount_paise').in('delivery_status', ['packed', 'shipped', 'delivered']),
+                supabase.from('transactions').select('id, total_paid_paise, amount').in('status', COMPLETED_STATUSES).gte('created_at', todayStartIST).lte('created_at', todayEndIST),
+                supabase.from('shopping_order_groups').select('id, total_amount_paise').in('delivery_status', ['packed', 'shipped', 'delivered']).gte('packed_at', todayStartIST).lte('packed_at', todayEndIST),
             ]);
             const txnRev = (txnsAll.data || []).reduce((s, t) => s + getAmountPaise(t), 0);
             const groupRev = (groupsAll.data || []).reduce((s, g) => s + (Number(g.total_amount_paise) || 0), 0);
@@ -58,12 +60,15 @@ export async function GET(request) {
         }
 
         if (group === 'all' || group === 'shopping') {
-            const { data: orders } = await supabase.from('shopping_order_groups').select('total_amount_paise, delivery_status, is_platform_order');
+            const { data: orders } = await supabase.from('shopping_order_groups').select('total_amount_paise, delivery_status, is_platform_order, status, payment_status, payment_method');
             const stats = (orders || []).reduce((acc, o) => {
-                acc.revenue += Number(o.total_amount_paise) || 0;
-                acc.sales += 1;
-                if (o.delivery_status === 'pending') acc.pendingOrders += 1;
-                if (o.is_platform_order) acc.platformRevenue += Number(o.total_amount_paise) || 0;
+                const isPacked = ['packed', 'shipped', 'delivered'].includes((o.delivery_status || '').toLowerCase());
+                if (isPacked) {
+                    acc.revenue += Number(o.total_amount_paise) || 0;
+                    acc.sales += 1;
+                    if (o.is_platform_order) acc.platformRevenue += Number(o.total_amount_paise) || 0;
+                }
+                if (isPendingActionOrder(o)) acc.pendingOrders += 1;
                 return acc;
             }, { revenue: 0, sales: 0, pendingOrders: 0, platformRevenue: 0 });
             result.shoppingStats = stats;

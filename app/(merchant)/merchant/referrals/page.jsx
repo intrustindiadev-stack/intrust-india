@@ -67,7 +67,7 @@ export default async function MerchantReferralsPage() {
         redirect('/merchant-apply');
     }
 
-    const { referralCode, hasReferrer, directReferrals, prizeHistory, chainDepth } = await getMerchantReferralData(merchant.id);
+    const { referralCode, hasReferrer, directReferrals, prizeHistory, chainDepth, referralPrizeRupees = 500 } = await getMerchantReferralData(merchant.id);
 
     return (
         <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 pb-24 lg:pb-8">
@@ -96,17 +96,17 @@ export default async function MerchantReferralsPage() {
                         Premium Partner Offer
                     </div>
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight">
-                        Earn <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200">₹20</span> For Every Referral!
+                        Earn <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200">₹{referralPrizeRupees}</span> For Every Referral!
                     </h2>
                     <p className="text-slate-400 max-w-xl text-sm sm:text-base mx-auto md:mx-0 font-medium leading-relaxed">
-                        Invite other merchants to join InTrust India using your unique referral code. When they activate their subscription, you instantly receive ₹20 directly in your wallet!
+                        Invite other merchants to join InTrust India using your unique referral code. When they activate their subscription, you instantly receive ₹{referralPrizeRupees} directly in your wallet!
                     </p>
                 </div>
                 
                 <div className="relative z-10 shrink-0 bg-gradient-to-br from-amber-500 to-yellow-300 text-slate-900 px-8 py-6 rounded-2xl font-black text-center shadow-[0_0_40px_rgba(245,158,11,0.3)] border-2 border-yellow-200/50 flex flex-col items-center justify-center min-w-[180px] transform hover:scale-105 transition-transform duration-300">
                     <div className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Instant Reward</div>
                     <div className="text-5xl flex items-center drop-shadow-md">
-                        ₹20
+                        ₹{referralPrizeRupees}
                     </div>
                 </div>
             </div>

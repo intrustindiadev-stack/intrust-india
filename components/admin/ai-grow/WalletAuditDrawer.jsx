@@ -146,17 +146,17 @@ export default function WalletAuditDrawer({ isOpen, onClose, merchant }) {
                         className="fixed right-0 top-0 h-full z-50 w-full max-w-xl bg-white shadow-2xl flex flex-col"
                     >
                         {/* Header */}
-                        <div className="flex items-start justify-between p-5 border-b border-gray-100 flex-shrink-0">
-                            <div>
-                                <h2 className="text-base font-bold text-gray-900">Wallet Audit Trail</h2>
-                                <p className="text-sm text-gray-500 mt-0.5">
+                        <div className="flex items-start justify-between p-4 sm:p-5 border-b border-gray-100 flex-shrink-0">
+                            <div className="min-w-0 flex-1 pr-2">
+                                <h2 className="text-base font-bold text-gray-900 truncate">Wallet Audit Trail</h2>
+                                <p className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">
                                     {merchant?.merchant?.business_name}
                                 </p>
-                                <p className="text-xs text-gray-400 font-mono mt-0.5">
+                                <p className="text-[11px] sm:text-xs text-gray-400 font-mono mt-0.5 truncate">
                                     Wallet · {merchant?.id?.slice(0, 16)}…
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 shrink-0">
                                 <button
                                     onClick={fetchTransactions}
                                     disabled={loading}
@@ -175,7 +175,7 @@ export default function WalletAuditDrawer({ isOpen, onClose, merchant }) {
                         </div>
 
                         {/* Current Balance Strip */}
-                        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                        <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
                             <span className="text-xs font-medium text-gray-500">Current Balance</span>
                             <span className="font-mono font-bold text-gray-900 text-sm">
                                 {formatCurrency(merchant?.balance)}
@@ -203,17 +203,17 @@ export default function WalletAuditDrawer({ isOpen, onClose, merchant }) {
                                     <p className="text-sm">No transactions found for this wallet.</p>
                                 </div>
                             ) : (
-                                <div className="divide-y divide-gray-50">
+                                <div className="divide-y divide-gray-100">
                                     {transactions.map((tx, idx) => (
                                         <motion.div
                                             key={tx.id}
                                             initial={{ opacity: 0, y: 8 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.03 }}
-                                            className="p-5 hover:bg-gray-50/50 transition-colors"
+                                            className="p-3.5 sm:p-5 hover:bg-gray-50/50 transition-colors"
                                         >
                                             {/* Top Row: Type + Delta */}
-                                            <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-start justify-between gap-2 mb-2.5 sm:mb-3">
                                                 <TransactionTypeBadge type={tx.transaction_type} />
                                                 <DeltaAmount
                                                     type={tx.transaction_type}
@@ -224,25 +224,25 @@ export default function WalletAuditDrawer({ isOpen, onClose, merchant }) {
                                             </div>
 
                                             {/* Balance Progression */}
-                                            <div className="flex items-center gap-2 mb-3 text-xs text-gray-500 font-mono">
+                                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2.5 sm:mb-3 text-xs text-gray-500 font-mono">
                                                 <span className="text-gray-400">Previous:</span>
                                                 <span className="font-semibold text-gray-700">{formatCurrency(tx.previous_balance)}</span>
-                                                <ArrowRight size={12} className="text-gray-300" />
+                                                <ArrowRight size={12} className="text-gray-300 shrink-0" />
                                                 <span className="text-gray-400">New:</span>
                                                 <span className="font-semibold text-gray-900">{formatCurrency(tx.new_balance)}</span>
                                             </div>
 
                                             {/* Reason */}
-                                            <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 mb-3">
-                                                <p className="text-xs font-medium text-gray-400 mb-0.5 flex items-center gap-1">
+                                            <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 mb-2.5 sm:mb-3">
+                                                <p className="text-[11px] font-medium text-gray-400 mb-0.5 flex items-center gap-1">
                                                     <FileText size={10} />
                                                     Reason
                                                 </p>
-                                                <p className="text-sm text-gray-700 leading-relaxed">{tx.reason}</p>
+                                                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{tx.reason}</p>
                                             </div>
 
                                             {/* Meta Footer */}
-                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+                                            <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs text-gray-400">
                                                 <span className="flex items-center gap-1">
                                                     <Clock size={11} />
                                                     {formatFullDate(tx.created_at)}
@@ -265,7 +265,7 @@ export default function WalletAuditDrawer({ isOpen, onClose, merchant }) {
 
                         {/* Footer */}
                         {transactions.length > 0 && (
-                            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
+                            <div className="px-4 sm:px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
                                 <p className="text-xs text-gray-400">
                                     {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} · Immutable audit ledger
                                 </p>

@@ -15,8 +15,10 @@ import {
     ArrowUpRight,
     Wallet,
     Info,
-    ChevronLeft
+    ChevronLeft,
+    ShieldAlert
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { 
@@ -34,12 +36,32 @@ export default function LockinDetailsPage({ params }) {
     const router = useRouter();
     const [lockin, setLockin] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     useEffect(() => {
         const fetchDetails = async () => {
             setLoading(true);
             try {
                 const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    router.push('/login');
+                    return;
+                }
+
+                // Verify super_admin role
+                const { data: profile } = await supabase
+                    .from('user_profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+
+                const superAdmin = profile?.role === 'super_admin';
+                setIsSuperAdmin(superAdmin);
+                if (!superAdmin) {
+                    setLoading(false);
+                    return;
+                }
+
                 const res = await fetch(`/api/admin/lockin/${id}`, {
                     headers: { Authorization: `Bearer ${session?.access_token}` }
                 });
@@ -117,6 +139,31 @@ export default function LockinDetailsPage({ params }) {
         const principal = lockin.amount_paise / 100;
         const interest = principal * (lockin.interest_rate / 100) * (i / 12);
         projectionData.push({ month: label, value: principal + interest });
+    }
+
+    if (!loading && !isSuperAdmin) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50/50 font-[family-name:var(--font-outfit)]">
+                <div className="bg-white rounded-3xl p-10 border border-slate-200 shadow-xl text-center max-w-md w-full">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto mb-6 shadow-inner">
+                        <ShieldAlert size={32} className="text-amber-600" />
+                    </div>
+                    <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200 mb-3">
+                        Super Admin Access Only
+                    </span>
+                    <h1 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Access Restricted</h1>
+                    <p className="text-sm text-slate-500 font-medium mb-6">
+                        Lockin contract details and release controls are restricted to Super Administrators only.
+                    </p>
+                    <Link
+                        href="/admin"
+                        className="inline-flex items-center justify-center px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-xl uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md shadow-slate-900/10"
+                    >
+                        Back to Dashboard
+                    </Link>
+                </div>
+            </div>
+        );
     }
 
     return (

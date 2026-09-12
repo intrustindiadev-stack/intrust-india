@@ -22,6 +22,7 @@ export default function MerchantPortfolioPage({ params }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     
     // For Modals
     const [showFeedModal, setShowFeedModal] = useState(false);
@@ -74,6 +75,17 @@ export default function MerchantPortfolioPage({ params }) {
             
             if (!res.ok) throw new Error(result.error);
             setData(result.data);
+
+            if (result.data?.is_super_admin !== undefined) {
+                setIsSuperAdmin(Boolean(result.data.is_super_admin));
+            } else if (session?.user) {
+                const { data: profile } = await supabase
+                    .from('user_profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+                setIsSuperAdmin(profile?.role === 'super_admin');
+            }
         } catch (err) {
             console.error('Error:', err);
             toast.error('Failed to load merchant portfolio');
@@ -251,12 +263,23 @@ export default function MerchantPortfolioPage({ params }) {
                                 )}
                             </p>
                         </div>
-                        <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
+                        <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group">
                             <div>
-                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
-                                    <TrendingUp size={16} />
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                        <TrendingUp size={16} />
+                                    </div>
+                                    {isSuperAdmin && (
+                                        <button
+                                            onClick={() => router.push(`/admin/portfolio/${merchantId}/settle-vault`)}
+                                            className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-all"
+                                            title="Settle Vault Capital to Merchant Wallet"
+                                        >
+                                            <ArrowUpRight size={12} /> Settle Vault
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI Grow Funds</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI Grow Funds / Vault</p>
                             </div>
                             <p className="text-2xl font-black text-slate-900 tracking-tight">
                                 ₹{(merchant.total_ai_grow_paise / 100).toLocaleString('en-IN')}
@@ -313,9 +336,20 @@ export default function MerchantPortfolioPage({ params }) {
                     
                     {/* AI Grow Section */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 px-2">
-                            <Activity size={18} className="text-indigo-600" />
-                            <h2 className="text-lg font-bold text-slate-900">AI Grow Plans</h2>
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-2">
+                                <Activity size={18} className="text-indigo-600" />
+                                <h2 className="text-lg font-bold text-slate-900">AI Grow Plans & Vault</h2>
+                            </div>
+                            {isSuperAdmin && (
+                                <button
+                                    onClick={() => router.push(`/admin/portfolio/${merchantId}/settle-vault`)}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.02]"
+                                >
+                                    <Wallet size={13} />
+                                    Release Vault to Wallet
+                                </button>
+                            )}
                         </div>
                         
                         {investments.length === 0 ? (
@@ -352,20 +386,24 @@ export default function MerchantPortfolioPage({ params }) {
                                                     >
                                                         <Activity size={14} /> Feed Orders
                                                     </button>
-                                                    <button 
-                                                        onClick={() => setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' })}
-                                                        disabled={processingId === inv.id}
-                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                                    >
-                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' })}
-                                                        disabled={processingId === inv.id}
-                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                                    >
-                                                        {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
-                                                    </button>
+                                                    {isSuperAdmin && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' })}
+                                                                disabled={processingId === inv.id}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                                                            >
+                                                                {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' })}
+                                                                disabled={processingId === inv.id}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                                                            >
+                                                                {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
@@ -470,44 +508,46 @@ export default function MerchantPortfolioPage({ params }) {
                                                 </div>
                                             )}
 
-                                            <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
-                                                {lockin.status === 'pending' && (
-                                                    <>
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(lockin.id, 'lockin', 'active')}
-                                                            disabled={processingId === lockin.id}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all"
-                                                        >
-                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleUpdateStatus(lockin.id, 'lockin', 'rejected')}
-                                                            disabled={processingId === lockin.id}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-xl text-xs font-bold transition-all"
-                                                        >
-                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {lockin.status === 'active' && (
-                                                    <>
-                                                        <button 
-                                                            onClick={() => setConfirmModalData({ item: lockin, action: 'wallet', type: 'lockin' })}
-                                                            disabled={processingId === lockin.id}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
-                                                        >
-                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release Lockin to Wallet
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setConfirmModalData({ item: lockin, action: 'cash', type: 'lockin' })}
-                                                            disabled={processingId === lockin.id}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                                        >
-                                                            {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
+                                            {isSuperAdmin && (
+                                                <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
+                                                    {lockin.status === 'pending' && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => handleUpdateStatus(lockin.id, 'lockin', 'active')}
+                                                                disabled={processingId === lockin.id}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                            >
+                                                                {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleUpdateStatus(lockin.id, 'lockin', 'rejected')}
+                                                                disabled={processingId === lockin.id}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                            >
+                                                                {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {lockin.status === 'active' && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => setConfirmModalData({ item: lockin, action: 'wallet', type: 'lockin' })}
+                                                                disabled={processingId === lockin.id}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-amber-500/20"
+                                                            >
+                                                                {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release Lockin to Wallet
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => setConfirmModalData({ item: lockin, action: 'cash', type: 'lockin' })}
+                                                                disabled={processingId === lockin.id}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                                                            >
+                                                                {processingId === lockin.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}

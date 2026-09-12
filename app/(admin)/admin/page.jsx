@@ -5,6 +5,8 @@ import Link from 'next/link';
 import AdminClock from './AdminClock';
 import AdminStatsCards from '@/components/admin/AdminStatsCards';
 import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
+import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
+import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
 
 // Helper to format price
 function formatPrice(paise) {
@@ -34,6 +36,8 @@ export default async function AdminDashboard() {
         redirect('/dashboard');
     }
 
+    const { start: todayStartIST, end: todayEndIST } = getTodayISTBoundaries();
+
     // 2. Fetch Data in Parallel
     const [
         revenueData,
@@ -47,14 +51,14 @@ export default async function AdminDashboard() {
         totalEmployeesCount,
         pendingAccessRequests
     ] = await Promise.all([
-        // 1. Total Revenue (from transactions table + shopping_order_groups)
+        // 1. Total Revenue (from transactions table + shopping_order_groups confirmed sales)
         Promise.all([
             supabase.from('transactions')
                 .select('total_paid_paise, amount')
                 .in('status', COMPLETED_STATUSES),
             supabase.from('shopping_order_groups')
                 .select('total_amount_paise')
-                .eq('status', 'completed')
+                .in('delivery_status', ['packed', 'shipped', 'delivered'])
         ]).then(([txns, groups]) => {
             const txnRev = (txns.data || []).reduce((sum, tx) => sum + getAmountPaise(tx), 0);
             const groupRev = (groups.data || []).reduce((sum, g) => sum + (Number(g.total_amount_paise) || 0), 0);
@@ -78,16 +82,18 @@ export default async function AdminDashboard() {
                 return count || 0;
             }),
 
-        // 4. Today Sales (from transactions table + shopping_order_groups)
+        // 4. Today Sales (from transactions table + shopping_order_groups packed today)
         Promise.all([
             supabase.from('transactions')
                 .select('id, total_paid_paise, amount')
                 .in('status', COMPLETED_STATUSES)
-                .gte('created_at', new Date().toISOString().split('T')[0]),
+                .gte('created_at', todayStartIST)
+                .lte('created_at', todayEndIST),
             supabase.from('shopping_order_groups')
                 .select('id, total_amount_paise')
-                .eq('status', 'completed')
-                .gte('created_at', new Date().toISOString().split('T')[0])
+                .in('delivery_status', ['packed', 'shipped', 'delivered'])
+                .gte('packed_at', todayStartIST)
+                .lte('packed_at', todayEndIST)
         ]).then(([txns, groups]) => {
             const count = (txns.data?.length || 0) + (groups.data?.length || 0);
             const txnRev = (txns.data || []).reduce((sum, tx) => sum + getAmountPaise(tx), 0);
@@ -168,17 +174,20 @@ export default async function AdminDashboard() {
 
         // 7. Shopping Stats (Detailed Dashboard Metrics)
         supabase.from('shopping_order_groups')
-            .select('total_amount_paise, delivery_status, is_platform_order')
+            .select('total_amount_paise, delivery_status, is_platform_order, status, payment_status, payment_method')
             .then(({ data, error }) => {
                 if (error) {
                     return { revenue: 0, sales: 0, pendingOrders: 0, platformRevenue: 0, commissionRevenue: 0 };
                 }
                 return (data || []).reduce((acc, order) => {
-                    acc.revenue += Number(order.total_amount_paise) || 0;
-                    acc.sales += 1;
-                    if (order.delivery_status === 'pending') acc.pendingOrders += 1;
-                    if (order.is_platform_order) acc.platformRevenue += Number(order.total_amount_paise) || 0;
-                    else acc.commissionRevenue += Math.round((Number(order.total_amount_paise) || 0) * 0.05);
+                    const isPacked = ['packed', 'shipped', 'delivered'].includes((order.delivery_status || '').toLowerCase());
+                    if (isPacked) {
+                        acc.revenue += Number(order.total_amount_paise) || 0;
+                        acc.sales += 1;
+                        if (order.is_platform_order) acc.platformRevenue += Number(order.total_amount_paise) || 0;
+                        else acc.commissionRevenue += Math.round((Number(order.total_amount_paise) || 0) * 0.05);
+                    }
+                    if (isPendingActionOrder(order)) acc.pendingOrders += 1;
                     return acc;
                 }, { revenue: 0, sales: 0, pendingOrders: 0, platformRevenue: 0, commissionRevenue: 0 });
             }),

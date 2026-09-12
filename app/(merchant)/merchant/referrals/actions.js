@@ -14,7 +14,8 @@ export async function getMerchantReferralData(merchantId) {
             { data: merchantData, error: merchantError },
             { data: networkData, error: networkError },
             { data: prizeData, error: prizeError },
-            { data: depthData, error: depthError }
+            { data: depthData, error: depthError },
+            { data: settingData, error: settingError }
         ] = await Promise.all([
             adminSupabase
                 .from('merchants')
@@ -45,7 +46,12 @@ export async function getMerchantReferralData(merchantId) {
                 .select('level')
                 .eq('ancestor_id', merchantId)
                 .order('level', { ascending: false })
-                .limit(1)
+                .limit(1),
+            adminSupabase
+                .from('platform_settings')
+                .select('value')
+                .eq('key', 'merchant_referral_prize_paise')
+                .single()
         ]);
 
         if (merchantError) {
@@ -60,16 +66,22 @@ export async function getMerchantReferralData(merchantId) {
         if (depthError) {
             console.error('Error fetching merchant network depth:', depthError);
         }
+        if (settingError) {
+            console.warn('Error fetching merchant_referral_prize_paise:', settingError);
+        }
 
         const directReferrals = networkData?.map(item => item.merchants) || [];
         const chainDepth = depthData && depthData.length > 0 ? depthData[0].level : 0;
+        const referralPrizePaise = Number(settingData?.value || 50000);
+        const referralPrizeRupees = Math.round(referralPrizePaise / 100);
 
         return {
             referralCode: merchantData?.referral_code || null,
             hasReferrer: !!merchantData?.referred_by_merchant_id,
             directReferrals,
             prizeHistory: prizeData || [],
-            chainDepth
+            chainDepth,
+            referralPrizeRupees
         };
 
     } catch (err) {

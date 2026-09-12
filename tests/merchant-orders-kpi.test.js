@@ -2,6 +2,7 @@ import {
     calculateMerchantOrderKPIs,
     filterOrdersByPeriod,
     isValidOrder,
+    isPackedOrder,
     isPendingActionOrder,
     isSettledOrder,
     formatPaise,
@@ -12,7 +13,7 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
     const fixedNow = new Date('2026-09-11T12:00:00.000Z');
 
     const sampleOrders = [
-        // 1. Valid Pending Order placed today (1 hour ago)
+        // 1. Valid Pending Order placed today (1 hour ago) - NOT a sale until packed!
         {
             id: 'ord-101',
             merchant_id: 'merchant-aaa',
@@ -36,7 +37,8 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             settlement_status: 'settled',
             status: 'completed',
             payment_status: 'paid',
-            created_at: '2026-09-09T10:00:00.000Z'
+            created_at: '2026-09-09T10:00:00.000Z',
+            packed_at: '2026-09-09T10:30:00.000Z'
         },
         // 3. Valid Delivered & Settled Order placed 10 days ago (this month)
         {
@@ -49,7 +51,8 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             settlement_status: 'settled',
             status: 'completed',
             payment_status: 'paid',
-            created_at: '2026-09-01T14:00:00.000Z'
+            created_at: '2026-09-01T14:00:00.000Z',
+            packed_at: '2026-09-01T15:00:00.000Z'
         },
         // 4. Cancelled Order placed today
         {
@@ -75,7 +78,8 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             settlement_status: 'settled_zero',
             status: 'completed',
             payment_status: 'paid',
-            created_at: '2026-09-06T10:00:00.000Z'
+            created_at: '2026-09-06T10:00:00.000Z',
+            packed_at: '2026-09-06T11:00:00.000Z'
         },
         // 6. Admin Takeover Order (settled reduced profit) placed 4 days ago
         {
@@ -88,7 +92,8 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             settlement_status: 'admin_takeover',
             status: 'completed',
             payment_status: 'paid',
-            created_at: '2026-09-07T16:00:00.000Z'
+            created_at: '2026-09-07T16:00:00.000Z',
+            packed_at: '2026-09-07T16:30:00.000Z'
         },
         // 7. Old Order placed 45 days ago (previous month)
         {
@@ -101,18 +106,36 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             settlement_status: 'settled',
             status: 'completed',
             payment_status: 'paid',
-            created_at: '2026-07-28T10:00:00.000Z'
+            created_at: '2026-07-28T10:00:00.000Z',
+            packed_at: '2026-07-28T12:00:00.000Z'
+        },
+        // 8. Order placed yesterday but packed TODAY (11 Sep)
+        {
+            id: 'ord-108',
+            merchant_id: 'merchant-aaa',
+            customer_name: 'Deepak Joshi',
+            total_amount_paise: 350000, // ₹3,500
+            merchant_profit_paise: 49000, // ₹490 settled
+            delivery_status: 'packed',
+            settlement_status: 'settled',
+            status: 'completed',
+            payment_status: 'paid',
+            created_at: '2026-09-10T18:00:00.000Z',
+            packed_at: '2026-09-11T08:00:00.000Z'
         }
     ];
 
-    describe('KPI 1: Total Sales Accuracy', () => {
-        test('includes valid orders (pending, packed, delivered) and excludes cancelled orders', () => {
+    describe('KPI 1: Total Sales Accuracy (Packed Only)', () => {
+        test('includes only confirmed sales (packed, shipped, delivered) and strictly excludes pending and cancelled orders', () => {
             const kpis = calculateMerchantOrderKPIs(sampleOrders, 'all', fixedNow);
-            // Valid orders: ord-101 (2500), ord-102 (4000), ord-103 (1500), ord-105 (1000), ord-106 (5000), ord-107 (2000)
-            // Total = 250000 + 400000 + 150000 + 100000 + 500000 + 200000 = 1,600,000 paise (₹16,000)
-            // Cancelled ord-104 (300000) is strictly excluded!
-            expect(kpis.totalSalesPaise).toBe(1600000);
-            expect(kpis.totalSalesFormatted).toBe('16,000.00');
+            // Confirmed sales:
+            // ord-102 (4000), ord-103 (1500), ord-105 (1000), ord-106 (5000), ord-107 (2000), ord-108 (3500)
+            // Total = 400000 + 150000 + 100000 + 500000 + 200000 + 350000 = 1,700,000 paise (₹17,000.00)
+            // ord-101 (pending 2500) is strictly EXCLUDED!
+            // ord-104 (cancelled 3000) is strictly EXCLUDED!
+            expect(kpis.totalSalesPaise).toBe(1700000);
+            expect(kpis.totalSalesFormatted).toBe('17,000.00');
+            expect(kpis.totalSalesSubtext).toBe('6 packed orders');
         });
 
         test('excludes failed or abandoned gateway drafts', () => {
@@ -125,15 +148,18 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
                 payment_status: 'pending'
             };
             expect(isValidOrder(draftOrder)).toBe(false);
+            expect(isPackedOrder(draftOrder)).toBe(false);
         });
     });
 
     describe('KPI 2: Orders Count Accuracy', () => {
-        test('counts only valid orders in the period', () => {
+        test('counts only packed/confirmed orders in the period for the Orders KPI', () => {
             const kpis = calculateMerchantOrderKPIs(sampleOrders, 'all', fixedNow);
-            // 7 total orders, but 1 is cancelled -> 6 valid orders
+            // 8 total orders: 6 packed, 1 pending, 1 cancelled
             expect(kpis.validOrdersCount).toBe(6);
+            expect(kpis.packedOrdersCount).toBe(6);
             expect(kpis.ordersFormatted).toBe('6');
+            expect(kpis.ordersSubtext).toBe('All packed orders');
         });
     });
 
@@ -172,10 +198,11 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             // ord-105: 0 (settled_zero)
             // ord-106: 30000 (admin_takeover settled)
             // ord-107: 28000
-            // Total = 56000 + 21000 + 0 + 30000 + 28000 = 135000 paise (₹1,350)
-            expect(kpis.settledEarningsPaise).toBe(135000);
-            expect(kpis.settledEarningsFormatted).toBe('1,350.00');
-            expect(kpis.settledOrdersCount).toBe(5); // ord-102, 103, 105, 106, 107
+            // ord-108: 49000
+            // Total = 56000 + 21000 + 0 + 30000 + 28000 + 49000 = 184000 paise (₹1,840)
+            expect(kpis.settledEarningsPaise).toBe(184000);
+            expect(kpis.settledEarningsFormatted).toBe('1,840.00');
+            expect(kpis.settledOrdersCount).toBe(6);
         });
 
         test('cancelled order contributes ₹0 to settled earnings even if marked settled improperly', () => {
@@ -189,39 +216,42 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
         });
     });
 
-    describe('Date / Period Boundary Filtering', () => {
-        test('Today: only includes orders placed today', () => {
+    describe('Date / Period Boundary Filtering (Packed Timestamp Attribution)', () => {
+        test('Today: includes orders packed today, even if placed yesterday, and excludes pending placed today', () => {
             const kpis = calculateMerchantOrderKPIs(sampleOrders, 'today', fixedNow);
-            // Placed today: ord-101 (valid, pending) and ord-104 (cancelled)
-            expect(kpis.validOrdersCount).toBe(1);
-            expect(kpis.totalSalesPaise).toBe(250000); // ₹2,500
-            expect(kpis.pendingOrdersCount).toBe(1);
-            expect(kpis.settledEarningsPaise).toBe(0); // ord-101 not yet settled
+            // ord-108 was placed yesterday (Sep 10) but packed TODAY (Sep 11): counts as sale today!
+            // ord-101 was placed today (Sep 11) but is pending: does NOT count as sale!
+            expect(kpis.validOrdersCount).toBe(1); // ord-108
+            expect(kpis.totalSalesPaise).toBe(350000); // ₹3,500
+            expect(kpis.pendingOrdersCount).toBe(1); // ord-101 pending action
+            expect(kpis.settledEarningsPaise).toBe(49000); // ord-108 settled
         });
 
-        test('7 Days: includes orders placed within the last 7 days', () => {
+        test('7 Days: includes orders packed within the last 7 days', () => {
             const kpis = calculateMerchantOrderKPIs(sampleOrders, '7d', fixedNow);
-            // ord-101 (today), ord-102 (2d ago), ord-104 (today, cancelled), ord-105 (5d ago), ord-106 (4d ago)
-            // Valid orders: ord-101, 102, 105, 106 = 4 valid orders
+            // Packed in last 7d: ord-108 (today), ord-102 (2d ago), ord-105 (5d ago), ord-106 (4d ago)
+            // Valid sales: 4 orders
             expect(kpis.validOrdersCount).toBe(4);
-            // Sales: 2500 + 4000 + 1000 + 5000 = 12,500 = 1250000 paise
-            expect(kpis.totalSalesPaise).toBe(1250000);
-            // Settled: ord-102 (560), ord-105 (0), ord-106 (300) = 86000 paise
-            expect(kpis.settledEarningsPaise).toBe(86000);
+            // Sales: 3500 + 4000 + 1000 + 5000 = 13,500 = 1350000 paise
+            expect(kpis.totalSalesPaise).toBe(1350000);
+            // Settled: ord-108 (490) + ord-102 (560) + ord-105 (0) + ord-106 (300) = 135000 paise
+            expect(kpis.settledEarningsPaise).toBe(135000);
         });
 
-        test('This Month: includes all orders in September 2026 (excludes July ord-107)', () => {
+        test('This Month: includes all orders packed in September 2026 (excludes July ord-107)', () => {
             const kpis = calculateMerchantOrderKPIs(sampleOrders, 'this_month', fixedNow);
-            // Valid orders: ord-101, 102, 103, 105, 106 = 5 valid orders
+            // Valid sales in September: ord-108, 102, 103, 105, 106 = 5 sales orders
             expect(kpis.validOrdersCount).toBe(5);
-            // Settled: ord-102 (560) + ord-103 (210) + ord-105 (0) + ord-106 (300) = 107000 paise
-            expect(kpis.settledEarningsPaise).toBe(107000);
+            expect(kpis.totalSalesPaise).toBe(1500000); // 1,500,000 paise (₹15,000)
+            // Settled: 135000 (from 7d) + ord-103 (21000) = 156000 paise
+            expect(kpis.settledEarningsPaise).toBe(156000);
         });
-        test('30 Days: includes orders placed within the last 30 days', () => {
+
+        test('30 Days: includes orders packed within the last 30 days', () => {
             const kpis = calculateMerchantOrderKPIs(sampleOrders, '30d', fixedNow);
-            // Valid orders within last 30d: ord-101, 102, 103, 105, 106 = 5 valid orders
+            // Valid sales within last 30d: ord-108, 102, 103, 105, 106 = 5 orders
             expect(kpis.validOrdersCount).toBe(5);
-            expect(kpis.totalSalesPaise).toBe(1400000); // Excludes July ord-107 (200000)
+            expect(kpis.totalSalesPaise).toBe(1500000); // Excludes July ord-107 (200000)
         });
 
         test('Empty orders array produces zeroed metrics without NaN or runtime errors', () => {
@@ -255,7 +285,8 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
                 merchant_profit_paise: 99900,
                 delivery_status: 'delivered',
                 settlement_status: 'settled',
-                created_at: '2026-09-11T10:00:00.000Z'
+                created_at: '2026-09-11T10:00:00.000Z',
+                packed_at: '2026-09-11T10:30:00.000Z'
             };
 
             const mixed = [...sampleOrders, merchantBOrder];
@@ -265,7 +296,7 @@ describe('Merchant Orders KPI & Financial Metrics Test Suite', () => {
             const kpiA = calculateMerchantOrderKPIs(isolatedA, 'all', fixedNow);
             const kpiB = calculateMerchantOrderKPIs(isolatedB, 'all', fixedNow);
 
-            expect(kpiA.totalSalesPaise).toBe(1600000);
+            expect(kpiA.totalSalesPaise).toBe(1700000);
             expect(kpiB.totalSalesPaise).toBe(888800);
             expect(kpiA.validOrdersCount).toBe(6);
             expect(kpiB.validOrdersCount).toBe(1);
