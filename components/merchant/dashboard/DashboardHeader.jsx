@@ -8,6 +8,7 @@ import StoreStatusToggle from '@/components/merchant/StoreStatusToggle';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Plus, ArrowUpRight, ArrowDownRight, Zap, TrendingUp } from 'lucide-react';
 import AIGrowModal from './AIGrowModal';
+import InstaVerifiedBadge from '@/components/ui/InstaVerifiedBadge';
 
 /* === STEP 0: AUDIT ===
    STATE VARIABLES: 
@@ -92,6 +93,7 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise,
 
     const planName = merchant?.subscription_status === 'active' ? 'Pro' : 'Free';
     const planTier = merchant?.subscription_status === 'active' ? 'pro' : 'free';
+    const isKycVerified = profile?.kyc_status === 'verified' || profile?.kyc_status === 'approved' || merchant?.status === 'approved';
 
     return (
         <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/80 shadow-sm border border-slate-200/60 dark:border-white/10 p-5 md:p-8 mb-8 backdrop-blur-md">
@@ -106,7 +108,7 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise,
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               {/* Greeting & Identity */}
               <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer mt-0.5 sm:mt-0">
+                  <Link href="/merchant/profile" className="w-12 h-12 shrink-0 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-sm overflow-hidden hover:scale-105 transition-transform cursor-pointer mt-0.5 sm:mt-0 flex items-center justify-center">
                       {profile?.avatar_url ? (
                           <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
@@ -115,7 +117,17 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise,
                   </Link>
                   <div className="min-w-0">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white tracking-tight break-words">
-                      Good {getTimeGreeting()}, <span className="text-slate-600 dark:text-slate-300">{merchant.business_name || 'Merchant'}</span>
+                      <span>Good {getTimeGreeting()},{' '}</span>
+                      <span className="inline-flex items-center gap-1.5 align-baseline text-slate-600 dark:text-slate-300">
+                        <span>{merchant.business_name || 'Merchant'}</span>
+                        {isKycVerified && (
+                          <InstaVerifiedBadge
+                            size="md"
+                            className="inline-block shrink-0 translate-y-[-1px]"
+                            title="KYC Verified Merchant"
+                          />
+                        )}
+                      </span>
                     </h1>
 
                     {/* Plan Status Badges */}

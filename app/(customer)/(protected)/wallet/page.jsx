@@ -251,7 +251,7 @@ export default function CustomerWalletPage() {
                 <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
                         <ShieldCheck size={14} />
-                        <span>100% Safe &amp; RBI Compliant</span>
+                        <span>100% Safe &amp; Secure</span>
                     </span>
                 </div>
             </div>

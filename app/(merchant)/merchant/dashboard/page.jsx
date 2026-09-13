@@ -72,7 +72,10 @@ export default async function MerchantDashboardPage() {
         todayShoppingGroupsRes,
         todaySettledTxnsRes,
         aiOrdersRes,
-        aiVaultRes
+        aiVaultRes,
+        ecommerceInventoryRes,
+        referralCountRes,
+        referralRewardsRes
     ] = await Promise.all([
         supabase.from('coupons').select('id, brand, face_value_paise, merchant_purchase_price_paise, merchant_selling_price_paise, merchant_commission_paise, status, listed_on_marketplace, image_url').eq('merchant_id', merchant.id).order('created_at', { ascending: false }),
 
@@ -125,7 +128,21 @@ export default async function MerchantDashboardPage() {
             .from('ai_orders_vault')
             .select('balance_paise, total_profit_paise')
             .eq('merchant_id', user.id)
-            .maybeSingle()
+            .maybeSingle(),
+        adminDb
+            .from('merchant_inventory')
+            .select('id, stock_quantity, is_active')
+            .eq('merchant_id', merchant.id),
+        adminDb
+            .from('merchant_tree_paths')
+            .select('*', { count: 'exact', head: true })
+            .eq('ancestor_id', merchant.id)
+            .eq('level', 1),
+        adminDb
+            .from('merchant_transactions')
+            .select('amount_paise')
+            .eq('merchant_id', merchant.id)
+            .eq('transaction_type', 'referral_reward')
     ]);
 
     const coupons = couponsRes.data || [];
@@ -185,6 +202,26 @@ export default async function MerchantDashboardPage() {
         totalCommission: (merchant.total_commission_paid_paise || 0) / 100,
         pendingUdhari: pendingUdhariCount,
         lockinBalance: totalLockinPaise / 100,
+    };
+
+    // E-commerce Inventory calculation
+    const inventoryItems = ecommerceInventoryRes.data || [];
+    const ecommerceTotalProducts = inventoryItems.length;
+    const ecommerceInStock = inventoryItems.reduce((sum, item) => sum + (item.stock_quantity || 0), 0);
+    const ecommerceLowStock = inventoryItems.filter(item => (item.stock_quantity || 0) < 5).length;
+    const ecommerceStats = {
+        totalProducts: ecommerceTotalProducts,
+        inStockCount: ecommerceInStock,
+        lowStockCount: ecommerceLowStock,
+    };
+
+    // Referral Metrics calculation
+    const referralCount = referralCountRes.count || 0;
+    const referralRewardsPaise = (referralRewardsRes.data || []).reduce((sum, tx) => sum + (tx.amount_paise || 0), 0);
+    const referralStats = {
+        totalReferrals: referralCount,
+        totalEarned: referralRewardsPaise / 100,
+        bounty: 500,
     };
 
     // Calculate Today's Stats (including completed AI Orders)
@@ -272,7 +309,12 @@ export default async function MerchantDashboardPage() {
             />
 
             {/* Performance Metrics / Stats Cards with Direct Redirection & AI Orders */}
-            <StatsCards stats={stats} aiStats={aiStats} />
+            <StatsCards 
+                stats={stats} 
+                aiStats={aiStats} 
+                ecommerceStats={ecommerceStats} 
+                referralStats={referralStats} 
+            />
 
             {/* Recent Transactions */}
             <TransactionsTable coupons={transformedCoupons} />

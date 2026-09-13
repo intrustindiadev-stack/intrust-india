@@ -26,8 +26,9 @@ import {
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
+import InstaVerifiedBadge from '@/components/ui/InstaVerifiedBadge';
 
-function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
+function AvatarUpload({ userId, avatarUrl, displayName, isVerified, onUpload }) {
     const [uploading, setUploading] = useState(false);
     const fileRef = useRef(null);
     const initial = displayName?.trim()?.charAt(0)?.toUpperCase() || 'M';
@@ -267,7 +268,7 @@ export default function ProfilePage() {
                         {merchant?.auto_mode && (
                             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Auto LIVE</span>
+                                <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">LIVE</span>
                             </div>
                         )}
                     </div>
@@ -320,13 +321,17 @@ export default function ProfilePage() {
                                 userId={merchant.user_id}
                                 avatarUrl={formData.avatar_url}
                                 displayName={formData.owner_name || merchant.business_name}
+                                isVerified={merchant?.status === 'approved' || merchant?.kyc_status === 'verified' || merchant?.user_profiles?.kyc_status === 'verified'}
                                 onUpload={(url, err) => {
                                     if (err) toast.error(err);
                                     else if (url) setFormData(prev => ({ ...prev, avatar_url: url }));
                                 }}
                             />
-                            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 truncate mb-1">
-                                {formData.owner_name || 'Business Owner'}
+                            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 truncate mb-1 flex items-center justify-center gap-1.5">
+                                <span>{formData.owner_name || 'Business Owner'}</span>
+                                {(merchant?.status === 'approved' || merchant?.kyc_status === 'verified' || merchant?.user_profiles?.kyc_status === 'verified') && (
+                                    <InstaVerifiedBadge size="md" className="shrink-0 inline-block translate-y-[-1px]" title="KYC Verified Merchant" />
+                                )}
                             </h2>
                             <p className="text-blue-600 font-black text-[10px] uppercase tracking-[0.2em] mb-3">
                                 Verified Merchant
