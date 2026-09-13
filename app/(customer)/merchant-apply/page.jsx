@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { verifyGSTIN } from '@/app/actions/sprintVerifyActions';
 import MerchantApplyShowcase from '@/components/merchant/MerchantApplyShowcase';
+import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
 
 // Confetti Component
 const Confetti = () => {
@@ -115,9 +116,9 @@ function MerchantApplyPageInner() {
     }, [searchParams]);
 
 
-    // Form State
+// Form State
     const [formData, setFormData] = useState({
-        businessName: '', gstNumber: '', ownerName: '',
+        businessName: '', department: 'grocery', gstNumber: '', ownerName: '',
         phone: '', email: '', address: '',
         bankAccount: '', confirmBankAccount: '', bankAccountName: '', bankName: '', ifscCode: '', panCard: '',
         merchantReferralCode: '',
@@ -486,7 +487,30 @@ function MerchantApplyPageInner() {
                                 </div>
 
                                 <div className="space-y-10">
-                                    <SmoothInput label="Business Name" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} autoFocus icon={Store} />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        <SmoothInput label="Business Name" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} autoFocus icon={Store} />
+                                        <div className="relative flex flex-col justify-end">
+                                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block uppercase tracking-wider">
+                                                Business Department / Category *
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={formData.department || 'grocery'}
+                                                    onChange={e => setFormData({ ...formData, department: e.target.value })}
+                                                    className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
+                                                >
+                                                    {MERCHANT_DEPARTMENTS.map(dept => (
+                                                        <option key={dept.key} value={dept.key} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold">
+                                                            {dept.label} ({dept.badge})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-xs text-slate-400">
+                                                    ▼
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                         <SmoothInput
                                             label="GSTIN (Optional)"

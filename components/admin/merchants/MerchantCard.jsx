@@ -71,6 +71,11 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             Sub: {merchant.subscriptionStatus || 'unpaid'}
                         </div>
                     )}
+                    {merchant.department && (
+                        <div className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border bg-blue-50 text-blue-700 border-blue-200 shadow-sm">
+                            {merchant.department}
+                        </div>
+                    )}
                 </div>
 
                 {/* Contact Details */}

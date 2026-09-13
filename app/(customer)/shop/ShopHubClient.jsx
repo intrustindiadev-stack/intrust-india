@@ -31,6 +31,7 @@ import {
     Zap
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -38,6 +39,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import MerchantCard from '@/components/customer/shop/MerchantCard';
+import MiniCartDrawer from '@/components/customer/shop/MiniCartDrawer';
+import { MERCHANT_DEPARTMENTS, getDepartmentMeta } from '@/lib/constants/departments';
 import { getCategorySlug, getCategoryIcon, getCategoryImage, getProductFallbackImage, FALLBACK_CATEGORIES } from '@/lib/shopping/categories';
 import { getSubCategories } from '@/lib/constants/categories';
 
@@ -53,6 +57,8 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     const [pickupMode, setPickupMode] = useState('all');
     const [selectedCategory, setSelectedCategory] = useState(urlCategory);
     const [selectedSubCategory, setSelectedSubCategory] = useState(urlSubCategory || 'all');
+    const [selectedDepartment, setSelectedDepartment] = useState('all');
+    const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterOnlyOpen, setFilterOnlyOpen] = useState(false);
     const [filterMinRating, setFilterMinRating] = useState(0);
@@ -66,6 +72,9 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
 
     useEffect(() => {
         setIsMounted(true);
+        const handleOpenMiniCart = () => setIsMiniCartOpen(true);
+        window.addEventListener('openMiniCart', handleOpenMiniCart);
+        return () => window.removeEventListener('openMiniCart', handleOpenMiniCart);
     }, []);
 
     // Load product wishlists from DB
@@ -241,19 +250,23 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
         fetchProducts();
     }, []);
 
-    // Filter merchants based on search, open status & rating
+    // Filter merchants based on search, department, open status & rating
     const filteredMerchants = useMemo(() => {
         return merchants.filter((m) => {
             if (m.id === 'official' || m.slug === 'official' || m.slug === 'intrust-official') return false; // Handled in dedicated hub
             if (searchQuery && !m.business_name?.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return false;
             }
+            if (selectedDepartment && selectedDepartment !== 'all') {
+                const mDept = (m.department || 'general').toLowerCase();
+                if (mDept !== selectedDepartment.toLowerCase()) return false;
+            }
             if (filterOnlyOpen && !m.is_open) return false;
             const rating = ratingsMap[m.id]?.avg_rating || 4.5;
             if (filterMinRating > 0 && rating < filterMinRating) return false;
             return true;
         });
-    }, [merchants, searchQuery, filterOnlyOpen, filterMinRating, ratingsMap]);
+    }, [merchants, searchQuery, selectedDepartment, filterOnlyOpen, filterMinRating, ratingsMap]);
 
 
     // Compute dynamic categories based on shopping_categories and active products
@@ -352,15 +365,67 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     const categoryScrollRef = useRef(null);
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartProduct, setPendingCartProduct] = useState(null);
+    const [dealFilter, setDealFilter] = useState('all');
 
-    const scrollCategories = (direction) => {
+    const scrollCategorySlider = (direction) => {
         if (!categoryScrollRef.current) return;
-        const scrollAmount = 300;
+        const scrollAmount = 350;
         categoryScrollRef.current.scrollBy({
             left: direction === 'left' ? -scrollAmount : scrollAmount,
             behavior: 'smooth'
         });
     };
+
+    // Compute dynamic categories for the creative carousel with proper routing
+    const carouselDepartments = useMemo(() => {
+        const list = [];
+        MERCHANT_DEPARTMENTS.forEach(dept => {
+            const slug = dept.key.replace(/_/g, '-');
+            list.push({
+                key: dept.key,
+                label: dept.label,
+                shortLabel: dept.label.split('&')[0].trim(),
+                badge: dept.badge || 'Same Day',
+                slug: slug,
+                gradient: dept.gradient || 'from-blue-600 to-indigo-600',
+                image: getCategoryImage(dept.label)
+            });
+        });
+        const deptSlugs = new Set(MERCHANT_DEPARTMENTS.map(d => d.key.replace(/_/g, '-')));
+        (categories || []).forEach(cat => {
+            const slug = getCategorySlug(cat);
+            if (!deptSlugs.has(slug)) {
+                const label = cat.name || cat.label || slug;
+                list.push({
+                    key: slug,
+                    label: label,
+                    shortLabel: label.split('&')[0].trim(),
+                    badge: 'Verified',
+                    slug: slug,
+                    gradient: 'from-indigo-600 to-blue-600',
+                    image: cat.image_url || getCategoryImage(label)
+                });
+            }
+        });
+        return list;
+    }, [categories]);
+
+    // Filter deals / top products strictly limited to 8 items
+    const displayedDeals = useMemo(() => {
+        let list = [...filteredProducts];
+        if (dealFilter === 'under_500') {
+            list = list.filter(p => Number(p.selling_price || p.price || 0) <= 500);
+        } else if (dealFilter === 'under_1500') {
+            list = list.filter(p => Number(p.selling_price || p.price || 0) <= 1500);
+        } else if (dealFilter === 'discount_20') {
+            list = list.filter(p => {
+                const sp = Number(p.selling_price || p.price || 0);
+                if (!p.mrp || !sp) return false;
+                return Math.round(((p.mrp - sp) / p.mrp) * 100) >= 20;
+            });
+        }
+        return list.slice(0, 8);
+    }, [filteredProducts, dealFilter]);
 
     const executeAddToCart = async (product) => {
         try {
@@ -381,40 +446,47 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 return;
             }
 
-            window.dispatchEvent(new Event('cartUpdated'));
             setAddedProductId(product.id);
-            toast.success(`Added ${product.title} to cart! 🛒`);
-
-            setTimeout(() => {
-                setAddedProductId(null);
-            }, 2000);
+            setTimeout(() => setAddedProductId(null), 2000);
+            window.dispatchEvent(new Event('cartUpdated'));
+            toast.success(`Added ${product.title} to cart`);
         } catch (err) {
-            console.error('Add to cart error:', err);
-            toast.error(err.message || 'Failed to add item to cart');
+            console.error('Error adding to cart:', err);
+            toast.error('Failed to add product to cart');
         }
     };
 
-    const handleAddToCart = async (e, product) => {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
+    const handleAddToCart = (e, product) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate(50); } catch (e) {}
         }
 
         if (!activeCustomer?.id) {
-            toast.error('Please sign in to add items to your cart');
+            toast.error('Please sign in to add items to cart');
             router.push('/login?next=/shop');
             return;
         }
 
-        await executeAddToCart(product);
+        executeAddToCart(product);
     };
 
     const handleConfirmClearCart = async () => {
-        if (!pendingCartProduct || !activeCustomer?.id) return;
         setConfirmModalOpen(false);
+        if (!pendingCartProduct) return;
+
         try {
-            await supabase.from('shopping_cart').delete().eq('customer_id', activeCustomer.id);
+            const { error: clearError } = await supabase
+                .from('shopping_cart')
+                .delete()
+                .eq('customer_id', activeCustomer.id);
+
+            if (clearError) throw clearError;
+
             await executeAddToCart(pendingCartProduct);
+            toast.success('Cart updated with new store items');
         } catch (err) {
             console.error('Error clearing cart:', err);
             toast.error('Failed to replace cart');
@@ -430,693 +502,581 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     if (!isMounted) return null;
 
     return (
-        <div className="w-full space-y-6 font-body-md text-slate-900 dark:text-on-surface">
+        <div className="w-full space-y-6 font-body-md text-slate-900 dark:text-on-surface transition-colors duration-500">
             {/* Top Breadcrumbs */}
             <CustomerBreadcrumbs items={[{ label: 'Shop & Local Stores' }]} className="mb-2" />
 
-            {/* ── EDITORIAL HEADER SECTION (Stitch Screen #30703825561c4f3c9ce69d33b63f890a) ── */}
-            <div className="relative overflow-hidden rounded-3xl bg-surface-container-lowest p-6 sm:p-8 border border-outline-variant/30 shadow-sm">
-                <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-                <div className="absolute left-1/3 -bottom-20 h-48 w-48 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+            {/* ── 1. MAIN HERO BANNER (Softened, Vibrant & Clean) ── */}
+            <div className="relative w-full rounded-3xl overflow-hidden shadow-md border border-outline-variant/30 min-h-[190px] sm:min-h-[230px] flex items-center group bg-gradient-to-r from-blue-950/80 via-slate-900/60 to-slate-950/40">
+                <img
+                    src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1400"
+                    alt="Everyday Essentials"
+                    className="absolute inset-0 w-full h-full object-cover object-center opacity-55 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                />
+                {/* Soft, translucent gradient overlay that does not hide the picture */}
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-900/40 to-transparent pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col gap-6">
-                    {/* Top Row: Title + Fast Pickup Switcher */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                        <div className="max-w-3xl">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] uppercase tracking-wider font-extrabold">
-                                    Bhopal Hub Central
-                                </span>
-                                <span className="text-on-surface-variant text-xs">•</span>
-                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                                    <ShieldCheck size={14} /> 100% Buyer Protection
-                                </span>
-                            </div>
-                            <h1 className="text-2xl sm:text-4xl font-black text-on-surface tracking-tight leading-tight">
-                                Explore Shop &amp; Local Bhopal Stores
-                            </h1>
-                            <p className="text-xs sm:text-sm text-on-surface-variant mt-2 max-w-2xl font-medium leading-relaxed">
-                                Browse verified Bhopal merchant inventory, top brand electronics, and genuine local store selections backed by InTrust Buyer Guarantee.
-                            </p>
-                        </div>
-
-                        {/* Store Mode Switcher */}
-                        <div className="p-1.5 rounded-2xl bg-surface-container-low flex items-center gap-1 self-start md:self-auto shrink-0 border border-outline-variant/20">
-                            <button
-                                onClick={() => { setPickupMode('all'); handleCategoryClick(''); }}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                    pickupMode === 'all' && selectedCategory !== 'official'
-                                        ? 'bg-surface-container-lowest text-primary shadow-sm'
-                                        : 'text-on-surface-variant hover:text-on-surface'
-                                }`}
-                            >
-                                <ShoppingBag size={14} />
-                                <span>All Stores</span>
-                            </button>
-                            <Link
-                                href="/shop/official"
-                                className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest"
-                            >
-                                <Sparkles size={14} className="text-blue-500" />
-                                <span>InTrust Official</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Integrated Search & Category Pills */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center pt-2">
-                        {/* Omnibox search */}
-                        <div className="lg:col-span-4 relative flex items-center">
-                            <Search size={18} className="absolute left-3.5 text-brand-steel pointer-events-none" />
-                            <input
-                                type="text"
-                                placeholder="Search gadgets, verified dealers, SKU..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full h-11 pl-11 pr-4 rounded-2xl bg-surface-container-low text-on-surface text-xs font-medium placeholder:text-brand-steel focus:outline-none focus:bg-surface-container-lowest border border-transparent focus:border-primary shadow-inner transition-all"
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery('')}
-                                    className="absolute right-3 text-brand-steel hover:text-on-surface"
-                                >
-                                    <X size={15} />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Horizontal Dynamic Category Chips */}
-                        <div className="lg:col-span-8 flex items-center gap-2 overflow-x-auto pb-1.5 lg:pb-0 scrollbar-none">
-                            {dynamicCategoryList.map((cat, idx) => {
-                                const Icon = cat.icon;
-                                const isActive = (selectedCategory === '' && cat.slug === '') || 
-                                    (cat.slug !== '' && (selectedCategory === cat.slug || selectedCategory.toLowerCase() === cat.label.toLowerCase()));
-
-                                return (
-                                    <button
-                                        key={cat.slug || idx}
-                                        onClick={() => handleCategoryClick(cat.slug)}
-                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-xs active:scale-95 ${
-                                            isActive
-                                                ? 'bg-blue-600 text-white shadow-md'
-                                                : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-950 dark:bg-surface-container-low dark:hover:bg-surface-container-high dark:text-on-surface-variant dark:hover:text-on-surface border border-slate-200 dark:border-outline-variant/20'
-                                        }`}
-                                    >
-                                        {Icon && <Icon size={14} className={isActive ? 'text-white' : 'text-blue-600 dark:text-primary'} />}
-                                        <span>{cat.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── DUAL PROMOTIONAL EDITORIAL BANNERS ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Promo 1: Festive Electronics Bonanza */}
-                <div className="lg:col-span-7 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg group border border-blue-500/30 bg-slate-950 min-h-[300px]">
-                    {/* Real Commercial Photography Background */}
-                    <img 
-                        src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=1400" 
-                        alt="Tech & Electronics" 
-                        className="absolute inset-0 w-full h-full object-cover object-center opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-transparent pointer-events-none" />
-                    
-                    <div className="relative z-10 flex flex-col gap-3">
-                        <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border border-blue-400/30 backdrop-blur-md">
-                                <Sparkles size={11} className="text-amber-400" /> TECH & ELECTRONICS BONANZA
+                <div className="relative z-10 p-6 sm:p-8 max-w-xl flex flex-col justify-between h-full">
+                    <div className="space-y-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] sm:text-[11px] font-black tracking-widest uppercase text-sky-300 bg-sky-500/25 px-3 py-1 rounded-full border border-sky-400/30 w-fit backdrop-blur-md flex items-center gap-1.5">
+                                <Zap size={12} className="fill-sky-400 text-sky-400" />
+                                Guaranteed Same-Day Delivery
                             </span>
-                            <span className="px-2.5 py-1 rounded-full bg-white/10 text-white/90 text-[10px] font-bold backdrop-blur-md border border-white/10">
-                                Bhopal Exclusive Deals
+                            <span className="text-[10px] sm:text-[11px] font-bold text-white/90 bg-white/10 px-2.5 py-1 rounded-full border border-white/20 backdrop-blur-md">
+                                100% InTrust Guarantee
                             </span>
                         </div>
-                        <div className="max-w-md">
-                            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight drop-shadow-sm">
-                                Up to 60% Off on Top Tech Brands
-                            </h2>
-                            <p className="text-xs sm:text-sm text-slate-200 mt-2 font-medium leading-relaxed">
-                                Unmatched deals on trending electronics and essentials with exclusive rewards and coins straight back into your InTrust Wallet.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="relative z-10 pt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 mt-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15">
-                                <Sparkles size={20} className="text-[#D4AF37]" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Instant InTrust Credit</p>
-                                <p className="text-sm font-black text-white">Wallet Rewards</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => handleCategoryClick('electronics')}
-                            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center gap-2 shadow-md transition-all active:scale-95"
-                        >
-                            <span>Shop Tech Deals</span>
-                            <ArrowRight size={14} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Promo 2: InTrust Official & Express Delivery */}
-                <div className="lg:col-span-5 relative overflow-hidden rounded-3xl text-white p-7 sm:p-8 flex flex-col justify-between shadow-lg border border-emerald-500/30 bg-emerald-950 group min-h-[300px]">
-                    {/* Real Commercial Photography Background */}
-                    <img 
-                        src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=1200" 
-                        alt="InTrust Official Express" 
-                        className="absolute inset-0 w-full h-full object-cover object-center opacity-35 group-hover:scale-105 transition-transform duration-700 pointer-events-none" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/85 to-transparent pointer-events-none" />
-
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30 backdrop-blur-md flex items-center gap-1">
-                                <Zap size={12} className="fill-emerald-400 text-emerald-400" />
-                                Express Dispatch
-                            </span>
-                            <span className="px-2.5 py-1 rounded-full bg-white/10 text-white text-[10px] font-bold backdrop-blur-md border border-white/15">
-                                Official Hub
-                            </span>
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-black text-white leading-tight drop-shadow-sm">
-                            InTrust Official
-                        </h3>
-                        <p className="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
-                            Order genuine essentials and verified gadgets directly from the official InTrust hub with live order tracking and verified fulfillment.
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm">
+                            Everything You Need, Delivered In Minutes
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed">
+                            Shop fresh groceries, daily essentials, electronics &amp; local partner inventory with express doorstep fulfillment.
                         </p>
                     </div>
 
-                    <div className="relative z-10 pt-6 mt-6 border-t border-white/15 flex items-center justify-between">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] text-slate-300 uppercase font-bold">Buyer Protection</span>
-                            <span className="text-sm font-black text-emerald-400">100% InTrust Guarantee</span>
-                        </div>
-                        <Link
-                            href="/shop/official"
-                            className="px-5 py-2.5 rounded-xl bg-white text-emerald-950 hover:bg-slate-100 font-black text-xs transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                    <div className="pt-4 flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedDepartment('grocery')}
+                            className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-blue-600/30 transition-all active:scale-95"
                         >
-                            <span>Visit Official Store</span>
-                            <ArrowRight size={13} />
+                            <span>Shop Daily Essentials</span>
+                            <ArrowRight size={14} />
+                        </button>
+                        <Link
+                            href="/shop/category"
+                            className="px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm backdrop-blur-md border border-white/20 transition-all active:scale-95"
+                        >
+                            Browse All Departments
                         </Link>
                     </div>
                 </div>
             </div>
 
-            {/* ── SHOP BY CATEGORY • HORIZONTAL CAROUSEL ── */}
+            {/* ── 2. UNIFIED STORE SWITCHER, SEARCH & DEPARTMENT FILTER BAR ── */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs space-y-3.5">
+                {/* Top Row: Store Mode Switcher + Omnibox Search Bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {/* Animated Store Mode Toggle Switcher with InTrust Logo */}
+                    <div className="p-1 rounded-2xl bg-surface-container-low flex items-center gap-1 shrink-0 border border-outline-variant/20 self-start sm:self-auto relative">
+                        <motion.button
+                            type="button"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => { setPickupMode('all'); handleCategoryClick(''); }}
+                            className={`relative px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 z-10 ${
+                                pickupMode === 'all' && selectedCategory !== 'official'
+                                    ? 'text-blue-600 dark:text-sky-400 font-black'
+                                    : 'text-on-surface-variant hover:text-on-surface'
+                            }`}
+                        >
+                            {pickupMode === 'all' && selectedCategory !== 'official' && (
+                                <motion.div
+                                    layoutId="storeToggleIndicator"
+                                    className="absolute inset-0 bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 -z-10"
+                                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                            )}
+                            <Store size={14} />
+                            <span>All Stores</span>
+                        </motion.button>
+                        <motion.button
+                            type="button"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => router.push('/shop/official')}
+                            className={`relative px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 z-10 ${
+                                selectedCategory === 'official' || pickupMode === 'official'
+                                    ? 'text-blue-600 dark:text-sky-400 font-black'
+                                    : 'text-on-surface-variant hover:text-blue-600 dark:hover:text-sky-400'
+                            }`}
+                        >
+                            {(selectedCategory === 'official' || pickupMode === 'official') && (
+                                <motion.div
+                                    layoutId="storeToggleIndicator"
+                                    className="absolute inset-0 bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 -z-10"
+                                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                                />
+                            )}
+                            <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center overflow-hidden p-0.5 border border-slate-200 dark:border-white/20 shadow-2xs">
+                                <Image src="/icons/intrustLogo.png" alt="InTrust" width={14} height={14} className="object-contain" />
+                            </div>
+                            <span>InTrust Official</span>
+                        </motion.button>
+                    </div>
+
+                    {/* Search Omnibox */}
+                    <div className="flex-1 relative flex items-center">
+                        <Search size={17} className="absolute left-4 text-brand-steel pointer-events-none" />
+                        <input
+                            type="text"
+                            placeholder="Search local stores, groceries, gadgets, items..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full h-11 pl-11 pr-10 rounded-2xl bg-surface-container-low text-on-surface text-xs sm:text-sm font-medium placeholder:text-brand-steel focus:outline-none focus:bg-surface-container-lowest border border-transparent focus:border-blue-500 shadow-inner transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 text-brand-steel hover:text-on-surface p-1"
+                            >
+                                <X size={15} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Department-Only Filter Chips */}
+                <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pt-0.5">
+                    <button
+                        type="button"
+                        onClick={() => setSelectedDepartment('all')}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-xs ${
+                            selectedDepartment === 'all'
+                                ? 'bg-blue-600 text-white shadow-sm font-black'
+                                : 'bg-white hover:bg-slate-100 text-slate-700 dark:bg-surface-container-low dark:hover:bg-surface-container-high dark:text-on-surface-variant border border-slate-200 dark:border-outline-variant/20'
+                        }`}
+                    >
+                        All Stores
+                    </button>
+                    {MERCHANT_DEPARTMENTS.map((dept) => {
+                        const isActive = selectedDepartment === dept.key;
+                        return (
+                            <button
+                                key={dept.key}
+                                type="button"
+                                onClick={() => setSelectedDepartment(dept.key)}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-xs ${
+                                    isActive
+                                        ? 'bg-blue-600 text-white shadow-sm font-black'
+                                        : 'bg-white hover:bg-slate-100 text-slate-700 dark:bg-surface-container-lowest dark:hover:bg-surface-container-low dark:text-on-surface-variant border border-slate-200 dark:border-outline-variant/30'
+                                }`}
+                            >
+                                <span>{dept.label.split('&')[0].trim()}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* ── 3. SHOP BY CATEGORY • DYNAMIC QUICK COMMERCE CAROUSEL ── */}
             <div className="w-full space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                     <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider border border-blue-500/20">
-                                Curated Categories
-                            </span>
-                            <span className="text-[11px] text-slate-500 dark:text-brand-steel font-semibold">
-                                Instant Delivery &amp; Pickup
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight">
+                                Shop by Category
+                            </h2>
+                            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-black uppercase tracking-wider border border-sky-500/20">
+                                Same-Day Delivery
                             </span>
                         </div>
-                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                            Explore Top Categories
-                        </h2>
+                        <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
+                            Select any department to browse live inventory &amp; express deals
+                        </p>
                     </div>
-                    {/* CTA & Carousel Navigation Buttons */}
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    
+                    <div className="flex items-center gap-2">
+                        {/* Desktop Carousel Scroll Arrows */}
+                        <div className="hidden sm:flex items-center gap-1 mr-1">
+                            <button
+                                type="button"
+                                onClick={() => scrollCategorySlider('left')}
+                                aria-label="Previous departments"
+                                className="w-8 h-8 rounded-full bg-surface-container-lowest hover:bg-surface-container-low border border-outline-variant/30 flex items-center justify-center text-on-surface transition-all active:scale-95 shadow-xs"
+                            >
+                                <ChevronLeft size={15} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => scrollCategorySlider('right')}
+                                aria-label="Next departments"
+                                className="w-8 h-8 rounded-full bg-surface-container-lowest hover:bg-surface-container-low border border-outline-variant/30 flex items-center justify-center text-on-surface transition-all active:scale-95 shadow-xs"
+                            >
+                                <ChevronRight size={15} />
+                            </button>
+                        </div>
                         <Link
                             href="/shop/category"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-xs font-black transition-all border border-blue-500/20 shadow-xs active:scale-95"
+                            className="text-xs sm:text-sm font-black text-blue-600 dark:text-sky-400 hover:underline flex items-center gap-1 shrink-0"
                         >
-                            <span>Shop by Category</span>
-                            <ArrowRight size={13} />
+                            <span>View All</span>
+                            <ChevronRight size={14} />
                         </Link>
-                        <div className="flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() => scrollCategories('left')}
-                                aria-label="Previous categories"
-                                className="w-8 h-8 rounded-full bg-white dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex items-center justify-center text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-high transition-all shadow-xs active:scale-95"
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => scrollCategories('right')}
-                                aria-label="Next categories"
-                                className="w-8 h-8 rounded-full bg-white dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex items-center justify-center text-slate-700 dark:text-on-surface hover:bg-slate-100 dark:hover:bg-surface-container-high transition-all shadow-xs active:scale-95"
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
                     </div>
                 </div>
 
-                <div 
+                {/* Horizontal Scroll Carousel with Direct Department Redirects */}
+                <div
                     ref={categoryScrollRef}
-                    className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth py-2 px-0.5"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    className="w-full flex items-stretch gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1"
                 >
-                    {dynamicCategoryList
-                        .filter((c) => c.slug !== '')
-                        .map((cat) => {
-                            const Icon = cat.icon;
-                            return (
-                                <Link
-                                    key={cat.slug}
-                                    href={`/shop/category/${cat.slug}`}
-                                    className="group shrink-0 w-32 sm:w-36 p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-surface-container-lowest border border-slate-200/80 dark:border-outline-variant/25 hover:border-blue-500/50 dark:hover:border-primary/50 transition-all hover:shadow-md hover:-translate-y-0.5 flex flex-col items-center text-center justify-between"
-                                >
-                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-50 dark:bg-black/20 p-1 flex items-center justify-center relative shadow-xs transition-transform duration-300 group-hover:scale-105">
-                                        {cat.image ? (
-                                            <img
-                                                src={cat.image}
-                                                alt={cat.label}
-                                                className="w-full h-full object-cover rounded-xl"
-                                                onError={(e) => {
-                                                    e.currentTarget.style.display = 'none';
-                                                    const fallbackEl = e.currentTarget.nextSibling;
-                                                    if (fallbackEl) fallbackEl.style.display = 'flex';
-                                                }}
-                                            />
-                                        ) : null}
-                                        <div 
-                                            className="w-full h-full items-center justify-center text-primary"
-                                            style={{ display: cat.image ? 'none' : 'flex' }}
-                                        >
-                                            <Icon size={24} strokeWidth={2.2} />
-                                        </div>
-                                    </div>
-                                    <div className="w-full mt-2.5 min-h-[32px] flex flex-col items-center justify-center">
-                                        <span className="text-xs font-bold text-slate-800 dark:text-on-surface group-hover:text-blue-600 dark:group-hover:text-primary transition-colors line-clamp-2 leading-tight">
-                                            {cat.label}
-                                        </span>
-                                    </div>
-                                </Link>
-                            );
-                        })}
+                    {carouselDepartments.map((cat) => {
+                        const Icon = getCategoryIcon(cat.label);
+                        const href = `/shop/category/${cat.slug}`;
+
+                        return (
+                            <Link
+                                key={cat.slug}
+                                href={href}
+                                className="group shrink-0 w-[120px] sm:w-[136px] p-3 rounded-2xl sm:rounded-3xl bg-surface-container-lowest hover:bg-surface-container-low border border-outline-variant/25 hover:border-blue-500/50 transition-all duration-300 flex flex-col items-center text-center justify-between shadow-xs hover:shadow-lg active:scale-95 cursor-pointer"
+                            >
+                                <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center p-2 mb-2 transition-transform group-hover:scale-110 shadow-xs bg-gradient-to-tr ${cat.gradient} text-white overflow-hidden`}>
+                                    <Icon size={26} strokeWidth={2.2} className="relative z-10 text-white drop-shadow-xs" />
+                                </div>
+                                
+                                <div className="space-y-0.5 w-full">
+                                    <span className="text-[12px] sm:text-xs font-black text-on-surface group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors line-clamp-1 leading-tight">
+                                        {cat.shortLabel}
+                                    </span>
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-on-surface-variant block truncate">
+                                        {cat.badge}
+                                    </span>
+                                </div>
+                            </Link>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* ── 1. VERIFIED BHOPAL STORES & MERCHANT CATALOGS (FEATURED FIRST) ── */}
-            {filteredMerchants.length > 0 && (
-                <div className="w-full space-y-6 pt-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider border border-blue-500/20">
-                                    Local Commerce Network
-                                </span>
-                                <span className="text-[11px] text-slate-500 dark:text-brand-steel font-semibold">
-                                    Bhopal Verified Sellers
-                                </span>
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight flex items-center gap-2">
-                                <span>🏬 Verified Stores &amp; Retail Catalogs</span>
-                            </h2>
-                            <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
-                                Direct merchant contact with fast local store pickup &amp; 100% InTrust Protection
-                            </p>
+            {/* ── 4. TRUSTED STORES NEAR YOU ── */}
+            <div className="w-full space-y-4 pt-2">
+                <div className="relative w-full rounded-3xl p-6 sm:p-8 overflow-hidden border border-blue-500/25 bg-gradient-to-br from-[#070b14] via-[#0c142b] to-[#070b18] shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 group">
+                    {/* ── Rich InTrust Theme Background Illustration & Grid ── */}
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        {/* Soft Ambient Radial Orbs */}
+                        <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-600/20 rounded-full blur-3xl" />
+                        <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-sky-500/15 rounded-full blur-3xl" />
+                        <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl" />
+
+                        {/* Architectural Network Grid & Store Vectors */}
+                        <svg className="absolute inset-0 w-full h-full opacity-20 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <pattern id="store-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.8" className="text-blue-400" />
+                                    <circle cx="0" cy="0" r="1.5" fill="currentColor" className="text-sky-400" />
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#store-grid)" />
+                            {/* Curved Network Connection Waypoints */}
+                            <path d="M 200 120 Q 380 40 600 90 T 950 50" fill="none" stroke="url(#net-gradient)" strokeWidth="1.5" strokeDasharray="4 4" />
+                            <path d="M 150 70 Q 420 130 750 80" fill="none" stroke="url(#net-gradient)" strokeWidth="1" strokeDasharray="3 3" />
+                            <defs>
+                                <linearGradient id="net-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.1" />
+                                    <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.6" />
+                                    <stop offset="100%" stopColor="#818cf8" stopOpacity="0.1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    {/* Left: Content & Badges */}
+                    <div className="relative z-10 max-w-xl space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-sky-300 bg-sky-500/20 border border-sky-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 backdrop-blur-md">
+                                <svg className="w-3 h-3 text-[#0095F6] shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" fill="#0095F6" />
+                                    <path d="M8.5 12.5L10.8 14.8L15.5 9.8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <span>Verified Local Network</span>
+                            </span>
+                            <span className="text-[11px] text-sky-200/80 font-bold flex items-center gap-1">
+                                <Zap size={12} className="text-sky-400 fill-sky-400" />
+                                <span>Same-Day Dispatch</span>
+                            </span>
+                        </div>
+
+                        <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                            Trusted Stores Near You
+                        </h2>
+                        
+                        <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
+                            Direct neighborhood store inventory, transparent merchant pricing, and guaranteed same-day doorstep delivery.
+                        </p>
+
+                        {/* Feature Tags Row */}
+                        <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-300 font-semibold">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                                <ShieldCheck size={13} className="text-emerald-400" />
+                                <span>100% Genuine Stock</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                                <Sparkles size={13} className="text-amber-400" />
+                                <span>Zero Commission Markup</span>
+                            </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {filteredMerchants.map((merchant) => {
-                            const banner = merchant.shopping_banner_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80';
-                            const merchantPhone = merchant.phone || merchant.business_phone;
-                            const isOpen = merchant.is_open !== false;
-                            const ratingVal = ratingsMap[merchant.id]?.avg_rating;
-                            const storeUrl = `/shop/${merchant.slug || merchant.id}`;
+                    {/* Right: Graphic Card with InTrust Storefront Illustration & Live Store Count */}
+                    <div className="relative z-10 shrink-0 self-stretch sm:self-auto flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3">
+                        {/* Live Active Store Count Pill */}
+                        <div className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/20 text-xs font-black text-white flex items-center gap-2.5 shadow-lg shadow-black/20 transition-all">
+                            <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                            </span>
+                            <span>{filteredMerchants.length} Active Stores Nearby</span>
+                        </div>
 
-                            // Get ONLY this merchant's products
-                            const storeProds = (merchantProductsMap[merchant.id] || []).slice(0, 3);
-
-                            return (
-                                <div
-                                    key={merchant.id}
-                                    onClick={() => router.push(storeUrl)}
-                                    className="group bg-white dark:bg-[#0c0e16] hover:bg-slate-50 dark:hover:bg-white/[0.02] rounded-3xl p-4 border border-slate-200/90 dark:border-white/[0.08] hover:border-blue-500/40 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer relative"
-                                >
-                                    <div>
-                                        <div className="relative h-44 w-full rounded-2xl overflow-hidden bg-surface-container-low mb-4">
-                                            <img
-                                                src={banner}
-                                                alt={merchant.business_name}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
-
-                                            <div className="absolute top-3 left-3 flex items-center gap-2">
-                                                {isOpen ? (
-                                                    <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                                        Open Now
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2.5 py-1 rounded-full bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                                                        Closed
-                                                    </span>
-                                                )}
-                                                <span className="px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[10px] font-bold">
-                                                    Direct Order
-                                                </span>
-                                            </div>
-
-                                            {/* Top right: Rating */}
-                                            {ratingVal != null && (
-                                                <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                                                    <div className="px-2 py-1 rounded-xl bg-white/95 backdrop-blur-md text-slate-900 text-xs font-black flex items-center gap-1 shadow-sm">
-                                                        <Star size={12} className="text-amber-500 fill-amber-500" />
-                                                        <span>{Number(ratingVal).toFixed(1)}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {merchant.business_address && (
-                                                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-1 text-white text-xs font-semibold truncate">
-                                                    <MapPin size={13} className="text-[#D4AF37] shrink-0" />
-                                                    <span className="truncate">{merchant.business_address}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-extrabold text-base text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                                {merchant.business_name}
-                                            </h3>
-                                            <ShieldCheck size={16} className="text-blue-600 dark:text-primary shrink-0" title="Verified Merchant" />
-                                        </div>
-
-                                        {merchant.business_address && (
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-1 mb-2">
-                                                {merchant.business_address}
-                                            </p>
-                                        )}
-
-                                        {/* Merchant's OWN Products Preview */}
-                                        {storeProds.length > 0 ? (
-                                            <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5">
-                                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-brand-steel mb-2 flex items-center gap-1">
-                                                    <Sparkles size={11} className="text-amber-500" />
-                                                    Featured in this Store
-                                                </p>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {storeProds.map((p) => {
-                                                        const pImg = getProductFallbackImage(p);
-                                                        return (
-                                                            <div 
-                                                                key={p.id}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    router.push(`/shop/product/${p.slug || p.id}`);
-                                                                }}
-                                                                className="p-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 hover:border-blue-500/40 transition-all flex flex-col justify-between group/prod"
-                                                            >
-                                                                <div className="w-full h-12 rounded-lg overflow-hidden bg-white dark:bg-black/20 mb-1 flex items-center justify-center p-0.5">
-                                                                    <img src={pImg} alt={p.title} className="w-full h-full object-contain group-hover/prod:scale-105 transition-transform" />
-                                                                </div>
-                                                                <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{p.title}</span>
-                                                                <span className="text-[11px] font-black text-blue-600 dark:text-primary mt-0.5">₹{p.selling_price}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5">
-                                                <div className="flex items-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] text-slate-500 dark:text-slate-400 text-[11px] font-semibold">
-                                                    <Store size={13} className="text-blue-500" />
-                                                    <span>Verified Merchant Catalog • Live Pickup</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between gap-3 mt-3">
-                                        {merchantPhone && (
-                                            <a
-                                                href={`tel:${merchantPhone}`}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-bold flex items-center gap-1.5 border border-slate-200/80 dark:border-white/10 transition-colors"
-                                                title="Call Store Merchant"
-                                            >
-                                                <Phone size={13} className="text-emerald-600 dark:text-emerald-400" />
-                                                <span>Call</span>
-                                            </a>
-                                        )}
-
-                                        <Link
-                                            href={storeUrl}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
-                                        >
-                                            <span>Visit Storefront</span>
-                                            <ArrowRight size={13} />
-                                        </Link>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        {/* Storefront Illustration Accent (Desktop & Tablet) */}
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-950/40 border border-blue-500/20 text-[10px] font-bold text-sky-200">
+                            <Store size={14} className="text-blue-400" />
+                            <span>Bhopal Metro Region</span>
+                        </div>
                     </div>
                 </div>
-            )}
 
-            {/* ── 2. CURATED FEATURED PRODUCTS & TRENDING DEALS (LIMITED & CLEAN) ── */}
-            <div className="w-full space-y-6 pt-6 border-t border-outline-variant/20">
-                <div className="flex items-center justify-between">
+                {filteredMerchants.length === 0 ? (
+                    <div className="p-10 rounded-3xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-2">
+                        <Store size={36} className="mx-auto text-on-surface-variant/40" />
+                        <h4 className="font-black text-base text-on-surface">No stores found in this department</h4>
+                        <p className="text-xs text-on-surface-variant">Try selecting "All Stores" to explore other verified sellers.</p>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedDepartment('all')}
+                            className="mt-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
+                        >
+                            View All Stores
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredMerchants.map((merchant) => (
+                            <MerchantCard
+                                key={merchant.id}
+                                merchant={merchant}
+                                variant="showcase"
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* ── 5. CURATED FLASH DEALS & TOP PRODUCTS (Amazon-Grade Clean & Premium) ── */}
+            <div className="w-full space-y-4 pt-4 border-t border-outline-variant/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-0.5">
                             <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider border border-rose-500/20">
-                                Curated Deals
+                                Today's Deals
                             </span>
                             <span className="text-[11px] text-slate-500 dark:text-brand-steel font-semibold">
                                 Best Value Picks
                             </span>
                         </div>
                         <h2 className="text-xl sm:text-2xl font-black text-on-surface tracking-tight flex items-center gap-2">
-                            <span>🔥 Featured Deals &amp; Top Products</span>
+                            <span>⚡ Top Curated Deals</span>
                         </h2>
-                        <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5">
-                            Showing {Math.min(visibleProductCount, filteredProducts.length)} of {filteredProducts.length} curated genuine items
-                        </p>
                     </div>
 
-                    <button
-                        onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="px-3.5 py-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/20 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-colors"
-                    >
-                        <SlidersHorizontal size={14} />
-                        <span>Filters</span>
-                    </button>
-                </div>
-
-                {/* Filter Drawers / Chips */}
-                {isFilterOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 flex flex-wrap items-center gap-3"
-                    >
-                        <label className="flex items-center gap-2 text-xs font-bold text-on-surface cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={filterOnlyOpen}
-                                onChange={(e) => setFilterOnlyOpen(e.target.checked)}
-                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                            />
-                            <span>Open Stores Only</span>
-                        </label>
-
-                        <div className="flex items-center gap-2 pl-4 border-l border-outline-variant/20 text-xs font-bold text-on-surface">
-                            <span>Rating:</span>
-                            {[0, 4.0, 4.5].map((r) => (
-                                <button
-                                    key={r}
-                                    onClick={() => setFilterMinRating(r)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        filterMinRating === r
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
-                                    }`}
-                                >
-                                    {r === 0 ? 'All' : `${r}+ ★`}
-                                </button>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Sub-Category Filter Chips */}
-                {availableSubCategories.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-brand-steel mr-1 shrink-0 flex items-center gap-1">
-                            <Sparkles size={12} className="text-violet-500" />
-                            Sub-Category:
-                        </span>
-                        <button
-                            onClick={() => handleSubCategoryClick('all')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                                selectedSubCategory === 'all'
-                                    ? 'bg-violet-600 text-white shadow-xs font-black'
-                                    : 'bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant'
-                            }`}
-                        >
-                            All
-                        </button>
-                        {availableSubCategories.map((sub) => (
+                    {/* Price & Discount Filter Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                        {[
+                            { id: 'all', label: 'All Deals' },
+                            { id: 'under_500', label: 'Under ₹500' },
+                            { id: 'under_1500', label: 'Under ₹1,500' },
+                            { id: 'discount_20', label: '20%+ Off' },
+                        ].map((f) => (
                             <button
-                                key={sub}
-                                onClick={() => handleSubCategoryClick(sub)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                                    selectedSubCategory === sub
-                                        ? 'bg-violet-600 text-white shadow-xs font-black'
+                                key={f.id}
+                                type="button"
+                                onClick={() => setDealFilter(f.id)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-2xs ${
+                                    dealFilter === f.id
+                                        ? 'bg-blue-600 text-white shadow-xs font-black'
                                         : 'bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant'
                                 }`}
                             >
-                                {sub}
+                                {f.label}
                             </button>
                         ))}
                     </div>
-                )}
+                </div>
 
-                {/* Products Grid — Responsive 2 cols on mobile */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-                    {filteredProducts.slice(0, visibleProductCount).map((prod) => {
-                        const discount = prod.mrp && prod.selling_price 
-                            ? Math.round(((prod.mrp - prod.selling_price) / prod.mrp) * 100)
-                            : 0;
+                {/* Amazon-Grade Clean Product Grid — 8 items max */}
+                {displayedDeals.length === 0 ? (
+                    <div className="p-10 rounded-3xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-2">
+                        <Package size={36} className="mx-auto text-on-surface-variant/40" />
+                        <h4 className="font-black text-base text-on-surface">No products match this deal filter</h4>
+                        <p className="text-xs text-on-surface-variant">Try selecting "All Deals" to see all curated products.</p>
+                        <button
+                            type="button"
+                            onClick={() => setDealFilter('all')}
+                            className="mt-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
+                        >
+                            Reset Deal Filter
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                        {displayedDeals.map((prod) => {
+                            const discount = prod.mrp && prod.selling_price 
+                                ? Math.round(((prod.mrp - prod.selling_price) / prod.mrp) * 100)
+                                : 0;
 
-                        const isAdded = addedProductId === prod.id;
-                        const isWishlisted = productWishlistIds.has(prod.id);
-                        const isWishlistBusy = wishlistLoading.has(prod.id);
-                        const imageUrl = getProductFallbackImage(prod);
+                            const isAdded = addedProductId === prod.id;
+                            const isWishlisted = productWishlistIds.has(prod.id);
+                            const isWishlistBusy = wishlistLoading.has(prod.id);
+                            const imageUrl = getProductFallbackImage(prod);
+                            const isOfficial = (prod.merchants?.business_name || '').toLowerCase().includes('official');
 
-                        return (
-                            <Link
-                                key={prod.id}
-                                href={`/shop/product/${prod.slug || prod.id}`}
-                                className="group flex flex-col justify-between bg-surface-container-lowest hover:bg-surface-container-low rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-outline-variant/30 hover:border-blue-500/50 shadow-sm hover:shadow-xl transition-all duration-300 relative"
-                            >
-                                <div>
-                                    <div className="relative w-full aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-surface-container-low mb-3 sm:mb-4 flex items-center justify-center p-2 sm:p-3">
-                                        <img
-                                            src={imageUrl}
-                                            alt={prod.title}
-                                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                                        />
+                            return (
+                                <div
+                                    key={prod.id}
+                                    onClick={() => router.push(`/shop/product/${prod.slug || prod.id}`)}
+                                    className="group relative flex flex-col justify-between bg-surface-container-lowest hover:bg-surface-container-low rounded-3xl p-3 sm:p-3.5 border border-outline-variant/30 hover:border-blue-500/40 shadow-xs hover:shadow-xl transition-all duration-300 cursor-pointer"
+                                >
+                                    <div>
+                                        {/* Product Image Container */}
+                                        <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900/40 mb-2.5 flex items-center justify-center p-3 border border-slate-100 dark:border-white/5">
+                                            <img
+                                                src={imageUrl}
+                                                alt={prod.title}
+                                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                                                loading="lazy"
+                                            />
 
-                                        {discount > 0 && (
-                                            <div className="absolute top-2 left-2 px-1.5 sm:px-2 py-0.5 rounded-lg bg-rose-600 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-sm">
-                                                {discount}% OFF
-                                            </div>
-                                        )}
+                                            {/* Clean Deal Badge on Top-Left */}
+                                            {discount > 0 ? (
+                                                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs z-10">
+                                                    {discount}% off
+                                                </div>
+                                            ) : (
+                                                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-blue-600/90 text-white text-[10px] font-black tracking-tight flex items-center gap-1 shadow-xs z-10">
+                                                    <Zap size={10} className="fill-white" />
+                                                    <span>TOP PICK</span>
+                                                </span>
+                                            )}
 
-                                        <div className="absolute bottom-2 left-2 px-1.5 sm:px-2 py-0.5 rounded-lg bg-surface-container-lowest/90 backdrop-blur-md text-on-surface text-[9px] sm:text-[10px] font-black flex items-center gap-1 shadow-sm">
-                                            <Star size={10} className="text-amber-500 fill-amber-500" />
-                                            <span>{prod.rating || '4.8'}</span>
+                                            {/* Wishlist Heart Button on Top-Right */}
+                                            <motion.button
+                                                type="button"
+                                                disabled={isWishlistBusy}
+                                                whileTap={isWishlistBusy ? {} : { scale: 1.25 }}
+                                                whileHover={isWishlistBusy ? {} : { scale: 1.1 }}
+                                                onClick={(e) => {
+                                                    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                                                        try { navigator.vibrate(40); } catch (e) {}
+                                                    }
+                                                    toggleProductWishlist(e, prod);
+                                                }}
+                                                className={`absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all z-20 shadow-xs ${
+                                                    isWishlistBusy ? 'opacity-70 cursor-wait' : ''
+                                                } ${
+                                                    isWishlisted 
+                                                        ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-500 border border-rose-200 dark:border-rose-800 shadow-sm'
+                                                        : 'bg-white/90 dark:bg-black/60 text-slate-400 hover:text-rose-500 border border-slate-200/60 dark:border-white/10'
+                                                }`}
+                                                title={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
+                                            >
+                                                {isWishlisted && (
+                                                    <motion.span
+                                                        key={`burst-${prod.id}`}
+                                                        initial={{ scale: 0.8, opacity: 0.8 }}
+                                                        animate={{ scale: 1.8, opacity: 0 }}
+                                                        transition={{ duration: 0.45, ease: "easeOut" }}
+                                                        className="absolute inset-0 rounded-full border-2 border-rose-500 pointer-events-none"
+                                                    />
+                                                )}
+                                                <motion.div
+                                                    animate={isWishlisted ? { 
+                                                        scale: [1, 1.45, 0.85, 1.15, 1],
+                                                        rotate: [0, -10, 10, -5, 0]
+                                                    } : { scale: 1, rotate: 0 }}
+                                                    transition={{ duration: 0.4, ease: "easeOut" }}
+                                                >
+                                                    <Heart 
+                                                        size={14} 
+                                                        className={`transition-colors duration-300 ${
+                                                            isWishlisted 
+                                                                ? "fill-rose-500 text-rose-500 drop-shadow-[0_2px_6px_rgba(244,63,94,0.45)]" 
+                                                                : "currentColor"
+                                                        }`} 
+                                                    />
+                                                </motion.div>
+                                            </motion.button>
                                         </div>
 
-                                        {/* Animated Wishlist Heart Button */}
-                                        <motion.button
-                                            type="button"
-                                            disabled={isWishlistBusy}
-                                            whileTap={isWishlistBusy ? {} : { scale: 1.35 }}
-                                            whileHover={isWishlistBusy ? {} : { scale: 1.1 }}
-                                            onClick={(e) => toggleProductWishlist(e, prod)}
-                                            className={`absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all z-10 ${
-                                                isWishlistBusy ? 'opacity-70 cursor-wait' : ''
-                                            } ${
-                                                isWishlisted 
-                                                    ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-500 border border-rose-200 dark:border-rose-800 shadow-sm'
-                                                    : 'bg-white/80 dark:bg-black/50 text-slate-400 hover:text-rose-500 border border-slate-200/60 dark:border-white/10'
-                                            }`}
-                                            title={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
-                                            aria-label={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
-                                        >
-                                            <motion.div
-                                                animate={isWishlisted ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                                                transition={{ duration: 0.3 }}
-                                            >
-                                                <Heart size={14} className={isWishlisted ? "fill-rose-500 text-rose-500" : "currentColor"} />
-                                            </motion.div>
-                                        </motion.button>
+                                        {/* Merchant Tag with Instagram-Style Blue Verified Badge */}
+                                        <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-semibold mb-1 truncate">
+                                            <Store size={11} className={isOfficial ? "text-blue-600 dark:text-sky-400 shrink-0" : "text-sky-600 dark:text-sky-400 shrink-0"} />
+                                            <span className="truncate">{prod.merchants?.business_name || 'Verified Store'}</span>
+                                            <svg className="w-3.5 h-3.5 text-[#0095F6] shrink-0 inline-block" viewBox="0 0 24 24" fill="none">
+                                                <circle cx="12" cy="12" r="10" fill="#0095F6" />
+                                                <path d="M8.5 12.5L10.8 14.8L15.5 9.8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+
+                                        {/* Title */}
+                                        <h3 className="font-bold text-xs sm:text-sm text-on-surface line-clamp-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors">
+                                            {prod.title}
+                                        </h3>
+
+                                        {/* Amazon Rating & Same-Day Badge Row */}
+                                        <div className="flex items-center gap-1.5 mt-1.5 text-[11px]">
+                                            <div className="flex items-center text-amber-500 font-bold">
+                                                <Star size={11} className="fill-amber-500 text-amber-500" />
+                                                <span className="ml-1 text-slate-800 dark:text-slate-200">{prod.rating || '4.8'}</span>
+                                            </div>
+                                            <span className="text-slate-400 text-[10px]">(120+)</span>
+                                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 truncate">
+                                                <Zap size={9} className="fill-emerald-600 text-emerald-600" />
+                                                Same-Day
+                                            </span>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-brand-steel font-semibold mb-1 truncate">
-                                        <Store size={11} className="text-blue-600 dark:text-primary shrink-0" />
-                                        <span className="truncate">{prod.merchants?.business_name || 'Verified Store'}</span>
-                                        {prod.sub_category && prod.sub_category !== 'General' && (
-                                            <>
-                                                <span>•</span>
-                                                <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 truncate">{prod.sub_category}</span>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <h3 className="font-bold text-xs sm:text-sm text-on-surface line-clamp-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-primary transition-colors">
-                                        {prod.title}
-                                    </h3>
-                                </div>
-
-                                <div className="pt-4 mt-3 border-t border-outline-variant/20 flex items-center justify-between gap-2">
-                                    <div className="flex flex-col">
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className="text-lg font-black text-on-surface">
+                                    {/* Amazon-Style Price Block & Action Button */}
+                                    <div className="pt-2 mt-2 border-t border-slate-100 dark:border-white/5 space-y-2">
+                                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                                            <span className="text-base sm:text-lg font-black text-on-surface">
                                                 ₹{Number(prod.selling_price).toLocaleString('en-IN')}
                                             </span>
                                             {prod.mrp && prod.mrp > prod.selling_price && (
-                                                <span className="text-xs text-brand-steel line-through font-semibold">
-                                                    ₹{Number(prod.mrp).toLocaleString('en-IN')}
+                                                <span className="text-[11px] text-slate-400 dark:text-slate-500 line-through font-semibold">
+                                                    M.R.P. ₹{Number(prod.mrp).toLocaleString('en-IN')}
                                                 </span>
                                             )}
                                         </div>
-                                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                            Earn Coins
-                                        </span>
+
+                                        {/* Full-width Responsive Action Button — Never overflows */}
+                                        <div onClick={(e) => e.stopPropagation()} className="w-full">
+                                            {isAdded ? (
+                                                <div className="w-full h-8 sm:h-9 flex items-center justify-center bg-blue-700 text-white rounded-xl gap-1.5 text-xs font-black shadow-xs">
+                                                    <Check size={14} strokeWidth={3} />
+                                                    <span>Added to Cart</span>
+                                                </div>
+                                            ) : (
+                                                <motion.button
+                                                    type="button"
+                                                    whileTap={{ scale: 0.96 }}
+                                                    onClick={(e) => handleAddToCart(e, prod)}
+                                                    className="w-full h-8 sm:h-9 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-blue-600/25"
+                                                >
+                                                    <ShoppingBag size={13} />
+                                                    <span>Add to Cart</span>
+                                                </motion.button>
+                                            )}
+                                        </div>
                                     </div>
-
-                                    <motion.button
-                                        type="button"
-                                        whileTap={{ scale: 0.88 }}
-                                        onClick={(e) => handleAddToCart(e, prod)}
-                                        className={`w-10 h-10 rounded-xl font-black text-xs flex items-center justify-center transition-all shrink-0 shadow-md ${
-                                            isAdded
-                                                ? 'bg-emerald-600 text-white shadow-emerald-500/25'
-                                                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-blue-500/25'
-                                        }`}
-                                        title="Add to Cart"
-                                    >
-                                        {isAdded ? (
-                                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                                <Check size={16} strokeWidth={3} />
-                                            </motion.div>
-                                        ) : (
-                                            <Plus size={16} strokeWidth={3} />
-                                        )}
-                                    </motion.button>
                                 </div>
-                            </Link>
-                        );
-                    })}
-                </div>
-
-                {/* Show More Products Button */}
-                {filteredProducts.length > visibleProductCount && (
-                    <div className="flex justify-center pt-2">
-                        <button
-                            type="button"
-                            onClick={() => setVisibleProductCount(prev => prev + 8)}
-                            className="px-6 py-3 rounded-2xl bg-surface-container-low hover:bg-surface-container-high text-on-surface font-black text-xs uppercase tracking-wider border border-outline-variant/30 flex items-center gap-2 shadow-xs transition-all active:scale-95"
-                        >
-                            <span>Explore More Products ({filteredProducts.length - visibleProductCount} more)</span>
-                            <ArrowRight size={14} />
-                        </button>
+                            );
+                        })}
                     </div>
                 )}
-            </div>
 
+                {/* Browse Full Catalog Button */}
+                <div className="flex justify-center pt-2">
+                    <Link
+                        href="/shop/category"
+                        className="px-6 py-3 rounded-2xl bg-surface-container-low hover:bg-surface-container-high text-on-surface font-black text-xs uppercase tracking-wider border border-outline-variant/30 flex items-center gap-2 shadow-xs transition-all active:scale-95"
+                    >
+                        <span>Browse Complete Catalog in Categories</span>
+                        <ArrowRight size={14} />
+                    </Link>
+                </div>
+            </div>
 
             {/* Single Merchant Cart Conflict Modal (Zomato-Style) */}
             <ConfirmModal
@@ -1127,6 +1087,12 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                 cancelLabel="Keep Current Cart"
                 onConfirm={handleConfirmClearCart}
                 onCancel={handleCancelClearCart}
+            />
+
+            {/* Slide-over Mini Cart Drawer */}
+            <MiniCartDrawer
+                isOpen={isMiniCartOpen}
+                onClose={() => setIsMiniCartOpen(false)}
             />
         </div>
     );

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
 
 function AvatarUpload({ userId, avatarUrl, displayName, onUpload }) {
     const [uploading, setUploading] = useState(false);
@@ -91,8 +92,12 @@ export default function ProfilePage() {
     const phoneRef = useRef(null);
     const emailRef = useRef(null);
     const [highlightedField, setHighlightedField] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [uploadingBanner, setUploadingBanner] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [formData, setFormData] = useState({
         business_name: '',
+        department: 'general',
         owner_name: '',
         gst_number: '',
         business_phone: '',
@@ -102,14 +107,11 @@ export default function ProfilePage() {
         shopping_banner_url: ''
     });
 
-    const [saving, setSaving] = useState(false);
-    const [uploadingBanner, setUploadingBanner] = useState(false);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
-
     useEffect(() => {
         if (merchant) {
             setFormData({
                 business_name: merchant.business_name || '',
+                department: merchant.department || 'general',
                 owner_name: merchant.owner_name || merchant.user_profiles?.full_name || '',
                 gst_number: merchant.gst_number || '',
                 business_phone: merchant.business_phone || merchant.user_profiles?.phone || '',
@@ -187,6 +189,7 @@ export default function ProfilePage() {
                 business_phone: formData.business_phone,
                 business_email: formData.business_email,
                 business_address: formData.business_address,
+                department: formData.department || 'general',
                 shopping_banner_url: formData.shopping_banner_url
             };
 
@@ -463,6 +466,30 @@ export default function ProfilePage() {
                                             className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all uppercase"
                                         />
                                     </div>
+                                </div>
+
+                                <div className="space-y-1.5 sm:col-span-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Store Department / Category</label>
+                                    <div className="relative group">
+                                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+                                        <select
+                                            value={formData.department || 'general'}
+                                            onChange={e => setFormData({ ...formData, department: e.target.value })}
+                                            className="w-full pl-12 pr-10 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm font-bold text-slate-900 dark:text-slate-100 transition-all appearance-none cursor-pointer"
+                                        >
+                                            {MERCHANT_DEPARTMENTS.map(dept => (
+                                                <option key={dept.key} value={dept.key} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold">
+                                                    {dept.label} ({dept.badge})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-xs text-slate-400">
+                                            ▼
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 ml-1">
+                                        This determines which section and filters your shop appears under in InTrust Mart.
+                                    </p>
                                 </div>
 
                                 <div className="sm:col-span-2 space-y-1.5">

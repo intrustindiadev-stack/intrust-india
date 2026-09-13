@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
     Search,
     X,
@@ -15,77 +15,131 @@ import {
     Grid,
     CheckCircle2,
     SlidersHorizontal,
-    Layers
+    Layers,
+    Store,
+    Zap
 } from 'lucide-react';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import { getCategoryIcon, getCategoryImage } from '@/lib/shopping/categories';
 import { CATEGORY_MAP, getSubCategories } from '@/lib/constants/categories';
+import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
 
 export default function CategoryDirectoryClient({ initialCategories = [], initialCounts = {} }) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedDepartment, setSelectedDepartment] = useState('all');
+    const [selectedDepartmentGroup, setSelectedDepartmentGroup] = useState('all');
 
-    // Build unified categories list combining DB categories and canonical taxonomy
+    // Build unified categories list combining DB categories, departments, and canonical taxonomy
     const categories = useMemo(() => {
-        const canonicalKeys = Object.keys(CATEGORY_MAP);
         const map = new Map();
 
-        // Populate from DB if available
-        initialCategories.forEach(cat => {
-            const name = cat.name || cat.title || '';
-            const slug = (cat.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
+        // 1. Populate from MERCHANT_DEPARTMENTS as core foundational departments
+        MERCHANT_DEPARTMENTS.forEach(dept => {
+            const slug = dept.key.replace(/_/g, '-');
+            const subCategories = getSubCategories(dept.label) || [];
             map.set(slug, {
-                id: cat.id || slug,
-                name: name,
+                id: `dept-${dept.key}`,
+                name: dept.label,
                 slug: slug,
-                description: cat.description || `Explore genuine ${name} products from verified merchants.`,
-                image: cat.image_url || getCategoryImage(name),
-                itemCount: initialCounts[slug] || initialCounts[name.toLowerCase()] || 0,
-                subCategories: getSubCategories(name),
+                departmentKey: dept.key,
+                badge: dept.badge || 'Verified Department',
+                gradient: dept.gradient || 'from-blue-600 to-indigo-600',
+                description: dept.description,
+                image: getCategoryImage(dept.label),
+                itemCount: initialCounts[slug] || initialCounts[dept.key] || initialCounts[dept.label.toLowerCase()] || 0,
+                subCategories: subCategories.length > 0 ? subCategories : (CATEGORY_MAP[dept.label] || []),
             });
         });
 
-        // Add any missing canonical categories
-        canonicalKeys.forEach(canonName => {
+        // 2. Populate / augment from DB categories
+        initialCategories.forEach(cat => {
+            const name = cat.name || cat.title || '';
+            const slug = (cat.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
+            const existing = map.get(slug);
+            if (existing) {
+                existing.id = cat.id || existing.id;
+                existing.name = name || existing.name;
+                if (cat.image_url) existing.image = cat.image_url;
+                if (cat.description) existing.description = cat.description;
+                const subs = getSubCategories(name);
+                if (subs.length > 0) existing.subCategories = subs;
+            } else {
+                map.set(slug, {
+                    id: cat.id || slug,
+                    name: name,
+                    slug: slug,
+                    departmentKey: slug,
+                    badge: 'Verified Store',
+                    gradient: 'from-blue-600 to-indigo-600',
+                    description: cat.description || `Explore genuine ${name} products from verified merchants.`,
+                    image: cat.image_url || getCategoryImage(name),
+                    itemCount: initialCounts[slug] || initialCounts[name.toLowerCase()] || 0,
+                    subCategories: getSubCategories(name),
+                });
+            }
+        });
+
+        // 3. Ensure canonical categories are also present
+        Object.keys(CATEGORY_MAP).forEach(canonName => {
             const slug = canonName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
             if (!map.has(slug)) {
                 map.set(slug, {
                     id: `canon-${slug}`,
                     name: canonName,
                     slug: slug,
+                    departmentKey: slug,
+                    badge: 'Curated Hub',
+                    gradient: 'from-indigo-600 to-blue-600',
                     description: `Explore top quality ${canonName} essentials and brand deals.`,
                     image: getCategoryImage(canonName),
                     itemCount: initialCounts[slug] || initialCounts[canonName.toLowerCase()] || 0,
                     subCategories: CATEGORY_MAP[canonName] || [],
                 });
-            } else {
-                // Ensure subcategories are merged
-                const existing = map.get(slug);
-                if (!existing.subCategories || existing.subCategories.length === 0) {
-                    existing.subCategories = CATEGORY_MAP[canonName] || [];
-                }
             }
         });
 
         return Array.from(map.values());
     }, [initialCategories, initialCounts]);
 
-    // Filter categories based on search and selected department filter
+    // Quick filter department groups
+    const departmentGroups = [
+        { id: 'all', label: 'All Departments' },
+        { id: 'daily', label: 'Daily Essentials', keys: ['grocery', 'fruits_veg', 'dairy_eggs', 'bakery', 'groceries', 'food'] },
+        { id: 'tech', label: 'Electronics & Tech', keys: ['electronics'] },
+        { id: 'fashion', label: 'Fashion & Apparel', keys: ['fashion'] },
+        { id: 'health', label: 'Pharmacy & Wellness', keys: ['pharmacy', 'health', 'health-wellness'] },
+        { id: 'beauty', label: 'Beauty & Personal Care', keys: ['personal_care', 'beauty', 'beauty-personal-care'] },
+        { id: 'home', label: 'Home & Living', keys: ['household', 'home', 'home-furnishing', 'tools-hardware'] },
+    ];
+
+    // Filter categories based on search and selected department group
     const filteredCategories = useMemo(() => {
         let result = categories;
 
+        // Group filtering
+        if (selectedDepartmentGroup !== 'all') {
+            const group = departmentGroups.find(g => g.id === selectedDepartmentGroup);
+            if (group?.keys) {
+                result = result.filter(cat => {
+                    const k = (cat.departmentKey || cat.slug || '').toLowerCase();
+                    return group.keys.some(gk => k.includes(gk) || gk.includes(k));
+                });
+            }
+        }
+
+        // Search filtering
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
             result = result.filter(cat => {
                 const nameMatch = cat.name.toLowerCase().includes(q);
                 const descMatch = (cat.description || '').toLowerCase().includes(q);
+                const badgeMatch = (cat.badge || '').toLowerCase().includes(q);
                 const subMatch = (cat.subCategories || []).some(sub => sub.toLowerCase().includes(q));
-                return nameMatch || descMatch || subMatch;
+                return nameMatch || descMatch || badgeMatch || subMatch;
             });
         }
 
         return result;
-    }, [categories, searchQuery]);
+    }, [categories, selectedDepartmentGroup, searchQuery]);
 
     const totalSubcategories = useMemo(() => {
         let count = 0;
@@ -105,28 +159,32 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                 ]} 
             />
 
-            {/* ── HERO BANNER ── */}
-            <div className="relative overflow-hidden rounded-3xl bg-surface-container-lowest p-6 sm:p-8 border border-outline-variant/30 shadow-sm">
+            {/* ── HERO BANNER (Clean, Modern Marketplace) ── */}
+            <div className="relative overflow-hidden rounded-3xl bg-surface-container-lowest p-6 sm:p-8 border border-outline-variant/30 shadow-xs">
                 <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
                 <div className="absolute left-1/3 -bottom-20 h-48 w-48 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="max-w-2xl space-y-2.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-black uppercase tracking-wider border border-blue-500/20 flex items-center gap-1.5">
                                 <Sparkles size={12} className="text-blue-600 dark:text-blue-400" />
-                                Product Taxonomy &amp; Directory
+                                Store Directory &amp; Departments
                             </span>
                             <span className="text-xs text-slate-400 dark:text-brand-steel">•</span>
                             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
                                 <ShieldCheck size={14} /> 100% Verified Stores
+                            </span>
+                            <span className="text-xs text-slate-400 dark:text-brand-steel">•</span>
+                            <span className="flex items-center gap-1 text-sky-600 dark:text-sky-400 text-xs font-bold">
+                                <Zap size={13} className="fill-sky-500 text-sky-500" /> Same-Day Delivery
                             </span>
                         </div>
                         <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                             Shop by Category &amp; Department
                         </h1>
                         <p className="text-xs sm:text-sm text-slate-600 dark:text-brand-steel font-medium leading-relaxed">
-                            Discover authentic products across {categories.length} major departments and {totalSubcategories}+ curated subcategories from verified Bhopal shops and InTrust Official inventory.
+                            Discover authentic products across {categories.length} core departments and {totalSubcategories}+ curated categories from verified local merchants and InTrust Official inventory.
                         </p>
                     </div>
 
@@ -168,7 +226,7 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search departments, subcategories (e.g. Mobiles, Staple food, Men's wear)..."
+                        placeholder="Search departments, items (e.g. Mobiles, Grocery, Men's wear)..."
                         className="w-full h-12 pl-11 pr-10 rounded-2xl bg-slate-100/80 dark:bg-surface-container-low text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-brand-steel text-xs sm:text-sm font-medium border border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-surface-container-lowest focus:outline-none transition-all shadow-inner"
                     />
                     {searchQuery && (
@@ -181,6 +239,26 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                         </button>
                     )}
                 </div>
+
+                {/* Department Filter Strip */}
+                <div className="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pt-1">
+                    {departmentGroups.map(group => {
+                        const isActive = selectedDepartmentGroup === group.id;
+                        return (
+                            <button
+                                key={group.id}
+                                onClick={() => setSelectedDepartmentGroup(group.id)}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                                    isActive
+                                        ? 'bg-blue-600 text-white shadow-xs font-black'
+                                        : 'bg-slate-100 dark:bg-surface-container-low text-slate-600 dark:text-brand-steel hover:bg-slate-200 dark:hover:bg-surface-container-high'
+                                }`}
+                            >
+                                {group.label}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* ── CATEGORY DIRECTORY GRID ── */}
@@ -188,10 +266,10 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                            {searchQuery ? `Search Results (${filteredCategories.length})` : 'All Departments'}
+                            {searchQuery ? `Search Results (${filteredCategories.length})` : 'All Store Departments'}
                         </h2>
                         <p className="text-xs text-slate-500 dark:text-brand-steel font-medium">
-                            Select any category to browse live products and local store inventory
+                            Select any department to browse live inventory, merchant stores, and express deals
                         </p>
                     </div>
 
@@ -199,7 +277,7 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                         href="/shop"
                         className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                     >
-                        <span>Back to Storefront</span>
+                        <span>Back to Shop Hub</span>
                         <ArrowRight size={13} />
                     </Link>
                 </div>
@@ -210,16 +288,16 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                             <Search size={22} />
                         </div>
                         <h3 className="text-base font-black text-slate-900 dark:text-white">
-                            No matching categories found
+                            No matching departments found
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-brand-steel max-w-sm mx-auto">
-                            We couldn't find any departments or subcategories matching "{searchQuery}". Try searching for Electronics, Groceries, or Fashion.
+                            We couldn't find any departments or subcategories matching "{searchQuery}". Try searching for Grocery, Electronics, or Fashion.
                         </p>
                         <button
-                            onClick={() => setSearchQuery('')}
+                            onClick={() => { setSearchQuery(''); setSelectedDepartmentGroup('all'); }}
                             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm"
                         >
-                            Clear Search
+                            Reset Filters
                         </button>
                     </div>
                 ) : (
@@ -248,7 +326,7 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                                                     e.currentTarget.src = getCategoryImage(cat.name);
                                                 }}
                                             />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
                                             
                                             {/* Icon Squircle Floating Badge */}
                                             <div className="absolute bottom-3 left-4 flex items-center gap-2.5">
@@ -256,26 +334,40 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                                                     <Icon size={20} strokeWidth={2.2} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-base font-black text-white drop-shadow-sm leading-tight">
-                                                        {cat.name}
-                                                    </h3>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <h3 className="text-base font-black text-white drop-shadow-sm leading-tight">
+                                                            {cat.name}
+                                                        </h3>
+                                                        {/* Instagram-style blue verified checkmark */}
+                                                        <svg className="w-3.5 h-3.5 text-[#0095F6] shrink-0 drop-shadow-xs" viewBox="0 0 24 24" fill="none">
+                                                            <circle cx="12" cy="12" r="10" fill="#0095F6" />
+                                                            <path d="M8.5 12.5L10.8 14.8L15.5 9.8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                    </div>
                                                     {cat.itemCount > 0 ? (
                                                         <span className="text-[10px] font-bold text-white/90 drop-shadow-xs">
                                                             {cat.itemCount} Items Available
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[10px] font-bold text-white/75 drop-shadow-xs">
+                                                        <span className="text-[10px] font-bold text-white/80 drop-shadow-xs">
                                                             Curated Collection
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            {/* Top Tag */}
-                                            <div className="absolute top-3 right-3">
-                                                <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-bold border border-white/20">
-                                                    {cat.subCategories.length} Subcategories
-                                                </span>
+                                            {/* Top Badges */}
+                                            <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                                                {cat.badge && (
+                                                    <span className="px-2.5 py-0.5 rounded-full bg-blue-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                        {cat.badge}
+                                                    </span>
+                                                )}
+                                                {cat.subCategories.length > 0 && (
+                                                    <span className="px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md text-white text-[10px] font-bold border border-white/20">
+                                                        {cat.subCategories.length} Types
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -295,16 +387,19 @@ export default function CategoryDirectoryClient({ initialCategories = [], initia
                                                         {cat.subCategories.slice(0, 6).map((sub, sIdx) => (
                                                             <Link
                                                                 key={sIdx}
-                                                                href={`/shop/category/${cat.slug}?sub=${encodeURIComponent(sub)}`}
+                                                                href={`/shop/category/${cat.slug}?sub_category=${encodeURIComponent(sub)}`}
                                                                 className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-surface-container-low hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-700 dark:text-on-surface-variant hover:text-blue-600 dark:hover:text-blue-400 text-[11px] font-semibold border border-slate-200/60 dark:border-outline-variant/15 transition-colors"
                                                             >
                                                                 {sub}
                                                             </Link>
                                                         ))}
                                                         {cat.subCategories.length > 6 && (
-                                                            <span className="px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-brand-steel self-center">
+                                                            <Link
+                                                                href={categoryHref}
+                                                                className="px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-brand-steel self-center hover:text-blue-600 dark:hover:text-blue-400"
+                                                            >
                                                                 +{cat.subCategories.length - 6} more
-                                                            </span>
+                                                            </Link>
                                                         )}
                                                     </div>
                                                 </div>

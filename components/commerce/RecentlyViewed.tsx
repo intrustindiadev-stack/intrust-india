@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { History, ShoppingBag, Eye } from 'lucide-react';
-import ProductCard from './ProductCard';
+import ProductCardV2 from './ProductCardV2';
 
 export interface RecentlyViewedItem {
   id: string;
@@ -76,45 +76,30 @@ export default function RecentlyViewed({ currentProductId }: { currentProductId?
   if (items.length === 0) return null;
 
   return (
-    <div className="mt-16 pt-10 border-t border-slate-100 dark:border-gray-800">
-      <div className="flex items-center gap-2 mb-6">
-        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-          <History size={16} />
-        </div>
-        <div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
-            Recently Viewed
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-gray-400">
-            Pick up where you left off
-          </p>
+    <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-slate-200/80 dark:border-white/[0.08]">
+      <div className="flex items-center justify-between mb-5 sm:mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100/60 dark:border-blue-900/40 shadow-xs">
+            <History size={18} />
+          </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+              Recently Viewed
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Pick up where you left off
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-        {items.map((item) => {
-          const productShim: any = {
-            id: item.id,
-            title: item.title,
-            category: item.category || 'General',
-            suggested_retail_price_paise: item.price_paise,
-            mrp_paise: item.compare_at_price_paise,
-            product_images: item.image ? [item.image] : [],
-            slug: item.slug || item.id,
-            is_platform: true,
-            variants: item.is_fashion ? [{
-              id: item.id,
-              price_paise: item.price_paise,
-              compare_at_price_paise: item.compare_at_price_paise,
-              inventory_quantity: 10,
-              media: item.image ? [{ image_url: item.image }] : []
-            }] : []
-          };
-
-          return (
-            <ProductCard key={item.id} product={productShim} />
-          );
-        })}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        {items.map((item) => (
+          <ProductCardV2
+            key={item.id}
+            item={item}
+          />
+        ))}
       </div>
     </div>
   );

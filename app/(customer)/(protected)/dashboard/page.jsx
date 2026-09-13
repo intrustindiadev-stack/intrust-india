@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import {
@@ -27,7 +27,6 @@ import TrendingProductsGrid from '@/components/customer/dashboard/TrendingProduc
 import VerifiedStoresNearby from '@/components/customer/dashboard/VerifiedStoresNearby';
 import ActiveOrdersSnapshot from '@/components/customer/dashboard/ActiveOrdersSnapshot';
 import FintechWalletCard from '@/components/customer/dashboard/FintechWalletCard';
-import FintechServiceGrid from '@/components/customer/dashboard/FintechServiceGrid';
 import FintechGrowthSection from '@/components/customer/dashboard/FintechGrowthSection';
 import PromoBanners from '@/components/customer/dashboard/PromoBanners';
 import KYCPopup from '@/components/kyc/KYCPopup';
@@ -60,13 +59,18 @@ function DashboardSkeleton() {
     );
 }
 
+// In-memory client cache to preserve dashboard state across back navigation
+let dashboardMemoryCache = null;
+
 export default function CustomerDashboardPage() {
     const { user, profile, loading: authLoading } = useAuth();
     const router = useRouter();
     const { initiatePayment, loading: paymentLoading } = usePayment();
     const payerContact = usePayerContact({ requireMerchant: false });
-    const [loading, setLoading] = useState(true);
-    const [userData, setUserData] = useState({
+    
+    // If we have cached dashboard data, start with loading=false for instantaneous render on back navigation
+    const [loading, setLoading] = useState(() => !dashboardMemoryCache);
+    const [userData, setUserData] = useState(() => dashboardMemoryCache?.userData || {
         name: '',
         totalPurchases: 0,
         totalSavings: 0,
@@ -81,8 +85,8 @@ export default function CustomerDashboardPage() {
         merchantSub1mPrice: null,
     });
 
-    const [topMerchants, setTopMerchants] = useState([]);
-    const [recentActivity, setRecentActivity] = useState([]);
+    const [topMerchants, setTopMerchants] = useState(() => dashboardMemoryCache?.topMerchants || []);
+    const [recentActivity, setRecentActivity] = useState(() => dashboardMemoryCache?.recentActivity || []);
     const [showPackages, setShowPackages] = useState(false);
     const [walletConfirmPkg, setWalletConfirmPkg] = useState(null);
 
@@ -153,6 +157,7 @@ export default function CustomerDashboardPage() {
             });
 
         setRecentActivity(combined);
+        return combined;
     };
 
     const fetchDashboardData = useCallback(async () => {
@@ -177,7 +182,7 @@ export default function CustomerDashboardPage() {
                 supabase.from('reward_points_balance').select('total_earned').eq('user_id', user.id).maybeSingle(),
                 supabase.from('platform_settings').select('value').eq('key', 'merchant_sub_price_1m').maybeSingle(),
                 supabase.from('merchants')
-                    .select('id, slug, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at, phone, business_phone')
+                    .select('id, slug, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at, business_phone')
                     .eq('status', 'approved')
                     .eq('subscription_status', 'active')
                     .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${new Date().toISOString()}`)
@@ -247,7 +252,7 @@ export default function CustomerDashboardPage() {
             if (walletTxResult.status === 'fulfilled' && walletTxResult.value.data) {
                 walletTxs = walletTxResult.value.data;
             }
-            processActivityFeed(coupons.slice(0, 5), walletTxs);
+            const activityFeed = processActivityFeed(coupons.slice(0, 5), walletTxs);
 
             const rewardPoints = rewardsResult.status === 'fulfilled' && rewardsResult.value.data ? rewardsResult.value.data.total_earned : 0;
 
@@ -255,7 +260,7 @@ export default function CustomerDashboardPage() {
                 setTopMerchants(topMerchantsResult.value.data);
             }
 
-            setUserData({
+            const finalUserData = {
                 name: displayName(profileData, user),
                 totalPurchases,
                 totalSavings,
@@ -273,14 +278,71 @@ export default function CustomerDashboardPage() {
                 merchantSub1mPrice: sub1mResult?.status === 'fulfilled' && sub1mResult.value?.data?.value != null
                     ? Number(sub1mResult.value.data.value) || null
                     : null,
-            });
+            };
+
+            setUserData(finalUserData);
+
+            // Update memory cache
+            dashboardMemoryCache = {
+                userData: finalUserData,
+                topMerchants: (topMerchantsResult && topMerchantsResult.status === 'fulfilled' && topMerchantsResult.value.data) ? topMerchantsResult.value.data : topMerchants,
+                recentActivity: activityFeed || []
+            };
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, topMerchants]);
+
+    // Zero-jump scroll restoration: execute synchronously before browser paints
+    const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+    useIsomorphicLayoutEffect(() => {
+        if (typeof window === 'undefined') return;
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+
+        const savedY = sessionStorage.getItem('customer_dashboard_scroll');
+        let isRestoring = false;
+
+        if (savedY) {
+            const targetY = parseInt(savedY, 10);
+            if (!isNaN(targetY) && targetY > 0) {
+                isRestoring = true;
+                // Immediate pre-paint scroll
+                window.scrollTo(0, targetY);
+
+                // Follow up in next ticks to ensure layout expansion doesn't clamp it
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, targetY);
+                    setTimeout(() => {
+                        window.scrollTo(0, targetY);
+                        isRestoring = false;
+                    }, 50);
+                });
+            }
+        }
+
+        let saveTimeout;
+        const handleSaveScroll = () => {
+            if (isRestoring) return; // Protect saved spot while restoring
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                if (window.scrollY > 0) {
+                    sessionStorage.setItem('customer_dashboard_scroll', window.scrollY.toString());
+                }
+            }, 80);
+        };
+
+        window.addEventListener('scroll', handleSaveScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleSaveScroll);
+            clearTimeout(saveTimeout);
+        };
+    }, []);
 
     useEffect(() => {
         let walletSub;
@@ -386,7 +448,8 @@ export default function CustomerDashboardPage() {
         }
     };
 
-    if (authLoading || loading) return <DashboardSkeleton />;
+    // Only show full skeleton on initial cold load when no memory cache exists
+    if ((authLoading || loading) && !dashboardMemoryCache) return <DashboardSkeleton />;
 
     return (
         <div className="w-full space-y-8 font-body-md text-on-surface">
@@ -425,41 +488,44 @@ export default function CustomerDashboardPage() {
                         </div>
                     </div>
 
-                    {/* E-Commerce Hero Carousel */}
-                    <EcomHeroCarousel banners={HERO_BANNERS} />
+                    {/* ── 1. Creative Hero Showcase: 8-col Banner Carousel + 4-col Wallet Hub on Laptop/Desktop ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                        <div className="lg:col-span-8 w-full">
+                            <EcomHeroCarousel banners={HERO_BANNERS} />
+                        </div>
+                        <div className="lg:col-span-4 w-full flex flex-col">
+                            <FintechWalletCard userData={userData} />
+                        </div>
+                    </div>
 
-                    {/* Category Quick Pills */}
+                    {/* ── 2. Category Quick Action Pills & Top 4 Categories ── */}
                     <CategoryQuickPills />
 
-                    {/* Trending Flash Deals */}
+                    {/* ── 3. Trending Flash Deals ── */}
                     <TrendingProductsGrid />
 
-                    {/* Nearby Verified Bhopal Stores */}
-                    <VerifiedStoresNearby merchants={topMerchants} />
-
-                    {/* Active Order & Logistics Tracking (No OTP) */}
+                    {/* ── 4. Active Logistics Tracking ── */}
                     <ActiveOrdersSnapshot userId={user?.id} />
 
-                    {/* Merchant Partner Opportunity Card */}
-                    <MerchantOpportunityBanner
-                        merchantStatus={userData.merchantStatus}
-                        subscriptionStatus={userData.subscriptionStatus}
-                        subscriptionExpiresAt={userData.subscriptionExpiry}
-                        startingPriceRupees={userData.merchantSub1mPrice}
-                    />
+                    {/* ── 5. Nearby Verified Stores ── */}
+                    <VerifiedStoresNearby merchants={topMerchants} />
 
-                    {/* 2-Column Section: Wallet & Services + Recent Activity */}
+                    {/* ── 6. Discovery & Partner Ecosystem (2-Column Grid) ── */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                        {/* Left Column: Wallet Card + Quick Services Grid */}
+                        {/* Left Column: Merchant Opportunity Card + Growth Stats */}
                         <div className="lg:col-span-6 space-y-6">
-                            <FintechWalletCard userData={userData} />
-                            <FintechServiceGrid />
+                            <MerchantOpportunityBanner
+                                merchantStatus={userData.merchantStatus}
+                                subscriptionStatus={userData.subscriptionStatus}
+                                subscriptionExpiresAt={userData.subscriptionExpiry}
+                                startingPriceRupees={userData.merchantSub1mPrice}
+                            />
+                            <FintechGrowthSection userData={userData} />
                         </div>
 
-                        {/* Right Column: Recent Activity Stream + Promo Banners */}
+                        {/* Right Column: Recent Activity Stream + Minimal Promo Carousel */}
                         <div className="lg:col-span-6 space-y-6">
                             <RecentActivity orders={recentActivity} />
-                            <FintechGrowthSection userData={userData} />
                             <PromoBanners />
                         </div>
                     </div>

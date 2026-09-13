@@ -4,6 +4,7 @@ import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, 
 import Link from 'next/link';
 import MerchantActions from './MerchantActions';
 import MerchantWalletAdjustSection from './MerchantWalletAdjustSection';
+import { getDepartmentMeta } from '@/lib/constants/departments';
 
 export const dynamic = 'force-dynamic';
 
@@ -230,6 +231,15 @@ export default async function AdminMerchantDetailPage({ params }) {
                                     }`}>
                                     {merchant.status}
                                 </span>
+                                {(() => {
+                                    const deptMeta = getDepartmentMeta(merchant.department);
+                                    return (
+                                        <span className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                                            <ShoppingBag size={12} className="text-blue-600" />
+                                            <span>{deptMeta.label}</span>
+                                        </span>
+                                    );
+                                })()}
                                 {isApproved && (
                                     <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest border shadow-sm ${merchant.subscription_status === 'active'
                                         ? 'bg-amber-100 text-amber-800 border-amber-300'

@@ -23,7 +23,7 @@ export default async function MerchantHubPage() {
     ] = await Promise.all([
         supabase
             .from('merchants')
-            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at')
+            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at, department')
             .eq('status', 'approved')
             .eq('subscription_status', 'active')
             .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${nowIso}`)

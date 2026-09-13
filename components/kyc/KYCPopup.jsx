@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShieldCheck, Zap, Gift, Store, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, Zap, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 const SESSION_KEY = 'kyc_popup_dismissed';
 
@@ -20,12 +19,10 @@ export default function KYCPopup({ isOpen, onClose, onSubmitSuccess }) {
         if (onClose) onClose();
     };
 
-    // Close on outside tap
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) handleDismiss();
     };
 
-    // Prevent body scroll when open
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -44,13 +41,6 @@ export default function KYCPopup({ isOpen, onClose, onSubmitSuccess }) {
         }
     };
 
-    const features = [
-        { icon: ShieldCheck, title: "Verified Member Badge", desc: "Gold verification shield on your InTrust profile." },
-        { icon: Zap, title: "Higher Wallet Limits", desc: "Unlock unlimited transactions and monthly spend caps." },
-        { icon: Gift, title: "Exclusive Cashbacks & Drops", desc: "Access member-only deals, coins, and reward multipliers." },
-        { icon: Store, title: "Merchant Enablement", desc: "Eligible to apply as an official InTrust local seller." }
-    ];
-
     return (
         <AnimatePresence>
             {isOpen && (
@@ -61,108 +51,111 @@ export default function KYCPopup({ isOpen, onClose, onSubmitSuccess }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
+                        transition={{ duration: 0.2 }}
                         onClick={handleBackdropClick}
                         className="fixed inset-0 z-[900] bg-black/60 backdrop-blur-sm"
                     />
 
-                    {/* Centered modal on desktop, bottom sheet on mobile */}
+                    {/* Half-Screen Bottom Sheet on Mobile, Compact Centered Modal on Desktop */}
                     <motion.div
                         key="kyc-sheet"
                         ref={sheetRef}
-                        initial={{ y: '100%', opacity: 0, scale: 0.95 }}
-                        animate={{ y: 0, opacity: 1, scale: 1 }}
-                        exit={{ y: '100%', opacity: 0, scale: 0.95 }}
-                        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-                        className="fixed bottom-0 left-0 right-0 z-[910] md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-[460px] md:w-full
-                                   bg-white dark:bg-[#0c101c] rounded-t-[2.5rem] md:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80 dark:border-white/10"
-                        style={{ maxHeight: '92vh' }}
+                        initial={{ y: '100%', opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: '100%', opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+                        className="fixed bottom-0 left-0 right-0 z-[910] md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 
+                                   max-h-[52vh] md:max-h-none md:max-w-[420px] md:w-full
+                                   bg-white dark:bg-[#0c101c] rounded-t-[2rem] md:rounded-3xl shadow-2xl overflow-hidden border border-slate-200/90 dark:border-white/10 flex flex-col"
                     >
-                        {/* Drag handle (mobile) */}
-                        <div className="flex justify-center pt-3 pb-1 md:hidden">
-                            <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/10" />
+                        {/* Drag handle (Mobile) */}
+                        <div className="flex justify-center pt-2.5 pb-1 md:hidden shrink-0">
+                            <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-white/15" />
                         </div>
 
-                        {/* 3D KYC Illustration Area */}
-                        <div className="relative w-full h-48 bg-slate-50 dark:bg-slate-900 overflow-hidden flex items-center justify-center">
-                            <Image
-                                src="/images/kyc_verified_hero.jpg"
-                                alt="Digital KYC Verification"
-                                fill
-                                priority
-                                className="object-cover object-center"
-                                sizes="(max-width: 640px) 100vw, 460px"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                        {/* Close Button */}
+                        <button
+                            type="button"
+                            onClick={handleDismiss}
+                            className="absolute top-3.5 right-3.5 z-20 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 dark:text-slate-300 transition-colors"
+                            aria-label="Close modal"
+                        >
+                            <X size={15} strokeWidth={2.5} />
+                        </button>
 
-                            {/* Verification Chip */}
-                            <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 dark:bg-black/70 backdrop-blur-md text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm text-[11px] font-black uppercase tracking-wider">
-                                <ShieldCheck size={14} className="text-amber-500" />
-                                <span>Verified Member</span>
+                        {/* Modal Body: Compact & Minimal */}
+                        <div className="p-5 sm:p-6 flex flex-col items-center text-center overflow-y-auto no-scrollbar">
+                            
+                            {/* InTrust KYC Vector Illustration */}
+                            <div className="relative mb-3 flex items-center justify-center">
+                                {/* Ambient Glow */}
+                                <div className="absolute w-20 h-20 bg-blue-500/15 dark:bg-blue-500/25 rounded-full blur-xl pointer-events-none" />
+                                
+                                <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-blue-600/25 flex items-center justify-center">
+                                    <div className="w-full h-full rounded-[14px] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center text-white">
+                                        <ShieldCheck size={28} className="text-white drop-shadow-sm" />
+                                    </div>
+                                    {/* Gold Verification Star Badge */}
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#D4AF37] border-2 border-white dark:border-[#0c101c] flex items-center justify-center shadow-xs">
+                                        <Lock size={9} className="text-slate-950 stroke-[3]" />
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Close Button */}
-                            <button
-                                type="button"
-                                onClick={handleDismiss}
-                                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white transition-all active:scale-90"
-                                aria-label="Close modal"
-                            >
-                                <X size={17} strokeWidth={2.5} />
-                            </button>
+                            {/* Badge */}
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider mb-2 border border-amber-500/20">
+                                <span>Action Recommended</span>
+                            </span>
 
-                            {/* Title overlay */}
-                            <div className="absolute bottom-3 left-5 right-5 z-10 text-white">
-                                <h2 className="text-xl font-black tracking-tight leading-tight">
-                                    Complete Your KYC Verification
-                                </h2>
-                                <p className="text-[11px] text-sky-200 font-medium">Instant paperless verification via Aadhaar / PAN</p>
+                            {/* Title */}
+                            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-1">
+                                Complete Your KYC Verification
+                            </h2>
+
+                            {/* Description */}
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs mb-3.5">
+                                Unlock unlimited wallet transfers, cashbacks, and the verified InTrust Gold badge in 60 seconds.
+                            </p>
+
+                            {/* 3 Inline Minimal Benefits Pills */}
+                            <div className="w-full grid grid-cols-3 gap-1.5 mb-4">
+                                <div className="p-2 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/5 flex flex-col items-center text-center">
+                                    <ShieldCheck size={14} className="text-[#D4AF37] mb-1" />
+                                    <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Gold Shield</span>
+                                </div>
+                                <div className="p-2 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/5 flex flex-col items-center text-center">
+                                    <Zap size={14} className="text-blue-600 dark:text-sky-400 mb-1" />
+                                    <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Zero Limits</span>
+                                </div>
+                                <div className="p-2 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/5 flex flex-col items-center text-center">
+                                    <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 mb-1" />
+                                    <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Paperless</span>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Features List */}
-                        <div className="px-6 py-4 space-y-3">
-                            {features.map((feat, idx) => (
-                                <motion.div 
-                                    key={idx}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.12 + (idx * 0.07) }}
-                                    className="flex items-start gap-3.5 p-2.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5"
-                                >
-                                    <div className="shrink-0 w-9 h-9 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 flex items-center justify-center shadow-xs">
-                                        <feat.icon size={18} />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <h3 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{feat.title}</h3>
-                                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{feat.desc}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        {/* Footer Action */}
-                        <div className="px-6 pt-2 pb-6 space-y-2.5">
+                            {/* Primary Action Button */}
                             <button
                                 type="button"
                                 onClick={handleRedirect}
-                                className="w-full relative group overflow-hidden bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-sm py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 active:scale-[0.98]"
+                                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-xs sm:text-sm tracking-wide shadow-md shadow-blue-600/25 flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] mb-2"
                             >
-                                <span>Verify Identity in 2 Minutes</span>
-                                <ChevronRight size={18} className="translate-y-[0.5px] group-hover:translate-x-1 transition-transform" />
+                                <span>Verify Account Now</span>
+                                <ArrowRight size={14} strokeWidth={2.5} />
                             </button>
 
+                            {/* Dismiss button */}
                             <button
                                 type="button"
                                 onClick={handleDismiss}
-                                className="w-full py-2 rounded-xl text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors text-center"
+                                className="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 py-1 transition-colors"
                             >
-                                Remind Me Later
+                                Maybe Later
                             </button>
 
-                            <p className="text-center text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-center gap-1">
-                                <CheckCircle2 size={12} className="text-emerald-500" />
-                                <span>100% Secure • SprintVerify Fast-Track</span>
+                            {/* Trust Footnote */}
+                            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1">
+                                <Lock size={10} />
+                                <span>256-bit encrypted • UIDAI Aadhaar compliant</span>
                             </p>
                         </div>
                     </motion.div>

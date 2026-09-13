@@ -11,12 +11,14 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { getProductFallbackImage } from '@/lib/shopping/categories';
 import toast from 'react-hot-toast';
 
+let trendingProductsCache = null;
+
 function TrendingProductsGrid() {
     const router = useRouter();
     const { user, profile } = useAuth();
     const activeCustomer = profile || user;
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState(() => trendingProductsCache || []);
+    const [loading, setLoading] = useState(() => !trendingProductsCache);
     const [addedId, setAddedId] = useState(null);
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingProduct, setPendingProduct] = useState(null);
@@ -139,6 +141,7 @@ function TrendingProductsGrid() {
                         rating: 4.8,
                         merchants: { business_name: 'InTrust Official' }
                     }));
+                    trendingProductsCache = mapped;
                     setProducts(mapped);
                 } else {
                     setProducts([]);
@@ -294,9 +297,16 @@ function TrendingProductsGrid() {
                                     <motion.button
                                         type="button"
                                         disabled={isWishlistBusy}
-                                        whileTap={isWishlistBusy ? {} : { scale: 1.35 }}
+                                        whileTap={isWishlistBusy ? {} : { scale: 1.25 }}
                                         whileHover={isWishlistBusy ? {} : { scale: 1.1 }}
-                                        onClick={(e) => toggleWishlist(e, prod)}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                                                try { navigator.vibrate(40); } catch (e) {}
+                                            }
+                                            toggleWishlist(e, prod);
+                                        }}
                                         className={`absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all z-10 ${
                                             isWishlistBusy ? 'opacity-70 cursor-wait' : ''
                                         } ${
@@ -307,11 +317,30 @@ function TrendingProductsGrid() {
                                         title={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
                                         aria-label={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}
                                     >
+                                        {isWishlisted && (
+                                            <motion.span
+                                                key={`burst-${prod.id}`}
+                                                initial={{ scale: 0.8, opacity: 0.8 }}
+                                                animate={{ scale: 1.8, opacity: 0 }}
+                                                transition={{ duration: 0.45, ease: "easeOut" }}
+                                                className="absolute inset-0 rounded-full border-2 border-rose-500 pointer-events-none"
+                                            />
+                                        )}
                                         <motion.div
-                                            animate={isWishlisted ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                                            transition={{ duration: 0.3 }}
+                                            animate={isWishlisted ? { 
+                                                scale: [1, 1.45, 0.85, 1.15, 1],
+                                                rotate: [0, -10, 10, -5, 0]
+                                            } : { scale: 1, rotate: 0 }}
+                                            transition={{ duration: 0.4, ease: "easeOut" }}
                                         >
-                                            <Heart size={14} className={isWishlisted ? "fill-rose-500 text-rose-500" : "currentColor"} />
+                                            <Heart 
+                                                size={14} 
+                                                className={`transition-colors duration-300 ${
+                                                    isWishlisted 
+                                                        ? "fill-rose-500 text-rose-500 drop-shadow-[0_2px_6px_rgba(244,63,94,0.45)]" 
+                                                        : "currentColor"
+                                                }`} 
+                                            />
                                         </motion.div>
                                     </motion.button>
                                 </div>

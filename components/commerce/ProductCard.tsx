@@ -304,9 +304,16 @@ export default function ProductCard({
         </div>
 
         {/* Wishlist Button (Top Right) */}
-        <button
+        <motion.button
           type="button"
-          onClick={handleWishlist}
+          whileTap={wishlistLoading ? {} : { scale: 1.25 }}
+          whileHover={wishlistLoading ? {} : { scale: 1.1 }}
+          onClick={(e) => {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(40); } catch (e) {}
+            }
+            handleWishlist(e);
+          }}
           disabled={wishlistLoading}
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 z-10 ${
@@ -315,8 +322,25 @@ export default function ProductCard({
               : 'bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 text-slate-700 dark:text-gray-200 opacity-90 sm:opacity-0 group-hover:opacity-100 shadow-sm'
           } ${wishlistLoading ? 'cursor-wait' : 'cursor-pointer'}`}
         >
-          <Heart size={16} className={isWishlisted ? 'fill-rose-500 text-rose-500' : ''} />
-        </button>
+          {isWishlisted && (
+            <motion.span
+              key={`burst-${product.id}`}
+              initial={{ scale: 0.8, opacity: 0.8 }}
+              animate={{ scale: 1.8, opacity: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              className="absolute inset-0 rounded-full border-2 border-rose-500 pointer-events-none"
+            />
+          )}
+          <motion.div
+            animate={isWishlisted ? { 
+              scale: [1, 1.45, 0.85, 1.15, 1],
+              rotate: [0, -10, 10, -5, 0]
+            } : { scale: 1, rotate: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <Heart size={16} className={isWishlisted ? 'fill-rose-500 text-rose-500 drop-shadow-[0_2px_6px_rgba(244,63,94,0.45)]' : ''} />
+          </motion.div>
+        </motion.button>
 
         {/* Desktop Quick Add Hover Overlay */}
         {!isOOS && (

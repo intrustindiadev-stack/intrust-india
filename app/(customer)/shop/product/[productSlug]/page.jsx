@@ -9,61 +9,145 @@ export default async function ProductDetailPage({ params }) {
     const { productSlug } = await params;
 
     // Use admin client to bypass RLS for product/inventory lookups.
-    // The storefront uses SECURITY DEFINER RPCs that bypass RLS — so products
-    // visible there may not be readable via the anon key's RLS policy directly.
-    // Admin client is safe here: this is a Server Component, the key never reaches the browser.
     const supabase = createAdminClient();
-    // Static client for non-sensitive public queries (platform settings, recommendations)
     const staticSupabase = createStaticSupabaseClient();
 
+    // 1. Decode & normalize incoming slug parameter
+    const rawParam = (productSlug || '').trim();
+    let decodedSlug = rawParam;
+    try {
+        decodedSlug = decodeURIComponent(rawParam).trim();
+    } catch (e) {
+        decodedSlug = rawParam;
+    }
 
-    // If the segment looks like a UUID, redirect to the slug-based URL
-    if (UUID_REGEX.test(productSlug)) {
-        const { data: legacyProduct } = await supabase
+    let product = null;
+
+    const PRODUCT_SELECT_FIELDS = `
+        id, title, description, product_images, mrp_paise,
+        suggested_retail_price_paise, platform_price_paise, platform_listed,
+        category_id, category, sub_category, slug,
+        is_active, admin_stock, gst_percentage, hsn_code, approval_status, created_at,
+        shopping_categories(name, color_primary, color_secondary),
+        fashion_product_categories(category_id)
+    `;
+
+    // Strategy A: If it's a UUID, check product ID or merchant inventory ID
+    if (UUID_REGEX.test(decodedSlug)) {
+        const { data: byId } = await supabase
             .from('shopping_products')
-            .select('slug')
-            .eq('id', productSlug)
+            .select(PRODUCT_SELECT_FIELDS)
+            .eq('id', decodedSlug)
             .is('deleted_at', null)
             .maybeSingle();
 
-        if (legacyProduct?.slug) {
-            redirect(`/shop/product/${legacyProduct.slug}`);
+        if (byId) {
+            product = byId;
+            if (byId.slug && byId.slug !== decodedSlug) {
+                redirect(`/shop/product/${byId.slug}`);
+            }
+        } else {
+            // Check if it is a merchant_inventory ID
+            const { data: inv } = await supabase
+                .from('merchant_inventory')
+                .select('product_id, shopping_products(slug, id)')
+                .eq('id', decodedSlug)
+                .maybeSingle();
+
+            if (inv?.shopping_products?.slug) {
+                redirect(`/shop/product/${inv.shopping_products.slug}`);
+            } else if (inv?.product_id) {
+                const { data: byInvProdId } = await supabase
+                    .from('shopping_products')
+                    .select(PRODUCT_SELECT_FIELDS)
+                    .eq('id', inv.product_id)
+                    .is('deleted_at', null)
+                    .maybeSingle();
+                product = byInvProdId;
+            }
         }
-        redirect('/shop');
     }
 
-    // 1. Fetch Product Details by slug
-    // Use maybeSingle() instead of single() — returns null (not an error) when no row found
-    const { data: product, error: productError } = await supabase
-        .from('shopping_products')
-        .select(`
-            id, title, description, product_images, mrp_paise,
-            suggested_retail_price_paise, platform_price_paise, platform_listed,
-            category_id, category, slug,
-            is_active, admin_stock, gst_percentage, hsn_code, approval_status, created_at,
-            shopping_categories(name, color_primary, color_secondary),
-            fashion_product_categories(category_id)
-        `)
-        .eq('slug', productSlug)
-        .is('deleted_at', null)
-        .maybeSingle();
+    // Strategy B: If not found by UUID, resolve by slug or title
+    if (!product) {
+        // B1. Exact slug match
+        const { data: exactSlug } = await supabase
+            .from('shopping_products')
+            .select(PRODUCT_SELECT_FIELDS)
+            .eq('slug', decodedSlug)
+            .is('deleted_at', null)
+            .maybeSingle();
+        product = exactSlug;
 
-    if (productError) {
-        console.error("[PDP] Error fetching product:", productError?.message || productError?.code || JSON.stringify(productError));
-        redirect("/shop");
+        // B2. Case-insensitive slug match
+        if (!product) {
+            const { data: ilikeSlug } = await supabase
+                .from('shopping_products')
+                .select(PRODUCT_SELECT_FIELDS)
+                .ilike('slug', decodedSlug)
+                .is('deleted_at', null)
+                .maybeSingle();
+            product = ilikeSlug;
+        }
+
+        // B3. Hyphenated / lowercase slug variations
+        if (!product) {
+            const hyphenated = decodedSlug.toLowerCase().replace(/\s+/g, '-');
+            const { data: hyphenSlug } = await supabase
+                .from('shopping_products')
+                .select(PRODUCT_SELECT_FIELDS)
+                .or(`slug.ilike.${hyphenated},slug.ilike.${decodedSlug.toLowerCase()}`)
+                .is('deleted_at', null)
+                .maybeSingle();
+            product = hyphenSlug;
+        }
+
+        // B4. Title fallback match
+        if (!product) {
+            const titleSearch = decodedSlug.replace(/-/g, ' ');
+            const { data: titleMatch } = await supabase
+                .from('shopping_products')
+                .select(PRODUCT_SELECT_FIELDS)
+                .ilike('title', titleSearch)
+                .is('deleted_at', null)
+                .limit(1)
+                .maybeSingle();
+            product = titleMatch;
+        }
+
+        // B5. Check merchant inventory by custom_title
+        if (!product) {
+            const { data: invMatch } = await supabase
+                .from('merchant_inventory')
+                .select('product_id')
+                .ilike('custom_title', decodedSlug.replace(/-/g, ' '))
+                .limit(1)
+                .maybeSingle();
+
+            if (invMatch?.product_id) {
+                const { data: byInvCustomTitle } = await supabase
+                    .from('shopping_products')
+                    .select(PRODUCT_SELECT_FIELDS)
+                    .eq('id', invMatch.product_id)
+                    .is('deleted_at', null)
+                    .maybeSingle();
+                product = byInvCustomTitle;
+            }
+        }
     }
 
     if (!product) {
-        console.warn("[PDP] Product not found for slug:", productSlug);
+        console.warn("[PDP] Product not found for slug/id:", productSlug, decodedSlug);
         redirect("/shop");
     }
 
-
-
-    // Block access to pending-approval products on the public storefront.
-    // Products with approval_status = null are legacy admin/platform products — allow those.
-    if (product.approval_status && product.approval_status !== 'live') {
-        redirect('/shop');
+    // Guard: Block access only to explicit drafts, pending approval, or rejected products that are inactive.
+    // Platform and active merchant products with 'live', 'approved', 'active', or null status are allowed.
+    if (product.approval_status) {
+        const normStatus = product.approval_status.toLowerCase();
+        if (['draft', 'rejected', 'pending_approval'].includes(normStatus) && !product.is_active) {
+            redirect('/shop');
+        }
     }
 
     // Run independent queries in parallel for performance

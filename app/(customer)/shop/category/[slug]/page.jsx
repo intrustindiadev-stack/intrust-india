@@ -7,25 +7,28 @@ import {
     MapPin, 
     Sparkles, 
     Store,
-    Headphones,
-    Smartphone,
-    Shirt,
-    Home,
-    ShoppingBasket,
-    Sun,
-    ChevronRight
+    ChevronRight,
+    Zap,
+    ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
 import CategoryProductsClient from './CategoryProductsClient';
+import MerchantCard from '@/components/customer/shop/MerchantCard';
 import { getCategorySlug, getCategoryIcon, getCategoryImage, FALLBACK_CATEGORIES } from '@/lib/shopping/categories';
+import { MERCHANT_DEPARTMENTS, getDepartmentMeta } from '@/lib/constants/departments';
 
 export const revalidate = 60;
 
 export default async function CategoryPage({ params }) {
     const { slug } = await params;
-    const categoryName = slug.replace(/-/g, ' ');
-    const formattedCategoryTitle = categoryName.charAt(0).toUpperCase() + categoryName.slice(1);
+    const normalizedSlug = (slug || '').toLowerCase().trim();
+    const deptMeta = getDepartmentMeta(normalizedSlug.replace(/-/g, '_')) || getDepartmentMeta(normalizedSlug);
+    const isKnownDept = deptMeta && deptMeta.key !== 'general';
+    const categoryName = normalizedSlug.replace(/-/g, ' ');
+    const formattedCategoryTitle = isKnownDept 
+        ? deptMeta.label 
+        : (categoryName.charAt(0).toUpperCase() + categoryName.slice(1));
 
     const supabase = createStaticSupabaseClient();
     const nowIso = new Date().toISOString();
@@ -34,7 +37,7 @@ export default async function CategoryPage({ params }) {
     const [merchantsResult, productsResult, merchantInventoryResult, categoriesResult] = await Promise.all([
         supabase
             .from('merchants')
-            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at')
+            .select('id, slug, user_id, business_name, business_address, shopping_banner_url, is_open, subscription_status, subscription_expires_at, department')
             .eq('status', 'approved')
             .eq('subscription_status', 'active')
             .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${nowIso}`)
@@ -64,11 +67,13 @@ export default async function CategoryPage({ params }) {
                 stock_quantity,
                 custom_title,
                 merchant_id,
+                product_id,
                 merchants:merchants (
                     id,
                     business_name,
                     slug,
-                    is_open
+                    is_open,
+                    department
                 ),
                 shopping_products:shopping_products (
                     id,
@@ -95,11 +100,13 @@ export default async function CategoryPage({ params }) {
     let merchantInventory = merchantInventoryResult.data || [];
     let dbCategories = categoriesResult?.data && categoriesResult.data.length > 0 ? categoriesResult.data : FALLBACK_CATEGORIES;
 
-    // Filter platform products by category
+    // Filter platform products by category / department
     let matchedPlatformProducts = rawProducts.filter(p => {
         if (!p.category) return false;
-        return p.category.toLowerCase().includes(categoryName.toLowerCase()) || 
-               categoryName.toLowerCase().includes(p.category.toLowerCase());
+        const pCat = p.category.toLowerCase();
+        return pCat.includes(categoryName) || 
+               categoryName.includes(pCat) ||
+               (isKnownDept && pCat.includes(deptMeta.key.replace(/_/g, ' ')));
     });
 
     // Map platform products (Fulfilled by InTrust Official)
@@ -110,7 +117,7 @@ export default async function CategoryPage({ params }) {
             id: p.id,
             product_id: p.id,
             title: p.title,
-            slug: p.slug,
+            slug: p.slug || p.id,
             description: p.description,
             selling_price: sPrice,
             sale_price: sPrice,
@@ -133,21 +140,23 @@ export default async function CategoryPage({ params }) {
     // Filter & map merchant inventory items
     const merchantItems = merchantInventory
         .filter(item => {
-            const spCat = item.shopping_products?.category || '';
-            return spCat.toLowerCase().includes(categoryName.toLowerCase()) || 
-                   categoryName.toLowerCase().includes(spCat.toLowerCase());
+            const spCat = (item.shopping_products?.category || '').toLowerCase();
+            return spCat.includes(categoryName) || 
+                   categoryName.includes(spCat) ||
+                   (isKnownDept && spCat.includes(deptMeta.key.replace(/_/g, ' ')));
         })
         .map(item => {
             const sp = item.shopping_products || {};
             const merch = item.merchants || {};
             const sPrice = Math.round(((item.retail_price_paise || sp.suggested_retail_price_paise || 0) / 100));
             const mrpVal = Math.round(((sp.mrp_paise || item.retail_price_paise || 0) / 100));
+            const prodSlug = sp.slug || sp.id || item.product_id || item.id;
             return {
                 id: item.id,
                 inventory_id: item.id,
                 product_id: item.product_id || sp.id,
                 title: item.custom_title || sp.title || 'Product',
-                slug: sp.slug || item.id,
+                slug: prodSlug,
                 description: sp.description,
                 selling_price: sPrice,
                 sale_price: sPrice,
@@ -162,7 +171,8 @@ export default async function CategoryPage({ params }) {
                 merchants: {
                     business_name: merch.business_name || 'Local Verified Merchant',
                     slug: merch.slug || '',
-                    is_open: merch.is_open ?? true
+                    is_open: merch.is_open ?? true,
+                    department: merch.department || null
                 }
             };
         });
@@ -170,64 +180,77 @@ export default async function CategoryPage({ params }) {
     // Check category validity: if not in taxonomy and has zero matching products, 404
     const matchedCategory = dbCategories.find(c => {
         const s = getCategorySlug(c);
-        return s === slug || s === slug.toLowerCase();
+        return s === normalizedSlug || s === normalizedSlug.replace(/-/g, '_');
     });
 
-    if (!matchedCategory && platformItems.length === 0 && merchantItems.length === 0) {
+    if (!matchedCategory && !isKnownDept && platformItems.length === 0 && merchantItems.length === 0) {
         return notFound();
     }
 
     // Combine both: InTrust official first, then local merchant offerings
     let products = [...platformItems, ...merchantItems];
 
+    // Filter merchants specifically for this category/department
+    const targetDeptKey = normalizedSlug.replace(/-/g, '_');
+    const matchedMerchants = merchants.filter(m => {
+        const mDept = (m.department || '').toLowerCase().replace(/-/g, '_');
+        const bName = (m.business_name || '').toLowerCase();
+        return mDept === targetDeptKey || 
+               mDept.includes(targetDeptKey) || 
+               targetDeptKey.includes(mDept) ||
+               bName.includes(categoryName);
+    });
+    const displayMerchants = matchedMerchants.length > 0 
+        ? matchedMerchants.slice(0, 6) 
+        : merchants.slice(0, 6);
+
+    const categoryBannerImage = getCategoryImage(categoryName) || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&auto=format&fit=crop&q=80';
+
     return (
-        <div className="w-full space-y-8 font-body-md text-slate-900 dark:text-on-surface pb-16">
-            {/* ── Breadcrumbs & Back ── */}
-            <div className="flex items-center justify-between gap-4">
-                <CustomerBreadcrumbs 
-                    items={[
-                        { label: 'Shop Hub', href: '/shop' }, 
-                        { label: formattedCategoryTitle }
-                    ]} 
-                    className="mb-0"
-                />
-                <Link
-                    href="/shop"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-surface-container-low hover:bg-slate-100 dark:hover:bg-surface-container-high border border-slate-200 dark:border-outline-variant/20 text-xs font-bold text-slate-700 dark:text-on-surface transition-colors shadow-xs"
-                >
-                    <ArrowLeft size={14} />
-                    <span>Back to All Stores</span>
-                </Link>
-            </div>
+        <div className="w-full space-y-6 font-body-md text-slate-900 dark:text-on-surface pb-16 transition-colors duration-500">
+            {/* ── Breadcrumbs ── */}
+            <CustomerBreadcrumbs 
+                items={[
+                    { label: 'Shop Hub', href: '/shop' }, 
+                    { label: 'Categories', href: '/shop/category' },
+                    { label: formattedCategoryTitle }
+                ]} 
+                className="mb-2"
+            />
 
-            {/* ── Category Hero Banner (Sleek Modern Quick Commerce Gradient) ── */}
-            <div className="relative w-full rounded-3xl overflow-hidden shadow-md border border-slate-200 dark:border-outline-variant/30 min-h-[190px] sm:min-h-[220px] flex items-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950">
-                {/* Geometric Grid Pattern */}
-                <div 
-                    className="absolute inset-0 opacity-15 pointer-events-none"
-                    style={{
-                        backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)`,
-                        backgroundSize: '20px 20px'
-                    }}
+            {/* ── Category Hero Banner (Matching Shop Hub Everyday Essentials Aesthetic) ── */}
+            <div className="relative w-full rounded-3xl overflow-hidden shadow-md border border-outline-variant/30 min-h-[190px] sm:min-h-[220px] flex items-center group bg-gradient-to-r from-blue-950/80 via-slate-900/60 to-slate-950/40">
+                <img
+                    src={categoryBannerImage}
+                    alt={formattedCategoryTitle}
+                    className="absolute inset-0 w-full h-full object-cover object-center opacity-50 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
                 />
-                <div className="absolute -right-10 -top-10 w-64 h-64 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute left-1/2 -bottom-10 w-48 h-48 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+                {/* Soft, translucent gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-900/45 to-transparent pointer-events-none" />
 
-                <div className="relative z-10 p-6 sm:p-8 max-w-2xl text-white flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/20 backdrop-blur-md border border-sky-400/30 text-[11px] font-black uppercase tracking-wider text-sky-300">
-                            ⚡ Express Delivery
+                <div className="relative z-10 p-5 sm:p-8 max-w-xl flex flex-col justify-between h-full space-y-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] sm:text-[11px] font-black tracking-widest uppercase text-sky-300 bg-sky-500/25 px-3 py-1 rounded-full border border-sky-400/30 w-fit backdrop-blur-md flex items-center gap-1.5">
+                            <Zap size={12} className="fill-sky-400 text-sky-400" />
+                            Guaranteed Same-Day Delivery
                         </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[11px] font-bold uppercase tracking-wider text-slate-200">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-white/90 bg-white/10 px-2.5 py-1 rounded-full border border-white/20 backdrop-blur-md">
                             100% InTrust Verified
                         </span>
                     </div>
 
-                    <h1 className="text-2xl sm:text-4xl font-black capitalize tracking-tight leading-tight text-white">
-                        {formattedCategoryTitle}
-                    </h1>
-                    <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-xl">
-                        Discover top-rated local merchants and genuine products with 100% InTrust Buyer Protection, instant Blinkit-style ordering, and express delivery in Bhopal.
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm capitalize">
+                            {formattedCategoryTitle}
+                        </h1>
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#0095F6] shrink-0 drop-shadow-sm" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" fill="#0095F6" />
+                            <path d="M8.5 12.5L10.8 14.8L15.5 9.8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed max-w-lg">
+                        {isKnownDept ? deptMeta.description : `Browse top-rated local merchants and genuine products with 100% InTrust Buyer Protection, guaranteed same-day delivery, and live order tracking.`}
                     </p>
                 </div>
             </div>
@@ -239,7 +262,7 @@ export default async function CategoryPage({ params }) {
                         Available in {formattedCategoryTitle}
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-on-surface-variant font-medium">
-                        {products.length} verified products available for instant order
+                        {products.length} verified products available for instant ordering
                     </p>
                 </div>
 
@@ -251,72 +274,61 @@ export default async function CategoryPage({ params }) {
             </div>
 
             {/* ── Verified Stores Offering Category ── */}
-            {merchants.length > 0 && (
+            {displayMerchants.length > 0 && (
                 <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-outline-variant/20">
-                    <div>
-                        <h2 className="text-xl font-black text-slate-900 dark:text-on-surface tracking-tight">
-                            Verified Stores in {formattedCategoryTitle}
-                        </h2>
-                        <p className="text-xs text-slate-500 dark:text-on-surface-variant font-medium">
-                            Local merchants stocking genuine inventory in Bhopal
-                        </p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <h2 className="text-xl font-black text-slate-900 dark:text-on-surface tracking-tight">
+                                    Verified Stores in {formattedCategoryTitle}
+                                </h2>
+                                <svg className="w-4 h-4 text-[#0095F6] shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" fill="#0095F6" />
+                                    <path d="M8.5 12.5L10.8 14.8L15.5 9.8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-on-surface-variant font-medium">
+                                Local merchants stocking genuine inventory with express store dispatch
+                            </p>
+                        </div>
+
+                        <Link
+                            href="/shop"
+                            className="text-xs font-bold text-blue-600 dark:text-primary hover:underline flex items-center gap-1"
+                        >
+                            <span>All Stores</span>
+                            <ChevronRight size={14} />
+                        </Link>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {merchants.slice(0, 6).map((merchant) => (
-                            <Link
+                        {displayMerchants.map((merchant) => (
+                            <MerchantCard
                                 key={merchant.id}
-                                href={`/shop/${merchant.slug}`}
-                                className="group bg-white dark:bg-surface-container-lowest hover:bg-slate-50 dark:hover:bg-surface-container-low rounded-3xl p-4 border border-slate-200 dark:border-outline-variant/30 hover:border-blue-500/40 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
-                            >
-                                <div>
-                                    <div className="relative h-36 w-full rounded-2xl overflow-hidden bg-slate-100 dark:bg-surface-container-low mb-3">
-                                        <img
-                                            src={merchant.shopping_banner_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800'}
-                                            alt={merchant.business_name}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        />
-                                        <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-white/95 text-slate-900 text-xs font-black flex items-center gap-1 shadow-xs border border-slate-200">
-                                            <Star size={12} className="text-amber-500 fill-amber-500" />
-                                            <span>4.8</span>
-                                        </div>
-                                    </div>
-
-                                    <h3 className="font-extrabold text-base text-slate-900 dark:text-on-surface truncate group-hover:text-blue-600 dark:group-hover:text-primary transition-colors">
-                                        {merchant.business_name}
-                                    </h3>
-                                    <p className="text-xs text-slate-500 dark:text-on-surface-variant font-medium line-clamp-1 mt-0.5">
-                                        <MapPin size={12} className="inline mr-1 text-blue-600 dark:text-primary" />
-                                        {merchant.business_address || 'MP Nagar, Bhopal'}
-                                    </p>
-                                </div>
-
-                                <div className="mt-4 pt-3 border-t border-slate-200 dark:border-outline-variant/20 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-primary group-hover:underline">
-                                    <span>Visit Store Catalog</span>
-                                    <span>→</span>
-                                </div>
-                            </Link>
+                                merchant={merchant}
+                                variant="showcase"
+                            />
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* ── Explore Other Quick-Commerce Categories ── */}
+            {/* ── Explore Other Departments ── */}
             <div className="pt-8 border-t border-slate-200 dark:border-outline-variant/20 space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-xl font-black text-slate-900 dark:text-on-surface tracking-tight">
-                            Explore Other Categories
+                            Explore Other Departments
                         </h2>
                         <p className="text-xs text-slate-500 dark:text-on-surface-variant font-medium">
-                            Browse instant delivery products across Bhopal hubs
+                            Browse instant delivery products across verified departments
                         </p>
                     </div>
                     <Link 
-                        href="/shop" 
+                        href="/shop/category" 
                         className="text-xs font-bold text-blue-600 dark:text-primary hover:underline flex items-center gap-1"
                     >
-                        <span>View All</span>
+                        <span>View All Departments</span>
                         <ChevronRight size={14} />
                     </Link>
                 </div>
@@ -327,7 +339,7 @@ export default async function CategoryPage({ params }) {
                         const catLabel = cat.name || cat.label || catSlug;
                         const catImage = cat.image_url || getCategoryImage(cat);
                         const Icon = getCategoryIcon(catLabel);
-                        const isCurrent = catSlug.toLowerCase() === slug.toLowerCase();
+                        const isCurrent = catSlug.toLowerCase() === normalizedSlug;
                         return (
                             <Link
                                 key={catSlug}

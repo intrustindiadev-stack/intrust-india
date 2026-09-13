@@ -59,7 +59,7 @@ const NAV_GROUPS = [
             { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
             { label: 'Shop & Stores', href: '/shop', icon: ShoppingBag, badge: 'Deals' },
             { label: 'My Cart', href: '/shop/cart', icon: ShoppingCart, isCart: true },
-            { label: 'Wishlist', href: '/wishlist', icon: Heart },
+            { label: 'Wishlist', href: '/wishlist', icon: Heart, isWishlist: true },
         ]
     },
     {
@@ -118,6 +118,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [walletBalance, setWalletBalance] = useState(0);
     const [cartCount, setCartCount] = useState(0);
+    const [wishlistCount, setWishlistCount] = useState(0);
 
     const isDarkMode = theme === 'dark';
     const isGuest = !user;
@@ -146,7 +147,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
         }
     };
 
-    // Real-time Wallet Balance & Cart Count Listener
+    // Real-time Wallet Balance, Cart Count & Wishlist Count Listener
     useEffect(() => {
         if (!user) return;
 
@@ -172,6 +173,16 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                 if (cartData) {
                     const totalItems = cartData.reduce((acc, curr) => acc + (curr.quantity || 1), 0);
                     setCartCount(totalItems);
+                }
+
+                // Wishlist count
+                const { count: wishCount } = await supabase
+                    .from('user_wishlists')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.id);
+
+                if (wishCount !== null && wishCount !== undefined) {
+                    setWishlistCount(wishCount);
                 }
             } catch (err) {
                 console.error('Shell data fetch error:', err);
@@ -206,9 +217,22 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
             )
             .subscribe();
 
+        // Listen for wishlist changes
+        const wishlistChannel = supabase
+            .channel(`customer_shell_wishlist_${user.id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'user_wishlists', filter: `user_id=eq.${user.id}` },
+                () => {
+                    fetchWalletAndCart();
+                }
+            )
+            .subscribe();
+
         return () => {
             supabase.removeChannel(walletChannel);
             supabase.removeChannel(cartChannel);
+            supabase.removeChannel(wishlistChannel);
         };
     }, [user]);
 
@@ -350,6 +374,14 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                                         : 'bg-rose-500 text-white'
                                                 }`}>
                                                     {cartCount}
+                                                </span>
+                                            ) : item.isWishlist && wishlistCount > 0 ? (
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                                    isActive 
+                                                        ? 'bg-white/20 text-white' 
+                                                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                                }`}>
+                                                    {wishlistCount}
                                                 </span>
                                             ) : item.badge ? (
                                                 <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
@@ -553,7 +585,6 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                         </div>
 
                         <div className="flex items-center gap-2">
-
                             {/* Cart */}
                             <Link
                                 href="/shop/cart"
@@ -746,6 +777,12 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                                                         isActive ? 'bg-white/20 text-white' : 'bg-rose-500 text-white'
                                                                     }`}>
                                                                         {cartCount}
+                                                                    </span>
+                                                                ) : item.isWishlist && wishlistCount > 0 ? (
+                                                                    <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                                                                        isActive ? 'bg-white/20 text-white' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                                                    }`}>
+                                                                        {wishlistCount}
                                                                     </span>
                                                                 ) : item.badge ? (
                                                                     <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
