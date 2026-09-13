@@ -189,15 +189,6 @@ export default function Navbar() {
                             <span>India</span>
                         </div>
 
-                        {/* Wishlist Link */}
-                        <Link
-                            href="/wishlist"
-                            className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-low dark:hover:bg-surface-container-high text-slate-700 dark:text-on-surface-variant hover:text-rose-500 dark:hover:text-rose-400 transition-colors border border-slate-200/50 dark:border-outline-variant/10"
-                            title="Wishlist"
-                        >
-                            <Heart size={18} />
-                        </Link>
-
                         {/* Cart Button with Live Badge */}
                         <Link
                             href="/shop/cart"

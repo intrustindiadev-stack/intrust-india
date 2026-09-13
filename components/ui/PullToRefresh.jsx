@@ -105,7 +105,7 @@ export default function PullToRefresh({ onRefresh, children }) {
     const [pullProgress, setPullProgress] = useState(0);
     
     useEffect(() => {
-        return pullY.onChange((latest) => {
+        return pullY.on("change", (latest) => {
             setPullProgress(Math.min(latest / THRESHOLD, 1));
         });
     }, [pullY]);

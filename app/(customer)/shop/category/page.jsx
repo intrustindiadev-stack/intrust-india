@@ -6,7 +6,7 @@ export const revalidate = 60;
 
 export const metadata = {
     title: 'Shop by Category & Department | InTrust India',
-    description: 'Browse authentic products across all categories and departments from verified Bhopal merchants and InTrust Official inventory.',
+    description: 'Browse authentic products across all categories and departments from verified local merchants and InTrust Official inventory.',
 };
 
 export default async function AllCategoriesPage() {

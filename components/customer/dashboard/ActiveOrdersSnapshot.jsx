@@ -6,9 +6,11 @@ import { motion } from 'framer-motion';
 import { Package, Truck, Phone, CheckCircle2, ArrowRight, FileText, Headphones, ShieldCheck, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
+let activeOrdersCache = null;
+
 function ActiveOrdersSnapshot({ userId }) {
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [orders, setOrders] = useState(() => activeOrdersCache || []);
+    const [loading, setLoading] = useState(() => activeOrdersCache === null);
 
     useEffect(() => {
         if (!userId) return;
@@ -32,11 +34,11 @@ function ActiveOrdersSnapshot({ userId }) {
                             shopping_products (
                                 title,
                                 product_images
+                            ),
+                            merchants (
+                                business_name,
+                                business_phone
                             )
-                        ),
-                        merchants (
-                            business_name,
-                            business_phone
                         )
                     `)
                     .eq('customer_id', userId)
@@ -47,8 +49,10 @@ function ActiveOrdersSnapshot({ userId }) {
                     .limit(2);
 
                 if (!error && data && data.length > 0) {
+                    activeOrdersCache = data;
                     setOrders(data);
                 } else {
+                    activeOrdersCache = [];
                     setOrders([]);
                 }
             } catch (err) {
@@ -67,8 +71,9 @@ function ActiveOrdersSnapshot({ userId }) {
     const order = orders[0];
     const firstItem = order.shopping_order_items?.[0];
     const itemTitle = firstItem?.shopping_products?.title || `InTrust Order #${order.order_group_id || order.id?.slice(0, 8)}`;
-    const merchantName = order.merchants?.business_name || (order.is_platform_order ? 'InTrust Official' : 'Local Merchant');
-    const merchantPhone = order.merchants?.business_phone || null;
+    const merchant = firstItem?.merchants;
+    const merchantName = merchant?.business_name || (order.is_platform_order ? 'InTrust Official' : 'Local Merchant');
+    const merchantPhone = merchant?.business_phone || null;
 
     return (
         <div className="w-full bg-surface-container-lowest rounded-3xl p-5 sm:p-6 border border-outline-variant/30 shadow-md">

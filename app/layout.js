@@ -129,7 +129,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en-IN" className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
+    <html lang="en-IN" suppressHydrationWarning className={`${inter.variable} ${outfit.variable} ${poppins.variable} ${sora.variable} ${dmSans.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -156,7 +156,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <ConfettiProvider>
           <ThemeProvider>
             <AuthProvider>

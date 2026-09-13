@@ -29,9 +29,9 @@ export default function CustomerBreadcrumbs({ items = [], className = '', rootHr
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className={`flex items-center flex-wrap gap-1.5 text-xs font-semibold mb-6 ${className}`}
+            className={`w-full overflow-x-auto no-scrollbar flex items-center mb-4 sm:mb-6 py-0.5 ${className}`}
         >
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low/90 dark:bg-surface-container-low/70 border border-outline-variant/30 dark:border-white/10 shadow-xs backdrop-blur-sm max-w-full overflow-hidden">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low/90 dark:bg-surface-container-low/70 border border-outline-variant/30 dark:border-white/10 shadow-xs backdrop-blur-sm flex-nowrap shrink-0">
                 {/* Home Anchor */}
                 <Link
                     href={effectiveRootHref}
@@ -47,17 +47,17 @@ export default function CustomerBreadcrumbs({ items = [], className = '', rootHr
 
                     return (
                         <React.Fragment key={index}>
-                            <ChevronRight size={12} className="text-outline shrink-0 opacity-80" />
+                            <ChevronRight size={12} className="text-outline shrink-0 opacity-70" />
                             {item.href && !isLast ? (
                                 <Link
                                     href={item.href}
-                                    className="text-on-surface-variant hover:text-primary transition-colors truncate max-w-[130px] sm:max-w-[180px] focus-visible:ring-2 focus-visible:ring-primary rounded px-0.5 outline-none font-semibold"
+                                    className="text-on-surface-variant hover:text-primary transition-colors truncate max-w-[120px] sm:max-w-[180px] focus-visible:ring-2 focus-visible:ring-primary rounded px-0.5 outline-none font-semibold text-xs whitespace-nowrap"
                                 >
                                     {item.label}
                                 </Link>
                             ) : (
                                 <span 
-                                    className="text-primary dark:text-blue-400 font-bold truncate max-w-[160px] sm:max-w-[280px]"
+                                    className="text-primary dark:text-blue-400 font-bold truncate max-w-[160px] sm:max-w-[280px] text-xs whitespace-nowrap"
                                     aria-current={isLast ? 'page' : undefined}
                                 >
                                     {item.label}

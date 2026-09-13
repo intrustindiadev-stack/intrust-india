@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useChat } from './ChatProvider';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -9,6 +10,9 @@ import { CHAT_HIDDEN_PATHS } from './hiddenPaths';
  * ChatBubble
  * Fixed floating button at bottom-right. Visible only to authenticated
  * users and hidden on auth/admin pages (see hiddenPaths.js).
+ * Dynamically coordinates with the FloatingCart to glide up with an
+ * elastic spring animation when the cart opens/appears, and glides back
+ * down when the cart is empty or closed.
  */
 export function BaseChatBubble({
   hiddenPaths = CHAT_HIDDEN_PATHS,
@@ -16,12 +20,37 @@ export function BaseChatBubble({
   closeAccentColor = "#1565c0",
   ariaLabel = "Open InTrust Assistant",
   assistantTitle = "InTrust Assistant",
-  /* mobile bottom offset — pass a px value as a string, e.g. "110px" */
-  mobileBottom = "110px",
+  /* mobile bottom offset when cart is not active */
+  mobileBottom = "78px",
 }) {
   const pathname = usePathname();
-  const { isOpen, toggleChat, hasUnread } = useChat();
+  const { isOpen, toggleChat, hasUnread, hasFloatingCart } = useChat();
   const { user } = useAuth();
+  const [hasCartLocal, setHasCartLocal] = useState(false);
+
+  // Synchronize cart state via DOM attribute and window custom events
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      setHasCartLocal(document.body.getAttribute('data-floating-cart') === 'true');
+    }
+
+    const handleCartEvent = (e) => {
+      if (e?.detail && typeof e.detail.visible === 'boolean') {
+        setHasCartLocal(e.detail.visible);
+      }
+    };
+    window.addEventListener('intrust:floating-cart', handleCartEvent);
+    return () => window.removeEventListener('intrust:floating-cart', handleCartEvent);
+  }, []);
+
+  // Reset cart presence on navigation to routes where floating cart is definitely not used
+  useEffect(() => {
+    if (pathname && !pathname.startsWith('/shop')) {
+      setHasCartLocal(false);
+    }
+  }, [pathname]);
+
+  const isCartActive = Boolean(hasFloatingCart || hasCartLocal);
 
   return (
     <>
@@ -29,7 +58,7 @@ export function BaseChatBubble({
         /* ── Bubble button ─────────────────────────────── */
         .chat-bubble-btn {
           position: fixed;
-          bottom: 28px;
+          bottom: 24px;
           right: 24px;
           z-index: 9999;
           width: 72px;
@@ -41,11 +70,17 @@ export function BaseChatBubble({
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: transform 0.45s cubic-bezier(0.34, 1.7, 0.64, 1);
+          transition: transform 0.45s cubic-bezier(0.34, 1.7, 0.64, 1),
+                      bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
           outline: none;
           animation: bubble-float 3.2s ease-in-out infinite;
           padding: 0;
         }
+        /* Desktop: glide up when floating cart appears */
+        .chat-bubble-btn.has-cart {
+          bottom: 104px;
+        }
+
         .chat-bubble-btn.is-open {
           transform: scale(0.88) rotate(0deg);
           animation: none;
@@ -185,12 +220,16 @@ export function BaseChatBubble({
             width: 62px;
             height: 62px;
           }
+          /* Mobile: glide up above the floating cart bar when cart is active */
+          .chat-bubble-btn.has-cart {
+            bottom: calc(${mobileBottom} + 72px);
+          }
         }
       `}</style>
 
       <button
         id="chat-bubble-btn"
-        className={`chat-bubble-btn ${isOpen ? 'is-open' : ''}`}
+        className={`chat-bubble-btn ${isOpen ? 'is-open' : ''} ${isCartActive ? 'has-cart' : ''}`}
         onClick={toggleChat}
         aria-label={isOpen ? 'Close chat' : ariaLabel}
         title={isOpen ? 'Close chat' : assistantTitle}
@@ -229,5 +268,14 @@ export function BaseChatBubble({
 }
 
 export default function ChatBubble() {
-  return <BaseChatBubble />;
+  const pathname = usePathname();
+  const isShopRoute = pathname?.startsWith('/shop');
+  const isPdpRoute = pathname?.startsWith('/shop/product');
+  
+  // Normal resting positions:
+  // On PDP, clear the sticky bottom action bar (84px).
+  // On standard shop/customer pages with bottom nav, clear the bottom nav (78px).
+  // When a floating cart appears, BaseChatBubble dynamically springs up +72px.
+  const mobileBottom = isPdpRoute ? "84px" : isShopRoute ? "78px" : "80px";
+  return <BaseChatBubble mobileBottom={mobileBottom} />;
 }

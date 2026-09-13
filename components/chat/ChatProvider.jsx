@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const ChatContext = createContext(null);
 
@@ -13,6 +13,18 @@ const ChatContext = createContext(null);
 export function ChatProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [hasFloatingCart, setHasFloatingCart] = useState(false);
+
+  // Listen to window-level custom event from any floating cart component
+  useEffect(() => {
+    const handleCartChange = (e) => {
+      if (e?.detail && typeof e.detail.visible === 'boolean') {
+        setHasFloatingCart(e.detail.visible);
+      }
+    };
+    window.addEventListener('intrust:floating-cart', handleCartChange);
+    return () => window.removeEventListener('intrust:floating-cart', handleCartChange);
+  }, []);
 
   const toggleChat = useCallback(() => {
     setIsOpen((prev) => {
@@ -32,7 +44,16 @@ export function ChatProvider({ children }) {
 
   return (
     <ChatContext.Provider
-      value={{ isOpen, toggleChat, openChat, closeChat, hasUnread, setHasUnread }}
+      value={{
+        isOpen,
+        toggleChat,
+        openChat,
+        closeChat,
+        hasUnread,
+        setHasUnread,
+        hasFloatingCart,
+        setHasFloatingCart,
+      }}
     >
       {children}
     </ChatContext.Provider>

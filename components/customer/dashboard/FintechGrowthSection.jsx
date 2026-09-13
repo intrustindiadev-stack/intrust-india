@@ -51,31 +51,32 @@ function FintechGrowthSection({ userData }) {
     if (items.length === 0) return null;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-xl shadow-gray-200/40 dark:shadow-black/20 border border-gray-100 dark:border-gray-700/50 mt-6 sm:mt-8">
-            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-6">Growth & Opportunities</h3>
+        <div className="bg-surface-container-lowest rounded-3xl p-5 sm:p-7 shadow-xs border border-outline-variant/30">
+            <h3 className="text-base sm:text-lg font-black text-on-surface mb-4 tracking-tight">Growth & Opportunities</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                 {items.map((item, index) => (
                     <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
+                        transition={{ delay: index * 0.08 }}
                     >
                         <Link 
                             href={item.href}
-                            className={`flex items-start gap-4 p-4 sm:p-5 rounded-2xl ${item.bgLight} border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group`}
+                            className="flex items-start gap-3.5 p-4 rounded-2xl bg-surface-container-low/60 hover:bg-surface-container-low border border-outline-variant/20 hover:border-blue-500/40 transition-all duration-200 group h-full"
                         >
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${item.iconBg} group-hover:scale-110 transition-transform shadow-sm`}>
-                                <item.icon size={22} />
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${item.iconBg} group-hover:scale-105 transition-transform shadow-xs`}>
+                                <item.icon size={20} />
                             </div>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">{item.title}</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-3">
+                            <div className="flex-1 min-w-0">
+                                <h4 className="text-xs sm:text-sm font-bold text-on-surface mb-0.5 truncate">{item.title}</h4>
+                                <p className="text-[11px] sm:text-xs text-on-surface-variant font-medium leading-relaxed line-clamp-2 mb-2">
                                     {item.description}
                                 </p>
-                                <div className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all">
-                                    Explore Now <ArrowRight size={12} />
+                                <div className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                                    <span>Explore</span>
+                                    <ArrowRight size={11} />
                                 </div>
                             </div>
                         </Link>

@@ -7,6 +7,16 @@ import { ChevronRight, ChevronLeft, Sparkles, ArrowRight } from 'lucide-react';
 
 export const DEFAULT_SLIDES = [
     {
+        id: 'official-brands',
+        title: 'Top Brands. Unmatched Value.',
+        subtitle: 'Shop your trusted brands — Apple, Adidas, DMart, IndiaMART, Samsung & more directly on InTrust India',
+        tag: 'TOP BRANDS',
+        badge: '100% Genuine',
+        ctaText: 'Explore Brands',
+        ctaHref: '/shop',
+        image: '/banners/banner_official_brands_v2.jpeg',
+    },
+    {
         id: 'mart-deals',
         title: 'Top Brands, Best Deals - Up to 70% Off',
         subtitle: 'Shop your favourite electronics, fashion and essentials on InTrust Mart',
@@ -14,7 +24,7 @@ export const DEFAULT_SLIDES = [
         badge: 'Up to 70% Off',
         ctaText: 'Shop Now',
         ctaHref: '/shop',
-        image: '/banners/banner_intrust_mart_deals.jpeg',
+        image: '/banners/banner_intrust_mart_deals_v2.jpeg',
     },
     {
         id: 'digital-wallet',
@@ -24,7 +34,7 @@ export const DEFAULT_SLIDES = [
         badge: 'Instant Rewards',
         ctaText: 'Activate Wallet',
         ctaHref: '/wallet',
-        image: '/banners/banner_wallet_pay_save.jpeg',
+        image: '/banners/banner_wallet_pay_save_v2.jpeg',
     },
     {
         id: 'solar-square',
@@ -34,7 +44,17 @@ export const DEFAULT_SLIDES = [
         badge: 'Cost Savings',
         ctaText: 'Explore Solar',
         ctaHref: '/services',
-        image: '/banners/banner_solarsquare_green.jpeg',
+        image: '/banners/banner_solarsquare_v2.jpeg',
+    },
+    {
+        id: 'rewards-offers',
+        title: 'Earn Real Cashback On Every Spend.',
+        subtitle: 'Unlock scratch cards, double reward coins, and exclusive merchant discounts every day',
+        tag: 'CASHBACK & REWARDS',
+        badge: 'Instant Cashback',
+        ctaText: 'Claim Rewards',
+        ctaHref: '/rewards',
+        image: '/banners/banner_rewards_offers_v2.jpeg',
     }
 ];
 
@@ -45,25 +65,31 @@ const swipePower = (offset, velocity) => {
 
 const slideVariants = {
     enter: (direction) => ({
-        x: direction > 0 ? '100%' : direction < 0 ? '-100%' : 0,
+        zIndex: 2,
         opacity: 0,
+        x: direction > 0 ? 60 : -60,
+        scale: 1.015,
     }),
     center: {
-        zIndex: 1,
-        x: 0,
+        zIndex: 2,
         opacity: 1,
+        x: 0,
+        scale: 1,
         transition: {
-            x: { type: 'spring', stiffness: 340, damping: 32 },
-            opacity: { duration: 0.22, ease: 'easeOut' }
+            opacity: { duration: 0.4, ease: [0.25, 1, 0.5, 1] },
+            x: { duration: 0.45, ease: [0.25, 1, 0.5, 1] },
+            scale: { duration: 0.45, ease: [0.25, 1, 0.5, 1] }
         }
     },
     exit: (direction) => ({
-        zIndex: 0,
-        x: direction > 0 ? '-100%' : '100%',
+        zIndex: 1,
         opacity: 0,
+        x: direction > 0 ? -40 : 40,
+        scale: 0.985,
         transition: {
-            x: { type: 'spring', stiffness: 340, damping: 32 },
-            opacity: { duration: 0.18, ease: 'easeIn' }
+            opacity: { duration: 0.35, ease: 'easeIn' },
+            x: { duration: 0.4, ease: [0.25, 1, 0.5, 1] },
+            scale: { duration: 0.4, ease: [0.25, 1, 0.5, 1] }
         }
     })
 };
@@ -100,11 +126,11 @@ function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
 
     return (
         <div
-            className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-outline-variant/25 bg-slate-900/5 dark:bg-black/40 group select-none"
+            className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 dark:border-white/10 bg-slate-100 dark:bg-surface-container-lowest group select-none"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            <div className="relative w-full aspect-[2.72/1] sm:aspect-[2.85/1] overflow-hidden">
+            <div className="relative w-full aspect-[16/9] overflow-hidden bg-slate-900/5 dark:bg-black/30">
                 <AnimatePresence initial={false} custom={direction}>
                     <motion.div
                         key={page}
@@ -131,11 +157,11 @@ function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
                             className="block relative w-full h-full"
                             aria-label={slide.title}
                         >
-                            {/* High Resolution Banner Image — completely visible without side or bottom cropping */}
+                            {/* High Resolution Banner Image — 16:9 native aspect ratio for a perfect fit across all screens */}
                             <img
                                 src={slide.image}
                                 alt={slide.title}
-                                className="w-full h-full object-contain sm:object-cover object-center pointer-events-none transition-transform duration-300 ease-out group-hover:scale-[1.01]"
+                                className="w-full h-full object-cover object-center pointer-events-none transition-transform duration-500 ease-out group-hover:scale-[1.01]"
                                 loading="eager"
                                 draggable={false}
                             />
@@ -154,9 +180,9 @@ function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
                         paginate(-1);
                     }}
                     aria-label="Previous Slide"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-md z-20 border border-white/20 active:scale-95"
+                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/75 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-md z-20 border border-white/20 active:scale-95"
                 >
-                    <ChevronLeft size={18} />
+                    <ChevronLeft size={20} />
                 </button>
             )}
 
@@ -170,15 +196,15 @@ function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
                         paginate(1);
                     }}
                     aria-label="Next Slide"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-md z-20 border border-white/20 active:scale-95"
+                    className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/75 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 shadow-md z-20 border border-white/20 active:scale-95"
                 >
-                    <ChevronRight size={18} />
+                    <ChevronRight size={20} />
                 </button>
             )}
 
             {/* Indicator Dots */}
             {slides.length > 1 && (
-                <div className="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 z-20">
+                <div className="absolute bottom-2.5 sm:bottom-4 lg:bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/20 z-20 shadow-lg">
                     {slides.map((_, idx) => (
                         <button
                             key={idx}
@@ -189,10 +215,10 @@ function EcomHeroCarousel({ banners = DEFAULT_SLIDES }) {
                                 goToSlide(idx);
                             }}
                             aria-label={`Go to slide ${idx + 1}`}
-                            className={`h-1 sm:h-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                            className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 cursor-pointer ${
                                 idx === safeIdx
-                                    ? 'w-5 sm:w-6 bg-white shadow-sm'
-                                    : 'w-1 sm:w-1.5 bg-white/45 hover:bg-white/75'
+                                    ? 'w-6 sm:w-8 bg-white shadow-sm'
+                                    : 'w-1.5 sm:w-2 bg-white/40 hover:bg-white/70'
                             }`}
                         />
                     ))}

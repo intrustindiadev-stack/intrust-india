@@ -25,7 +25,14 @@ import {
   PartyPopper,
   X,
   Store,
-  Clock
+  Clock,
+  Zap,
+  ChevronRight,
+  Heart,
+  Smartphone,
+  Laptop,
+  Headphones,
+  LayoutGrid
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -710,24 +717,152 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
     );
   }
 
-  // Empty
+  // Empty Cart State — Exact Match to Reference Design
   if (cartItems.length === 0) {
+    const popularCategories = [
+      {
+        title: 'Mobiles',
+        href: '/shop/category/electronics-appliances',
+        icon: Smartphone,
+        color: 'text-blue-500 dark:text-blue-400',
+        bg: 'bg-sky-50/80 dark:bg-sky-950/30 border border-sky-100/80 dark:border-sky-900/30',
+      },
+      {
+        title: 'Laptops',
+        href: '/shop/category/electronics-appliances',
+        icon: Laptop,
+        color: 'text-purple-500 dark:text-purple-400',
+        bg: 'bg-purple-50/80 dark:bg-purple-950/30 border border-purple-100/80 dark:border-purple-900/30',
+      },
+      {
+        title: 'Audio',
+        href: '/shop/category/electronics-appliances',
+        icon: Headphones,
+        color: 'text-emerald-500 dark:text-emerald-400',
+        bg: 'bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-100/80 dark:border-emerald-900/30',
+      },
+      {
+        title: 'All Categories',
+        href: '/shop',
+        icon: LayoutGrid,
+        color: 'text-amber-500 dark:text-amber-400',
+        bg: 'bg-amber-50/80 dark:bg-amber-950/30 border border-amber-100/80 dark:border-amber-900/30',
+      },
+    ];
+
     return (
-      <div className={`min-h-screen pt-28 px-4 ${isDark ? 'bg-[#080a10]' : 'bg-[#f7f8fa]'}`}>
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className={`max-w-md mx-auto text-center py-16 px-6 rounded-2xl ${isDark ? 'bg-[#12151c] border border-white/[0.06]' : 'bg-white shadow-sm border border-slate-100'}`}
-        >
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 ${isDark ? 'bg-blue-900/10' : 'bg-blue-50'}`}>
-            <ShoppingBag className="w-9 h-9 text-blue-600" />
-          </div>
-          <h2 className={`text-xl font-black mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Your cart is empty</h2>
-          <p className={`text-sm mb-6 ${isDark ? 'text-white/30' : 'text-slate-500'}`}>Add items to get started.</p>
-          <Link href="/shop" className="inline-flex items-center justify-center w-full gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all active:scale-95">
-            Shop Now
-          </Link>
-        </motion.div>
+      <div className={`min-h-[85vh] py-8 sm:py-14 px-4 sm:px-6 flex flex-col items-center justify-center transition-colors duration-300 ${isDark ? 'bg-[#090d14] text-white' : 'bg-white text-slate-900'}`}>
+        <div className="w-full max-w-md mx-auto flex flex-col items-center text-center">
+          
+          {/* Mascot Illustration with subtle float */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-[340px] sm:max-w-[380px] mb-2 flex items-center justify-center relative"
+          >
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+              className="w-full flex items-center justify-center"
+            >
+              <Image
+                src="/banners/empty-cart-robot.png"
+                alt="Your cart is empty"
+                width={544}
+                height={389}
+                priority
+                className="w-full h-auto object-contain select-none pointer-events-none drop-shadow-sm"
+              />
+            </motion.div>
+          </motion.div>
+
+          {/* Typography */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="space-y-2.5 px-2"
+          >
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Your cart is empty
+            </h1>
+            <p className="text-sm sm:text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed font-normal">
+              Looks like you haven&apos;t added any items yet.<br />
+              Start exploring and find something you&apos;ll love!
+            </p>
+          </motion.div>
+
+          {/* Action Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="w-full mt-7 sm:mt-8 space-y-3"
+          >
+            {/* Start Shopping Button */}
+            <Link
+              href="/shop"
+              className="w-full relative flex items-center justify-center py-3.5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-base shadow-lg shadow-blue-600/25 transition-all group"
+            >
+              <div className="flex items-center gap-2.5">
+                <ShoppingBag size={20} strokeWidth={2.2} />
+                <span>Start Shopping</span>
+              </div>
+              <ArrowRight size={20} strokeWidth={2.2} className="absolute right-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+
+            {/* View Wishlist Button */}
+            <Link
+              href="/wishlist"
+              className="w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100 font-bold text-base shadow-xs transition-all active:scale-[0.99]"
+            >
+              <Heart size={20} strokeWidth={2} className="text-slate-700 dark:text-slate-300" />
+              <span>View Wishlist</span>
+            </Link>
+          </motion.div>
+
+          {/* Flanked Divider */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="relative my-7 sm:my-8 flex items-center justify-center w-full"
+          >
+            <div className="border-t border-slate-200 dark:border-white/10 flex-1" />
+            <span className="px-3.5 text-xs font-semibold text-slate-400 dark:text-slate-500 shrink-0 select-none tracking-wide">
+              Explore Popular Categories
+            </span>
+            <div className="border-t border-slate-200 dark:border-white/10 flex-1" />
+          </motion.div>
+
+          {/* 4 Category Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.25 }}
+            className="grid grid-cols-4 gap-2.5 sm:gap-3.5 w-full"
+          >
+            {popularCategories.map((cat, idx) => {
+              const Icon = cat.icon;
+              return (
+                <Link
+                  key={idx}
+                  href={cat.href}
+                  className={`flex flex-col items-center justify-center py-3.5 px-2 rounded-2xl ${cat.bg} shadow-xs hover:shadow-md hover:scale-[1.03] active:scale-[0.97] transition-all group`}
+                >
+                  <div className="w-10 h-10 flex items-center justify-center shrink-0 mb-1">
+                    <Icon size={24} className={`${cat.color} group-hover:scale-110 transition-transform`} strokeWidth={1.8} />
+                  </div>
+                  <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-center leading-tight">
+                    {cat.title}
+                  </span>
+                </Link>
+              );
+            })}
+          </motion.div>
+
+        </div>
       </div>
     );
   }

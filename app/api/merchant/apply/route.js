@@ -32,6 +32,7 @@ export async function POST(request) {
             ifscCode,
             panCard,
             merchantReferralCode,
+            department,
         } = formData;
 
         // Validate required fields
@@ -130,6 +131,7 @@ export async function POST(request) {
                     {
                         user_id: user.id,
                         business_name: businessName,
+                        department: (department || 'general').toLowerCase().trim(),
                         gst_number: gstNumber || null,
                         owner_name: ownerName,
                         business_phone: phone,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef, useTransition } from 'react';
-import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store, Plus, Minus, X, Clock } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, ShoppingCart, Package, ChevronLeft, ChevronRight, BadgeCheck, Sparkles, SlidersHorizontal, Grid3X3, Heart, Zap, Shirt, Pill, Home, Utensils, Grid, Star, MapPin, Store, Plus, Minus, X, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
@@ -14,6 +14,7 @@ import ProductCardSkeleton from '@/components/customer/shop/ProductCardSkeleton'
 import MerchantProfileCard from '@/components/customer/shop/MerchantProfileCard';
 import Image from 'next/image';
 import { isStorefrontItemOOS } from '@/lib/shopping/stock';
+import { getProductFallbackImage } from '@/lib/shopping/categories';
 import { isValidUUID } from '@/lib/utils';
 import React, { Suspense } from 'react';
 import FilterSidebar from '@/components/shop/FilterSidebar';
@@ -55,8 +56,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
 
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [pendingCartItem, setPendingCartItem] = useState(null);
-    const [selectedProductItem, setSelectedProductItem] = useState(null);
-    const [isZoomed, setIsZoomed] = useState(false);
+    const [quickViewItem, setQuickViewItem] = useState(null);
     const [liveMerchant, setLiveMerchant] = useState(merchant);
     const [liveInventory, setLiveInventory] = useState(initialInventory);
     const [totalCount, setTotalCount] = useState(initialTotalCount ?? 0);
@@ -217,6 +217,29 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             router.push(`${pathname}?${params.toString()}`, { scroll: false });
         });
     }, [searchParams, activeCategory, pathname, router]);
+
+    // Sub-category change from sticky slider (toggles sub_category and resets page to 1)
+    const handleSubCategoryChange = useCallback((sub) => {
+        startTransition(() => {
+            const params = new URLSearchParams(searchParams);
+            if (!sub || sub === 'All' || selectedSubCategory.toLowerCase() === sub.toLowerCase()) {
+                params.delete('sub_category');
+            } else {
+                params.set('sub_category', sub);
+            }
+            params.set('page', '1');
+            router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        });
+    }, [searchParams, selectedSubCategory, pathname, router]);
+
+    // Sub-category horizontal slider ref and scroll control
+    const subCatSliderRef = useRef(null);
+    const scrollSubCat = useCallback((direction) => {
+        if (subCatSliderRef.current) {
+            const scrollAmount = direction === 'left' ? -220 : 220;
+            subCatSliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+    }, []);
 
     // Debounce search input — 300ms prevents spamming router on every keystroke
     const handleSearchChange = useCallback((e) => {
@@ -530,15 +553,39 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
     }, [categories]);
 
     const availableSubCategories = useMemo(() => {
-        if (!activeCategory || activeCategory === 'All') return [];
-        const canonical = getSubCategories(activeCategory);
-        const dynamicSet = new Set(canonical);
-        liveInventory?.forEach(item => {
-            const sub = item.sub_category || item.shopping_products?.sub_category;
-            if (sub && sub !== 'General') dynamicSet.add(sub);
-        });
+        const dynamicSet = new Set();
+        if (activeCategory && activeCategory !== 'All') {
+            const canonical = getSubCategories(activeCategory);
+            canonical.forEach(sub => {
+                if (sub && sub !== 'General' && sub !== 'All') dynamicSet.add(sub);
+            });
+            liveInventory?.forEach(item => {
+                const itemCat = item.category || item.shopping_products?.category;
+                if (!itemCat || itemCat.toLowerCase() === activeCategory.toLowerCase()) {
+                    const sub = item.sub_category || item.shopping_products?.sub_category;
+                    if (sub && sub !== 'General' && sub !== 'All') dynamicSet.add(sub);
+                }
+            });
+        } else {
+            // All categories: collect all distinct subcategories from items in liveInventory
+            liveInventory?.forEach(item => {
+                const sub = item.sub_category || item.shopping_products?.sub_category;
+                if (sub && sub !== 'General' && sub !== 'All') dynamicSet.add(sub);
+            });
+            // If live inventory has few items, supplement from merchant's active categories
+            if (dynamicSet.size < 3 && merchantCategories?.length > 1) {
+                merchantCategories.forEach(cat => {
+                    if (cat && cat !== 'All') {
+                        const subs = getSubCategories(cat);
+                        subs.slice(0, 3).forEach(s => {
+                            if (s && s !== 'General' && s !== 'All') dynamicSet.add(s);
+                        });
+                    }
+                });
+            }
+        }
         return Array.from(dynamicSet);
-    }, [activeCategory, liveInventory]);
+    }, [activeCategory, liveInventory, merchantCategories]);
 
 
     const getCategoryIcon = useCallback((category) => {
@@ -594,7 +641,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
             </div>
 
             {/* ====== STICKY HEADER — FROSTED GLASS ====== */}
-            <div className="sticky top-[76px] md:top-[92px] z-30 px-2 sm:px-4 md:px-6 max-w-7xl mx-auto w-full mb-4 pointer-events-none">
+            <div className="sticky top-[76px] md:top-[92px] z-30 px-0 sm:px-4 md:px-6 max-w-7xl mx-auto w-full mb-3 sm:mb-4 pointer-events-none">
                 <header
                     className={`pointer-events-auto md:backdrop-blur-xl rounded-2xl md:rounded-[2rem] border transition-all overflow-hidden flex flex-col ${
                         isDark 
@@ -674,11 +721,97 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             })}
                         </div>
                     )}
+
+                    {/* Minimal Professional Subcategory Slider under Categories */}
+                    {availableSubCategories.length > 0 && (
+                        <div className={`relative flex items-center px-3 md:px-5 py-1.5 border-t transition-colors ${
+                            isDark 
+                                ? 'bg-white/[0.02] border-white/[0.05]' 
+                                : 'bg-slate-50/90 border-slate-100'
+                        }`}>
+                            {/* Scroll Left Button for desktop */}
+                            <button
+                                type="button"
+                                onClick={() => scrollSubCat('left')}
+                                aria-label="Scroll subcategories left"
+                                className={`hidden md:flex items-center justify-center w-6 h-6 rounded-full shrink-0 mr-1.5 transition-all opacity-70 hover:opacity-100 active:scale-95 ${
+                                    isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white shadow-2xs border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                }`}
+                            >
+                                <ChevronLeft size={13} />
+                            </button>
+
+                            {/* Slider Container */}
+                            <div 
+                                ref={subCatSliderRef}
+                                className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5"
+                            >
+                                <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 mr-1 hidden sm:inline-block ${
+                                    isDark ? 'text-slate-400' : 'text-slate-500'
+                                }`}>
+                                    Subcategory:
+                                </span>
+
+                                {/* "All" Pill */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleSubCategoryChange('All')}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                                        selectedSubCategory === 'All'
+                                            ? isDark 
+                                                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' 
+                                                : 'bg-sky-100 text-sky-800 border border-sky-200'
+                                            : isDark
+                                                ? 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent'
+                                    }`}
+                                >
+                                    All
+                                </button>
+
+                                {/* Subcategory Pills */}
+                                {availableSubCategories.map(sub => {
+                                    const isSubActive = selectedSubCategory.toLowerCase() === sub.toLowerCase();
+                                    return (
+                                        <button
+                                            key={sub}
+                                            type="button"
+                                            onClick={() => handleSubCategoryChange(sub)}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5 ${
+                                                isSubActive
+                                                    ? isDark 
+                                                        ? 'bg-sky-500 text-white shadow-xs font-bold' 
+                                                        : 'bg-sky-600 text-white shadow-xs font-bold'
+                                                    : isDark
+                                                        ? 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.06]'
+                                                        : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-950 border border-slate-200/70 shadow-2xs'
+                                            }`}
+                                        >
+                                            {isSubActive && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
+                                            <span>{sub}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Scroll Right Button for desktop */}
+                            <button
+                                type="button"
+                                onClick={() => scrollSubCat('right')}
+                                aria-label="Scroll subcategories right"
+                                className={`hidden md:flex items-center justify-center w-6 h-6 rounded-full shrink-0 ml-1.5 transition-all opacity-70 hover:opacity-100 active:scale-95 ${
+                                    isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white shadow-2xs border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                }`}
+                            >
+                                <ChevronRight size={13} />
+                            </button>
+                        </div>
+                    )}
                 </header>
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <main className="w-full px-2 sm:px-4 md:px-6 flex-1 py-3 md:py-5 relative z-10">
+            <main className="w-full px-0 sm:px-4 md:px-6 flex-1 py-2 sm:py-3 md:py-5 relative z-10">
                 {/* pb-36 on mobile gives clearance below last card for floating cart and bottom nav */}
                 <div className="max-w-7xl mx-auto pb-36 md:pb-8 space-y-4">
                     
@@ -733,6 +866,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                             <FilterSidebar
                                 onFilterChange={handleFilterChange}
                                 showHeader={true}
+                                availableSubCategories={availableSubCategories}
                             />
                         </aside>
 
@@ -768,7 +902,7 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                 </div>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-2 sm:gap-4">
                                         {filteredItems.map(item => (
                                             <ProductCardV2
                                                 key={item.id}
@@ -776,11 +910,12 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                                 cartItem={cart.find(i => i.id === item.id)}
                                                 onAdd={() => addToCart(item)}
                                                 onRemove={() => removeFromCart(item)}
-                                                onSelect={() => setSelectedProductItem(item)}
+                                                merchantSlug={merchant?.slug}
                                                 primaryColor={primaryColor}
                                                 secondaryColor={secondaryColor}
                                                 isWishlisted={wishlistIds.has(item.product_id)}
                                                 onWishlist={() => toggleWishlist(item)}
+                                                onQuickView={() => setQuickViewItem(item)}
                                                 isStoreOpen={isStoreOpen}
                                             />
                                         ))}
@@ -817,6 +952,185 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                 />
             )}
 
+            {/* Sleek Quick View Bottom Sheet Modal */}
+            <AnimatePresence>
+                {quickViewItem && (() => {
+                    const qvProduct = quickViewItem?.shopping_products || quickViewItem;
+                    const qvMrp = (qvProduct?.mrp_paise || qvProduct?.suggested_retail_price_paise || quickViewItem?.retail_price_paise || 0) / 100;
+                    const qvSellingPrice = quickViewItem?.is_platform_product
+                        ? ((qvProduct?.platform_price_paise ?? qvProduct?.suggested_retail_price_paise) || quickViewItem?.retail_price_paise || 0) / 100
+                        : ((quickViewItem?.retail_price_paise || qvProduct?.platform_price_paise || 0) / 100);
+                    const qvSavings = qvMrp > qvSellingPrice ? qvMrp - qvSellingPrice : 0;
+                    const qvDiscountPct = qvMrp > 0 ? Math.round((qvSavings / qvMrp) * 100) : 0;
+                    const qvCartItem = cart.find(i => i.id === quickViewItem?.id);
+                    const qvQty = qvCartItem ? qvCartItem.quantity : 0;
+                    const qvProductSlugOrId = qvProduct?.slug || qvProduct?.id || quickViewItem?.slug || quickViewItem?.id;
+                    const qvPdpUrl = `/shop/product/${qvProductSlugOrId}${merchant?.slug ? `?merchant=${merchant.slug}` : ''}`;
+                    const qvImage = getProductFallbackImage(qvProduct || quickViewItem);
+                    const isOos = isStorefrontItemOOS(quickViewItem);
+
+                    return (
+                        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                            {/* Backdrop */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setQuickViewItem(null)}
+                                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                            />
+
+                            {/* Modal Sheet */}
+                            <motion.div
+                                initial={{ y: "100%", opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: "100%", opacity: 0 }}
+                                transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                                className={`relative w-full max-w-lg rounded-t-[32px] sm:rounded-3xl shadow-2xl z-10 overflow-hidden max-h-[90vh] flex flex-col ${
+                                    isDark ? 'bg-[#0f131d] text-white border border-white/10' : 'bg-white text-slate-900 border border-slate-200'
+                                }`}
+                            >
+                                {/* Drag handle on mobile */}
+                                <div className="sm:hidden pt-3 pb-1 flex justify-center cursor-grab">
+                                    <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-white/20" />
+                                </div>
+
+                                {/* Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={() => setQuickViewItem(null)}
+                                    className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-600 dark:text-slate-300 transition-colors z-20"
+                                >
+                                    <X size={18} />
+                                </button>
+
+                                <div className="p-5 sm:p-6 overflow-y-auto space-y-4">
+                                    {/* Image & Title Header */}
+                                    <div className="flex gap-4 items-start">
+                                        <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-2 flex items-center justify-center shrink-0 relative overflow-hidden">
+                                            <img
+                                                src={qvImage}
+                                                alt={quickViewItem.custom_title || qvProduct?.title || 'Product'}
+                                                className="w-full h-full object-contain"
+                                            />
+                                            {qvDiscountPct > 0 && (
+                                                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[9px] font-black uppercase">
+                                                    {qvDiscountPct}% OFF
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0 pr-6">
+                                            {/* Same Day Badge */}
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 text-[10px] font-bold border border-sky-200/60 dark:border-sky-800/40 mb-1.5">
+                                                <Zap size={10} className="fill-sky-500 text-sky-500" />
+                                                SAME DAY DELIVERY
+                                            </span>
+
+                                            <h3 className="text-base sm:text-lg font-bold line-clamp-2 leading-snug">
+                                                {quickViewItem.custom_title || qvProduct?.title}
+                                            </h3>
+
+                                            {/* Verified Store */}
+                                            <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                                <span>{liveMerchant?.business_name || 'InTrust Store'}</span>
+                                                <BadgeCheck size={14} className="text-[#0095F6] fill-[#0095F6]" />
+                                            </div>
+
+                                            {/* Pricing */}
+                                            <div className="flex items-baseline gap-2 mt-2">
+                                                <span className="text-xl font-black text-slate-900 dark:text-white">
+                                                    ₹{qvSellingPrice.toFixed(0)}
+                                                </span>
+                                                {qvMrp > qvSellingPrice && (
+                                                    <span className="text-xs line-through text-slate-400 dark:text-slate-500">
+                                                        ₹{qvMrp.toFixed(0)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Store Closed Browsing Notice */}
+                                    {!isStoreOpen && (
+                                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2">
+                                            <Clock size={15} />
+                                            <span>This store is currently not accepting orders.</span>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="pt-2 space-y-2.5">
+                                        <div className="flex items-center gap-3">
+                                            {/* Add to Cart / Quantity Stepper */}
+                                            {qvQty > 0 ? (
+                                                <div className="flex-1 flex items-center justify-between px-3 py-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFromCart(quickViewItem)}
+                                                        className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs active:scale-95 transition-transform"
+                                                    >
+                                                        <Minus size={16} />
+                                                    </button>
+                                                    <span className="font-extrabold text-base text-blue-600 dark:text-blue-400">
+                                                        {qvQty} in Cart
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addToCart(quickViewItem)}
+                                                        className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs active:scale-95 transition-transform"
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    disabled={!isStoreOpen || isOos}
+                                                    onClick={() => addToCart(quickViewItem)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <ShoppingCart size={16} />
+                                                    <span>Add to Cart</span>
+                                                </button>
+                                            )}
+
+                                            {/* Buy Now Button */}
+                                            <button
+                                                type="button"
+                                                disabled={!isStoreOpen || isOos}
+                                                onClick={() => {
+                                                    if (qvQty === 0) addToCart(quickViewItem);
+                                                    setQuickViewItem(null);
+                                                    router.push('/shop/cart');
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-sm shadow-md shadow-amber-500/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <Zap size={16} className="fill-white" />
+                                                <span>BUY NOW</span>
+                                            </button>
+                                        </div>
+
+                                        {/* View Full Details Button */}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setQuickViewItem(null);
+                                                router.push(qvPdpUrl);
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 font-semibold text-xs transition-colors"
+                                        >
+                                            <span>View Full Product Details</span>
+                                            <ChevronRight size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
+            </AnimatePresence>
+
             <Suspense fallback={null}>
                 {confirmModalOpen && (
                     <ConfirmModal
@@ -831,166 +1145,6 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                 )}
             </Suspense>
 
-            {/* PRODUCT DETAIL MODAL (BLINKIT STYLE BOTTOM SHEET) */}
-            <AnimatePresence>
-                {selectedProductItem && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => { setSelectedProductItem(null); setIsZoomed(false); }}
-                            className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 z-[80] backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 250, mass: 0.8 }}
-                            className={`fixed bottom-0 left-0 right-0 z-[90] rounded-t-[2rem] max-h-[85vh] flex flex-col shadow-2xl ${isDark ? 'bg-[#0f111a]' : 'bg-white'}`}
-                        >
-                            {/* Drag handle */}
-                            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full z-20" />
-                            
-                            <button onClick={() => { setSelectedProductItem(null); setIsZoomed(false); }} className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center z-20 shadow-md ${isDark ? 'bg-black/50 text-white backdrop-blur-md' : 'bg-white/80 text-slate-700 backdrop-blur-md border border-slate-100'}`}>
-                                <X size={18} />
-                            </button>
-
-                            {/* Modal Content - Scrollable */}
-                            <div className="overflow-y-auto w-full no-scrollbar">
-                                {(() => {
-                                    const pItem = selectedProductItem;
-                                    const pProduct = pItem.shopping_products;
-                                    const pOos = isStorefrontItemOOS(pItem);
-                                    const pCartItem = cart.find(i => i.id === pItem.id);
-                                    const pMrp = (pProduct.mrp_paise || pProduct.suggested_retail_price_paise || pItem.retail_price_paise || 0) / 100;
-                                    const pSellingPrice = pItem.is_platform_product
-                                        ? ((pProduct?.platform_price_paise ?? pProduct?.suggested_retail_price_paise) || pItem.retail_price_paise || 0) / 100
-                                        : (pItem.retail_price_paise || 0) / 100;
-                                    const pSavings = pMrp > pSellingPrice ? pMrp - pSellingPrice : 0;
-                                    const discountPct = pMrp > 0 ? Math.round((pSavings / pMrp) * 100) : 0;
-                                    
-                                    return (
-                                        <div className="flex flex-col md:flex-row w-full max-w-5xl mx-auto md:p-6 md:gap-8">
-                                            
-                                            {/* Image Area - Edge to edge on mobile, rounded on desktop */}
-                                            <div
-                                                className={`relative w-full aspect-square md:w-1/2 md:rounded-3xl flex items-center justify-center shrink-0 cursor-pointer ${isDark ? 'bg-[#151822]' : 'bg-[#f4f6f9]'}`}
-                                                onClick={() => pProduct.product_images?.[0] && setIsZoomed(true)}
-                                            >
-                                                {pProduct.product_images?.[0] ? (
-                                                    <Image
-                                                        src={pProduct.product_images[0]}
-                                                        alt={pProduct.title}
-                                                        fill
-                                                        sizes="(max-width: 768px) 100vw, 50vw"
-                                                        className="object-contain p-8 md:p-12 mix-blend-multiply dark:mix-blend-normal cursor-pointer"
-                                                        onClick={() => setIsZoomed(true)}
-                                                    />
-                                                ) : (
-                                                    <Package size={80} className={isDark ? 'text-white/10' : 'text-slate-200'} />
-                                                )}
-                                                {discountPct > 0 && (
-                                                    <div className="absolute bottom-4 left-4 bg-blue-600 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-widest flex items-center gap-1">
-                                                        <Zap size={12} className="fill-white" /> {discountPct}% OFF
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                            {/* Details Area */}
-                                            <div className="flex-1 flex flex-col p-5 sm:p-6 md:p-0 md:py-4">
-                                                <h2 className={`text-[22px] md:text-3xl font-black leading-tight tracking-tight mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                                    {pItem.custom_title || pProduct.title}
-                                                </h2>
-                                                
-                                                <div className={`text-sm font-bold mt-1 mb-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                    {pProduct.category || 'General'} • 1 Unit
-                                                </div>
-
-                                                {/* Delivery Badge */}
-                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl self-start mb-6 ${isDark ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border border-indigo-100 text-indigo-600'}`}>
-                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
-                                                        <Clock size={12} className={isDark ? 'text-indigo-400' : 'text-indigo-600'} />
-                                                    </div>
-                                                    <span className="text-[13px] font-bold">Standard Delivery</span>
-                                                </div>
-                                                
-                                                {/* Product Info / Description */}
-                                                <div className="mb-8">
-                                                    <h4 className={`text-sm font-black uppercase tracking-widest mb-3 ${isDark ? 'text-slate-300' : 'text-slate-900'}`}>Product Details</h4>
-                                                    <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                                                        {pProduct.description || 'Premium quality product delivered directly to your doorstep. Guaranteed freshness and authenticity.'}
-                                                    </p>
-                                                </div>
-
-                                                {/* Features */}
-                                                <div className="grid grid-cols-2 gap-3 mb-8">
-                                                    <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-white/[0.02]' : 'bg-slate-50'}`}>
-                                                        <BadgeCheck size={18} className="text-blue-500" />
-                                                        <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>100% Genuine</span>
-                                                    </div>
-                                                    <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-white/[0.02]' : 'bg-slate-50'}`}>
-                                                        <Package size={18} className="text-blue-500" />
-                                                        <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Safe Packaging</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                {/* Bottom Action Bar - Sticky on Mobile */}
-                                                <div className={`sticky bottom-0 -mx-5 -mb-5 p-5 md:mx-0 md:mb-0 md:p-0 border-t md:border-none flex items-center justify-between gap-4 mt-auto z-10 ${isDark ? 'bg-[#0f111a] border-white/5' : 'bg-white border-slate-100'}`}>
-                                                    <div className="flex flex-col">
-                                                        {pSavings > 0 && (
-                                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                                <span className={`text-xs font-bold line-through ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                                                    MRP ₹{pMrp.toLocaleString('en-IN')}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        <div className={`text-2xl md:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                                            ₹{pSellingPrice.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="w-[140px] md:w-[160px] shrink-0">
-                                                        {pOos ? (
-                                                            <div className={`w-full py-3.5 rounded-xl text-center font-black uppercase tracking-widest text-xs border ${isDark ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                                                                Out of Stock
-                                                            </div>
-                                                        ) : pCartItem ? (
-                                                            <div className="flex items-center bg-sky-500 text-white rounded-xl h-[48px] px-1 shadow-[0_4px_16px_rgba(14,165,233,0.3)] w-full overflow-hidden">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50); removeFromCart(pItem); }}
-                                                                    className="w-12 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
-                                                                >
-                                                                    <Minus size={18} strokeWidth={3} />
-                                                                </button>
-                                                                <span className="flex-1 text-lg font-black text-center">{pCartItem.quantity}</span>
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); addToCart(pItem); }}
-                                                                    className="w-12 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
-                                                                >
-                                                                    <Plus size={18} strokeWidth={3} />
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); addToCart(pItem); }}
-                                                                className="w-full h-[48px] rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-black text-[13px] uppercase tracking-widest shadow-md shadow-sky-500/25 transition-all active:scale-95 flex items-center justify-center"
-                                                            >
-                                                                ADD TO CART
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-
             {/* Mobile Filter Drawer */}
             <MobileFilterDrawer
                 isOpen={isMobileFiltersOpen}
@@ -1002,33 +1156,9 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                 <FilterSidebar
                     onFilterChange={handleFilterChange}
                     showHeader={false}
+                    availableSubCategories={availableSubCategories}
                 />
             </MobileFilterDrawer>
-
-            {/* Full-Screen Image Lightbox */}
-            {isZoomed && (
-                <div
-                    className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-                    onClick={() => setIsZoomed(false)}
-                >
-                    <button
-                        type="button"
-                        onClick={() => setIsZoomed(false)}
-                        className="absolute top-6 right-6 text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10"
-                        aria-label="Close"
-                    >
-                        <X size={28} />
-                    </button>
-                    {(selectedProductItem?.shopping_products?.product_images?.[0] || selectedProductItem?.product_images?.[0]) && (
-                        <img
-                            src={selectedProductItem.shopping_products?.product_images?.[0] || selectedProductItem.product_images?.[0]}
-                            alt={selectedProductItem.shopping_products?.title || selectedProductItem.title || 'Product zoom'}
-                            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    )}
-                </div>
-            )}
         </div>
     );
 }

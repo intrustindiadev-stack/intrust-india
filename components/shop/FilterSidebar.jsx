@@ -10,7 +10,7 @@ import FilterCheckbox from './filters/FilterCheckbox';
 import ColorSwatch from './filters/ColorSwatch';
 import SizeGrid from './filters/SizeGrid';
 
-export default function FilterSidebar({ onFilterChange, showHeader = true }) {
+export default function FilterSidebar({ onFilterChange, showHeader = true, availableSubCategories: customSubCategories = null }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -109,10 +109,13 @@ export default function FilterSidebar({ onFilterChange, showHeader = true }) {
         searchParams.get('color')
     );
 
-    // Derive canonical sub-categories for the currently selected category
+    // Derive canonical sub-categories for the currently selected category or use supplied inventory sub-categories
     const availableSubCategories = useMemo(() => {
+        if (customSubCategories && customSubCategories.length > 0) {
+            return customSubCategories;
+        }
         return getSubCategories(activeCategory);
-    }, [activeCategory]);
+    }, [customSubCategories, activeCategory]);
 
     const filteredSubCategories = useMemo(() => {
         if (!subCategorySearch.trim()) return availableSubCategories;
