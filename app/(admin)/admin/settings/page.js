@@ -21,6 +21,9 @@ export default function SettingsPage() {
     });
 
     const [notificationSettings, setNotificationSettings] = useState({
+        adminEmail: "kapildubey0626@gmail.com",
+        adminPhone: "+919755900467",
+        whatsappAlerts: true,
         emailAlerts: true,
         smsAlerts: false,
     });
@@ -55,7 +58,14 @@ export default function SettingsPage() {
                     }));
                     
                     setNotificationSettings({
-                        emailAlerts: data.notification_email_alerts === 'true' || data.notification_email_alerts === true,
+                        adminEmail: data.admin_notification_email || "kapildubey0626@gmail.com",
+                        adminPhone: data.admin_notification_phone || "+919755900467",
+                        whatsappAlerts: data.admin_whatsapp_alerts_enabled !== undefined
+                            ? (data.admin_whatsapp_alerts_enabled === 'true' || data.admin_whatsapp_alerts_enabled === true)
+                            : true,
+                        emailAlerts: data.admin_email_alerts_enabled !== undefined
+                            ? (data.admin_email_alerts_enabled === 'true' || data.admin_email_alerts_enabled === true)
+                            : (data.notification_email_alerts === 'true' || data.notification_email_alerts === true),
                         smsAlerts: data.notification_sms_alerts === 'true' || data.notification_sms_alerts === true,
                     });
                     
@@ -94,6 +104,10 @@ export default function SettingsPage() {
             business_gstin: generalSettings.businessGstin,
             business_pan: generalSettings.businessPan,
             business_website: generalSettings.businessWebsite,
+            admin_notification_email: notificationSettings.adminEmail,
+            admin_notification_phone: notificationSettings.adminPhone,
+            admin_whatsapp_alerts_enabled: notificationSettings.whatsappAlerts ? 'true' : 'false',
+            admin_email_alerts_enabled: notificationSettings.emailAlerts ? 'true' : 'false',
             notification_email_alerts: notificationSettings.emailAlerts ? 'true' : 'false',
             notification_sms_alerts: notificationSettings.smsAlerts ? 'true' : 'false',
             security_2fa_enabled: securitySettings.twoFactorAuth ? 'true' : 'false',
@@ -266,14 +280,78 @@ export default function SettingsPage() {
                     {/* Notification Settings */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                            <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
-                            <p className="text-sm text-gray-500">Manage how you receive alerts.</p>
+                            <h2 className="text-lg font-semibold text-gray-900">Admin Notification Channels</h2>
+                            <p className="text-sm text-gray-500">Configure dedicated email and WhatsApp coordinates for real-time platform alerts.</p>
                         </div>
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b border-gray-100">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Dedicated Admin Alert Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={notificationSettings.adminEmail}
+                                        onChange={(e) =>
+                                            setNotificationSettings({
+                                                ...notificationSettings,
+                                                adminEmail: e.target.value,
+                                            })
+                                        }
+                                        placeholder="kapildubey0626@gmail.com"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        New orders, merchant applications, and payout requests are emailed here.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Dedicated Admin WhatsApp Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={notificationSettings.adminPhone}
+                                        onChange={(e) =>
+                                            setNotificationSettings({
+                                                ...notificationSettings,
+                                                adminPhone: e.target.value,
+                                            })
+                                        }
+                                        placeholder="+919755900467"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Real-time WhatsApp alerts are dispatched to this E.164 phone.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium text-gray-900">WhatsApp Alerts</p>
+                                    <p className="text-sm text-gray-500">Receive instant WhatsApp alerts for new orders, payouts, and KYC submissions.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={notificationSettings.whatsappAlerts}
+                                        onChange={(e) =>
+                                            setNotificationSettings({
+                                                ...notificationSettings,
+                                                whatsappAlerts: e.target.checked,
+                                            })
+                                        }
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                </label>
+                            </div>
+
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-medium text-gray-900">Email Alerts</p>
-                                    <p className="text-sm text-gray-500">Receive critical system updates via email.</p>
+                                    <p className="text-sm text-gray-500">Receive comprehensive HTML order & payout summaries via email.</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -290,10 +368,11 @@ export default function SettingsPage() {
                                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
                                 </label>
                             </div>
-                            <div className="flex items-center justify-between">
+
+                            <div className="flex items-center justify-between opacity-60">
                                 <div>
                                     <p className="font-medium text-gray-900">SMS Alerts</p>
-                                    <p className="text-sm text-gray-500">Receive urgent notifications via SMS.</p>
+                                    <p className="text-sm text-gray-500">SMS notifications (Disabled; requires telecom DLT template registration).</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
