@@ -13,10 +13,13 @@ import {
     TrendingUp,
     Clock,
     ShieldCheck,
-    Coins
+    Coins,
+    ShoppingBag,
+    Users,
+    Gift
 } from 'lucide-react';
 
-export default function StatsCards({ stats = {}, aiStats = {} }) {
+export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = {}, referralStats = {} }) {
     const totalSales = stats?.totalSales ?? 0;
     const pendingOrders = stats?.pendingOrders ?? 0;
     const activeCoupons = stats?.activeCoupons ?? 0;
@@ -30,6 +33,16 @@ export default function StatsCards({ stats = {}, aiStats = {} }) {
     const aiInProgressCount = aiStats?.inProgressCount ?? 0;
     const aiVaultBalance = aiStats?.vaultBalance ?? 0;
     const aiTotalProfit = aiStats?.totalProfit ?? 0;
+
+    // E-Commerce Metrics
+    const ecommerceTotalProducts = ecommerceStats?.totalProducts ?? listedCoupons;
+    const ecommerceInStock = ecommerceStats?.inStockCount ?? activeCoupons;
+    const ecommerceLowStock = ecommerceStats?.lowStockCount ?? 0;
+
+    // Refer & Earn Metrics
+    const totalReferrals = referralStats?.totalReferrals ?? 0;
+    const totalReferralEarned = referralStats?.totalEarned ?? 0;
+    const referralBounty = referralStats?.bounty ?? 500;
 
     return (
         <div className="space-y-3 mb-8">
@@ -100,8 +113,8 @@ export default function StatsCards({ stats = {}, aiStats = {} }) {
                     </motion.div>
                 </Link>
 
-                {/* 2. Inventory & Stock Card */}
-                <Link href="/merchant/inventory" className="block outline-none group">
+                {/* 2. E-Commerce Catalog & Stock Card */}
+                <Link href="/merchant/shopping/inventory" className="block outline-none group">
                     <motion.div 
                         whileHover={{ y: -2 }}
                         className="relative h-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs transition-all group-hover:shadow-md group-hover:border-indigo-300 dark:group-hover:border-indigo-800 flex flex-col justify-between"
@@ -110,40 +123,40 @@ export default function StatsCards({ stats = {}, aiStats = {} }) {
                             <div className="flex items-center justify-between mb-3">
                                 <div>
                                     <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                                        Inventory & Stock
+                                        E-Commerce Catalog
                                     </h4>
-                                    <p className="text-[11px] text-slate-400 font-medium">Coupons & products</p>
+                                    <p className="text-[11px] text-slate-400 font-medium">Products &amp; Stock</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40 transition-transform group-hover:scale-105">
-                                    <Package size={18} />
+                                    <ShoppingBag size={18} />
                                 </div>
                             </div>
 
                             <div className="flex items-baseline gap-2 mb-3">
                                 <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                                    {activeCoupons.toLocaleString('en-IN')}
+                                    {ecommerceTotalProducts.toLocaleString('en-IN')}
                                 </span>
-                                <span className="text-xs font-bold text-slate-400">in stock</span>
+                                <span className="text-xs font-bold text-slate-400">products listed</span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
                                 <div>
-                                    <span className="text-slate-400 block font-medium">Marketplace Listed</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                                        {listedCoupons} listed
+                                    <span className="text-slate-400 block font-medium">In-Stock Items</span>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                        {ecommerceInStock} ready
                                     </span>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-slate-400 block font-medium">Available</span>
-                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                                        {activeCoupons} ready
+                                    <span className="text-slate-400 block font-medium">Low Stock</span>
+                                    <span className={`font-bold ${ecommerceLowStock > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                        {ecommerceLowStock} alerts
                                     </span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                            <span>Open Inventory</span>
+                            <span>Manage E-Commerce</span>
                             <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                         </div>
                     </motion.div>
@@ -213,8 +226,8 @@ export default function StatsCards({ stats = {}, aiStats = {} }) {
                     </motion.div>
                 </Link>
 
-                {/* 4. Financial Overview & Wallet Card */}
-                <Link href="/merchant/wallet" className="block outline-none group">
+                {/* 4. Refer & Earn Network Card */}
+                <Link href="/merchant/referrals" className="block outline-none group">
                     <motion.div 
                         whileHover={{ y: -2 }}
                         className="relative h-full bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs transition-all group-hover:shadow-md group-hover:border-emerald-300 dark:group-hover:border-emerald-800 flex flex-col justify-between"
@@ -223,40 +236,42 @@ export default function StatsCards({ stats = {}, aiStats = {} }) {
                             <div className="flex items-center justify-between mb-3">
                                 <div>
                                     <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                                        Wallet & Finances
+                                        Refer &amp; Earn
                                     </h4>
-                                    <p className="text-[11px] text-slate-400 font-medium">Balance & lockin</p>
+                                    <p className="text-[11px] text-slate-400 font-medium">Network &amp; Rewards</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-900/40 transition-transform group-hover:scale-105">
-                                    <Wallet size={18} />
+                                    <Users size={18} />
                                 </div>
                             </div>
 
                             <div className="flex items-baseline gap-2 mb-3">
                                 <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                                    ₹{Math.round(lockinBalance).toLocaleString('en-IN')}
+                                    {totalReferralEarned > 0 ? `₹${Math.round(totalReferralEarned).toLocaleString('en-IN')}` : `₹${referralBounty}`}
                                 </span>
-                                <span className="text-xs font-bold text-slate-400">locked</span>
+                                <span className="text-xs font-bold text-slate-400">
+                                    {totalReferralEarned > 0 ? 'earned' : '/ activation'}
+                                </span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
                                 <div>
-                                    <span className="text-slate-400 block font-medium">Shopping Spend</span>
+                                    <span className="text-slate-400 block font-medium">Invited Network</span>
                                     <span className="font-bold text-slate-800 dark:text-slate-200">
-                                        ₹{Math.round(shoppingSpend).toLocaleString('en-IN')}
+                                        {totalReferrals} {totalReferrals === 1 ? 'partner' : 'partners'}
                                     </span>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-slate-400 block font-medium">Commission</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                                        ₹{Math.round(totalCommission).toLocaleString('en-IN')}
+                                    <span className="text-slate-400 block font-medium">Bounty Rate</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                        ₹{referralBounty} / invite
                                     </span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span>Open InTrust Wallet</span>
+                            <span>View Network &amp; Earn</span>
                             <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                         </div>
                     </motion.div>

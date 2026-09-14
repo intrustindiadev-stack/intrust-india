@@ -486,7 +486,7 @@ export default function TransactionDetailPage({ params: paramsPromise }) {
                             <ShieldCheck size={13} className="text-emerald-500" />
                             <span>Payment Security</span>
                         </span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">256-Bit Encrypted • RBI Compliant</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">256-Bit Encrypted • Secure</span>
                     </div>
                 </div>
 

@@ -61,14 +61,14 @@ export default function HRMSidebar({ isOpen, setIsOpen, userProfile }) {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 lg:hidden"
+                    className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] lg:hidden"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside className={`
-                fixed top-0 left-0 h-full w-72 bg-white/80 backdrop-blur-3xl border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
+                fixed top-0 left-0 h-full w-72 bg-white/80 backdrop-blur-3xl border-none shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-[70] 
                 transform transition-transform duration-300 ease-in-out
                 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
                 flex flex-col font-[family-name:var(--font-outfit)]
