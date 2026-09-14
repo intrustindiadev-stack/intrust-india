@@ -923,7 +923,12 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                             return (
                                 <div
                                     key={prod.id}
-                                    onClick={() => router.push(`/shop/product/${prod.slug || prod.id}`)}
+                                    onClick={() => {
+                                        if (typeof window !== 'undefined') {
+                                            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                                        }
+                                        router.push(`/shop/product/${prod.slug || prod.id}`, { scroll: true });
+                                    }}
                                     className="group relative flex flex-col justify-between bg-surface-container-lowest hover:bg-surface-container-low rounded-3xl p-3 sm:p-3.5 border border-outline-variant/30 hover:border-blue-500/40 shadow-xs hover:shadow-xl transition-all duration-300 cursor-pointer"
                                 >
                                     <div>

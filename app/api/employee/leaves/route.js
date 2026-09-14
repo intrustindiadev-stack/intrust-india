@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 import { LeaveRequestSchema } from '@/lib/hrm/validation';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendHRMAlert } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +100,38 @@ export async function POST(request) {
         code: 'SUBMISSION_FAILED'
       }, { status: isDomainError ? 400 : 500 });
     }
+
+    // Fire-and-forget email alert to HR/Admin
+    fireAndForgetEmail(async () => {
+      const { data: emp } = await admin
+        .from('user_profiles')
+        .select('full_name, department')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const { data: hrManagers } = await admin
+        .from('user_profiles')
+        .select('email')
+        .in('role', ['admin', 'super_admin', 'hr', 'hr_manager']);
+
+      const hrEmails = (hrManagers || []).map(h => h.email).filter(Boolean);
+      const recipient = hrEmails[0] || process.env.ADMIN_NOTIFICATION_EMAIL || 'hr@intrustindia.com';
+
+      await sendHRMAlert({
+        type: 'leave_applied',
+        to: recipient,
+        data: {
+          employeeName: emp?.full_name || 'Employee',
+          department: emp?.department || 'General',
+          leaveType: leave_type,
+          fromDate: from_date,
+          toDate: to_date,
+          reason: reason || undefined,
+        },
+        actorId: user.id,
+        metadata: { leaveRequestId: data?.request?.id },
+      });
+    }, { category: 'hrm_leave', entityId: data?.request?.id });
 
     const response = NextResponse.json({
       success: true,

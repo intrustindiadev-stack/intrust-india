@@ -1,6 +1,8 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { notifyMerchantNewOrder } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendCustomerOrderEmail, sendAdminAlert, sendMerchantAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -108,16 +110,20 @@ export async function POST(request) {
             .eq('group_id', group_id)
             .not('seller_id', 'is', null);
 
+        let orderMerchants = [];
+
         if (!orderItemsError && orderItems && orderItems.length > 0) {
             const merchantIds = [...new Set(orderItems.map(i => i.seller_id))];
             
             const { data: merchants } = await admin
                 .from('merchants')
-                .select('id, user_id')
+                .select('id, user_id, business_name, business_email')
                 .in('id', merchantIds);
 
-            if (merchants && merchants.length > 0) {
-                const merchantNotifs = merchants.map(m => ({
+            orderMerchants = merchants || [];
+
+            if (orderMerchants.length > 0) {
+                const merchantNotifs = orderMerchants.map(m => ({
                     user_id: m.user_id,
                     title: 'New Order Received 🛒',
                     body: `A customer placed an order (ID: ${group_id.slice(0, 8).toUpperCase()}). Check your orders page.`,
@@ -133,7 +139,7 @@ export async function POST(request) {
 
                 // Best-effort WhatsApp notification (Fire-and-forget)
                 try {
-                    merchants.forEach(m => {
+                    orderMerchants.forEach(m => {
                         const itemCount = orderItems.filter(i => i.seller_id === m.id).length;
                         notifyMerchantNewOrder({
                             merchantUserId: m.user_id,
@@ -147,6 +153,76 @@ export async function POST(request) {
                 }
             }
         }
+
+        // Fire-and-forget emails: Customer confirmation, Admin alert, and Merchant alerts
+        fireAndForgetEmail(async () => {
+            // 1. Fetch customer details
+            const { data: customerProfile } = await admin
+                .from('user_profiles')
+                .select('email, full_name')
+                .eq('id', customerId)
+                .maybeSingle();
+
+            const customerEmail = customerProfile?.email;
+            const customerName = customerProfile?.full_name || 'Valued Customer';
+
+            // Send Customer Order Confirmation Email
+            if (customerEmail) {
+                await sendCustomerOrderEmail({
+                    type: 'order_confirmed',
+                    to: customerEmail,
+                    data: {
+                        customerName,
+                        orderId: group_id,
+                        orderTotalRs: formattedAmount,
+                    },
+                    actorId: customerId,
+                    metadata: { orderGroupId: group_id },
+                });
+            }
+
+            // Send Admin Platform Alert
+            await sendAdminAlert({
+                type: 'new_order',
+                data: {
+                    orderShortId: group_id.slice(0, 8).toUpperCase(),
+                    amountRs: formattedAmount,
+                    customerName,
+                },
+                actorId: customerId,
+                metadata: { orderGroupId: group_id },
+            });
+
+            // Send Merchant Alerts
+            if (orderMerchants && orderMerchants.length > 0) {
+                for (const m of orderMerchants) {
+                    let mEmail = m.business_email;
+                    if (!mEmail && m.user_id) {
+                        const { data: mProf } = await admin
+                            .from('user_profiles')
+                            .select('email')
+                            .eq('id', m.user_id)
+                            .maybeSingle();
+                        mEmail = mProf?.email;
+                    }
+                    if (mEmail) {
+                        const itemCount = (orderItems || []).filter(i => i.seller_id === m.id).length;
+                        await sendMerchantAlert({
+                            type: 'new_order',
+                            to: mEmail,
+                            data: {
+                                businessName: m.business_name || 'Valued Merchant',
+                                orderShortId: group_id.slice(0, 8).toUpperCase(),
+                                amountRs: formattedAmount,
+                                itemCount,
+                            },
+                            actorId: customerId,
+                            metadata: { orderGroupId: group_id, merchantId: m.id },
+                        });
+                    }
+                }
+            }
+        }, { category: 'shopping_order', entityId: group_id });
 
         return NextResponse.json({ success: true });
     } catch (error) {

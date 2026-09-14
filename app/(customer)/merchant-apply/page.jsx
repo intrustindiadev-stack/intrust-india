@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Building2, FileText, Upload, CheckCircle, ArrowRight, Shield,
-    Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home, Share2
+    Loader2, ChevronLeft, Store, TrendingUp, Users, Check, Sparkles, CreditCard, Banknote, X, Home, Share2, Info, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -115,14 +115,80 @@ function MerchantApplyPageInner() {
         }
     }, [searchParams]);
 
-
 // Form State
     const [formData, setFormData] = useState({
-        businessName: '', department: 'grocery', gstNumber: '', ownerName: '',
-        phone: '', email: '', address: '',
-        bankAccount: '', confirmBankAccount: '', bankAccountName: '', bankName: '', ifscCode: '', panCard: '',
+        businessName: '',
+        gstNumber: '',
+        ownerName: '',
+        phone: '',
+        email: '',
+        address: '',
+        bankAccount: '',
+        bankAccountName: '',
+        bankName: '',
+        ifscCode: '',
+        confirmBankAccount: '',
+        panCard: '',
         merchantReferralCode: '',
+        department: 'grocery',
     });
+
+    const [touched, setTouched] = useState({});
+    const markTouched = (k) => setTouched(p => ({ ...p, [k]: true }));
+
+    const handleFieldChange = (key, value) => {
+        setFormData(prev => ({ ...prev, [key]: value }));
+        if (touched[key]) {
+            markTouched(key);
+        }
+    };
+
+    const hasAnyBankField = Boolean(
+        (formData.bankAccountName || '').trim() ||
+        (formData.bankAccount || '').trim() ||
+        (formData.confirmBankAccount || '').trim() ||
+        (formData.ifscCode || '').trim() ||
+        (formData.bankName || '').trim()
+    );
+
+    const isBusinessNameValid = (formData.businessName || '').trim().length >= 3;
+    const isOwnerNameValid = (formData.ownerName || '').trim().length >= 3;
+    const isPhoneValid = /^[6-9]\d{9}$/.test((formData.phone || '').trim());
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((formData.email || '').trim());
+    const isAddressValid = (formData.address || '').trim().length >= 10;
+    const isGstValid = !(formData.gstNumber || '').trim() || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test((formData.gstNumber || '').trim());
+    const isReferralValid = !(formData.merchantReferralCode || '').trim() || /^[A-Z0-9]{6}$/.test((formData.merchantReferralCode || '').trim().toUpperCase());
+
+    const isBankAccountNameValid = (formData.bankAccountName || '').trim().length >= 3;
+    const isBankAccountValid = /^[0-9]{9,18}$/.test((formData.bankAccount || '').trim());
+    const isConfirmAccountValid = Boolean((formData.confirmBankAccount || '').trim()) && formData.confirmBankAccount === formData.bankAccount;
+    const isIfscValid = /^[A-Z]{4}0[A-Z0-9]{6}$/.test((formData.ifscCode || '').trim().toUpperCase());
+    const isBankNameValid = true;
+    const isPanValid = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test((formData.panCard || '').trim().toUpperCase());
+
+    const bankFieldKeys = ['bankAccountName', 'bankAccount', 'confirmBankAccount', 'ifscCode', 'bankName'];
+
+    const getFieldState = (key, value, isValid) => {
+        if (bankFieldKeys.includes(key)) {
+            if (!hasAnyBankField) return 'idle';
+            if (!touched[key]) return 'idle';
+            if (key === 'bankName') {
+                return (value || '').trim() ? 'valid' : 'idle';
+            }
+            return isValid ? 'valid' : 'invalid';
+        }
+
+        if (!touched[key]) return 'idle';
+
+        if (key === 'gstNumber' && !(value || '').trim()) {
+            return 'idle';
+        }
+        if (key === 'merchantReferralCode' && !(value || '').trim()) {
+            return 'idle';
+        }
+
+        return isValid ? 'valid' : 'invalid';
+    };
 
     const [error, setError] = useState('');
 
@@ -176,6 +242,15 @@ function MerchantApplyPageInner() {
 
         const step2Error = validateStep2();
         if (step2Error) {
+            setTouched(p => ({
+                ...p,
+                panCard: true,
+                bankAccountName: true,
+                bankAccount: true,
+                confirmBankAccount: true,
+                ifscCode: true,
+                bankName: true,
+            }));
             setError(step2Error);
             return;
         }
@@ -239,12 +314,36 @@ function MerchantApplyPageInner() {
     };
 
     const validateStep2 = () => {
-        if (!formData.bankAccountName || !formData.bankAccountName.trim()) {
+        if (!formData.panCard) {
+            toast.error("Please enter your PAN Number.");
+            return "Please enter your PAN Number.";
+        }
+
+        const pan = formData.panCard.trim().toUpperCase();
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (!panRegex.test(pan)) {
+            toast.error("Invalid PAN format.");
+            return "Invalid PAN format.";
+        }
+
+        const accHolderName = (formData.bankAccountName || '').trim();
+        const accNum = (formData.bankAccount || '').trim();
+        const confirmAccNum = (formData.confirmBankAccount || '').trim();
+        const ifsc = (formData.ifscCode || '').trim().toUpperCase();
+        const bankName = (formData.bankName || '').trim();
+
+        const hasAnyBankField = Boolean(accHolderName || accNum || confirmAccNum || ifsc || bankName);
+
+        if (!hasAnyBankField) {
+            return null;
+        }
+
+        if (!accHolderName) {
             toast.error("Please enter the Account Holder Name.");
             return "Please enter the Account Holder Name.";
         }
 
-        if (!formData.bankAccount || !formData.ifscCode) {
+        if (!accNum || !ifsc) {
             toast.error("Please enter your Bank Account details.");
             return "Please enter your Bank Account details.";
         }
@@ -254,15 +353,10 @@ function MerchantApplyPageInner() {
             return "Account numbers do not match.";
         }
 
-        if (!formData.panCard) {
-            toast.error("Please enter your PAN Number.");
-            return "Please enter your PAN Number.";
-        }
-
-        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-        if (!panRegex.test(formData.panCard)) {
-            toast.error("Invalid PAN format.");
-            return "Invalid PAN format.";
+        const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+        if (!ifscRegex.test(ifsc)) {
+            toast.error("Invalid IFSC format.");
+            return "Invalid IFSC format.";
         }
 
         return null;
@@ -274,8 +368,29 @@ function MerchantApplyPageInner() {
         else if (step === 2) errorMsg = validateStep2();
 
         if (errorMsg) {
-            // Errors either alerted or toasted inside validation logic now based on type
-            if (step === 1) alert(errorMsg);
+            if (step === 1) {
+                setTouched(p => ({
+                    ...p,
+                    businessName: true,
+                    gstNumber: true,
+                    ownerName: true,
+                    phone: true,
+                    email: true,
+                    address: true,
+                    merchantReferralCode: true,
+                }));
+                alert(errorMsg);
+            } else if (step === 2) {
+                setTouched(p => ({
+                    ...p,
+                    panCard: true,
+                    bankAccountName: true,
+                    bankAccount: true,
+                    confirmBankAccount: true,
+                    ifscCode: true,
+                    bankName: true,
+                }));
+            }
             return;
         }
         setStep(step + 1);
@@ -488,7 +603,16 @@ function MerchantApplyPageInner() {
 
                                 <div className="space-y-10">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                        <SmoothInput label="Business Name" value={formData.businessName} onChange={e => setFormData({ ...formData, businessName: e.target.value })} autoFocus icon={Store} />
+                                        <SmoothInput
+                                            label="Business Name"
+                                            value={formData.businessName}
+                                            onChange={e => handleFieldChange('businessName', e.target.value)}
+                                            onBlur={() => markTouched('businessName')}
+                                            state={getFieldState('businessName', formData.businessName, isBusinessNameValid)}
+                                            hint="Business name must be at least 3 characters"
+                                            autoFocus
+                                            icon={Store}
+                                        />
                                         <div className="relative flex flex-col justify-end">
                                             <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block uppercase tracking-wider">
                                                 Business Department / Category *
@@ -516,26 +640,65 @@ function MerchantApplyPageInner() {
                                             label="GSTIN (Optional)"
                                             value={formData.gstNumber}
                                             onChange={e => {
-                                                setFormData({ ...formData, gstNumber: e.target.value });
+                                                handleFieldChange('gstNumber', e.target.value);
                                                 if (verified.gstin) setVerified(prev => ({ ...prev, gstin: null }));
                                             }}
+                                            onBlur={() => markTouched('gstNumber')}
+                                            state={getFieldState('gstNumber', formData.gstNumber, isGstValid)}
+                                            hint="Invalid GSTIN format (e.g., 22AAAAA0000A1Z5)"
                                             icon={FileText}
                                             actionLabel="Verify"
                                             onAction={handleVerifyGSTIN}
                                             isVerifying={verifying.gstin}
                                             verificationState={verified.gstin}
                                         />
-                                        <SmoothInput label="Owner Name" value={formData.ownerName} onChange={e => setFormData({ ...formData, ownerName: e.target.value })} icon={Users} />
+                                        <SmoothInput
+                                            label="Owner Name"
+                                            value={formData.ownerName}
+                                            onChange={e => handleFieldChange('ownerName', e.target.value)}
+                                            onBlur={() => markTouched('ownerName')}
+                                            state={getFieldState('ownerName', formData.ownerName, isOwnerNameValid)}
+                                            hint="Owner name must be at least 3 characters"
+                                            icon={Users}
+                                        />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                        <SmoothInput label="Mobile Number" type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} icon={TrendingUp} />
-                                        <SmoothInput label="Email Address" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} icon={Building2} />
+                                        <SmoothInput
+                                            label="Mobile Number"
+                                            type="tel"
+                                            value={formData.phone}
+                                            onChange={e => handleFieldChange('phone', e.target.value)}
+                                            onBlur={() => markTouched('phone')}
+                                            state={getFieldState('phone', formData.phone, isPhoneValid)}
+                                            hint="Enter a valid 10-digit mobile number starting with 6-9"
+                                            icon={TrendingUp}
+                                        />
+                                        <SmoothInput
+                                            label="Email Address"
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={e => handleFieldChange('email', e.target.value)}
+                                            onBlur={() => markTouched('email')}
+                                            state={getFieldState('email', formData.email, isEmailValid)}
+                                            hint="Enter a valid email address"
+                                            icon={Building2}
+                                        />
                                     </div>
-                                    <SmoothTextArea label="Registered Address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+                                    <SmoothTextArea
+                                        label="Registered Address"
+                                        value={formData.address}
+                                        onChange={e => handleFieldChange('address', e.target.value)}
+                                        onBlur={() => markTouched('address')}
+                                        state={getFieldState('address', formData.address, isAddressValid)}
+                                        hint="Address must be at least 10 characters"
+                                    />
                                     <SmoothInput
                                         label="Referral Code (Optional)"
                                         value={formData.merchantReferralCode}
-                                        onChange={e => setFormData({ ...formData, merchantReferralCode: e.target.value })}
+                                        onChange={e => handleFieldChange('merchantReferralCode', e.target.value.toUpperCase())}
+                                        onBlur={() => markTouched('merchantReferralCode')}
+                                        state={getFieldState('merchantReferralCode', formData.merchantReferralCode, isReferralValid)}
+                                        hint="Referral code must be 6 alphanumeric characters"
                                         icon={Share2}
                                     />
                                 </div>
@@ -553,7 +716,7 @@ function MerchantApplyPageInner() {
                             >
                                 <div className="mb-10">
                                     <h2 className="text-4xl sm:text-5xl font-display font-black text-slate-900 dark:text-white mb-4 tracking-tight">Banking Details</h2>
-                                    <p className="text-xl text-slate-500 dark:text-slate-400 font-semibold">Connect your bank account for settlements.</p>
+                                    <p className="text-xl text-slate-500 dark:text-slate-400 font-semibold">Connect your bank account for settlements — or skip and add it later.</p>
                                 </div>
 
                                 <div className="space-y-10">
@@ -567,62 +730,76 @@ function MerchantApplyPageInner() {
                                         </div>
                                     </div>
 
+                                    <div className="flex gap-3 items-start p-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
+                                        <Info size={18} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-bold text-blue-900 dark:text-blue-100 text-sm">Bank details are optional</p>
+                                            <p className="text-blue-700/80 dark:text-blue-300/70 text-sm mt-1 leading-relaxed font-medium">Optional: Skip for now. You can securely add your banking and settlement details later from your Merchant Dashboard once your account is approved.</p>
+                                        </div>
+                                    </div>
+
                                     <SmoothInput
-                                        label="Account Holder Name"
+                                        label="Account Holder Name (Optional)"
                                         type="text"
                                         value={formData.bankAccountName}
-                                        onChange={e => {
-                                            setFormData({ ...formData, bankAccountName: e.target.value });
-                                        }}
+                                        onChange={e => handleFieldChange('bankAccountName', e.target.value)}
+                                        onBlur={() => markTouched('bankAccountName')}
+                                        state={getFieldState('bankAccountName', formData.bankAccountName, isBankAccountNameValid)}
+                                        hint="Account holder name must be at least 3 characters"
                                         autoFocus
                                         icon={Users}
                                     />
                                     <SmoothInput
-                                        label="Account Number"
+                                        label="Account Number (Optional)"
                                         type="text"
                                         inputMode="numeric"
                                         pattern="[0-9]*"
                                         value={formData.bankAccount}
-                                        onChange={e => {
-                                            setFormData({ ...formData, bankAccount: e.target.value });
-                                        }}
+                                        onChange={e => handleFieldChange('bankAccount', e.target.value)}
+                                        onBlur={() => markTouched('bankAccount')}
+                                        state={getFieldState('bankAccount', formData.bankAccount, isBankAccountValid)}
+                                        hint="Enter a valid bank account number (9-18 digits)"
                                         icon={CreditCard}
                                     />
                                     <SmoothInput
-                                        label="Confirm Account Number"
+                                        label="Confirm Account Number (Optional)"
                                         type="text"
                                         inputMode="numeric"
                                         pattern="[0-9]*"
                                         value={formData.confirmBankAccount}
-                                        onChange={e => {
-                                            setFormData({ ...formData, confirmBankAccount: e.target.value });
-                                        }}
+                                        onChange={e => handleFieldChange('confirmBankAccount', e.target.value)}
+                                        onBlur={() => markTouched('confirmBankAccount')}
+                                        state={getFieldState('confirmBankAccount', formData.confirmBankAccount, isConfirmAccountValid)}
+                                        hint="Account numbers do not match"
                                         icon={CreditCard}
                                     />
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                         <SmoothInput
-                                            label="IFSC Code"
+                                            label="IFSC Code (Optional)"
                                             value={formData.ifscCode}
-                                            onChange={e => {
-                                                setFormData({ ...formData, ifscCode: e.target.value });
-                                            }}
+                                            onChange={e => handleFieldChange('ifscCode', e.target.value.toUpperCase())}
+                                            onBlur={() => markTouched('ifscCode')}
+                                            state={getFieldState('ifscCode', formData.ifscCode, isIfscValid)}
+                                            hint="Enter a valid 11-character IFSC code (e.g. SBIN0000001)"
                                             icon={Banknote}
                                         />
                                         <SmoothInput
-                                            label="Bank Name"
+                                            label="Bank Name (Optional)"
                                             value={formData.bankName}
-                                            onChange={e => {
-                                                setFormData({ ...formData, bankName: e.target.value });
-                                            }}
+                                            onChange={e => handleFieldChange('bankName', e.target.value)}
+                                            onBlur={() => markTouched('bankName')}
+                                            state={getFieldState('bankName', formData.bankName, isBankNameValid)}
+                                            hint=""
                                             icon={Building2}
                                         />
                                     </div>
                                     <SmoothInput
                                         label="PAN Number"
                                         value={formData.panCard}
-                                        onChange={e => {
-                                            setFormData({ ...formData, panCard: e.target.value.toUpperCase() });
-                                        }}
+                                        onChange={e => handleFieldChange('panCard', e.target.value.toUpperCase())}
+                                        onBlur={() => markTouched('panCard')}
+                                        state={getFieldState('panCard', formData.panCard, isPanValid)}
+                                        hint="Enter a valid 10-character PAN (e.g. ABCDE1234F)"
                                         icon={FileText}
                                     />
 
@@ -695,8 +872,8 @@ function MerchantApplyPageInner() {
                         </button>
                         <button
                             onClick={step === 2 ? handleFormSubmit : nextStep}
-                            disabled={loading || (step === 2 && (!formData.bankAccountName || !formData.bankAccount || !formData.confirmBankAccount || !formData.ifscCode || !formData.panCard))}
-                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && (!formData.bankAccountName || !formData.bankAccount || !formData.confirmBankAccount || !formData.ifscCode || !formData.panCard))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
+                            disabled={loading || (step === 2 && (!formData.panCard))}
+                            className={`flex-1 flex gap-3 justify-center items-center py-5 rounded-2xl text-white dark:text-[#020617] font-black shadow-lg transition-all text-xl ${(loading || (step === 2 && (!formData.panCard))) ? 'bg-slate-200 dark:bg-white/5 shadow-none text-slate-400 cursor-not-allowed' : 'bg-[#D4AF37] shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/30 hover:scale-[1.02] active:scale-[0.98] gold-glow'}`}
                         >
                             {loading && <Loader2 className="animate-spin" size={24} />}
                             {loading ? 'Submitting...' : step === 2 ? 'Submit Application' : 'Continue'}
@@ -732,23 +909,40 @@ function TrustItem({ icon: Icon, title, text, delay }) {
 
 // Ultra Smooth Inputs with verification action
 // verificationState: null | 'verified' | 'pending' | 'failed'
-function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction, isVerifying, verificationState, ...props }) {
+function SmoothInput({
+    label,
+    className = "",
+    icon: Icon,
+    actionLabel,
+    onAction,
+    isVerifying,
+    verificationState,
+    state = 'idle',
+    hint = '',
+    ...props
+}) {
     const isVerified = verificationState === 'verified';
     const isPending = verificationState === 'pending';
+    const isValid = !verificationState && state === 'valid';
+    const isInvalid = !verificationState && state === 'invalid';
 
     // Border/ring colour
-    const borderClass = isVerified
+    const borderClass = isVerified || isValid
         ? 'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/10'
         : isPending
             ? 'border-amber-400/50 focus:border-amber-400/50 focus:ring-amber-400/10'
-            : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/10';
+            : isInvalid
+                ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
+                : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/10';
 
     // Icon colour
-    const iconClass = isVerified
+    const iconClass = isVerified || isValid
         ? 'text-green-500'
         : isPending
             ? 'text-amber-400'
-            : 'text-slate-400 dark:text-slate-500 group-focus-within:text-[#D4AF37]';
+            : isInvalid
+                ? 'text-red-500'
+                : 'text-slate-400 dark:text-slate-500 group-focus-within:text-[#D4AF37]';
 
     return (
         <div className="group">
@@ -759,7 +953,7 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
             </div>
             <div className="relative transform transition-all duration-200 group-focus-within:scale-[1.01]">
                 <input
-                    className={`w-full px-6 py-5 pl-14 ${actionLabel ? 'pr-28' : ''} bg-slate-50 dark:bg-white/5 border ${borderClass} rounded-2xl focus:ring-4 transition-all outline-none font-bold text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm ${className}`}
+                    className={`w-full px-6 py-5 pl-14 ${actionLabel ? 'pr-28' : (!actionLabel && state !== 'idle' ? 'pr-14' : '')} bg-slate-50 dark:bg-white/5 border ${borderClass} rounded-2xl focus:ring-4 transition-all outline-none font-bold text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm ${className}`}
                     placeholder={`Enter ${label}`}
                     readOnly={isVerifying || isVerified}
                     {...props}
@@ -794,23 +988,57 @@ function SmoothInput({ label, className = "", icon: Icon, actionLabel, onAction,
                         )}
                     </div>
                 )}
+
+                {!actionLabel && state !== 'idle' && (
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                        {state === 'valid' && (
+                            <CheckCircle2 size={22} className="text-green-500" />
+                        )}
+                        {state === 'invalid' && (
+                            <AlertCircle size={22} className="text-red-500" />
+                        )}
+                    </div>
+                )}
             </div>
+            {state === 'invalid' && hint && (
+                <p className="mt-2 ml-1 text-sm font-semibold text-red-500 flex items-center gap-1">
+                    <AlertCircle size={14} className="shrink-0" />
+                    {hint}
+                </p>
+            )}
         </div>
-    )
+    );
 }
 
-function SmoothTextArea({ label, className = "", ...props }) {
+function SmoothTextArea({ label, className = "", state = 'idle', hint = '', ...props }) {
+    const isValid = state === 'valid';
+    const isInvalid = state === 'invalid';
+
+    const borderClass = isValid
+        ? 'border-green-500/50 focus:border-green-500/50 focus:ring-green-500/10'
+        : isInvalid
+            ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/10'
+            : 'border-black/5 dark:border-white/10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/10';
+
     return (
         <div className="group">
             <label className="block text-lg font-bold text-slate-700 dark:text-slate-300 mb-3 ml-1 group-focus-within:text-[#D4AF37] transition-colors">
                 {label}
             </label>
-            <textarea
-                className={`w-full px-6 py-5 bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl focus:border-[#D4AF37]/50 focus:ring-4 focus:ring-[#D4AF37]/10 transition-all outline-none font-bold text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm resize-none ${className}`}
-                placeholder={`Enter ${label}`}
-                rows={4}
-                {...props}
-            />
+            <div className="relative transform transition-all duration-200 group-focus-within:scale-[1.01]">
+                <textarea
+                    className={`w-full px-6 py-5 bg-slate-50 dark:bg-white/5 border ${borderClass} rounded-2xl focus:ring-4 transition-all outline-none font-bold text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm resize-none ${className}`}
+                    placeholder={`Enter ${label}`}
+                    rows={4}
+                    {...props}
+                />
+            </div>
+            {isInvalid && hint && (
+                <p className="mt-2 ml-1 text-sm font-semibold text-red-500 flex items-center gap-1">
+                    <AlertCircle size={14} className="shrink-0" />
+                    {hint}
+                </p>
+            )}
         </div>
-    )
+    );
 }

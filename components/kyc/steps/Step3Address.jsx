@@ -12,8 +12,8 @@ import { validateAddress } from '@/app/types/kyc';
  * @property {boolean} isSubmitting
  */
 
-/** @param {Step3AddressProps} props */
-export default function Step3Address({ formData, onChange, errors, isSubmitting }) {
+/** @param {Step3AddressProps & { onOpenTerms: () => void, termsVersion: string }} props */
+export default function Step3Address({ formData, onChange, errors, isSubmitting, onOpenTerms, termsVersion }) {
 
     return (
         <div className="space-y-5">
@@ -88,22 +88,24 @@ export default function Step3Address({ formData, onChange, errors, isSubmitting 
                 </div>
             </div>
 
-            {/* Terms checkbox */}
+            {/* Terms acceptance via scroll-to-accept modal */}
             <div className="flex flex-col">
-                <label className="flex items-start gap-4 p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100/50 transition-colors cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={formData.termsAccepted || false}
-                        onChange={(e) => onChange('termsAccepted', e.target.checked)}
-                        className={`mt-1 w-5 h-5 rounded border-2 border-slate-300 text-blue-600 focus:ring-blue-600 focus:ring-2 cursor-pointer transition-colors shrink-0 ${errors.termsAccepted ? 'border-red-500' : ''}`}
-                    />
-                    <div className="flex-1 text-sm text-slate-600 leading-relaxed">
-                        I confirm that all information provided is accurate and authentic. By proceeding, I agree to Intrust's{' '}
-                        <a href="/legal?tab=terms" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-blue-600 font-semibold hover:underline cursor-pointer focus:outline-none">Terms of Service</a>
-                        {' '}and{' '}
-                        <a href="/legal?tab=privacy" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-blue-600 font-semibold hover:underline cursor-pointer focus:outline-none">Privacy Policy</a>.
-                    </div>
-                </label>
+                <button
+                    type="button"
+                    onClick={onOpenTerms}
+                    className={`flex items-start gap-4 p-4 border rounded-xl transition-colors text-left w-full ${formData.termsAccepted ? 'border-emerald-300 bg-emerald-50/60' : 'border-slate-200 bg-slate-50 hover:bg-slate-100/50'} ${errors.termsAccepted ? 'border-red-400' : ''}`}
+                >
+                    <span className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${formData.termsAccepted ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white text-transparent'}`}>
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                    <span className="flex-1 text-sm text-slate-600 leading-relaxed">
+                        {formData.termsAccepted ? (
+                            <>You accepted <strong>Intrust India KYC Terms ({termsVersion || 'latest'})</strong>. A signed PDF copy will be attached to your application. <span className="text-blue-600 font-semibold">Read again</span></>
+                        ) : (
+                            <>I confirm that all information provided is accurate and authentic. <span className="text-blue-600 font-semibold">Read & Accept Intrust India KYC Terms</span> to continue.</>
+                        )}
+                    </span>
+                </button>
                 {errors.termsAccepted && (
                     <p className="text-red-500 text-sm mt-2 ml-1 flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

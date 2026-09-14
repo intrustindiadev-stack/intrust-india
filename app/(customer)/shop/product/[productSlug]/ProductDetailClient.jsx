@@ -58,6 +58,7 @@ import OutOfStockBanner from '@/components/ui/OutOfStockBanner';
 import RecentlyViewed, { recordRecentlyViewed } from '@/components/commerce/RecentlyViewed';
 import ProductCardV2 from '@/components/commerce/ProductCardV2';
 import SizeGuideModal from '@/components/commerce/SizeGuideModal';
+import ProductReviews from '@/components/commerce/ProductReviews';
 
 // Lazy-load modal — only needed on rare cart-conflict path, keep it out of the initial bundle
 const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
@@ -73,6 +74,17 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Open-at-top fix: ensure PDP always opens at top on mount and on product switch
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            const rafId = requestAnimationFrame(() => {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            });
+            return () => cancelAnimationFrame(rafId);
+        }
+    }, [product?.id, product?.slug]);
 
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -892,13 +904,23 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                             {product.description || `${categoryName} crafted for peak performance and refined modern style.`}
                         </p>
 
-                        {/* Rating Row: ★ 4.8 (142 reviews) | 100% Genuine InTrust Guaranteed */}
+                        {/* Rating Row: Live avg_rating & review_count */}
                         <div className="flex flex-wrap items-center gap-2.5 mb-4 text-xs">
-                            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-700/40 text-amber-900 dark:text-amber-200 font-bold">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveDetailTab('reviews');
+                                    const el = document.getElementById('customer-reviews') || document.getElementById('product-details-section');
+                                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 dark:border-amber-700/40 text-amber-900 dark:text-amber-200 font-bold hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors cursor-pointer text-left"
+                            >
                                 <Star size={13} className="text-amber-500 fill-amber-500" />
-                                <span>4.8</span>
-                                <span className="text-amber-700/70 dark:text-amber-400/70 font-medium">(142 reviews)</span>
-                            </div>
+                                <span>{Number(product.avg_rating || 0) > 0 ? Number(product.avg_rating).toFixed(1) : 'New'}</span>
+                                <span className="text-amber-700/70 dark:text-amber-400/70 font-medium">
+                                    ({product.review_count || 0} {product.review_count === 1 ? 'review' : 'reviews'})
+                                </span>
+                            </button>
                             <span className="text-slate-300 dark:text-white/20">|</span>
                             <div className="flex items-center gap-1 text-blue-600 dark:text-sky-400 font-bold">
                                 <BadgeCheck size={16} className="text-blue-600 dark:text-sky-400" />
@@ -1046,7 +1068,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                         {[
                             { id: 'overview', label: 'Product Details' },
                             { id: 'specifications', label: 'Specifications' },
-                            { id: 'reviews', label: 'Reviews (142)' },
+                            { id: 'reviews', label: `Reviews (${product.review_count || 0})` },
                             { id: 'faqs', label: 'FAQs' },
                         ].map(tab => {
                             const isActive = activeDetailTab === tab.id;
@@ -1358,173 +1380,8 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                                 </div>
                             </div>
 
-                            {/* Block 6: Customer Reviews Module (Matching Reference Mockup) */}
-                            <div className="p-5 sm:p-8 rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 space-y-6 shadow-xs">
-                                {/* Header with "Write a Review" button */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Star size={18} className="fill-amber-500 text-amber-500" />
-                                        <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                                            Customer Reviews
-                                        </h4>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => toast('Reviews are enabled for verified buyers after delivery.')}
-                                        className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-all shadow-xs"
-                                    >
-                                        Write a Review
-                                    </button>
-                                </div>
-
-                                {/* Rating Summary Cluster: Big Score + Bars + Photo Strip */}
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
-                                    
-                                    {/* Big Score */}
-                                    <div className="md:col-span-3 flex flex-col items-center md:items-start text-center md:text-left">
-                                        <div className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white">
-                                            4.8
-                                        </div>
-                                        <div className="flex items-center text-amber-500 gap-0.5 my-1.5">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} size={16} className="fill-amber-500" />
-                                            ))}
-                                        </div>
-                                        <div className="text-xs text-slate-400">
-                                            Based on 142 reviews
-                                        </div>
-                                    </div>
-
-                                    {/* Progress Bars */}
-                                    <div className="md:col-span-5 space-y-1.5 text-xs">
-                                        {[
-                                            { stars: 5, pct: 78 },
-                                            { stars: 4, pct: 16 },
-                                            { stars: 3, pct: 4 },
-                                            { stars: 2, pct: 1 },
-                                            { stars: 1, pct: 1 },
-                                        ].map(item => (
-                                            <div key={item.stars} className="flex items-center gap-2">
-                                                <span className="w-6 text-slate-500 font-bold">{item.stars} ★</span>
-                                                <div className="flex-1 h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                                                        style={{ width: `${item.pct}%` }}
-                                                    />
-                                                </div>
-                                                <span className="w-8 text-right text-slate-400 font-semibold">{item.pct}%</span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Customer Photos Strip */}
-                                    <div className="md:col-span-4 flex flex-col items-center md:items-end">
-                                        <span className="text-[11px] font-bold text-slate-400 mb-2">Customer Photos</span>
-                                        <div className="flex items-center gap-1.5">
-                                            {allImages.slice(0, 4).map((url, i) => (
-                                                <div key={i} className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10">
-                                                    <Image src={url} alt={`Review ${i + 1}`} fill sizes="48px" className="object-cover" />
-                                                </div>
-                                            ))}
-                                            <div className="w-12 h-12 rounded-xl bg-slate-900 text-white dark:bg-white/10 flex items-center justify-center text-xs font-black">
-                                                +98
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 3 Customer Review Cards (Matching Mockup) */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {[
-                                        {
-                                            id: 'rev-1',
-                                            name: 'Aditi Sharma',
-                                            time: '2 days ago',
-                                            rating: 5,
-                                            comment: 'Absolutely loved this item! The quality is so premium and the fit is perfect. Great for all occasions.',
-                                            thumbs: 12,
-                                            images: allImages.slice(0, 3)
-                                        },
-                                        {
-                                            id: 'rev-2',
-                                            name: 'Rohan Mehta',
-                                            time: '1 week ago',
-                                            rating: 5,
-                                            comment: 'Good quality and exactly as shown in the pictures. Delivery was super fast and well packed.',
-                                            thumbs: 8,
-                                            images: allImages.slice(0, 1)
-                                        },
-                                        {
-                                            id: 'rev-3',
-                                            name: 'Neha Kapoor',
-                                            time: '2 weeks ago',
-                                            rating: 5,
-                                            comment: 'Beautiful finish and very comfortable. Received lots of compliments! Will order again.',
-                                            thumbs: 6,
-                                            images: allImages.slice(0, 3)
-                                        },
-                                    ].map(rev => {
-                                        const isHelpful = helpfulReviews.has(rev.id);
-                                        return (
-                                            <div
-                                                key={rev.id}
-                                                className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-3 flex flex-col justify-between bg-white dark:bg-white/[0.01]"
-                                            >
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-xs font-bold text-slate-900 dark:text-white">{rev.name}</span>
-                                                                <Check size={12} className="text-blue-600 stroke-[3]" />
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-400">{rev.time}</div>
-                                                        </div>
-                                                        <div className="flex items-center text-amber-500">
-                                                            {[...Array(rev.rating)].map((_, idx) => (
-                                                                <Star key={idx} size={12} className="fill-amber-500" />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                                                        {rev.comment}
-                                                    </p>
-                                                    {rev.images.length > 0 && (
-                                                        <div className="flex items-center gap-1.5 pt-1">
-                                                            {rev.images.map((imgUrl, imgIdx) => (
-                                                                <div key={imgIdx} className="relative w-11 h-11 rounded-lg overflow-hidden border border-slate-100 dark:border-white/5">
-                                                                    <Image src={imgUrl} alt="Review attachment" fill sizes="44px" className="object-cover" />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5 text-xs text-slate-400">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setHelpfulReviews(prev => {
-                                                                const next = new Set(prev);
-                                                                if (next.has(rev.id)) next.delete(rev.id);
-                                                                else next.add(rev.id);
-                                                                return next;
-                                                            });
-                                                        }}
-                                                        className={`flex items-center gap-1 font-semibold transition-colors ${
-                                                            isHelpful ? 'text-blue-600 dark:text-sky-400' : 'hover:text-slate-900 dark:hover:text-white'
-                                                        }`}
-                                                    >
-                                                        <ThumbsUp size={13} className={isHelpful ? 'fill-blue-600' : ''} />
-                                                        <span>Helpful ({rev.thumbs + (isHelpful ? 1 : 0)})</span>
-                                                    </button>
-                                                    <button type="button" aria-label="More" className="hover:text-slate-900 dark:hover:text-white">
-                                                        <MoreHorizontal size={15} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            {/* Block 6: Enterprise Customer Reviews Module */}
+                            <ProductReviews product={product} customer={activeCustomer} />
                         </div>
                     )}
 
@@ -1548,15 +1405,7 @@ export default function ProductDetailClient({ product, inventory, customer, vari
                     {/* ====== TAB 3: REVIEWS ====== */}
                     {activeDetailTab === 'reviews' && (
                         <div className="space-y-6">
-                            <div className="flex items-center gap-4 p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50">
-                                <div className="text-4xl font-black text-amber-600">4.8</div>
-                                <div>
-                                    <div className="flex items-center text-amber-500 gap-0.5">
-                                        {[...Array(5)].map((_, i) => <Star key={i} size={16} className="fill-amber-500" />)}
-                                    </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Based on 142 verified customer purchases</div>
-                                </div>
-                            </div>
+                            <ProductReviews product={product} customer={activeCustomer} />
                         </div>
                     )}
 

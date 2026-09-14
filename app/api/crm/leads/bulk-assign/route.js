@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { BulkAssignSchema } from '@/lib/crm/validation';
 import { getAuthorizedTeamScope } from '@/lib/teamAuth';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendCRMAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -144,6 +146,29 @@ export async function POST(request) {
 
         if (!rpcData?.success) {
             return NextResponse.json({ error: rpcData?.error || 'Unknown database error' }, { status: 400 });
+        }
+
+        if (newRepId) {
+            fireAndForgetEmail(async () => {
+                const { data: repProf } = await adminClient
+                    .from('user_profiles')
+                    .select('email, full_name')
+                    .eq('id', newRepId)
+                    .maybeSingle();
+
+                if (repProf?.email) {
+                    await sendCRMAlert({
+                        type: 'lead_assigned',
+                        to: repProf.email,
+                        data: {
+                            repName: repProf.full_name || 'Representative',
+                            count: rpcData.affected_count || targetLeadIds.length,
+                        },
+                        actorId: user.id,
+                        metadata: { newRepId, count: rpcData.affected_count },
+                    });
+                }
+            }, { category: 'crm_lead', entityId: newRepId });
         }
 
         return NextResponse.json({

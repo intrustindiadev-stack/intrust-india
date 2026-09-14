@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { z } from 'zod';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendCRMAlert } from '@/lib/email';
 
 const convertSchema = z.object({
     type:      z.enum(['customer', 'merchant']),
@@ -83,6 +85,38 @@ export async function POST(request, { params }) {
 
             return NextResponse.json({ error: errorMsg }, { status });
         }
+
+        // Fire-and-forget email alert to rep
+        fireAndForgetEmail(async () => {
+            const { data: lead } = await supabase
+                .from('crm_leads')
+                .select('contact_name, full_name, assigned_to')
+                .eq('id', leadId)
+                .maybeSingle();
+
+            const leadName = lead?.contact_name || lead?.full_name || 'Lead';
+            const repUserId = lead?.assigned_to || user.id;
+
+            const { data: repProf } = await supabase
+                .from('user_profiles')
+                .select('email, full_name')
+                .eq('id', repUserId)
+                .maybeSingle();
+
+            if (repProf?.email) {
+                await sendCRMAlert({
+                    type: 'lead_converted',
+                    to: repProf.email,
+                    data: {
+                        repName: repProf.full_name || 'Representative',
+                        leadName,
+                        type,
+                    },
+                    actorId: user.id,
+                    metadata: { leadId, type, target_id },
+                });
+            }
+        }, { category: 'crm_lead', entityId: leadId });
 
         return NextResponse.json(rpcResult, { status: 200 });
     } catch (err) {

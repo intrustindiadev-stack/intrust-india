@@ -2,6 +2,8 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseSer
 import { NextResponse } from 'next/server';
 import { notifyCustomerOrderStatus } from '@/lib/notifications/userWhatsapp';
 import { notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendCustomerOrderEmail } from '@/lib/email';
 
 export async function PATCH(request, { params }) {
     try {
@@ -53,6 +55,30 @@ export async function PATCH(request, { params }) {
                     orderId: orderId.substring(0, 8).toUpperCase(), 
                     newStatus: newStatus 
                 }).catch(e => console.error('[Order Status API] Customer WhatsApp failed:', e));
+
+                // Fire and forget email notification to customer
+                fireAndForgetEmail(async () => {
+                    const { data: customerProfile } = await adminClient
+                        .from('user_profiles')
+                        .select('email')
+                        .eq('id', order.customer_id)
+                        .maybeSingle();
+
+                    if (customerProfile?.email) {
+                        await sendCustomerOrderEmail({
+                            type: 'order_status_update',
+                            to: customerProfile.email,
+                            data: {
+                                orderId,
+                                newStatus,
+                                trackingNumber: trackingNumber || undefined,
+                                statusNotes: statusNotes || undefined,
+                            },
+                            actorId: order.customer_id,
+                            metadata: { orderId, newStatus },
+                        });
+                    }
+                }, { category: 'customer_order', entityId: orderId });
             }
 
             // 3. Fire merchant transaction alert for settlement credit

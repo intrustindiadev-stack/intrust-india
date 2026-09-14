@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
 import { notifyMerchantPayoutStatus, notifyMerchantPayoutFailed } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert } from '@/lib/email';
 
 // PATCH /api/admin/payout-requests/[id]
 // body: { action: 'approved' | 'rejected' | 'released', admin_note?: string, utr_reference?: string }
@@ -37,7 +39,7 @@ export async function PATCH(request, { params }) {
         // Fetch current payout request (for notification data)
         const { data: payoutReq, error: prFetchErr } = await admin
             .from('payout_requests')
-            .select('*, merchants:merchant_id(id, user_id, wallet_balance_paise, business_name)')
+            .select('*, merchants:merchant_id(id, user_id, wallet_balance_paise, business_name, business_email)')
             .eq('id', id)
             .single();
 
@@ -169,6 +171,33 @@ export async function PATCH(request, { params }) {
         } catch (e) {
             console.error('[Payout PATCH] WhatsApp dispatch failed:', e);
         }
+
+        // Fire-and-forget email alert to merchant
+        fireAndForgetEmail(async () => {
+            let merchantEmail = merchant?.business_email;
+            if (!merchantEmail && merchant?.user_id) {
+                const { data: prof } = await admin
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('id', merchant.user_id)
+                    .maybeSingle();
+                merchantEmail = prof?.email;
+            }
+            if (merchantEmail) {
+                await sendMerchantAlert({
+                    type: 'payout_status',
+                    to: merchantEmail,
+                    data: {
+                        amountRs: Number(payoutReq.amount),
+                        status: action,
+                        utrReference: utr_reference || undefined,
+                        adminNote: admin_note || undefined,
+                    },
+                    actorId: user.id,
+                    metadata: { requestId: id },
+                });
+            }
+        }, { category: 'merchant_payout', entityId: id });
 
         return NextResponse.json({
             success: true,

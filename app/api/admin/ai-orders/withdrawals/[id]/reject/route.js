@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert } from '@/lib/email';
 
 export async function POST(req, { params }) {
     try {
@@ -98,6 +100,28 @@ export async function POST(req, { params }) {
             } catch (waErr) {
                 console.warn('[Reject Withdrawal] Merchant WhatsApp alert error:', waErr?.message);
             }
+
+            // Fire-and-forget email decision alert to merchant
+            fireAndForgetEmail(async () => {
+                const { data: prof } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('id', merchantUserId)
+                    .maybeSingle();
+                if (prof?.email) {
+                    await sendMerchantAlert({
+                        type: 'vault_withdrawal_decision',
+                        to: prof.email,
+                        data: {
+                            amountRs: amountRupees,
+                            action: 'rejected',
+                            reason: 'Withdrawal rejected by administrator. Funds refunded to your vault.',
+                        },
+                        actorId: user.id,
+                        metadata: { transactionId: id },
+                    });
+                }
+            }, { category: 'vault_withdrawal', entityId: id });
         }
 
         return NextResponse.json({ success: true });

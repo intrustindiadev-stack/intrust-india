@@ -1,6 +1,8 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { notifyMerchantProductDecision } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -48,7 +50,8 @@ export async function POST(request) {
             .select(`
                 *,
                 merchants!shopping_products_submitted_by_merchant_id_fkey(
-                    user_id
+                    user_id,
+                    business_email
                 )
             `)
             .eq('id', productId)
@@ -177,6 +180,33 @@ export async function POST(request) {
                     reason: rejectionReason
                 }
             }]);
+        }
+
+        if (targetUserId) {
+            fireAndForgetEmail(async () => {
+                let merchantEmail = existingProduct.merchants?.business_email;
+                if (!merchantEmail) {
+                    const { data: prof } = await adminSupabase
+                        .from('user_profiles')
+                        .select('email')
+                        .eq('id', targetUserId)
+                        .maybeSingle();
+                    merchantEmail = prof?.email;
+                }
+                if (merchantEmail) {
+                    await sendMerchantAlert({
+                        type: 'product_decision',
+                        to: merchantEmail,
+                        data: {
+                            productTitle: existingProduct.title,
+                            action: action === 'approve' ? 'approved' : 'rejected',
+                            rejectionReason: action === 'reject' ? (rejectionReason || undefined) : undefined,
+                        },
+                        actorId: user.id,
+                        metadata: { productId },
+                    });
+                }
+            }, { category: 'merchant_ops', entityId: productId });
         }
 
         return NextResponse.json({

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { notifyMerchantBankVerified } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -47,7 +49,7 @@ export async function POST(request) {
         // Notify the merchant
         const { data: merchantFull } = await admin
             .from('merchants')
-            .select('user_id')
+            .select('user_id, business_name, owner_name, business_email')
             .eq('id', merchantId)
             .single();
 
@@ -69,6 +71,31 @@ export async function POST(request) {
             } catch (e) {
                 console.error('[Verify Bank] WhatsApp dispatch failed:', e);
             }
+
+            // Fire-and-forget email alert to merchant
+            fireAndForgetEmail(async () => {
+                let emailToSend = merchantFull.business_email;
+                if (!emailToSend) {
+                    const { data: prof } = await admin
+                        .from('user_profiles')
+                        .select('email')
+                        .eq('id', merchantFull.user_id)
+                        .maybeSingle();
+                    emailToSend = prof?.email;
+                }
+                if (emailToSend) {
+                    await sendMerchantAlert({
+                        type: 'bank_verified',
+                        to: emailToSend,
+                        data: {
+                            businessName: merchantFull.business_name,
+                            ownerName: merchantFull.owner_name,
+                        },
+                        actorId: user.id,
+                        metadata: { merchantId },
+                    });
+                }
+            }, { category: 'merchant_kyc', entityId: merchantId });
         }
 
         return NextResponse.json({ success: true, message: 'Bank account verified successfully' });

@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabaseServer';
 import { createClient } from '@supabase/supabase-js';
 import { normalizePhone } from '@/lib/phoneUtils';
 import { verifyOTPHash } from '@/lib/otpHmac';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendAuthEmail } from '@/lib/email';
 
 export async function POST(request) {
     let claimedOtpId = null;
@@ -189,6 +191,20 @@ export async function POST(request) {
             } catch (auditErr) {
                 console.warn('[SIGNUP] Audit log failed (non-fatal):', auditErr);
             }
+
+            // Fire-and-forget welcome email to newly registered user
+            fireAndForgetEmail(async () => {
+                await sendAuthEmail({
+                    type: 'welcome',
+                    to: email,
+                    data: {
+                        fullName: full_name,
+                        email,
+                    },
+                    actorId: newUserId,
+                    metadata: { userId: newUserId },
+                });
+            }, { category: 'auth_welcome', entityId: newUserId });
         }
 
         return NextResponse.json({ success: true, pendingVerification: true });

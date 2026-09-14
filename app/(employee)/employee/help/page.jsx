@@ -197,7 +197,7 @@ export default function EmployeeHelpPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {[
                             { title: 'Leave Types', items: ['Casual Leave — 12 days/year', 'Sick Leave — 10 days/year', 'Earned Leave — accrued monthly'], color: 'bg-violet-50/50 border-violet-100' },
-                            { title: 'Attendance Rules', items: ['Check-in by 10:00 AM = On Time', 'After 10:00 AM = Late', '3 lates = 1 absent (policy may vary)'], color: 'bg-blue-50/50 border-blue-100' },
+                            { title: 'Attendance Rules', items: ['Check-in by 9:45 AM = On Time (15m grace)', 'After 9:45 AM = Late (Shift: 9:30 AM – 6:30 PM)', '3 lates = 1 absent (policy may vary)'], color: 'bg-blue-50/50 border-blue-100' },
                             { title: 'Payslip Timeline', items: ['Salary processed by 1st of month', 'Payslip available after processing', 'Query: email HR or support team'], color: 'bg-emerald-50/50 border-emerald-100' },
                         ].map(p => (
                             <div key={p.title} className={`p-4 rounded-2xl border ${p.color}`}>

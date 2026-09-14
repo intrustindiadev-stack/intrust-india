@@ -31,6 +31,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 { label: "Wholesale", href: "/merchant/shopping/wholesale", icon: "storefront" },
                 { label: "Inventory", href: "/merchant/shopping/inventory", icon: "inventory_2" },
                 { label: "Orders", href: "/merchant/shopping/orders", icon: "shopping_basket" },
+                { label: "Reviews", href: "/merchant/shopping/reviews", icon: "reviews" },
                 { label: "Auto Mode", href: "/merchant/shopping/auto-mode", icon: "offline_bolt" },
             ]
         },

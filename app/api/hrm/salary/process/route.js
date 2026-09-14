@@ -7,6 +7,8 @@ import {
   roundToTwo,
 } from '@/lib/hrm/payroll';
 import crypto from 'crypto';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendEmployeeAlert } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -412,6 +414,31 @@ export async function POST(request) {
       module: 'Payroll',
       severity: 'high',
     });
+
+    if (employee?.email) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthName = monthNames[parsedMonth - 1] || `Month ${parsedMonth}`;
+      fireAndForgetEmail(async () => {
+        await sendEmployeeAlert({
+          type: 'salary_processed',
+          to: employee.email,
+          data: {
+            employeeName: employee.full_name,
+            monthName,
+            year: parsedYear,
+            netSalaryRs: breakdown.net_payable,
+            breakdown: {
+              basic: breakdown.base_salary,
+              hra: breakdown.hra,
+              allowances: breakdown.allowances,
+              deductions: breakdown.total_deductions,
+            },
+          },
+          actorId: user.id,
+          metadata: { salaryRecordId: salRec.id },
+        });
+      }, { category: 'employee_payroll', entityId: salRec.id });
+    }
 
     return NextResponse.json(
       {

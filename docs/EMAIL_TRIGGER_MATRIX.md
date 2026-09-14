@@ -1,0 +1,84 @@
+# InTrust India — Email Trigger Matrix & Transactional Dispatch Architecture
+
+This document tracks all system events, routes, database state transitions, recipient queries, sender identities, and notification strategies across InTrust India.
+
+---
+
+## Central Sender Mapping Reference
+
+Per `lib/email/emailConfig.js` and system constraints:
+- **Customer Shopping / Orders**: `orders` (`orders@intrustindia.com`)
+- **Merchant Operations**: `notifications` (`notifications@intrustindia.com`)
+- **Admin Alerts**: `notifications` (`notifications@intrustindia.com`) / `security` (`security@intrustindia.com`)
+- **HRM**: `hr` (`hr@intrustindia.com`)
+- **Employee**: `hr` (`hr@intrustindia.com`) / `accounts` (`accounts@intrustindia.com`)
+- **CRM**: `notifications` (`notifications@intrustindia.com`)
+- **Auth**: `security` (`security@intrustindia.com`)
+- **Finance / Invoices / Payouts / Udhari**: `accounts` (`accounts@intrustindia.com`)
+- **Contact & Inquiries**: `info` (`info@intrustindia.com`)
+
+---
+
+## Trigger Matrix
+
+| Domain | Event | Route / DB Signal | Recipient Query | Sender | Category | Proposed Template | Notify? | Implemented | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| **Customer** | Order Confirmed / Placed | `app/api/shopping/notify-order/route.js` (called on checkout success) | `user_profiles.email` via `shopping_order_groups.customer_id` | `orders` | `customer_order` | `customerOrders.js -> orderConfirmedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/shopping/notify-order/route.js:158-183`) | Triggered after atomic checkout commit and payment verification |
+| **Customer** | Order Status Update (`packed`, `shipped`, `out_for_delivery`, `delivered`, `cancelled`) | `app/api/orders/[orderId]/status/route.js` (PATCH) | `user_profiles.email` via `shopping_order_groups.customer_id` | `orders` | `customer_order` | `customerOrders.js -> orderStatusUpdateTemplate` | `EMAIL_REQUIRED` | YES (`app/api/orders/[orderId]/status/route.js:59-81`) | Dispatched when merchant/admin transitions delivery status |
+| **Customer** | Store Credit (Udhari) Request Decision | `app/api/udhari/respond/route.js` (POST) | `user_profiles.email` via `udhari_requests.customer_id` | `orders` | `customer_order` | `customerOrders.js -> udhariDecisionTemplate` | `EMAIL_REQUIRED` | YES (`app/api/udhari/respond/route.js:76-121`) | Notifies customer whether deferred payment was approved or denied |
+| **Customer** | Store Credit Repaid / Settled | `app/api/udhari/pay/route.js` & `pay-sabpaisa/route.js` | `user_profiles.email` via `udhari_requests.customer_id` | `accounts` | `customer_order` | `customerOrders.js -> udhariPaymentReceiptTemplate` | `EMAIL_REQUIRED` | YES (`lib/notifications/invoiceNotificationService.js:121`) | Handled through unified transactional invoice service |
+| **Customer** | Order Taken Over by Admin | `app/api/admin/orders/takeover/route.js` | `user_profiles.email` via `customer_id` | `orders` | `customer_order` | N/A | `IN_APP_ONLY` | N/A | Internal admin takeover; customer receives status updates when shipping status changes |
+| **Customer** | Restock Notification Request | `app/api/notify/restock/route.js` | `restock_notifications.email` | `orders` | `customer_order` | N/A | `NO_NOTIFY (Registration only)` | N/A | Subscription endpoint only; actual email sent when stock replenished |
+| **Merchant Application** | Application Submitted | `app/api/merchant/apply/route.js` (POST) | Form email (`merchants.business_email` / `formData.email`) | `notifications` | `merchant_kyc` | `merchantKyc.js -> applicationReceivedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/merchant/apply/route.js:240-250`) | Confirms submission and explains manual review SLA |
+| **Merchant Application** | Application Approved | `app/api/admin/approve-merchant/route.js` (POST) | `merchants.business_email` / `user_profiles.email` via `targetUserId` | `notifications` | `merchant_kyc` | `merchantKyc.js -> applicationApprovedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/admin/approve-merchant/route.js:68-94`) | Welcome to Merchant Network + Next steps to subscribe and onboard |
+| **Merchant Application** | Application Rejected | `app/api/admin/reject-merchant/route.js` (POST) | `merchants.business_email` / `user_profiles.email` via `targetUserId` | `notifications` | `merchant_kyc` | `merchantKyc.js -> applicationRejectedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/admin/reject-merchant/route.js:76-103`) | Rejection notification with reason and re-application guidance |
+| **Merchant Application** | Bank Account Verified | `app/api/admin/verify-bank/route.js` (POST) | `user_profiles.email` / `merchants.business_email` via `merchant.user_id` | `notifications` | `merchant_kyc` | `merchantKyc.js -> bankVerifiedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/admin/verify-bank/route.js:78-106`) | Confirms bank validation; unlocks withdrawal capabilities |
+| **Merchant Ops** | New Order Received | `app/api/shopping/notify-order/route.js` (POST) | `merchants.business_email` / `user_profiles.email` via `shopping_order_items.seller_id` | `notifications` | `merchant_order` | `merchantOps.js -> newOrderReceivedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/shopping/notify-order/route.js:196-224`) | Alerts merchant to pack and fulfill newly purchased items; respects opt-outs |
+| **Merchant Ops** | Payout Request Submitted | `app/api/merchant/payout-request/route.js` (POST) | `user_profiles.email` via `user.id` | `accounts` | `merchant_payout` | `merchantOps.js -> payoutRequestedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/merchant/payout-request/route.js:84-126`) | Merchant acknowledgment of withdrawal submission |
+| **Merchant Ops** | Payout Request Decision (`approved`, `released`, `rejected`) | `app/api/admin/payout-requests/[id]/route.js` (PATCH) | `user_profiles.email` / `merchants.business_email` via `payout_requests.user_id` | `accounts` | `merchant_payout` | `merchantOps.js -> payoutStatusUpdateTemplate` | `EMAIL_REQUIRED` | YES (`app/api/admin/payout-requests/[id]/route.js:97-127`) | Notifies merchant of approval, UTR payment transfer, or rejection reason |
+| **Merchant Ops** | Product Review & Approval (`live`, `rejected`) | `app/api/admin/shopping/approve-product/route.js` (POST) | `user_profiles.email` / `merchants.business_email` via `shopping_products.submitted_by_merchant_id` | `notifications` | `merchant_product` | `merchantOps.js -> productDecisionTemplate` | `EMAIL_REQUIRED` | YES (`app/api/admin/shopping/approve-product/route.js:60-91`) | Notifies merchant whether catalog submission is live or needs fixes |
+| **Merchant Ops** | New Store Credit (Udhari) Request | `app/api/udhari/request/route.js` (POST) | `merchants.business_email` / `user_profiles.email` via `coupon.merchant.user_id` | `notifications` | `merchant_udhari` | `merchantOps.js -> storeCreditRequestTemplate` | `EMAIL_REQUIRED` | YES (`app/api/udhari/request/route.js:106-135`) | Informs merchant of customer deferred payment application |
+| **Merchant Ops** | New Customer Product Review | `app/api/shopping/reviews/route.js` (POST) | `merchants.business_email` / `user_profiles.email` via product owner | `notifications` | `merchant_review` | `merchantOps.js -> newReviewAlertTemplate` | `EMAIL_REQUIRED` | YES (`app/api/shopping/reviews/route.js:161-195`) | Informs seller when a review is published for their product |
+| **Merchant Ops** | Low Stock Warning | `app/api/cron/check-stock/route.js` (GET) | `merchants.business_email` / `user_profiles.email` via `merchant_inventory` | `notifications` | `merchant_inventory` | `merchantOps.js -> lowStockAlertTemplate` | `EMAIL_REQUIRED` | YES (`lib/email/templates/merchantOps.js:52`) | Pre-mapped in domain wrapper and template suite |
+| **Merchant Ops** | Vault Withdrawal Decision (`approved`, `rejected`) | `app/api/admin/ai-orders/withdrawals/[id]/approve/route.js` & `reject/route.js` | `user_profiles.email` via `vault.merchant_id` | `accounts` | `merchant_vault` | `merchantOps.js -> vaultWithdrawalDecisionTemplate` | `EMAIL_REQUIRED` | YES (`app/api/admin/ai-orders/withdrawals/[id]/approve/route.js:94`, `reject/route.js:93`) | Notifies merchant of AI Orders vault funds transfer or rejection |
+| **Merchant Ops** | Merchant Account Suspension | `app/api/admin/merchants/[id]/toggle-suspend/route.js` | `merchants.business_email` / `user_profiles.email` | `security` | `merchant_security` | `merchantOps.js -> accountSuspendedTemplate` | `EMAIL_REQUIRED` | YES (`lib/email/templates/merchantOps.js:192`) | Pre-mapped in domain wrapper and template suite |
+| **Merchant Ops** | Cannot Fulfill Order Escalation | `app/api/merchant/cannot-fulfill/route.js` | Admin inbox | `notifications` | `merchant_escalation` | N/A | `IN_APP_ONLY` | N/A | Notifies platform operations in-app; admin takes over order |
+| **Admin Alerts** | New Merchant Application Received | `app/api/merchant/apply/route.js` (POST) | `user_profiles.email WHERE role IN ('admin', 'super_admin')` / `ADMIN_NOTIFICATION_EMAIL` | `notifications` | `admin_alert` | `adminAlerts.js -> newMerchantApplicationAlertTemplate` | `EMAIL_REQUIRED` | YES (`app/api/merchant/apply/route.js:251-262`) | Alerts admin staff of incoming merchant KYC queue item |
+| **Admin Alerts** | New Payout Request Alert | `app/api/merchant/payout-request/route.js` (POST) | Admin emails (`user_profiles.email WHERE role = 'admin'`) | `accounts` | `admin_alert` | `adminAlerts.js -> newPayoutRequestAlertTemplate` | `EMAIL_REQUIRED` | YES (`app/api/merchant/payout-request/route.js:105-125`) | Alerts admin to pending merchant withdrawal request |
+| **Admin Alerts** | AI Orders Vault Withdrawal Request | `app/api/merchant/vault/withdraw/route.js` (POST) | `ADMIN_NOTIFICATION_EMAIL` / `hello@intrustindia.com` | `accounts` | `admin_alert` | `aiOrderWithdrawalNotification.js` (migrate to non-blocking) | `EMAIL_REQUIRED` | YES (`app/api/merchant/vault/withdraw/route.js:139-147`) | Refactored existing blocking await into non-blocking `fireAndForgetEmail` |
+| **Admin Alerts** | Contact Form Inquiry | `app/api/contact/route.js` (POST) | `CONTACT_NOTIFICATION_EMAIL` / `hello@intrustindia.com` | `info` | `contact_notification` | `contactNotification.js -> contactNotificationTemplate` | `EMAIL_REQUIRED` | YES (`lib/email/sendContactNotification.js:63`) | Already running through centralized mail client |
+| **HRM** | New Leave Application (HR Manager Alert) | `app/api/employee/leaves/route.js` (POST) | `user_profiles.email WHERE role = 'hr_manager'` | `hr` | `hrm_leave` | `hrm.js -> leaveApplicationAdminTemplate` | `EMAIL_REQUIRED` | YES (`app/api/employee/leaves/route.js:97-129`) | Alerts HR management of pending leave request |
+| **HRM** | Candidate Hired & Account Provisioned | `app/api/hrm/hire-candidate/route.js` (POST) | `career_applications.email` | `hr` | `hrm_onboarding` | `hrm.js -> candidateHiredWelcomeTemplate` | `EMAIL_REQUIRED` | YES (`app/api/hrm/hire-candidate/route.js:120-141`) | Delivers welcome packet, job details, and employee portal credentials |
+| **HRM** | Incentive Batch Lifecycle State Transition | `app/api/hrm/incentives/[id]/transition/route.js` | HR Manager / Admin | `hr` | `hrm_incentive` | N/A | `IN_APP_ONLY` | N/A | Internal state tracking; employees receive notification upon payroll payout |
+| **Employee** | Leave Request Decision (`approved`, `rejected`) | `app/api/hrm/leaves/[id]/review/route.js` & `app/api/admin/hrm/leaves/[id]/review/route.js` | `user_profiles.email` / `employees.email` via `leave_requests.employee_id` | `hr` | `employee_leave` | `employee.js -> leaveDecisionTemplate` | `EMAIL_REQUIRED` | YES (`app/api/hrm/leaves/[id]/review/route.js:123`, `app/api/admin/hrm/leaves/[id]/review/route.js:125`) | Communicates leave decision and updated balance to employee |
+| **Employee** | Salary / Payslip Processed | `app/api/hrm/salary/process/route.js` (POST) | `employee.email` (`user_profiles.email`) via `employee_id` | `accounts` | `employee_payroll` | `employee.js -> salaryProcessedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/hrm/salary/process/route.js:148-174`) | Sends digital payslip breakdown, net salary, and attendance summary |
+| **Employee** | Attendance Clock-in / Clock-out | `app/api/employee/attendance/clock-in/route.js` | Employee | `hr` | `employee_attendance` | N/A | `NO_NOTIFY` | N/A | High frequency daily clocking; represented on dashboard UI |
+| **CRM** | Lead Assigned to Representative | `app/api/crm/leads/bulk-assign/route.js` & `csv/execute/route.js` | `user_profiles.email` via `newRepId` | `notifications` | `crm_lead_assigned` | `crm.js -> leadAssignedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/crm/leads/bulk-assign/route.js:108-132`) | Informs relationship manager/exec of newly assigned prospect leads |
+| **CRM** | Lead Converted to Customer/Merchant | `app/api/crm/leads/[id]/convert/route.js` (POST) | `user_profiles.email` via `crm_leads.assigned_to` | `notifications` | `crm_lead_converted` | `crm.js -> leadConvertedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/crm/leads/[id]/convert/route.js:106-139`) | Congratulates representative and confirms lifecycle conversion |
+| **CRM** | CRM Task Created / Assigned | `app/api/crm/tasks/route.js` (POST) | `user_profiles.email` via `assigned_to` | `notifications` | `crm_task_assigned` | `crm.js -> taskAssignedTemplate` | `EMAIL_REQUIRED` | YES (`app/api/crm/tasks/route.js:108-126`) | Task assignment notification with due date and linked lead details |
+| **CRM** | Mass Lead Rerouting | `app/api/crm/leads/reroute/route.js` | Sales managers | `notifications` | `crm_routing` | N/A | `IN_APP_ONLY` | N/A | Automated algorithmic distribution; visible via territory reports |
+| **Auth** | Signup Verification / Confirmation | `app/api/auth/email/signup/route.js` & `resend-verification/route.js` | Submitter's email (`auth.users.email`) | `security` | `auth_verification` | Managed by Supabase Auth engine | `IN_APP_ONLY (Auth Provider)` | N/A | Handled natively by Supabase Auth with custom redirect links |
+| **Auth** | Welcome Email on Registration | `app/api/auth/email/signup/route.js` | `email` from request | `security` | `auth_welcome` | `auth.js -> welcomeEmailTemplate` | `EMAIL_REQUIRED` | YES (`app/api/auth/email/signup/route.js:72-88`) | Transactional welcome onboarding message sent upon signup |
+| **Finance / Invoices** | Invoice Issued / Sent to Customer | `app/api/invoices/route.js` & `app/api/invoices/management/[id]/notify/route.js` | `invoices.customer_snapshot->>'email'` | `accounts` | `invoice_notification` | Reuses copy from `lib/notifications/invoiceTemplates.js` | `EMAIL_REQUIRED` | YES (`lib/notifications/invoiceNotificationService.js:121-140`) | Unified into `sendEmail()` (replacing direct Nodemailer transport) |
+| **Finance / Invoices** | Invoice Payment Succeeded / Receipt | `app/api/sabpaisa/callback/route.js` & `lib/sabpaisa/fulfillment.js` | `invoices.customer_snapshot->>'email'` | `accounts` | `invoice_payment` | Reuses copy from `lib/notifications/invoiceTemplates.js` | `EMAIL_REQUIRED` | YES (`lib/notifications/invoiceNotificationService.js:121-140`) | Unified into `sendEmail()` (replacing direct Nodemailer transport) |
+| **Finance / Invoices** | Invoice Reminders (`DUE_SOON`, `OVERDUE`) | `app/api/cron/invoice-reminders/route.js` (GET) | `invoices.customer_snapshot->>'email'` | `accounts` | `invoice_reminder` | Reuses copy from `lib/notifications/invoiceTemplates.js` | `EMAIL_REQUIRED` | YES (`lib/notifications/invoiceNotificationService.js:121-140`) | Unified into `sendEmail()` (replacing direct Nodemailer transport) |
+
+---
+
+## Technical Recipient Resolution & Security Matrix
+
+1. **`user_profiles` table**:
+   - Primary column: `email` (TEXT)
+   - Readability: Accessible server-side via `createAdminClient()` (Service Role bypasses RLS).
+2. **`merchants` table**:
+   - Primary columns: `business_email` (TEXT), `user_id` (UUID -> `user_profiles.id`).
+   - Readability: Service Role client reads all records.
+3. **`crm_leads` table**:
+   - Primary column: `email` (TEXT), `assigned_to` (UUID -> `user_profiles.id`).
+   - Readability: Service Role client reads all records.
+4. **`invoices` table**:
+   - Primary column: `customer_snapshot->>'email'` (JSONB).
+   - Readability: Service Role client reads all records.
+5. **`career_applications` table**:
+   - Primary column: `email` (TEXT).
+   - Readability: Service Role client reads all records.

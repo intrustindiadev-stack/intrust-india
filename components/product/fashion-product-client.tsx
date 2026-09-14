@@ -61,6 +61,17 @@ export default function FashionProductClient({
   const [pincode, setPincode] = useState('');
   const [deliveryResult, setDeliveryResult] = useState<string | null>(null);
 
+  // Open-at-top fix: ensure PDP always opens at top on mount and on product change
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      const rafId = requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [product?.id]);
+
   // Record recently viewed on mount
   React.useEffect(() => {
     if (product?.id) {

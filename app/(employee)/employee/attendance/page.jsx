@@ -176,7 +176,7 @@ export default function EmployeeAttendancePage() {
             Attendance Log
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Authoritative time-tracking system · Business Timezone: <strong className="font-mono text-slate-700 dark:text-slate-300">{timezone}</strong>
+            Authoritative time-tracking system · Business Timezone: <strong className="font-mono text-slate-700 dark:text-slate-300">{timezone}</strong> · Standard Shift: <strong className="font-mono text-slate-700 dark:text-slate-300">09:30 AM – 06:30 PM</strong> (15m grace up to 09:45 AM)
           </p>
         </div>
         <div className="flex items-center gap-3">

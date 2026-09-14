@@ -28,6 +28,7 @@ export default async function ProductDetailPage({ params }) {
         suggested_retail_price_paise, platform_price_paise, platform_listed,
         category_id, category, sub_category, slug,
         is_active, admin_stock, gst_percentage, hsn_code, approval_status, created_at,
+        avg_rating, review_count, rating_1_count, rating_2_count, rating_3_count, rating_4_count, rating_5_count,
         shopping_categories(name, color_primary, color_secondary),
         fashion_product_categories(category_id)
     `;
@@ -291,8 +292,36 @@ export default async function ProductDetailPage({ params }) {
         }
     }
 
+    // 6. Schema.org Structured Data
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.title,
+        description: product.description || product.title,
+        image: Array.isArray(product.product_images) ? product.product_images : [],
+        offers: {
+            '@type': 'Offer',
+            priceCurrency: 'INR',
+            price: ((product.platform_price_paise || product.suggested_retail_price_paise || 0) / 100).toFixed(2),
+            availability: product.is_active ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+        },
+        ...(product.review_count > 0 && {
+            aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: Number(product.avg_rating || 0).toFixed(1),
+                reviewCount: product.review_count,
+                bestRating: '5',
+                worstRating: '1'
+            }
+        })
+    };
+
     return (
         <div className="w-full">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <main>
                 <ProductDetailClient
                     product={product}

@@ -1,0 +1,114 @@
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ShieldCheck, FileText, Loader2, CheckCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+
+export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAccept }) {
+    const scrollRef = useRef(null);
+    const [progress, setProgress] = useState(0);
+    const [scrolledToEnd, setScrolledToEnd] = useState(false);
+    const [checked, setChecked] = useState(false);
+    const [accepting, setAccepting] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            setProgress(0); setScrolledToEnd(false); setChecked(false); setAccepting(false);
+            requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0 }));
+        }
+    }, [open, doc?.version]);
+
+    useEffect(() => {
+        if (!open) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [open ]);
+
+    const handleScroll = () => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const max = el.scrollHeight - el.clientHeight;
+        const pct = max <= 0 ? 100 : Math.min(100, Math.round((el.scrollTop / max) * 100));
+        setProgress(pct);
+        if (max <= 0 || el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setScrolledToEnd(true);
+    };
+
+    const canAccept = scrolledToEnd && checked && !accepting && !loading;
+    const handleAccept = async () => {
+        if (!canAccept) return;
+        setAccepting(true);
+        try { await onAccept(); } finally { setAccepting(false); }
+    };
+
+    return (
+        <AnimatePresence>
+            {open && (
+                <motion.div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center sm:p-6"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={onClose} />
+                    <motion.div
+                        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                        className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+                        role="dialog" aria-modal="true" aria-label="Terms and conditions">
+                        <div className="bg-[#0e1a3a] px-5 sm:px-7 pt-5 pb-4 shrink-0">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-2xl bg-white/10">
+                                        <ShieldCheck size={22} className="text-emerald-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-widest text-blue-300">Intrust India - KYC Agreement</p>
+                                        <h2 className="text-white font-extrabold text-base sm:text-lg leading-tight">{doc?.title || 'Terms & Consent'}</h2>
+                                    </div>
+                                </div>
+                                <button onClick={onClose} aria-label="Close" className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <div className="h-1.5 mt-3 rounded-full bg-white/10 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 transition-all" style={{ width: progress + '%' }} />
+                            </div>
+                        </div>
+                        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300 min-h-[220px]">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+                                    <Loader2 className="animate-spin" size={28} />
+                                    <p className="text-xs font-semibold">Loading latest terms…</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <ReactMarkdown>{doc?.body_markdown || ''}</ReactMarkdown>
+                                </div>
+                            )}
+                            {!loading && !scrolledToEnd && (
+                                <p className="mt-5 text-center text-[11px] font-bold text-amber-600">Scroll to the bottom to enable acceptance ({progress}% read)</p>
+                            )}
+                            {!loading && scrolledToEnd && (
+                                <p className="mt-5 flex items-center gap-2 text-xs font-bold text-emerald-600"><CheckCircle size={15} /> Full document read.</p>
+                            )}
+                        </div>
+                        <div className="shrink-0 border-t border-slate-100 dark:border-white/10 px-5 sm:px-7 py-4 bg-slate-50/80 dark:bg-slate-950/40">
+                            <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 cursor-pointer">
+                                <input type="checkbox" checked={checked} disabled={!scrolledToEnd}
+                                    onChange={(e) => setChecked(e.target.checked)}
+                                    className="mt-0.5 w-5 h-5 rounded accent-blue-600" />
+                                <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    I have read <strong>{doc?.title} ({doc?.version})</strong> and agree to be bound by it. Intrust India may record this acceptance with timestamp, IP, and a signed PDF copy.
+                                </span>
+                            </label>
+                            <div className="flex gap-3 mt-3">
+                                <button onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-white/15 text-sm font-bold text-slate-600 dark:text-slate-300">Decline</button>
+                                <button onClick={handleAccept} disabled={!canAccept} className="flex-[2] py-3.5 rounded-xl text-sm font-extrabold text-white bg-gradient-to-r from-blue-600 to-blue-800 disabled:opacity-40 flex items-center justify-center gap-2">
+                                    {accepting ? (<><Loader2 size={17} className="animate-spin" /> Generating signed copy…</>) : (<><FileText size={17} /> Accept & Continue</>)}
+                                </button>
+                            </div>
+                            {!scrolledToEnd && (<p className="text-center text-[11px] font-semibold text-amber-600 mt-2">Version {doc?.version || '—'} — scroll fully to continue</p>)}
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+}

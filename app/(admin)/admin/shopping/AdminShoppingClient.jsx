@@ -16,9 +16,11 @@ import { isInventoryRowOOS, OOS_LABEL } from '@/lib/shopping/stock';
 import OutOfStockBadge from '@/components/ui/OutOfStockBadge';
 import BulkProductUpload from '@/components/admin/shopping/BulkProductUpload';
 import Pagination from '@/components/search/Pagination';
+import AdminReviewsModeration from '@/components/admin/shopping/AdminReviewsModeration';
 
 const TAB_PLATFORM = "platform";
 const TAB_CUSTOM = "custom";
+const TAB_REVIEWS = "reviews";
 
 export default function AdminShoppingClient({
     initialProducts,
@@ -396,6 +398,15 @@ export default function AdminShoppingClient({
                             {stats.customProducts}
                         </span>
                     </button>
+                    <button
+                        onClick={() => { setActiveTab(TAB_REVIEWS); }}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${activeTab === TAB_REVIEWS
+                                ? "bg-amber-500 text-slate-900 shadow-lg shadow-amber-500/20"
+                                : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                            }`}
+                    >
+                        <Star size={14} className="fill-amber-500 text-amber-500" /> Reviews
+                    </button>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 w-full">
@@ -495,7 +506,9 @@ export default function AdminShoppingClient({
             )}
 
             {/* Content Area */}
-            {activeTab === TAB_CUSTOM && selectedMerchant === "all" ? (
+            {activeTab === TAB_REVIEWS ? (
+                <AdminReviewsModeration />
+            ) : activeTab === TAB_CUSTOM && selectedMerchant === "all" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {merchants.length === 0 ? (
                         <div className="col-span-full py-24 text-center bg-white rounded-[2rem] border border-dashed border-slate-200 shadow-inner">
@@ -691,7 +704,7 @@ export default function AdminShoppingClient({
             )}
 
             {/* Pagination Controls — shared component, mobile-safe */}
-            {!(activeTab === TAB_CUSTOM && selectedMerchant === "all") && totalCount > pageSize && (
+            {activeTab !== TAB_REVIEWS && !(activeTab === TAB_CUSTOM && selectedMerchant === "all") && totalCount > pageSize && (
                 <div className="mt-8 pb-6">
                     <Pagination
                         page={page}

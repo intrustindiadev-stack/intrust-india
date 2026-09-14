@@ -19,9 +19,12 @@ import Step1Identity, { validateStep1 } from '@/components/kyc/steps/Step1Identi
 import Step2PAN, { validateStep2 } from '@/components/kyc/steps/Step2PAN';
 import Step3Address, { validateStep3 } from '@/components/kyc/steps/Step3Address';
 import SuccessScreen from '@/components/kyc/steps/SuccessScreen';
+import TermsAcceptanceModal from '@/components/kyc/TermsAcceptanceModal';
 
 import { submitKYC } from '@/app/actions/kyc';
-import { formatDateForInput } from '@/app/types/kyc';
+import { formatDateForInput, maskPAN } from '@/app/types/kyc';
+import { generateKycAgreementPdf, sha256Hex } from '@/lib/kycAgreementPdf';
+import { PLATFORM_CONFIG } from '@/lib/config/platform';
 
 /**
  * Direction for slide animation: +1 = forward, -1 = back.
@@ -106,15 +109,91 @@ export default function KYCForm({
                 formData,
                 fieldLocked,
                 panVerified,
-                showAutoFillBanner
+                showAutoFillBanner,
+                agreement,
             }));
         } catch (e) {
             // Ignore private browsing restrictions
         }
-    }, [formData, currentStep, panVerified, fieldLocked, completedSteps, showAutoFillBanner]);
+    }, [formData, currentStep, panVerified, fieldLocked, completedSteps, showAutoFillBanner, agreement]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [submissionStatus, setSubmissionStatus] = useState('');
+
+    // ─── Terms modal + agreement state ───
+    const [termsOpen, setTermsOpen] = useState(false);
+    const [termsDoc, setTermsDoc] = useState(null);
+    const [termsLoading, setTermsLoading] = useState(false);
+    const [agreement, setAgreement] = useState(draft.agreement || null);
+
+    const openTermsModal = useCallback(async () => {
+        setTermsOpen(true);
+        if (termsDoc) return;
+        setTermsLoading(true);
+        try {
+            const res = await fetch('/api/legal/kyc_terms');
+            const json = await res.json();
+            if (json?.success && json.data) setTermsDoc(json.data);
+        } catch (e) {
+            console.warn('Failed to load KYC terms', e);
+        } finally {
+            setTermsLoading(false);
+        }
+    }, [termsDoc]);
+
+    const handleTermsAccepted = useCallback(async () => {
+        let doc = termsDoc;
+        if (!doc) {
+            const res = await fetch('/api/legal/kyc_terms');
+            const json = await res.json();
+            doc = json?.data;
+            setTermsDoc(doc);
+        }
+        if (!doc) {
+            toast.error('Could not load terms. Please try again.');
+            return;
+        }
+        const acceptedAt = new Date().toISOString();
+        const agreementId = (globalThis.crypto?.randomUUID && globalThis.crypto.randomUUID()) || `agr-${Date.now()}`;
+        const masked = maskPAN(formData.panNumber || '');
+        const { pdf } = generateKycAgreementPdf({
+            customer: {
+                fullName: formData.fullName,
+                phoneNumber: formData.phoneNumber,
+                maskedPan: masked,
+                addressLine: [formData.fullAddress, formData.city, formData.state, formData.pinCode].filter(Boolean).join(', '),
+            },
+            doc,
+            business: PLATFORM_CONFIG.business,
+            meta: { agreementId, acceptedAt, ip: '', userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '', hash: '' },
+        });
+        let hash = '';
+        try {
+            const blob = pdf.output('blob');
+            hash = await sha256Hex(blob);
+        } catch { hash = ''; }
+        const payload = {
+            agreementId,
+            docSlug: 'kyc_terms',
+            docVersion: doc.version,
+            docTitle: doc.title,
+            fullText: doc.body_markdown,
+            acceptedAt,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+            pdfHash: hash,
+            pdfBase64: pdf.output('datauristring'),
+        };
+        setAgreement(payload);
+        setFormData((prev) => ({ ...prev, termsAccepted: true }));
+        setErrors((prev) => {
+            if (!prev.termsAccepted) return prev;
+            const next = { ...prev };
+            delete next.termsAccepted;
+            return next;
+        });
+        setTermsOpen(false);
+        toast.success('Terms accepted. Signed copy attached.');
+    }, [termsDoc, formData]);
 
     /** @type {Object<string, string>} */
     const [errors, setErrors] = useState(/** @type {Record<string, string>} */({}));
@@ -283,6 +362,15 @@ export default function KYCForm({
                 submitData.append('state', formData.state);
                 submitData.append('pinCode', formData.pinCode);
                 submitData.append('termsAccepted', String(formData.termsAccepted));
+                if (agreement) {
+                    submitData.append('termsVersion', agreement.docVersion || '');
+                    submitData.append('agreementTitle', agreement.docTitle || '');
+                    submitData.append('agreementText', agreement.fullText || '');
+                    submitData.append('agreementHash', agreement.pdfHash || '');
+                    submitData.append('agreementAcceptedAt', agreement.acceptedAt || '');
+                    submitData.append('agreementUserAgent', agreement.userAgent || '');
+                    submitData.append('agreementPdf', agreement.pdfBase64 || '');
+                }
 
                 const result = await submitKYC(submitData);
 
@@ -312,7 +400,7 @@ export default function KYCForm({
                 setIsSubmitting(false);
             }
         },
-        [formData, onError]
+        [formData, onError, agreement]
     );
 
     // ─── Render ───
@@ -407,6 +495,8 @@ export default function KYCForm({
                                     onChange={handleChange}
                                     errors={errors}
                                     isSubmitting={isSubmitting}
+                                    onOpenTerms={openTermsModal}
+                                    termsVersion={agreement?.docVersion || termsDoc?.version || ''}
                                 />
                             )}
                         </motion.div>
@@ -448,6 +538,13 @@ export default function KYCForm({
                     )}
                 </form>
             </div>
+            <TermsAcceptanceModal
+                open={termsOpen}
+                doc={termsDoc}
+                loading={termsLoading}
+                onClose={() => setTermsOpen(false)}
+                onAccept={handleTermsAccepted}
+            />
         </>
     );
 }

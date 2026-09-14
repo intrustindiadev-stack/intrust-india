@@ -120,6 +120,7 @@ const navigationGroups = [
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
             { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
             { name: 'My Profile', href: '/admin/profile', icon: User },
+            { name: 'Legal Documents', href: '/admin/legal', icon: BookOpen },
             { name: 'Settings', href: '/admin/settings', icon: Settings },
         ]
     }

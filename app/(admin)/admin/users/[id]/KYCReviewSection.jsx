@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, CheckCircle, XCircle, Clock } from 'lucide-react';
 import KYCModal from '@/components/admin/KYCModal';
+import AgreementSection from './AgreementSection';
 
 export default function KYCReviewSection({ kyc_records, userKycStatus }) {
     const [showKYCModal, setShowKYCModal] = useState(false);
@@ -122,6 +123,7 @@ export default function KYCReviewSection({ kyc_records, userKycStatus }) {
                     onClose={handleModalClose}
                 />
             )}
+            <AgreementSection userId={kyc_records?.[0]?.user_id} />
         </div>
     );
 }

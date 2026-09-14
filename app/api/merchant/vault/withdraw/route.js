@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 import { sendEmail } from '@/lib/email';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
 import { aiOrderWithdrawalNotificationTemplate } from '@/lib/email/templates/aiOrderWithdrawalNotification';
 import { notifyMerchantPayoutRequested } from '@/lib/notifications/merchantWhatsapp';
 
@@ -125,8 +126,8 @@ export async function POST(req) {
             console.error('[Withdrawal API] Admin notification error:', adminNotifErr?.message);
         }
 
-        // Best-effort transactional email alert to administration
-        try {
+        // Non-blocking fire-and-forget email alert to administration
+        fireAndForgetEmail(async () => {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://intrustindia.com';
             const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.CONTACT_NOTIFICATION_EMAIL || 'hello@intrustindia.com';
             const emailTemplate = aiOrderWithdrawalNotificationTemplate({
@@ -155,9 +156,7 @@ export async function POST(req) {
                     amount_paise: parsedAmountPaise,
                 },
             });
-        } catch (emailErr) {
-            console.warn('[Withdrawal API] Best-effort admin email alert dispatch skipped/failed:', emailErr?.message);
-        }
+        }, { category: 'vault_withdrawal', entityId: txData.id });
 
         // Best-effort WhatsApp receipt dispatch to merchant
         try {

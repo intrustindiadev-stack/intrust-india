@@ -245,6 +245,13 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
         }
     }
 
+    // Scroll to top on route change across all customer pages (unless hash anchor is present)
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !window.location.hash) {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+    }, [pathname]);
+
     const isKycVerified = profile?.kyc_status === 'verified' || profile?.kyc_status === 'approved';
     const userName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
     const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;

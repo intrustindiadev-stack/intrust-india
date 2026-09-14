@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendCRMAlert } from '@/lib/email';
 
 const CRM_ROLES = ['relationship_exec', 'relationship_manager', 'admin', 'super_admin'];
 
@@ -77,6 +79,23 @@ export async function POST(request) {
             .single();
 
         if (insertError) throw insertError;
+
+        if (task?.assigned_to_profile?.email) {
+            fireAndForgetEmail(async () => {
+                await sendCRMAlert({
+                    type: 'task_assigned',
+                    to: task.assigned_to_profile.email,
+                    data: {
+                        repName: task.assigned_to_profile.full_name || 'Representative',
+                        taskTitle: title,
+                        description: description || undefined,
+                        dueDate: due_date || undefined,
+                    },
+                    actorId: user.id,
+                    metadata: { taskId: task.id },
+                });
+            }, { category: 'crm_task', entityId: task.id });
+        }
 
         return NextResponse.json({ task }, { status: 201 });
     } catch (err) {

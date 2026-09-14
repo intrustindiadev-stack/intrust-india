@@ -3,6 +3,8 @@ import { getAuthUser } from '@/lib/apiAuth';
 import { requireMerchantSubscription } from '@/lib/merchant/requireSubscription';
 import { NextResponse } from 'next/server';
 import { notifyMerchantPayoutRequested, notifyMerchantTransaction } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert, sendAdminAlert } from '@/lib/email';
 
 // GET  /api/merchant/payout-request  — merchant's own payout request history
 // POST /api/merchant/payout-request  — submit a new payout request
@@ -173,6 +175,47 @@ export async function POST(request) {
             source:         'Payout Request',
             dedupeId:       requestId
         }).catch(e => console.error('[Payout POST] WhatsApp transaction alert failed:', e));
+
+        // Fire-and-forget emails: confirmation to merchant + alert to admin
+        fireAndForgetEmail(async () => {
+            let merchantEmail = user.email;
+            let merchantName = 'Valued Merchant';
+            const { data: merch } = await admin
+                .from('merchants')
+                .select('business_name, business_email, owner_name')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (merch) {
+                if (merch.business_email) merchantEmail = merch.business_email;
+                merchantName = merch.business_name || merch.owner_name || merchantName;
+            }
+
+            if (merchantEmail) {
+                await sendMerchantAlert({
+                    type: 'payout_requested',
+                    to: merchantEmail,
+                    data: {
+                        amountRs: amountNum,
+                        source,
+                    },
+                    actorId: user.id,
+                    metadata: { requestId },
+                });
+            }
+
+            await sendAdminAlert({
+                type: 'payout_needed',
+                data: {
+                    merchantName,
+                    amountRs: amountNum,
+                    requestId,
+                    source,
+                },
+                actorId: user.id,
+                metadata: { requestId },
+            });
+        }, { category: 'merchant_payout', entityId: requestId });
 
         return NextResponse.json({
             success: true,

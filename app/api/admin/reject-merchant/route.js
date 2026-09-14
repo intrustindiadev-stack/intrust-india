@@ -1,5 +1,7 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -185,6 +187,32 @@ export async function POST(request) {
                 { status: 500 }
             );
         }
+
+        // Fire-and-forget email alert to merchant
+        fireAndForgetEmail(async () => {
+            let emailToSend = existingMerchant.business_email;
+            if (!emailToSend && targetUserId) {
+                const { data: prof } = await adminSupabase
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('id', targetUserId)
+                    .maybeSingle();
+                emailToSend = prof?.email;
+            }
+            if (emailToSend) {
+                await sendMerchantAlert({
+                    type: 'application_rejected',
+                    to: emailToSend,
+                    data: {
+                        businessName: existingMerchant.business_name,
+                        ownerName: existingMerchant.owner_name,
+                        reason: reason || undefined,
+                    },
+                    actorId: user.id,
+                    metadata: { merchantId: merchantData.id },
+                });
+            }
+        }, { category: 'merchant_kyc', entityId: merchantData.id });
 
         return NextResponse.json({
             success: true,

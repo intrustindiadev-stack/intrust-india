@@ -46,6 +46,28 @@ import {
 import {
     sendContactNotification,
 } from '../lib/email/sendContactNotification.js';
+import {
+    getMailTransporter as mailerGetTransporter,
+    resetMailTransporter as mailerResetTransporter,
+    verifySmtpConnection as mailerVerifySmtp,
+} from '../lib/email/mailer.js';
+import {
+    fireAndForgetEmail,
+    safeEmail,
+} from '../lib/email/dispatch.js';
+import {
+    baseEmailLayout,
+    escapeHtml,
+} from '../lib/email/templates/layout.js';
+import {
+    sendCustomerOrderEmail,
+    sendMerchantAlert,
+    sendAdminAlert,
+    sendHRMAlert,
+    sendEmployeeAlert,
+    sendCRMAlert,
+    sendAuthEmail,
+} from '../lib/email/index.js';
 
 describe('Transactional Email Infrastructure', () => {
     const originalEnv = process.env;
@@ -500,6 +522,272 @@ describe('Transactional Email Infrastructure', () => {
             expect(mockSendMail).toHaveBeenCalledWith(
                 expect.objectContaining({
                     to: 'support@intrustindia.com',
+                })
+            );
+        });
+    });
+
+    describe('6. Mailer Alias (mailer.js)', () => {
+        it('re-exports transporter methods for spec compliance', () => {
+            expect(mailerGetTransporter).toBe(getMailTransporter);
+            expect(mailerResetTransporter).toBe(resetMailTransporter);
+            expect(mailerVerifySmtp).toBe(verifySmtpConnection);
+        });
+    });
+
+    describe('7. Non-blocking Dispatcher (dispatch.js)', () => {
+        it('fireAndForgetEmail executes fn without throwing or blocking caller', async () => {
+            let executed = false;
+            const res = fireAndForgetEmail(async () => {
+                executed = true;
+            }, { category: 'test_cat', entityId: '123' });
+
+            expect(res).toBeUndefined();
+            await new Promise(resolve => setTimeout(resolve, 10));
+            expect(executed).toBe(true);
+        });
+
+        it('fireAndForgetEmail swallows simulated SMTP failures without bubbling errors', async () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            
+            expect(() => {
+                fireAndForgetEmail(async () => {
+                    throw new Error('Simulated SMTP connection drop');
+                }, { category: 'simulated_failure', entityId: 'entity-999' });
+            }).not.toThrow();
+
+            await new Promise(resolve => setTimeout(resolve, 20));
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[EmailDispatch:simulated_failure]'),
+                expect.objectContaining({ category: 'simulated_failure', entityId: 'entity-999' })
+            );
+            consoleSpy.mockRestore();
+        });
+
+        it('safeEmail catches synchronous and asynchronous errors', async () => {
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+            
+            await safeEmail(async () => {
+                throw new Error('Async error inside safeEmail');
+            }, { category: 'safe_test' });
+
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[EmailDispatch:safeEmail] Caught error:'),
+                expect.objectContaining({ context: { category: 'safe_test' } })
+            );
+            consoleSpy.mockRestore();
+        });
+    });
+
+    describe('8. Email Layout & Escaping (templates/layout.js)', () => {
+        it('escapeHtml properly sanitizes untrusted input', () => {
+            expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+            expect(escapeHtml('Hello & "World" \'123\'')).toBe('Hello &amp; &quot;World&quot; &#39;123&#39;');
+            expect(escapeHtml(null)).toBe('');
+            expect(escapeHtml(undefined)).toBe('');
+        });
+
+        it('baseEmailLayout wraps body inside InTrust branded responsive HTML container', () => {
+            const html = baseEmailLayout({
+                title: 'Order Status Update',
+                preheader: 'Your package is on its way',
+                bodyHtml: '<p>Your order #123 has been shipped.</p>',
+                ctaUrl: 'https://intrustindia.com/orders',
+                ctaLabel: 'Track Package',
+                footerNote: 'Need help? Contact support.',
+            });
+
+            expect(html).toContain('<!DOCTYPE html>');
+            expect(html).toContain('InTrust');
+            expect(html).toContain('Order Status Update');
+            expect(html).toContain('Your package is on its way');
+            expect(html).toContain('Your order #123 has been shipped.');
+            expect(html).toContain('Track Package');
+            expect(html).toContain('https://intrustindia.com/orders');
+            expect(html).toContain('Need help? Contact support.');
+        });
+    });
+
+    describe('9. Domain Email Wrappers', () => {
+        beforeEach(() => {
+            process.env.SMTP_HOST = 'smtp.example.com';
+            process.env.SMTP_USER = 'smtp-user';
+            process.env.SMTP_PASS = 'smtp-pass';
+            mockSendMail.mockResolvedValue({ messageId: '<mock-domain-id@smtp>' });
+        });
+
+        it('sendCustomerOrderEmail validates type and dispatches with orders sender', async () => {
+            await sendCustomerOrderEmail({
+                type: 'order_confirmed',
+                to: 'customer@example.com',
+                data: {
+                    customerName: 'Aarav Sharma',
+                    orderId: 'grp_9988776655',
+                    orderTotalRs: '1,499.00',
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India Orders <orders@intrustindia.com>',
+                    to: 'customer@example.com',
+                    subject: expect.stringContaining('Order Confirmed'),
+                    html: expect.stringContaining('Aarav Sharma'),
+                })
+            );
+        });
+
+        it('sendCustomerOrderEmail rejects unknown type', async () => {
+            await expect(sendCustomerOrderEmail({
+                type: 'invalid_type',
+                to: 'customer@example.com',
+                data: {},
+            })).rejects.toThrow('Invalid customer order email type');
+        });
+
+        it('sendMerchantAlert dispatches with notifications sender', async () => {
+            await sendMerchantAlert({
+                type: 'application_received',
+                to: 'merchant@example.com',
+                data: {
+                    businessName: 'Apex Electronics',
+                    ownerName: 'Rajesh Gupta',
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India <notifications@intrustindia.com>',
+                    to: 'merchant@example.com',
+                    subject: expect.stringContaining('Application Received'),
+                    html: expect.stringContaining('Apex Electronics'),
+                })
+            );
+        });
+
+        it('sendAdminAlert dispatches with notifications sender to ADMIN_NOTIFICATION_EMAIL', async () => {
+            process.env.ADMIN_NOTIFICATION_EMAIL = 'admin-ops@intrustindia.com';
+            await sendAdminAlert({
+                type: 'new_merchant_application',
+                data: {
+                    businessName: 'Zenith Retail',
+                    ownerName: 'Sunita Rao',
+                    phone: '+919876543210',
+                    email: 'sunita@example.com',
+                    applicationId: 'app_123',
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India <notifications@intrustindia.com>',
+                    to: 'admin-ops@intrustindia.com',
+                    subject: expect.stringContaining('New Merchant Application'),
+                    html: expect.stringContaining('Zenith Retail'),
+                })
+            );
+        });
+
+        it('sendHRMAlert dispatches with hr sender', async () => {
+            await sendHRMAlert({
+                type: 'leave_applied',
+                to: 'hr-manager@intrustindia.com',
+                data: {
+                    employeeName: 'Rohan Mehra',
+                    department: 'Engineering',
+                    leaveType: 'casual',
+                    fromDate: '2026-10-01',
+                    toDate: '2026-10-03',
+                    reason: 'Personal family event',
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India HR <hr@intrustindia.com>',
+                    to: 'hr-manager@intrustindia.com',
+                    subject: expect.stringContaining('New Leave Request'),
+                    html: expect.stringContaining('Rohan Mehra'),
+                })
+            );
+        });
+
+        it('sendEmployeeAlert dispatches leave and payroll decisions with hr and accounts sender', async () => {
+            await sendEmployeeAlert({
+                type: 'leave_decision',
+                to: 'employee@intrustindia.com',
+                data: {
+                    employeeName: 'Rohan Mehra',
+                    leaveType: 'casual',
+                    fromDate: '2026-10-01',
+                    toDate: '2026-10-03',
+                    action: 'approved',
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India HR <hr@intrustindia.com>',
+                    to: 'employee@intrustindia.com',
+                    subject: expect.stringContaining('Leave Request Approved'),
+                })
+            );
+
+            await sendEmployeeAlert({
+                type: 'salary_processed',
+                to: 'employee@intrustindia.com',
+                data: {
+                    employeeName: 'Rohan Mehra',
+                    monthName: 'September',
+                    year: 2026,
+                    netSalaryRs: 75000,
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India Accounts <accounts@intrustindia.com>',
+                    to: 'employee@intrustindia.com',
+                    subject: expect.stringContaining('Payslip Processed'),
+                })
+            );
+        });
+
+        it('sendCRMAlert dispatches with notifications sender', async () => {
+            await sendCRMAlert({
+                type: 'lead_assigned',
+                to: 'rep@intrustindia.com',
+                data: {
+                    repName: 'Vikram Patel',
+                    count: 15,
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India <notifications@intrustindia.com>',
+                    to: 'rep@intrustindia.com',
+                    subject: expect.stringContaining('Leads Assigned'),
+                })
+            );
+        });
+
+        it('sendAuthEmail dispatches welcome with security sender', async () => {
+            await sendAuthEmail({
+                type: 'welcome',
+                to: 'newuser@example.com',
+                data: {
+                    fullName: 'Neha Kapoor',
+                    email: 'newuser@example.com',
+                },
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India Security <security@intrustindia.com>',
+                    to: 'newuser@example.com',
+                    subject: expect.stringContaining('Welcome to InTrust India'),
+                    html: expect.stringContaining('Neha Kapoor'),
                 })
             );
         });

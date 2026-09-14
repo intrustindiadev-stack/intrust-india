@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendCustomerOrderEmail } from '@/lib/email';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -111,6 +113,30 @@ export async function POST(request) {
                 reference_type: 'udhari_approved',
             });
 
+            // Fire-and-forget email alert to customer
+            fireAndForgetEmail(async () => {
+                const { data: prof } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('id', udhariRequest.customer_id)
+                    .maybeSingle();
+
+                if (prof?.email) {
+                    await sendCustomerOrderEmail({
+                        type: 'udhari_decision',
+                        to: prof.email,
+                        data: {
+                            itemTitle,
+                            action: 'approved',
+                            days,
+                            amountRs: udhariRequest.amount_paise / 100,
+                        },
+                        actorId: user.id,
+                        metadata: { requestId },
+                    });
+                }
+            }, { category: 'udhari_decision', entityId: requestId });
+
             return NextResponse.json({
                 success: true,
                 message: `Request approved. ${udhariRequest.source_type === 'gift_card' ? 'Coupon reserved' : 'Order confirmed'} for ${days} days.`,
@@ -144,6 +170,30 @@ export async function POST(request) {
                 reference_id: requestId,
                 reference_type: 'udhari_denied',
             });
+
+            // Fire-and-forget email alert to customer
+            fireAndForgetEmail(async () => {
+                const { data: prof } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('id', udhariRequest.customer_id)
+                    .maybeSingle();
+
+                if (prof?.email) {
+                    await sendCustomerOrderEmail({
+                        type: 'udhari_decision',
+                        to: prof.email,
+                        data: {
+                            itemTitle,
+                            action: 'denied',
+                            amountRs: udhariRequest.amount_paise / 100,
+                            rejectionReason: merchantNote || undefined,
+                        },
+                        actorId: user.id,
+                        metadata: { requestId },
+                    });
+                }
+            }, { category: 'udhari_decision', entityId: requestId });
 
             return NextResponse.json({
                 success: true,

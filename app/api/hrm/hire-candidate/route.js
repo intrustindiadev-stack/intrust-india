@@ -2,6 +2,8 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseSer
 import { NextResponse } from 'next/server';
 import { CandidateHireSchema } from '@/lib/hrm/validation';
 import { checkRateLimit } from '@/lib/hrm/rateLimiter';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendHRMAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -79,11 +81,11 @@ export async function POST(request) {
 
         // 6. Notify Admins if hired and automate employee creation
         if (stage === 'hired') {
+            // Generate a strong random password for onboarding
+            const tempPassword = Math.random().toString(36).slice(-10) + 'A1!a';
+
             // A. Automate User Creation
             try {
-                // Generate a strong random password
-                const tempPassword = Math.random().toString(36).slice(-10) + 'A1!a';
-                
                 // Create auth user (this triggers the user_profiles creation automatically)
                 const { data: authData, error: createUserError } = await adminSupabase.auth.admin.createUser({
                     email: updatedApp.email,
@@ -168,6 +170,24 @@ export async function POST(request) {
                 }
 
                 await adminSupabase.from('notifications').insert(notifications);
+            }
+
+            // Fire-and-forget onboarding welcome email to candidate
+            if (updatedApp.email) {
+                fireAndForgetEmail(async () => {
+                    await sendHRMAlert({
+                        type: 'candidate_hired',
+                        to: updatedApp.email,
+                        data: {
+                            candidateName: updatedApp.full_name,
+                            jobTitle: updatedApp.career_job_roles?.title || updatedApp.role_category,
+                            department: department || updatedApp.role_category || 'General',
+                            tempPassword,
+                        },
+                        actorId: user.id,
+                        metadata: { applicationId },
+                    });
+                }, { category: 'hrm_hire', entityId: applicationId });
             }
         }
 

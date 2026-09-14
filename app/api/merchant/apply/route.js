@@ -2,6 +2,8 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseSer
 import { NextResponse } from 'next/server';
 import { sprintVerify } from '@/lib/sprintVerify';
 import crypto from 'crypto';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert, sendAdminAlert } from '@/lib/email';
 
 export async function POST(request) {
     try {
@@ -36,9 +38,20 @@ export async function POST(request) {
         } = formData;
 
         // Validate required fields
-        if (!businessName || !ownerName || !phone || !email || !bankAccount || !bankAccountName || !ifscCode || !panCard) {
+        if (!businessName || !ownerName || !phone || !email || !panCard) {
             return NextResponse.json(
                 { error: 'Missing required fields. Please fill in all required information.' },
+                { status: 400 }
+            );
+        }
+
+        const norm = (v) => (typeof v === 'string' && v.trim() !== '') ? v.trim() : null;
+        const normalizedIfsc = norm(ifscCode)?.toUpperCase() ?? null;
+        const hasBank = !!(norm(bankAccountName) || norm(bankAccount) || normalizedIfsc);
+
+        if (hasBank && (!norm(bankAccountName) || !norm(bankAccount) || !normalizedIfsc)) {
+            return NextResponse.json(
+                { error: 'Incomplete bank details. Please provide Account Holder Name, Account Number, and IFSC Code.' },
                 { status: 400 }
             );
         }
@@ -137,22 +150,22 @@ export async function POST(request) {
                         business_phone: phone,
                         business_email: email,
                         business_address: address,
-                        bank_account_name: bankAccountName,
-                        bank_account_number: bankAccount,
-                        bank_ifsc_code: ifscCode,
-                        bank_name: bankName || null,
-                        pan_number: panCard,
+                        bank_account_name: norm(bankAccountName),
+                        bank_account_number: norm(bankAccount),
+                        bank_ifsc_code: normalizedIfsc,
+                        bank_name: norm(bankName),
+                        pan_number: panCard.trim().toUpperCase(),
                         status: finalStatus,
                         pan_verified: panVerified,
                         bank_verified: bankVerified,
                         gstin_verified: gstVerified,
                         pan_data: null,
-                        bank_data: {
-                            account_holder_name: bankAccountName,
-                            account_number: bankAccount,
-                            ifsc: ifscCode,
-                            bank_name: bankName || null,
-                        },
+                        bank_data: hasBank ? {
+                            account_holder_name: norm(bankAccountName),
+                            account_number: norm(bankAccount),
+                            ifsc: normalizedIfsc,
+                            bank_name: norm(bankName),
+                        } : null,
                         gstin_data: gstResult?.data || null,
                         referred_by_merchant_id: referrerMerchantId,
                         referral_code: generatedCode,
@@ -222,6 +235,32 @@ export async function POST(request) {
         }
 
         console.log('✅ Merchant application submitted and queued for manual review.');
+
+        // Fire-and-forget emails: confirmation to applicant + alert to admin
+        fireAndForgetEmail(async () => {
+            await sendMerchantAlert({
+                type: 'application_received',
+                to: email,
+                data: {
+                    businessName,
+                    ownerName,
+                },
+                actorId: user.id,
+                metadata: { merchantId: merchant.id },
+            });
+            await sendAdminAlert({
+                type: 'new_merchant_application',
+                data: {
+                    businessName,
+                    ownerName,
+                    phone,
+                    email,
+                    applicationId: merchant.id,
+                },
+                actorId: user.id,
+                metadata: { merchantId: merchant.id },
+            });
+        }, { category: 'merchant_kyc', entityId: merchant.id });
 
         return NextResponse.json(
             {

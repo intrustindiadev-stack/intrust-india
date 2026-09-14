@@ -159,7 +159,7 @@ export async function submitKYC(formData) {
             bank_grade_security: sanitizedData.bankGradeSecurity,
             terms_accepted: true,
             terms_accepted_at: new Date().toISOString(),
-            terms_version: TERMS_VERSION,
+            terms_version: (formData.get('termsVersion') || TERMS_VERSION),
 
             // Files (disabled — no document upload)
             selfie_url: null,
@@ -218,6 +218,37 @@ export async function submitKYC(formData) {
 
         if (upsertError) throw upsertError;
         result = upserted || kycRecord;
+
+        // Store the signed agreement PDF + audit row (non-fatal if it fails)
+        try {
+            const { storeCustomerAgreement } = await import('@/app/actions/agreements');
+            const storeRes = await storeCustomerAgreement({
+                userId: user.id,
+                kycRecordId: result?.id || null,
+                agreement: {
+                    agreementId: formData.get('agreementId'),
+                    docSlug: 'kyc_terms',
+                    docVersion: formData.get('termsVersion') || TERMS_VERSION,
+                    docTitle: formData.get('agreementTitle') || 'KYC Terms & Conditions',
+                    fullText: formData.get('agreementText') || '',
+                    pdfHash: formData.get('agreementHash') || null,
+                    acceptedAt: formData.get('agreementAcceptedAt') || new Date().toISOString(),
+                    userAgent: formData.get('agreementUserAgent') || '',
+                    pdfBase64: formData.get('agreementPdf') || null,
+                },
+            });
+            if (storeRes?.success && storeRes.data) {
+                await adminSupabase.from('kyc_records').update({
+                    agreement_id: storeRes.data.id,
+                    agreement_pdf_path: storeRes.data.pdf_storage_path,
+                    agreement_hash: storeRes.data.pdf_hash_sha256,
+                    accepted_ip: storeRes.data.acceptedIp || null,
+                }).eq('id', result.id);
+                result = { ...result, agreement_id: storeRes.data.id, agreement_pdf_path: storeRes.data.pdf_storage_path };
+            }
+        } catch (agreeErr) {
+            console.warn('[KYC] agreement store failed (non-fatal):', agreeErr?.message);
+        }
 
         // Keep user_profiles in sync with the new KYC status
         const { error: profileError } = await adminSupabase

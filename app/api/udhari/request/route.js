@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
 import { notifyMerchantStoreCreditRequest } from '@/lib/notifications/merchantWhatsapp';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendMerchantAlert } from '@/lib/email';
 
 export async function POST(request) {
     const correlationId = crypto.randomUUID();
@@ -44,7 +46,7 @@ export async function POST(request) {
         // 4. Fetch coupon with merchant
         const { data: coupon, error: couponError } = await supabaseAdmin
             .from('coupons')
-            .select('*, merchant:merchants(id, user_id, business_name)')
+            .select('*, merchant:merchants(id, user_id, business_name, business_email)')
             .eq('id', couponId)
             .single();
 
@@ -151,6 +153,32 @@ export async function POST(request) {
             console.error(JSON.stringify({ correlationId, stage: 'notification_insert', error: notifError }));
             // Non-critical — don't fail the request
         }
+
+        // Fire-and-forget email alert to merchant
+        fireAndForgetEmail(async () => {
+            let mEmail = coupon.merchant?.business_email;
+            if (!mEmail && coupon.merchant?.user_id) {
+                const { data: prof } = await supabaseAdmin
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('id', coupon.merchant.user_id)
+                    .maybeSingle();
+                mEmail = prof?.email;
+            }
+            if (mEmail) {
+                await sendMerchantAlert({
+                    type: 'store_credit_request',
+                    to: mEmail,
+                    data: {
+                        customerName: userProfile.full_name,
+                        amountRs: purchaseAmountPaise / 100,
+                        itemTitle: coupon.title || coupon.brand || 'Gift Card',
+                    },
+                    actorId: user.id,
+                    metadata: { requestId: udhariRequest.id },
+                });
+            }
+        }, { category: 'merchant_ops', entityId: udhariRequest.id });
 
         return NextResponse.json({
             success: true,

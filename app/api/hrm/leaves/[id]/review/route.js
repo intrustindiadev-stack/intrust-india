@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 import { HRLeaveReviewSchema } from '@/lib/hrm/validation';
+import { fireAndForgetEmail } from '@/lib/email/dispatch';
+import { sendEmployeeAlert } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +55,38 @@ export async function POST(request, { params }) {
         code: isConflict ? 'CONCURRENCY_CONFLICT' : isForbidden ? 'FORBIDDEN' : 'REVIEW_FAILED'
       }, { status: isConflict ? 409 : isForbidden ? 403 : 400 });
     }
+
+    // Fire-and-forget email alert to employee
+    fireAndForgetEmail(async () => {
+      const empId = data?.request?.employee_id;
+      let empEmail = null;
+      let empName = 'Employee';
+      if (empId) {
+        const { data: empProf } = await admin
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('id', empId)
+          .maybeSingle();
+        empEmail = empProf?.email;
+        empName = empProf?.full_name || empName;
+      }
+      if (empEmail) {
+        await sendEmployeeAlert({
+          type: 'leave_decision',
+          to: empEmail,
+          data: {
+            employeeName: empName,
+            leaveType: data?.request?.leave_type || 'Leave',
+            fromDate: data?.request?.from_date,
+            toDate: data?.request?.to_date,
+            action: action === 'approve' ? 'approved' : 'rejected',
+            note: note || undefined,
+          },
+          actorId: user.id,
+          metadata: { leaveRequestId: requestId },
+        });
+      }
+    }, { category: 'hrm_leave', entityId: requestId });
 
     const response = NextResponse.json({
       success: true,
