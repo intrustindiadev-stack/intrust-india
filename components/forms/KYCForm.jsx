@@ -101,6 +101,16 @@ export default function KYCForm({
     const [panVerified, setPanVerified] = useState(draft.panVerified ?? false);
     const [showAutoFillBanner, setShowAutoFillBanner] = useState(draft.showAutoFillBanner ?? false);
 
+    // ─── Terms modal + agreement state ─── (must be declared BEFORE the useEffect that uses `agreement`)
+    const [agreement, setAgreement] = useState(draft.agreement || null);
+    const [termsOpen, setTermsOpen] = useState(false);
+    const [termsDoc, setTermsDoc] = useState(null);
+    const [termsLoading, setTermsLoading] = useState(false);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [submissionStatus, setSubmissionStatus] = useState('');
+
     useEffect(() => {
         try {
             sessionStorage.setItem('kyc_draft', JSON.stringify({
@@ -116,15 +126,6 @@ export default function KYCForm({
             // Ignore private browsing restrictions
         }
     }, [formData, currentStep, panVerified, fieldLocked, completedSteps, showAutoFillBanner, agreement]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
-    const [submissionStatus, setSubmissionStatus] = useState('');
-
-    // ─── Terms modal + agreement state ───
-    const [termsOpen, setTermsOpen] = useState(false);
-    const [termsDoc, setTermsDoc] = useState(null);
-    const [termsLoading, setTermsLoading] = useState(false);
-    const [agreement, setAgreement] = useState(draft.agreement || null);
 
     const openTermsModal = useCallback(async () => {
         setTermsOpen(true);
