@@ -7,6 +7,7 @@ import { createServerClient } from '@supabase/ssr';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
+import { fireAndForgetEmail, sendAuthEmail } from '@/lib/email';
 
 export async function POST(request) {
     let claimedOtpId = null;
@@ -223,6 +224,32 @@ export async function POST(request) {
                 console.warn('[VERIFY-OTP] WhatsApp binding/alert failed (non-fatal):', e.message);
             }
         })();
+
+        // Non-blocking: send transactional email login alert if user has real email address
+        if (prof?.email && !prof.email.endsWith('@phone.internal')) {
+            fireAndForgetEmail(async () => {
+                const now = new Date().toLocaleString('en-IN', {
+                    timeZone: 'Asia/Kolkata',
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                }) + ' IST';
+
+                await sendAuthEmail({
+                    type: 'login_alert',
+                    to: prof.email,
+                    data: {
+                        fullName: prof.full_name || 'Valued User',
+                        email: prof.email,
+                        loginTime: now,
+                        loginMethod: 'Mobile OTP',
+                        deviceInfo: userAgent.length > 80 ? userAgent.slice(0, 77) + '...' : userAgent,
+                        ipAddress: ip,
+                    },
+                    actorId: userId,
+                    metadata: { userId, method: 'phone_otp' }
+                });
+            }, { category: 'auth_login_alert', entityId: userId });
+        }
 
         const response = NextResponse.json({
             success: true,

@@ -35,7 +35,7 @@ export default function SettingsPage() {
         sub12m: 3999,
         autoFirst: 999,
         autoRenewal: 1999,
-        merchantReferralPrize: 500,
+        merchantReferralPrize: 200,
     });
 
     useEffect(() => {
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Credited to a merchant's wallet when their referred merchant activates their subscription.
+                                        Credited to a merchant&apos;s wallet when their referred merchant activates their subscription.
                                     </p>
                                 </div>
                             </div>

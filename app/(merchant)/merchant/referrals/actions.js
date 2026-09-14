@@ -72,7 +72,7 @@ export async function getMerchantReferralData(merchantId) {
 
         const directReferrals = networkData?.map(item => item.merchants) || [];
         const chainDepth = depthData && depthData.length > 0 ? depthData[0].level : 0;
-        const referralPrizePaise = Number(settingData?.value || 50000);
+        const referralPrizePaise = Number(settingData?.value || 20000);
         const referralPrizeRupees = Math.round(referralPrizePaise / 100);
 
         return {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Copy, Check, Share2, Sparkles, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function ReferralCodeCard({ referralCode }) {
+export default function ReferralCodeCard({ referralCode, prizeRupees = 200 }) {
     const [copied, setCopied] = useState(false);
     const shareUrl = `https://intrustindia.com/merchant-apply?ref=${referralCode || ''}`;
 
@@ -60,7 +60,7 @@ export default function ReferralCodeCard({ referralCode }) {
                         Invite Merchants & Grow Together
                     </h3>
                     <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                        Share your partner referral code. You'll receive <span className="font-semibold text-slate-800 dark:text-slate-200">₹500 instant wallet credit</span> when your invited merchant joins and subscribes.
+                        Share your partner referral code. You&apos;ll receive <span className="font-semibold text-slate-800 dark:text-slate-200">₹{prizeRupees} instant wallet credit</span> when your invited merchant joins and subscribes.
                     </p>
                 </div>
 

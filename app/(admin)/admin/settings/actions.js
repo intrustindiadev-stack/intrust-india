@@ -107,10 +107,10 @@ export async function getPricingSettings() {
             sub12m:                parsePrice(map['merchant_sub_price_12m'], 3999),
             autoFirst:             parsePrice(map['auto_mode_price_first'], 999),
             autoRenewal:           parsePrice(map['auto_mode_price_renewal'], 1999),
-            merchantReferralPrize: parsePrice(map['merchant_referral_prize_paise'], 50000) / 100,
+            merchantReferralPrize: parsePrice(map['merchant_referral_prize_paise'], 20000) / 100,
         };
     } catch (err) {
         console.error('getPricingSettings caught error:', err);
-        return { sub1m: 499, sub6m: 1999, sub12m: 3999, autoFirst: 999, autoRenewal: 1999, merchantReferralPrize: 500 };
+        return { sub1m: 499, sub6m: 1999, sub12m: 3999, autoFirst: 999, autoRenewal: 1999, merchantReferralPrize: 200 };
     }
 }

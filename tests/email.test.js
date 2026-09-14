@@ -791,5 +791,61 @@ describe('Transactional Email Infrastructure', () => {
                 })
             );
         });
+
+        it('sendAuthEmail dispatches login_alert with security sender', async () => {
+            await sendAuthEmail({
+                type: 'login_alert',
+                to: 'ayushmalviya329@gmail.com',
+                data: {
+                    fullName: 'Ayush Malviya',
+                    email: 'ayushmalviya329@gmail.com',
+                    loginTime: '14 Sep 2026, 02:20 PM IST',
+                    loginMethod: 'Google OAuth',
+                    deviceInfo: 'Mozilla/5.0 (X11; Linux x86_64)',
+                    ipAddress: '187.124.98.130',
+                },
+                actorId: 'user_login_test_1',
+            });
+
+            expect(mockSendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    from: 'InTrust India Security <security@intrustindia.com>',
+                    to: 'ayushmalviya329@gmail.com',
+                    subject: expect.stringContaining('Security Alert: New Sign-in to InTrust India'),
+                    html: expect.stringContaining('Google OAuth'),
+                })
+            );
+        });
+
+        it('sendAuthEmail throttles duplicate login_alert within cooldown window', async () => {
+            mockSendMail.mockClear();
+
+            // First call
+            const firstRes = await sendAuthEmail({
+                type: 'login_alert',
+                to: 'cooldown-test@example.com',
+                data: {
+                    fullName: 'Cooldown User',
+                    email: 'cooldown-test@example.com',
+                },
+                actorId: 'user_cooldown_1',
+            });
+            expect(firstRes.skipped).toBeUndefined();
+            expect(mockSendMail).toHaveBeenCalledTimes(1);
+
+            // Second immediate call with same actorId
+            const secondRes = await sendAuthEmail({
+                type: 'login_alert',
+                to: 'cooldown-test@example.com',
+                data: {
+                    fullName: 'Cooldown User',
+                    email: 'cooldown-test@example.com',
+                },
+                actorId: 'user_cooldown_1',
+            });
+            expect(secondRes.skipped).toBe(true);
+            // sendMail was not called a second time
+            expect(mockSendMail).toHaveBeenCalledTimes(1);
+        });
     });
 });

@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper'
+import { fireAndForgetEmail, sendAuthEmail } from '@/lib/email'
 
 export async function GET(request) {
     const requestUrl = new URL(request.url)
@@ -64,7 +65,51 @@ export async function GET(request) {
         return applyCookies(NextResponse.redirect(new URL('/', origin)))
     }
 
+    // Fire-and-forget security alert or welcome onboarding email
     const type = requestUrl.searchParams.get('type')
+    if (user.email && type !== 'recovery') {
+        const isFreshSignup = (Date.now() - new Date(user.created_at).getTime()) < 60_000;
+        const fullName = user.user_metadata?.full_name || user.user_metadata?.name || 'Valued User';
+
+        fireAndForgetEmail(async () => {
+            if (isFreshSignup) {
+                await sendAuthEmail({
+                    type: 'welcome',
+                    to: user.email,
+                    data: {
+                        fullName,
+                        email: user.email,
+                    },
+                    actorId: user.id,
+                    metadata: { userId: user.id, provider: user.app_metadata?.provider || 'oauth' }
+                });
+            } else {
+                const userAgent = request.headers.get('user-agent') || 'Web Browser';
+                const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '';
+                const now = new Date().toLocaleString('en-IN', {
+                    timeZone: 'Asia/Kolkata',
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                }) + ' IST';
+
+                await sendAuthEmail({
+                    type: 'login_alert',
+                    to: user.email,
+                    data: {
+                        fullName,
+                        email: user.email,
+                        loginTime: now,
+                        loginMethod: user.app_metadata?.provider === 'google' ? 'Google OAuth' : 'OAuth Sign-in',
+                        deviceInfo: userAgent.length > 80 ? userAgent.slice(0, 77) + '...' : userAgent,
+                        ipAddress: ip,
+                    },
+                    actorId: user.id,
+                    metadata: { userId: user.id, provider: user.app_metadata?.provider || 'oauth' }
+                });
+            }
+        }, { category: 'auth_login', entityId: user.id });
+    }
+
     if (type === 'recovery') {
         return applyCookies(NextResponse.redirect(new URL('/reset-password?verified=true', origin)))
     }

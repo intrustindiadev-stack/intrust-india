@@ -5,6 +5,7 @@ import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
 import { isPseudoEmail } from '@/lib/auth';
+import { fireAndForgetEmail, sendAuthEmail } from '@/lib/email';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
@@ -264,6 +265,32 @@ export async function POST(request) {
         } catch (waErr) {
             console.error('[signin] WhatsApp login alert failed (non-blocking):', waErr.message);
         }
+
+        // 10. Fire-and-forget email login security alert
+        fireAndForgetEmail(async () => {
+            const userAgent = request.headers.get('user-agent') || 'Web Browser';
+            const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '';
+            const now = new Date().toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+            }) + ' IST';
+
+            await sendAuthEmail({
+                type: 'login_alert',
+                to: email,
+                data: {
+                    fullName: profile?.full_name || 'Valued User',
+                    email,
+                    loginTime: now,
+                    loginMethod: 'Email & Password',
+                    deviceInfo: userAgent.length > 80 ? userAgent.slice(0, 77) + '...' : userAgent,
+                    ipAddress: ip,
+                },
+                actorId: existing.id,
+                metadata: { userId: existing.id, method: 'password' }
+            });
+        }, { category: 'auth_login_alert', entityId: existing.id });
 
         return response;
 

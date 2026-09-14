@@ -35,7 +35,7 @@ export default async function MerchantReferralsPage() {
         directReferrals = [],
         prizeHistory = [],
         chainDepth = 0,
-        referralPrizeRupees = 500
+        referralPrizeRupees = 200
     } = await getMerchantReferralData(merchant.id);
 
     return (

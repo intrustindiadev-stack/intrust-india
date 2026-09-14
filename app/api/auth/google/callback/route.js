@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { ensureWhatsAppBinding } from '@/lib/whatsapp/ensureBinding';
 import { sendWhatsAppLoginAlert } from '@/lib/notifications/authWhatsapp';
 import { applySupabaseCookies } from '@/lib/supabaseCookieHelper';
+import { fireAndForgetEmail, sendAuthEmail } from '@/lib/email';
 
 // Service role client to upsert user_profiles bypassing RLS
 const supabaseAdmin = createClient(
@@ -513,6 +514,46 @@ export async function GET(request) {
                 console.warn('[Google OAuth] WhatsApp binding/alert failed (non-fatal):', e.message);
             }
         })();
+
+        // Non-blocking: send transactional email login alert (or welcome for fresh OAuth registration)
+        if (user?.email) {
+            const isFreshSignup = (Date.now() - new Date(user.created_at).getTime()) < 60_000;
+            const fullName = finalProfile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || 'Valued User';
+            const ua = request.headers.get('user-agent') || 'Web Browser';
+            const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '';
+            const now = new Date().toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+            }) + ' IST';
+
+            fireAndForgetEmail(async () => {
+                if (isFreshSignup) {
+                    await sendAuthEmail({
+                        type: 'welcome',
+                        to: user.email,
+                        data: { fullName, email: user.email },
+                        actorId: user.id,
+                        metadata: { userId: user.id, provider: 'google' }
+                    });
+                } else {
+                    await sendAuthEmail({
+                        type: 'login_alert',
+                        to: user.email,
+                        data: {
+                            fullName,
+                            email: user.email,
+                            loginTime: now,
+                            loginMethod: 'Google OAuth',
+                            deviceInfo: ua.length > 80 ? ua.slice(0, 77) + '...' : ua,
+                            ipAddress: ip,
+                        },
+                        actorId: user.id,
+                        metadata: { userId: user.id, provider: 'google' }
+                    });
+                }
+            }, { category: 'auth_login', entityId: user.id });
+        }
 
         console.log('[Google OAuth] Success. User:', user.id, '→', redirectPath);
         return redirectResponse;
