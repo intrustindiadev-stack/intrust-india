@@ -6,7 +6,7 @@ import {
     ShoppingBag, Plus, Package, PackageX, TrendingUp, DollarSign,
     ChevronRight, Tags, ClipboardList, Store, Edit,
     ToggleLeft, ToggleRight, Search, Filter, Clock,
-    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw, FileSpreadsheet, X, ArrowDownToLine
+    CheckCircle2, AlertTriangle, Trash2, ShieldCheck, RefreshCw, FileSpreadsheet, X, ArrowDownToLine, Star
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
