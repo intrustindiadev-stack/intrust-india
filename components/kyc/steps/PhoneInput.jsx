@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 export default function PhoneInput({ value = '', onChange, error }) {
     const [focused, setFocused] = useState(false);
@@ -90,9 +91,9 @@ export default function PhoneInput({ value = '', onChange, error }) {
 
             {/* Error Message */}
             {error && (
-                <div style={{ color: '#EF4444', fontSize: '12px', marginTop: '6px', fontWeight: 500 }}>
-                    Enter a valid 10-digit mobile number
-                </div>
+                <p className="text-red-600 text-xs sm:text-[13px] font-medium mt-1.5 ml-1 flex items-start gap-1.5 leading-snug">
+                    <AlertCircle size={14} className="shrink-0 text-red-500 mt-0.5" /> <span>{error}</span>
+                </p>
             )}
         </div>
     );

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Check, X } from 'lucide-react';
+import { Loader2, Check, X, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import FloatingLabelInput from './FloatingLabelInput';
 import AutoFillBanner from './AutoFillBanner';
 import { formatPANInput, validatePAN, maskPAN } from '@/app/types/kyc';
@@ -94,11 +95,15 @@ export default function Step2PAN({
                 onPANVerified(result.data || null, result.mode);
             } else {
                 setVerifyState('error');
-                setVerifyError(result.message || result.error || 'Verification failed');
+                const errMsg = result.message || result.error || 'Verification failed';
+                setVerifyError(errMsg);
+                toast.error(mapProviderError(errMsg));
             }
         } catch {
             setVerifyState('error');
-            setVerifyError('Verification service unavailable');
+            const errMsg = 'Verification service unavailable';
+            setVerifyError(errMsg);
+            toast.error(errMsg);
         }
     };
 
@@ -125,6 +130,14 @@ export default function Step2PAN({
                         label="PAN Number"
                         value={verifyState === 'verified' ? maskedPAN : formData.panNumber}
                         onChange={(e) => handlePANChange(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (formData.panNumber.length === 10 && verifyState !== 'verified' && verifyState !== 'loading') {
+                                    handleVerifyPAN();
+                                }
+                            }
+                        }}
                         error={errors.panNumber || (verifyState === 'error' ? mapProviderError(verifyError) : verifyError)}
                         success={false} /* we use button for success now */
                         maxLength={10}
@@ -155,17 +168,17 @@ export default function Step2PAN({
                 {verifyState === 'manual_review' && (
                     <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl">
                         <p className="text-sm text-amber-800 font-medium mb-2">
-                            PAN Verification service is currently degraded.
+                            Instant verification is temporarily unavailable.
                         </p>
                         <p className="text-xs text-amber-700 leading-relaxed mb-3">
-                            You can proceed with your application, but it will require manual verification later. Ensure your details are exactly as on your PAN card.
+                            Your application will proceed with manual verification, which typically takes 24–48 hours. Please ensure all your details exactly match your PAN card.
                         </p>
                         <button
                             type="button"
                             onClick={handleVerifyPAN}
                             className="text-xs font-bold text-amber-700 hover:text-amber-900 transition-colors uppercase"
                         >
-                            Retry Verification
+                            Try Instant Verification Again
                         </button>
                     </div>
                 )}
@@ -179,7 +192,9 @@ export default function Step2PAN({
                         ${verifyState === 'verified' || verifyState === 'manual_review'
                             ? 'bg-[#16A34A] text-white shadow-[0_4px_12px_rgba(22,163,74,0.25)]'
                             : formData.panNumber.length === 10
-                                ? 'bg-[#1A56DB] hover:bg-[#1546b5] text-white shadow-[0_4px_12px_rgba(26,86,219,0.25)]'
+                                ? errors.panNumber && !panVerified
+                                    ? 'bg-[#1A56DB] hover:bg-[#1546b5] text-white shadow-[0_4px_16px_rgba(26,86,219,0.4)] ring-4 ring-blue-500/25 animate-pulse'
+                                    : 'bg-[#1A56DB] hover:bg-[#1546b5] text-white shadow-[0_4px_12px_rgba(26,86,219,0.25)]'
                                 : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         }`}
                 >
@@ -191,6 +206,14 @@ export default function Step2PAN({
                         <><Check size={18} strokeWidth={3} /> {verifyState === 'manual_review' ? 'Proceeding Manually' : 'Verified'}</>
                     )}
                 </button>
+
+                {/* Helpful prompt when user needs to verify before continuing */}
+                {errors.panNumber && !panVerified && formData.panNumber.length === 10 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-2.5 text-blue-900 text-xs font-medium">
+                        <AlertCircle size={16} className="text-blue-600 shrink-0" />
+                        <span>Tap <strong>Verify PAN</strong> above to verify your details with the government registry before continuing.</span>
+                    </div>
+                )}
             </div>
 
             {/* Auto-fill banner */}
@@ -247,12 +270,16 @@ export function validateStep2(formData, panVerified) {
     /** @type {Object<string, string>} */
     const errs = {};
 
-    if (!validatePAN(formData.panNumber)) {
-        errs.panNumber = 'Invalid PAN format. Expected: ABCDE1234F';
-    }
+    const pan = (formData.panNumber || '').trim();
 
-    if (!panVerified) {
-        errs.panNumber = errs.panNumber || 'Please verify your PAN before proceeding';
+    if (!pan) {
+        errs.panNumber = 'Enter your PAN card number to continue';
+    } else if (pan.length < 10) {
+        errs.panNumber = 'PAN is incomplete — it must be exactly 10 characters (e.g. ABCDE1234F)';
+    } else if (!validatePAN(pan)) {
+        errs.panNumber = 'PAN format is incorrect — it should be 5 letters, 4 digits, then 1 letter (e.g. ABCDE1234F)';
+    } else if (!panVerified) {
+        errs.panNumber = 'Tap "Verify PAN" above to confirm your PAN with the government registry before proceeding';
     }
 
     return { valid: Object.keys(errs).length === 0, errors: errs };

@@ -204,24 +204,30 @@ export function validateStep3(formData) {
     /** @type {Object<string, string>} */
     const errs = {};
 
-    if (!validateAddress(formData.fullAddress)) {
-        errs.fullAddress = 'Please enter a complete address (minimum 10 characters)';
+    const address = (formData.fullAddress || '').trim();
+    if (!address) {
+        errs.fullAddress = 'Enter your complete permanent residential address';
+    } else if (!validateAddress(address)) {
+        errs.fullAddress = 'Address is too short — include your house/flat number, street, and locality';
     }
 
     if (!formData.city || formData.city.trim().length < 2) {
-        errs.city = 'City is required';
+        errs.city = 'Enter the name of your city or town';
     }
 
     if (!formData.state || formData.state.trim().length < 2) {
-        errs.state = 'State is required';
+        errs.state = 'Enter your state name';
     }
 
-    if (!formData.pinCode || !/^\d{6}$/.test(formData.pinCode)) {
-        errs.pinCode = 'Enter a valid 6-digit PIN code';
+    const pin = (formData.pinCode || '').trim();
+    if (!pin) {
+        errs.pinCode = 'Enter the 6-digit PIN code for your area';
+    } else if (!/^\d{6}$/.test(pin)) {
+        errs.pinCode = 'PIN code must be exactly 6 digits — no letters or spaces (e.g. 462043)';
     }
 
     if (formData.termsAccepted !== true) {
-        errs.termsAccepted = 'You must accept the terms to proceed';
+        errs.termsAccepted = 'Please read and accept the KYC Terms before submitting your application';
     }
 
     return { valid: Object.keys(errs).length === 0, errors: errs };

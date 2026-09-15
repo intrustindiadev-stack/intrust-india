@@ -98,6 +98,7 @@ jest.mock('@/components/kyc/steps/Step3Address', () => ({
     validateStep3: jest.fn(() => ({ valid: true, errors: {} }))
 }));
 jest.mock('@/components/kyc/steps/SuccessScreen', () => () => 'SuccessScreen');
+jest.mock('@/components/kyc/TermsAcceptanceModal', () => () => 'TermsAcceptanceModal');
 
 // Mock KYC Actions
 jest.mock('@/app/actions/kyc', () => ({
@@ -161,6 +162,7 @@ describe('UI-03: Form Submission Toasts Verification', () => {
             let stateIndex = 0;
             React.useState.mockImplementation((init) => {
                 stateIndex++;
+                if (stateIndex === 1) return [3, jest.fn()]; // Step 3 Address
                 if (stateIndex === 4) return [{ fullAddress: '', termsAccepted: false }, jest.fn()];
                 return [init, jest.fn()];
             });
@@ -171,7 +173,7 @@ describe('UI-03: Form Submission Toasts Verification', () => {
             const fakeEvent = { preventDefault: jest.fn() };
             await form.props.onSubmit(fakeEvent);
 
-            expect(toast.error).toHaveBeenCalledWith('Please fix the errors before submitting');
+            expect(toast.error).toHaveBeenCalledWith('Required');
         });
 
         it('triggers server action toast.error when submitKYC returns an error', async () => {
@@ -181,6 +183,7 @@ describe('UI-03: Form Submission Toasts Verification', () => {
             let stateIndex = 0;
             React.useState.mockImplementation((init) => {
                 stateIndex++;
+                if (stateIndex === 1) return [3, jest.fn()]; // Step 3 Address
                 if (stateIndex === 4) return [{
                     fullName: 'Ayush Kumar',
                     phoneNumber: '9999999999',
@@ -208,6 +211,28 @@ describe('UI-03: Form Submission Toasts Verification', () => {
 
             expect(submitKYC).toHaveBeenCalled();
             expect(toast.error).toHaveBeenCalledWith('Database integrity error');
+        });
+
+        it('triggers step 2 validation rather than step 3 submission toast when on step 2', async () => {
+            const { validateStep2 } = require('@/components/kyc/steps/Step2PAN');
+            validateStep2.mockReturnValueOnce({ valid: false, errors: { panNumber: 'Please verify your PAN before proceeding' } });
+
+            let stateIndex = 0;
+            React.useState.mockImplementation((init) => {
+                stateIndex++;
+                if (stateIndex === 1) return [2, jest.fn()]; // Step 2 PAN
+                if (stateIndex === 4) return [{ panNumber: 'HOHPM4570R' }, jest.fn()];
+                return [init, jest.fn()];
+            });
+
+            const rendered = KYCForm({ userType: 'customer' });
+            const form = findElement(rendered, (node) => node.type === 'form');
+            
+            const fakeEvent = { preventDefault: jest.fn() };
+            await form.props.onSubmit(fakeEvent);
+
+            expect(toast.error).toHaveBeenCalledWith('Please verify your PAN before proceeding');
+            expect(toast.error).not.toHaveBeenCalledWith('Please fix the errors before submitting');
         });
     });
 

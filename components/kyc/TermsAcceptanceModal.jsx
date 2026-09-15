@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShieldCheck, FileText, Loader2, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAccept }) {
+export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAccept, alreadyAccepted = false }) {
     const scrollRef = useRef(null);
     const [progress, setProgress] = useState(0);
     const [scrolledToEnd, setScrolledToEnd] = useState(false);
@@ -13,10 +13,19 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
 
     useEffect(() => {
         if (open) {
-            setProgress(0); setScrolledToEnd(false); setChecked(false); setAccepting(false);
-            requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0 }));
+            // If the user is re-reading after already accepting, keep the
+            // checkbox checked and treat the document as fully read so they
+            // can close/re-accept without having to scroll through again.
+            const wasAccepted = alreadyAccepted === true;
+            setProgress(wasAccepted ? 100 : 0);
+            setScrolledToEnd(wasAccepted);
+            setChecked(wasAccepted);
+            setAccepting(false);
+            if (!wasAccepted) {
+                requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0 }));
+            }
         }
-    }, [open, doc?.version]);
+    }, [open, doc?.version, alreadyAccepted]);
 
     useEffect(() => {
         if (!open) return;
@@ -99,9 +108,11 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                 </span>
                             </label>
                             <div className="flex gap-3 mt-3">
-                                <button onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-white/15 text-sm font-bold text-slate-600 dark:text-slate-300">Decline</button>
+                                <button onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-white/15 text-sm font-bold text-slate-600 dark:text-slate-300">
+                                    {alreadyAccepted ? 'Close' : 'Decline'}
+                                </button>
                                 <button onClick={handleAccept} disabled={!canAccept} className="flex-[2] py-3.5 rounded-xl text-sm font-extrabold text-white bg-gradient-to-r from-blue-600 to-blue-800 disabled:opacity-40 flex items-center justify-center gap-2">
-                                    {accepting ? (<><Loader2 size={17} className="animate-spin" /> Generating signed copy…</>) : (<><FileText size={17} /> Accept & Continue</>)}
+                                    {accepting ? (<><Loader2 size={17} className="animate-spin" /> Generating signed copy…</>) : (<><FileText size={17} /> {alreadyAccepted ? 'Confirm Acceptance' : 'Accept & Continue'}</>)}
                                 </button>
                             </div>
                             {!scrolledToEnd && (<p className="text-center text-[11px] font-semibold text-amber-600 mt-2">Version {doc?.version || '—'} — scroll fully to continue</p>)}
