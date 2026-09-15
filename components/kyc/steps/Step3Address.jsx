@@ -124,10 +124,10 @@ export default function Step3Address({ formData, onChange, errors, isSubmitting,
                     <span className="flex-1 text-sm text-slate-600 leading-relaxed">
                         {formData.termsAccepted ? (
                             <>
-                                You accepted{' '}
+                                You have successfully accepted the{' '}
                                 <strong>Intrust India KYC Terms ({termsVersion || 'latest'})</strong>.
-                                {' '}A signed PDF copy will be attached to your application.{' '}
-                                <span className="text-blue-600 font-semibold">Read again</span>
+                                {' '}Your agreement has been securely recorded for compliance.{' '}
+                                <span className="text-blue-600 font-semibold">Review terms</span>
                             </>
                         ) : (
                             <>

@@ -175,7 +175,7 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                         !scrolledToEnd ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'
                                     }`}
                                 >
-                                    I have read <strong>{doc?.title} ({doc?.version})</strong> and agree to be bound by it. Intrust India may record this acceptance with timestamp, IP, and a signed PDF copy.
+                                    I have read and agree to the <strong>{doc?.title} ({doc?.version})</strong>. I acknowledge that this acceptance is securely recorded for regulatory KYC compliance.
                                 </span>
                             </label>
                             <div className="flex gap-3 mt-3">

@@ -193,7 +193,7 @@ export default function KYCForm({
             return next;
         });
         setTermsOpen(false);
-        toast.success('Terms accepted. Signed copy attached.');
+        toast.success('Terms accepted successfully. Your agreement has been securely recorded.');
     }, [termsDoc, formData]);
 
     /** @type {Object<string, string>} */
