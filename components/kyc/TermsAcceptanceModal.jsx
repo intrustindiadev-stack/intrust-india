@@ -38,12 +38,13 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
         const el = scrollRef.current;
         if (!el) return;
         const max = el.scrollHeight - el.clientHeight;
+        // 50px tolerance buffer to solve mobile sub-pixel and safe-area calculation issues
         const isBottom = max <= 0 || Math.ceil(el.scrollTop + el.clientHeight) >= (el.scrollHeight - 50);
 
         if (isBottom) {
             setProgress(100);
             setScrolledToEnd(true);
-        } else {
+        } else if (!scrolledToEnd) {
             const pct = max <= 0 ? 100 : Math.min(100, Math.round((el.scrollTop / max) * 100));
             setProgress(pct);
         }
@@ -52,17 +53,23 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
     // Check if content fits without scrolling once loaded
     useEffect(() => {
         if (open && !loading && !alreadyAccepted) {
-            requestAnimationFrame(() => {
+            const checkFits = () => {
                 const el = scrollRef.current;
-                if (el) {
-                    const max = el.scrollHeight - el.clientHeight;
-                    const isBottom = max <= 0 || Math.ceil(el.scrollTop + el.clientHeight) >= (el.scrollHeight - 50);
-                    if (isBottom) {
-                        setProgress(100);
-                        setScrolledToEnd(true);
-                    }
+                if (!el) return;
+                const max = el.scrollHeight - el.clientHeight;
+                const isBottom = max <= 0 || Math.ceil(el.scrollTop + el.clientHeight) >= (el.scrollHeight - 50);
+                if (isBottom) {
+                    setProgress(100);
+                    setScrolledToEnd(true);
                 }
-            });
+            };
+
+            const rafId = requestAnimationFrame(checkFits);
+            const timerId = setTimeout(checkFits, 120);
+            return () => {
+                cancelAnimationFrame(rafId);
+                clearTimeout(timerId);
+            };
         }
     }, [open, loading, alreadyAccepted, doc?.body_markdown]);
 
@@ -100,10 +107,16 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                 </button>
                             </div>
                             <div className="h-1.5 mt-3 rounded-full bg-white/10 overflow-hidden">
-                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 transition-all" style={{ width: progress + '%' }} />
+                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 transition-all duration-150" style={{ width: progress + '%' }} />
                             </div>
                         </div>
-                        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300 min-h-[220px]">
+                        <div
+                            ref={scrollRef}
+                            onScroll={handleScroll}
+                            onTouchMove={handleScroll}
+                            onTouchEnd={handleScroll}
+                            className="terms-scroll flex-1 px-5 sm:px-7 py-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300 min-h-[220px]"
+                        >
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
                                     <Loader2 className="animate-spin" size={28} />
@@ -115,10 +128,24 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                 </div>
                             )}
                             {!loading && !scrolledToEnd && (
-                                <p className="mt-5 text-center text-[11px] font-bold text-amber-600">Scroll to the bottom to unlock acceptance ({progress}% read)</p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const el = scrollRef.current;
+                                        if (el) {
+                                            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                                        }
+                                    }}
+                                    className="mt-5 w-full text-center text-[11px] font-bold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 transition-colors cursor-pointer"
+                                >
+                                    <span>Scroll to the bottom to unlock acceptance ({progress}% read)</span>
+                                    <span className="text-xs font-black">↓</span>
+                                </button>
                             )}
                             {!loading && scrolledToEnd && (
-                                <p className="mt-5 flex items-center gap-2 text-xs font-bold text-emerald-600"><CheckCircle size={15} /> Full document read.</p>
+                                <p className="mt-5 flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle size={15} /> Full document read.
+                                </p>
                             )}
                         </div>
                         <div className="shrink-0 border-t border-slate-100 dark:border-white/10 px-5 sm:px-7 py-4 bg-slate-50/80 dark:bg-slate-950/40">
@@ -128,6 +155,11 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                         ? 'opacity-50 cursor-not-allowed border-slate-200/70 dark:border-white/5 bg-slate-100/60 dark:bg-white/[0.02]'
                                         : 'cursor-pointer border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-white/20'
                                 }`}
+                                onClick={(e) => {
+                                    if (!scrolledToEnd) {
+                                        e.preventDefault();
+                                    }
+                                }}
                             >
                                 <input
                                     type="checkbox"
@@ -162,3 +194,4 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
         </AnimatePresence>
     );
 }
+
