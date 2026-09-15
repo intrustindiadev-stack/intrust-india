@@ -38,10 +38,33 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
         const el = scrollRef.current;
         if (!el) return;
         const max = el.scrollHeight - el.clientHeight;
-        const pct = max <= 0 ? 100 : Math.min(100, Math.round((el.scrollTop / max) * 100));
-        setProgress(pct);
-        if (max <= 0 || el.scrollTop + el.clientHeight >= el.scrollHeight - 24) setScrolledToEnd(true);
+        const isBottom = max <= 0 || Math.ceil(el.scrollTop + el.clientHeight) >= (el.scrollHeight - 50);
+
+        if (isBottom) {
+            setProgress(100);
+            setScrolledToEnd(true);
+        } else {
+            const pct = max <= 0 ? 100 : Math.min(100, Math.round((el.scrollTop / max) * 100));
+            setProgress(pct);
+        }
     };
+
+    // Check if content fits without scrolling once loaded
+    useEffect(() => {
+        if (open && !loading && !alreadyAccepted) {
+            requestAnimationFrame(() => {
+                const el = scrollRef.current;
+                if (el) {
+                    const max = el.scrollHeight - el.clientHeight;
+                    const isBottom = max <= 0 || Math.ceil(el.scrollTop + el.clientHeight) >= (el.scrollHeight - 50);
+                    if (isBottom) {
+                        setProgress(100);
+                        setScrolledToEnd(true);
+                    }
+                }
+            });
+        }
+    }, [open, loading, alreadyAccepted, doc?.body_markdown]);
 
     const canAccept = scrolledToEnd && checked && !accepting && !loading;
     const handleAccept = async () => {
@@ -92,18 +115,34 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                 </div>
                             )}
                             {!loading && !scrolledToEnd && (
-                                <p className="mt-5 text-center text-[11px] font-bold text-amber-600">Scroll to the bottom to enable acceptance ({progress}% read)</p>
+                                <p className="mt-5 text-center text-[11px] font-bold text-amber-600">Scroll to the bottom to unlock acceptance ({progress}% read)</p>
                             )}
                             {!loading && scrolledToEnd && (
                                 <p className="mt-5 flex items-center gap-2 text-xs font-bold text-emerald-600"><CheckCircle size={15} /> Full document read.</p>
                             )}
                         </div>
                         <div className="shrink-0 border-t border-slate-100 dark:border-white/10 px-5 sm:px-7 py-4 bg-slate-50/80 dark:bg-slate-950/40">
-                            <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 cursor-pointer">
-                                <input type="checkbox" checked={checked} disabled={!scrolledToEnd}
+                            <label
+                                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all duration-200 select-none ${
+                                    !scrolledToEnd
+                                        ? 'opacity-50 cursor-not-allowed border-slate-200/70 dark:border-white/5 bg-slate-100/60 dark:bg-white/[0.02]'
+                                        : 'cursor-pointer border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-white/20'
+                                }`}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    disabled={!scrolledToEnd}
                                     onChange={(e) => setChecked(e.target.checked)}
-                                    className="mt-0.5 w-5 h-5 rounded accent-blue-600" />
-                                <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    className={`mt-0.5 w-5 h-5 rounded accent-blue-600 transition-opacity ${
+                                        !scrolledToEnd ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                                    }`}
+                                />
+                                <span
+                                    className={`text-xs sm:text-sm leading-relaxed transition-colors ${
+                                        !scrolledToEnd ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'
+                                    }`}
+                                >
                                     I have read <strong>{doc?.title} ({doc?.version})</strong> and agree to be bound by it. Intrust India may record this acceptance with timestamp, IP, and a signed PDF copy.
                                 </span>
                             </label>
@@ -115,7 +154,7 @@ export default function TermsAcceptanceModal({ open, doc, loading, onClose, onAc
                                     {accepting ? (<><Loader2 size={17} className="animate-spin" /> Generating signed copy…</>) : (<><FileText size={17} /> {alreadyAccepted ? 'Confirm Acceptance' : 'Accept & Continue'}</>)}
                                 </button>
                             </div>
-                            {!scrolledToEnd && (<p className="text-center text-[11px] font-semibold text-amber-600 mt-2">Version {doc?.version || '—'} — scroll fully to continue</p>)}
+                            {!scrolledToEnd && (<p className="text-center text-[11px] font-semibold text-amber-600 mt-2">Version {doc?.version || '—'} — scroll fully to unlock checkbox</p>)}
                         </div>
                     </motion.div>
                 </motion.div>
