@@ -404,7 +404,7 @@ function CareerApplyForm() {
                             <div>
                                 <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Career Application</p>
                                 <h1 className="text-xl font-black">
-                                    {selectedRole?.title || 'Join InTrust Financial'}
+                                    {selectedRole?.title || 'Join InTrust India'}
                                 </h1>
                             </div>
                         </div>

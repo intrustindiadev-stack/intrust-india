@@ -39,7 +39,8 @@ import {
     FileText,
     Lock,
     Truck,
-    RefreshCcw
+    RefreshCcw,
+    Briefcase
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -49,7 +50,7 @@ import Image from 'next/image';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
-const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search'];
+const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search', '/career'];
 
 const NAV_GROUPS = [
     {
@@ -94,6 +95,7 @@ const NAV_GROUPS = [
             { label: 'Contact Support', href: '/contact', icon: MapPin },
             { label: 'Orders & Tracking', href: '/orders', icon: Package },
             { label: 'Profile & KYC', href: '/profile', icon: User },
+            { label: 'Careers', href: '/career', icon: Briefcase, badge: 'Hiring' },
             { label: 'Partner / Merchant Apply', href: '/merchant-apply', icon: Store, badge: 'Join' },
         ]
     },
