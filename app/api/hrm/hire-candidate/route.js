@@ -2,6 +2,7 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseSer
 import { NextResponse } from 'next/server';
 import { CandidateHireSchema } from '@/lib/hrm/validation';
 import { checkRateLimit } from '@/lib/hrm/rateLimiter';
+import { generateEmployeeCode } from '@/lib/hrm/employeeCode';
 import { fireAndForgetEmail } from '@/lib/email/dispatch';
 import { sendHRMAlert } from '@/lib/email';
 
@@ -102,7 +103,17 @@ export async function POST(request) {
                     console.error('Auth user creation error (may already exist):', createUserError);
                 } else if (authData?.user) {
                     // Update the auto-generated user_profiles row with HRM data
-                    const empId = `EMP${Math.floor(10000 + Math.random() * 90000)}`; // EMP12345
+                    // Badge via shared generator (lib/hrm/employeeCode.js) with retry on
+                    // collision (partial unique index WHERE employee_id IS NOT NULL).
+                    let empId = null;
+                    for (let attempt = 0; attempt < 10; attempt++) {
+                        const candidate = generateEmployeeCode();
+                        const { data: empDup } = await adminSupabase.from('user_profiles').select('id').eq('employee_id', candidate).maybeSingle();
+                        if (!empDup) { empId = candidate; break; }
+                    }
+                    if (!empId) {
+                        console.error('hire-candidate: could not assign unique employee_id after 10 attempts');
+                    } else {
                     
                     await adminSupabase.from('user_profiles').update({
                         employee_id: empId,
@@ -114,6 +125,7 @@ export async function POST(request) {
                         employment_type: 'full_time',
                         reporting_manager_id: reportingManagerId || null
                     }).eq('id', authData.user.id);
+                    }
 
                     if (teamId) {
                         await adminSupabase.from('team_members').insert({

@@ -1,7 +1,45 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { generateEmployeeCode, normalizeEmployeeCode } from '@/lib/hrm/employeeCode';
 
 const HR_ROLES = ['hr', 'hr_manager', 'admin', 'super_admin'];
+
+// Explicit allow-list for profile fields on create. `...payload` spread
+// previously let callers write sensitive columns (role, is_suspended,
+// reward_*, team_id, ...) straight into user_profiles. `employee_id` is
+// NOT on this list — it is auto-generated below (or normalized +
+// duplicate-checked if the caller supplied one).
+const CREATE_MUTABLE_FIELDS = new Set([
+    'full_name',
+    'phone',
+    'address',
+    'avatar_url',
+    'date_of_birth',
+    'department',
+    'blood_group',
+    'joining_date',
+    'employment_type',
+    'city',
+    'state',
+    'base_salary',
+]);
+
+/**
+ * Try to generate a unique badge code, retrying on 23505 conflicts.
+ * Returns the code string, or null if all attempts collide.
+ */
+async function generateUniqueEmployeeCode(admin, attempts = 10) {
+    for (let i = 0; i < attempts; i++) {
+        const code = generateEmployeeCode();
+        const { data } = await admin
+            .from('user_profiles')
+            .select('id')
+            .eq('employee_id', code)
+            .maybeSingle();
+        if (!data) return code;
+    }
+    return null;
+}
 
 export async function POST(request) {
     try {
@@ -44,11 +82,35 @@ export async function POST(request) {
         // Give the database trigger a moment to create the user_profiles row
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Resolve the badge code: caller-supplied -> normalize + dup-check,
+        // otherwise auto-generate (retry on collision). Badge is the only
+        // code path — never trust caller `role`/sensitive keys via spread.
+        const suppliedCode = normalizeEmployeeCode(payload.employee_id);
+        let employeeCode = null;
+        if (suppliedCode) {
+            const { data: dup } = await admin
+                .from('user_profiles')
+                .select('id')
+                .eq('employee_id', suppliedCode)
+                .maybeSingle();
+            if (dup) {
+                return NextResponse.json({ error: 'Duplicate employee code' }, { status: 409 });
+            }
+            employeeCode = suppliedCode;
+        } else {
+            employeeCode = await generateUniqueEmployeeCode(admin);
+            if (!employeeCode) {
+                return NextResponse.json({ error: 'Could not assign a unique employee code, please retry.' }, { status: 500 });
+            }
+        }
+
         // 2. Update the user_profiles row that was created by the trigger
-        const profileUpdates = {
-            ...payload,
-            id: undefined, // ensure we don't try to update the id
-        };
+        // Whitelisted fields only — `id`/`role`/sensitive keys can never be
+        // overwritten via payload spread (previous bug).
+        const profileUpdates = { employee_id: employeeCode };
+        for (const [key, value] of Object.entries(payload || {})) {
+            if (CREATE_MUTABLE_FIELDS.has(key)) profileUpdates[key] = value;
+        }
 
         const { data: profileData, error: profileError } = await admin
             .from('user_profiles')

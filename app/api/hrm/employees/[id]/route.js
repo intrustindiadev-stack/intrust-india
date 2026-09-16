@@ -14,6 +14,12 @@ const HR_ROLES = ['hr_manager', 'admin', 'super_admin'];
  * join_date, probation_end_date, selfie_url) do NOT exist and were
  * removed — sending them caused `500 column does not exist`.
  *
+ * NOTE: `employee_id` (badge code) is intentionally NOT on this
+ * whitelist. It is system-generated (lib/hrm/employeeCode.js) at hire /
+ * backfill time and is read-only on the profile page. Allowing free-text
+ * edits created duplicates (1100 vs INT003 vs Intrust260727 formats) with
+ * no format validation. PATCH requests carrying it get a clear 400.
+ *
  * SECURITY NOTE: Sensitive columns (role, kyc_status, is_suspended,
  * suspension_reason, reward_*, team_id, reporting_manager_id, etc.) are
  * protected by the user_profiles_block_sensitive_column_guard DB trigger
@@ -29,7 +35,6 @@ const HR_MUTABLE_FIELDS = new Set([
     'date_of_birth',
     'department',
     'blood_group',
-    'employee_id',
     'joining_date',
     'employment_type',
     'city',
@@ -160,6 +165,17 @@ export async function PATCH(request, { params }) {
                 return NextResponse.json({ error: rpcData.error || 'Role update failed' }, { status: 403 });
             }
             roleResult = rpcData;
+        }
+
+        // `employee_id` badge is system-generated + read-only (see whitelist
+        // note). Reject explicit attempts so callers get a clear message
+        // instead of a silent drop. Identical no-op values are allowed so
+        // stale clients re-sending the current code don't 400.
+        if (body.employee_id !== undefined && body.employee_id !== null && String(body.employee_id).trim() !== '') {
+            const incoming = String(body.employee_id).trim();
+            if (incoming !== String(targetProfile.employee_id || '').trim()) {
+                return NextResponse.json({ error: 'Employee code is system-generated and cannot be edited.' }, { status: 400 });
+            }
         }
 
         // Filter to only HR-mutable fields

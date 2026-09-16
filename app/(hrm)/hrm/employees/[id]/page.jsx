@@ -37,9 +37,11 @@ export default function EmployeeDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     
-    // Form state for inline editing (defaults keep inputs controlled pre-fetch)
+    // Form state for inline editing (defaults keep inputs controlled pre-fetch).
+    // NOTE: employee_id (badge) is intentionally NOT in the form — it is
+    // system-generated and read-only. It renders from `employee` below.
     const [form, setForm] = useState({
-        phone: '', city: '', department: '', employee_id: '', role: 'employee',
+        phone: '', city: '', department: '', role: 'employee',
         joining_date: '', base_salary: '', employment_type: 'full_time',
     });
     const [saving, setSaving] = useState(false);
@@ -47,16 +49,12 @@ export default function EmployeeDetailPage() {
 
     // Build the edit form from a profile row. Covers exactly the fields
     // this page renders as editable inputs AND the API whitelist accepts
-    // (verified against production user_profiles columns). Previously this
-    // omitted employee_id, role, base_salary, employment_type, city,
-    // joining_date (leaving them undefined/uncontrolled) and included
-    // fictitious columns (designation, gender, emergency_contact_*) whose
-    // inputs no longer exist and which 500 on save.
+    // (verified against production user_profiles columns). `employee_id`
+    // is excluded — system-generated, read-only, rendered from `employee`.
     const buildForm = (data) => ({
         phone: data.phone || '',
         city: data.city || '',
         department: data.department || '',
-        employee_id: data.employee_id || '',
         role: data.role || 'employee',
         joining_date: data.joining_date || '',
         base_salary: data.base_salary ?? '',
@@ -91,10 +89,10 @@ export default function EmployeeDetailPage() {
         try {
             // Use secure server-side API route instead of direct supabase.update().
             // The API route verifies HR role and only allows whitelisted fields.
-            // Only send fields the API accepts (buildForm keys) so a stale
-            // `employee` spread can never leak sensitive columns (role is
-            // handled explicitly by the admin-only RPC path; is_suspended,
-            // kyc_status, etc. are never sent).
+            // Only send fields the API accepts (7 buildForm keys). employee_id is
+            // system-generated + read-only and is NEVER sent — the API 400s
+            // explicit attempts. Other sensitive columns (is_suspended,
+            // kyc_status, etc.) are never sent either.
             const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/hrm/employees/${employee.id}`, {
                 method: 'PATCH',
@@ -106,7 +104,6 @@ export default function EmployeeDetailPage() {
                     phone: form.phone ?? '',
                     city: form.city ?? '',
                     department: form.department ?? '',
-                    employee_id: form.employee_id ?? '',
                     role: form.role ?? '',
                     joining_date: form.joining_date ?? '',
                     base_salary: form.base_salary ?? '',
@@ -332,15 +329,20 @@ export default function EmployeeDetailPage() {
                                 <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><Shield size={18} /></div>
                                 <div className="w-full">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee ID</p>
-                                    {isEditing ? (
-                                        <input 
-                                            type="text" 
-                                            value={form.employee_id} 
-                                            onChange={e => setForm(f => ({...f, employee_id: e.target.value}))}
-                                            className="w-full mt-1 px-3 py-2 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-medium"
-                                        />
-                                    ) : (
-                                        <p className="font-mono font-bold text-slate-900 mt-0.5">{employee.employee_id || 'N/A'}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="font-mono font-bold text-slate-900">{employee.employee_id || 'Not assigned yet'}</p>
+                                        {employee.employee_id && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { navigator.clipboard?.writeText(employee.employee_id); toast.success('Employee ID copied'); }}
+                                                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 border border-indigo-100 rounded-lg px-2 py-0.5"
+                                            >
+                                                Copy
+                                            </button>
+                                        )}
+                                    </div>
+                                    {isEditing && (
+                                        <p className="text-[11px] text-slate-400 mt-1">System-generated — cannot be edited.</p>
                                     )}
                                 </div>
                             </div>
