@@ -28,12 +28,16 @@ export async function GET(request) {
         const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '15', 10)));
         const offset = (page - 1) * limit;
 
+        // NOTE: `user_profiles` embed requires the explicit FK hint — see the
+        // matching comment in app/api/merchant/reviews/route.js (PGRST201:
+        // product_reviews <-> user_profiles has both a direct FK and a
+        // many-to-many path via review_helpful_votes).
         let query = admin
             .from('product_reviews')
             .select(`
                 *,
                 shopping_products (id, title, product_images, slug),
-                user_profiles (id, full_name, avatar_url, phone),
+                user_profiles!product_reviews_user_id_fkey (id, full_name, avatar_url, phone),
                 review_replies (id, merchant_id, reply_text, created_at)
             `, { count: 'exact' })
             .order('created_at', { ascending: false });
@@ -105,7 +109,7 @@ export async function PATCH(request) {
             .select(`
                 *,
                 shopping_products (id, title, product_images, slug),
-                user_profiles (id, full_name, avatar_url)
+                user_profiles!product_reviews_user_id_fkey (id, full_name, avatar_url)
             `)
             .single();
 

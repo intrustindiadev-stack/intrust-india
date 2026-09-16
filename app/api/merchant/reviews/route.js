@@ -93,12 +93,20 @@ export async function GET(request) {
             ? [filterProductId]
             : productIds;
 
+        // NOTE: the `user_profiles` embed MUST carry the explicit FK hint
+        // (`!product_reviews_user_id_fkey`). product_reviews references
+        // user_profiles directly, but `review_helpful_votes` also references both
+        // tables, so PostgREST also detects a many-to-many path
+        // (product_reviews -> review_helpful_votes -> user_profiles).
+        // Without the hint PostgREST rejects the request with:
+        //   PGRST201 "Could not embed because more than one relationship was
+        //   found for 'product_reviews' and 'user_profiles'"
         let query = admin
             .from('product_reviews')
             .select(`
                 *,
                 shopping_products (id, title, product_images, slug),
-                user_profiles (id, full_name, avatar_url),
+                user_profiles!product_reviews_user_id_fkey (id, full_name, avatar_url),
                 review_replies (id, merchant_id, reply_text, created_at, updated_at)
             `, { count: 'exact' })
             .in('product_id', queryProductIds)
