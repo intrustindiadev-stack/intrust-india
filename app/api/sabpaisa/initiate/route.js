@@ -232,6 +232,33 @@ export async function POST(request) {
                 return failResponse(400, 'Invalid subscription plan selection.', correlationId);
             }
             canonicalAmountPaise = resolvedPaise;
+
+            // ── Pending transaction guard ────────────────────────────────────────
+            // If a SabPaisa-initiated transaction for this merchant is already in
+            // "initiated" state and is less than 30 minutes old, block a new
+            // initiation. This prevents the double-payment scenario where a user
+            // retries after a webhook delivery failure.
+            const pendingCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+            const { data: pendingTxn } = await supabaseAdmin
+                .from('transactions')
+                .select('id, client_txn_id, created_at')
+                .eq('udf1', 'MERCHANT_SUBSCRIPTION')
+                .eq('udf2', udf2)
+                .eq('status', 'initiated')
+                .gt('created_at', pendingCutoff)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (pendingTxn) {
+                console.warn(`[Initiate] Blocked duplicate MERCHANT_SUBSCRIPTION for merchant ${udf2} — pending txn ${pendingTxn.client_txn_id} exists.`);
+                return NextResponse.json({
+                    error: 'PAYMENT_PENDING',
+                    message: 'A payment for this subscription is already being processed. Please wait a few minutes for it to complete. If your money was debited and the store is still inactive, please contact support.',
+                    pendingTxnId: pendingTxn.client_txn_id,
+                    pendingSince: pendingTxn.created_at,
+                }, { status: 409 });
+            }
         } else if (udf1 === 'GIFT_CARD') {
             // udf2 = coupons.id (the specific coupon being purchased)
             const { data: coupon, error: couponErr } = await supabaseAdmin
