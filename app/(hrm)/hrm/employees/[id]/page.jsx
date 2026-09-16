@@ -37,10 +37,31 @@ export default function EmployeeDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     
-    // Form state for inline editing
-    const [form, setForm] = useState({});
+    // Form state for inline editing (defaults keep inputs controlled pre-fetch)
+    const [form, setForm] = useState({
+        phone: '', city: '', department: '', employee_id: '', role: 'employee',
+        joining_date: '', base_salary: '', employment_type: 'full_time',
+    });
     const [saving, setSaving] = useState(false);
     const [togglingStatus, setTogglingStatus] = useState(false);
+
+    // Build the edit form from a profile row. Covers exactly the fields
+    // this page renders as editable inputs AND the API whitelist accepts
+    // (verified against production user_profiles columns). Previously this
+    // omitted employee_id, role, base_salary, employment_type, city,
+    // joining_date (leaving them undefined/uncontrolled) and included
+    // fictitious columns (designation, gender, emergency_contact_*) whose
+    // inputs no longer exist and which 500 on save.
+    const buildForm = (data) => ({
+        phone: data.phone || '',
+        city: data.city || '',
+        department: data.department || '',
+        employee_id: data.employee_id || '',
+        role: data.role || 'employee',
+        joining_date: data.joining_date || '',
+        base_salary: data.base_salary ?? '',
+        employment_type: data.employment_type || 'full_time',
+    });
 
     const fetchEmployee = useCallback(async () => {
         if (!id) return;
@@ -53,19 +74,7 @@ export default function EmployeeDetailPage() {
 
             if (error) throw error;
             setEmployee(data);
-            setForm({
-                department: data.department || '',
-                designation: data.designation || '',
-                phone: data.phone || '',
-                date_of_birth: data.date_of_birth || '',
-                gender: data.gender || '',
-                address: data.address || '',
-                blood_group: data.blood_group || '',
-                emergency_contact_name: data.emergency_contact_name || '',
-                emergency_contact_phone: data.emergency_contact_phone || '',
-                // NOTE: role, is_active, is_suspended are NOT in this form.
-                // Those require admin-level operations via secure RPCs.
-            });
+            setForm(buildForm(data));
         } catch (err) {
             console.error(err);
         } finally {
@@ -82,6 +91,10 @@ export default function EmployeeDetailPage() {
         try {
             // Use secure server-side API route instead of direct supabase.update().
             // The API route verifies HR role and only allows whitelisted fields.
+            // Only send fields the API accepts (buildForm keys) so a stale
+            // `employee` spread can never leak sensitive columns (role is
+            // handled explicitly by the admin-only RPC path; is_suspended,
+            // kyc_status, etc. are never sent).
             const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/hrm/employees/${employee.id}`, {
                 method: 'PATCH',
@@ -89,12 +102,26 @@ export default function EmployeeDetailPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`,
                 },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    phone: form.phone ?? '',
+                    city: form.city ?? '',
+                    department: form.department ?? '',
+                    employee_id: form.employee_id ?? '',
+                    role: form.role ?? '',
+                    joining_date: form.joining_date ?? '',
+                    base_salary: form.base_salary ?? '',
+                    employment_type: form.employment_type ?? '',
+                }),
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Update failed');
             toast.success('Employee profile updated');
-            setEmployee(prev => ({ ...prev, ...form }));
+            if (result.profile) {
+                setEmployee(result.profile);
+                setForm(buildForm(result.profile));
+            } else {
+                setEmployee(prev => ({ ...prev, ...form }));
+            }
             setIsEditing(false);
         } catch (err) { 
             toast.error(err.message); 
@@ -184,7 +211,7 @@ export default function EmployeeDetailPage() {
                         <button 
                             onClick={() => {
                                 setIsEditing(false);
-                                setForm({ ...employee });
+                                if (employee) setForm(buildForm(employee));
                             }}
                             className="flex items-center gap-2 text-slate-600 font-bold text-sm bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-xl shadow-sm transition-all"
                         >
@@ -404,7 +431,7 @@ export default function EmployeeDetailPage() {
                         {isEditing && (
                             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
                                 <button 
-                                    onClick={() => { setIsEditing(false); setForm({ ...employee }); }}
+                                    onClick={() => { setIsEditing(false); if (employee) setForm(buildForm(employee)); }}
                                     className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
                                 >
                                     Cancel
