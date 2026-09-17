@@ -9,6 +9,7 @@ import MerchantDisclaimerNote from '@/components/merchant/dashboard/MerchantDisc
 import DashboardHeader from '@/components/merchant/dashboard/DashboardHeader';
 import QuickAccessGrid from '@/components/merchant/dashboard/QuickAccessGrid';
 import TodayStatsCards from '@/components/merchant/dashboard/TodayStatsCards';
+import MerchantMarketingKpiSection from '@/components/merchant/dashboard/MerchantMarketingKpiSection';
 import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
 import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
 
@@ -75,7 +76,11 @@ export default async function MerchantDashboardPage() {
         aiVaultRes,
         ecommerceInventoryRes,
         referralCountRes,
-        referralRewardsRes
+        referralRewardsRes,
+        marketingLinksRes,
+        marketingSponsorshipsRes,
+        marketingClaimsRes,
+        marketingEarningsRes
     ] = await Promise.all([
         supabase.from('coupons').select('id, brand, face_value_paise, merchant_purchase_price_paise, merchant_selling_price_paise, merchant_commission_paise, status, listed_on_marketplace, image_url').eq('merchant_id', merchant.id).order('created_at', { ascending: false }),
 
@@ -142,7 +147,24 @@ export default async function MerchantDashboardPage() {
             .from('merchant_transactions')
             .select('amount_paise')
             .eq('merchant_id', merchant.id)
-            .eq('transaction_type', 'referral_reward')
+            .eq('transaction_type', 'referral_reward'),
+        adminDb
+            .from('marketing_share_links')
+            .select('shares_count, clicks_count, orders_count')
+            .eq('user_id', user.id),
+        adminDb
+            .from('daily_challenge_sponsorships')
+            .select('id, status, sponsor_date')
+            .eq('merchant_id', merchant.id),
+        adminDb
+            .from('marketing_target_claims')
+            .select('id, status, gift_title')
+            .eq('user_id', user.id),
+        adminDb
+            .from('merchant_transactions')
+            .select('amount_paise')
+            .eq('merchant_id', merchant.id)
+            .in('transaction_type', ['daily_challenge_cashback', 'marketing_cashback', 'sponsorship'])
     ]);
 
     const coupons = couponsRes.data || [];
@@ -224,6 +246,33 @@ export default async function MerchantDashboardPage() {
         bounty: 500,
     };
 
+    // Marketing KPIs calculation (100% Real Live Database Data)
+    const marketingLinks = marketingLinksRes?.data || [];
+    const totalMarketingShares = marketingLinks.reduce((sum, l) => sum + (l.shares_count || 0), 0);
+    const totalMarketingClicks = marketingLinks.reduce((sum, l) => sum + (l.clicks_count || 0), 0);
+    const totalMarketingOrders = marketingLinks.reduce((sum, l) => sum + (l.orders_count || 0), 0);
+    
+    const marketingTxns = marketingEarningsRes?.data || [];
+    const totalMarketingEarningsPaise = marketingTxns.reduce((sum, tx) => sum + (tx.amount_paise || 0), 0);
+    
+    const todayDateStr = new Date().toISOString().split('T')[0];
+    const marketingSponsorships = marketingSponsorshipsRes?.data || [];
+    const activeSponsorshipCount = marketingSponsorships.filter(s => s.status === 'live' || s.status === 'booked').length;
+    const isSponsoringToday = marketingSponsorships.some(s => s.sponsor_date === todayDateStr && (s.status === 'live' || s.status === 'booked'));
+    
+    const marketingClaims = marketingClaimsRes?.data || [];
+    const completedTargetsCount = marketingClaims.filter(c => c.status === 'delivered' || c.status === 'completed' || c.status === 'earned').length;
+
+    const marketingStats = {
+        totalShares: totalMarketingShares,
+        linkClicks: totalMarketingClicks,
+        ordersCount: totalMarketingOrders,
+        activeSponsorships: activeSponsorshipCount,
+        isSponsoringToday,
+        campaignRevenue: totalMarketingEarningsPaise / 100,
+        completedTargets: completedTargetsCount
+    };
+
     // Calculate Today's Stats (including completed AI Orders)
     const todayCoupons = todayCouponsRes.data || [];
     const todayShoppingGroups = todayShoppingGroupsRes.data || [];
@@ -295,6 +344,9 @@ export default async function MerchantDashboardPage() {
             
             {/* SECTION 1.5: Today's Real-time Sales, Profit & Orders Performance */}
             <TodayStatsCards todayStats={todayStats} />
+
+            {/* SECTION 1.8: Marketing & Growth KPIs */}
+            <MerchantMarketingKpiSection marketingStats={marketingStats} />
 
             {/* Welcome Card if no sales */}
             {stats.totalSales === 0 && stats.activeCoupons === 0 && aiStats.totalOrders === 0 && (

@@ -36,11 +36,18 @@ export async function GET(request) {
 
         if (countError) throw countError;
 
+        const { data: profile } = await admin
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+
         return NextResponse.json({
             notifications: data || [],
             unreadCount: unreadCount || 0,
             totalCount: count || 0,
-            hasMore: (offset + (data?.length || 0)) < (count || 0)
+            hasMore: (offset + (data?.length || 0)) < (count || 0),
+            userRole: profile?.role || 'customer'
         });
     } catch (error) {
         console.error('[API] Notifications GET Error:', error);

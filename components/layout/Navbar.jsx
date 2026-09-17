@@ -18,7 +18,8 @@ import {
     Settings, 
     LogOut, 
     Store,
-    LogIn
+    LogIn,
+    Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -124,6 +125,7 @@ export default function Navbar() {
     const navItems = [
         { label: 'Home', href: '/' },
         { label: 'Shop', href: '/shop' },
+        { label: '✦ Marketing', href: '/marketing', isSpecial: true },
         { label: 'Services', href: '/services' },
         { label: 'About', href: '/about' },
         { label: 'Contact', href: '/contact' },
@@ -170,7 +172,9 @@ export default function Navbar() {
                                     key={item.label}
                                     href={item.href}
                                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                                        isActive
+                                        item.isSpecial
+                                            ? 'bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:border-blue-500 font-black shadow-2xs'
+                                            : isActive
                                             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-primary font-black shadow-xs'
                                             : 'text-slate-600 dark:text-on-surface-variant hover:text-slate-900 dark:hover:text-on-surface hover:bg-slate-100/70 dark:hover:bg-surface-container-high'
                                     }`}
@@ -282,6 +286,16 @@ export default function Navbar() {
                                             >
                                                 <LayoutDashboard size={15} className="text-blue-600 dark:text-primary" />
                                                 <span>Dashboard</span>
+                                            </Link>
+                                            <Link
+                                                href="/marketing"
+                                                className="flex items-center justify-between px-4 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <Sparkles size={15} className="text-blue-600 dark:text-blue-400" />
+                                                    <span>Marketing Workspace</span>
+                                                </div>
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-600 text-white">NEW</span>
                                             </Link>
                                             <Link
                                                 href="/orders"

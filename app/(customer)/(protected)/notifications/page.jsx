@@ -122,29 +122,64 @@ export default function NotificationsPage() {
     };
 
     const getNotificationLink = (n) => {
+        if (n.action_url) return n.action_url;
         if (!n.reference_type) return null;
+
         switch (n.reference_type) {
             case 'order':
             case 'order_status':
             case 'order_delivery':
             case 'shopping_order':
                 return n.reference_id ? `/orders/${n.reference_id}` : '/orders';
+
             case 'gift_card':
             case 'giftcard':
+            case 'gift_card_purchase':
+            case 'GIFT_CARD_PURCHASE':
                 return '/my-giftcards';
+
             case 'wallet':
             case 'wallet_credit':
             case 'wallet_topup':
+            case 'wallet_adjustment':
                 return '/wallet';
+
+            case 'udhari_approved':
+            case 'udhari_denied':
+            case 'udhari_completed':
+            case 'udhari_reminder':
+            case 'udhari_overdue_alert':
+                return '/store-credits';
+
+            case 'daily_challenge':
+            case 'sponsorship':
+                return '/marketing/daily-challenge';
+
+            case 'campaign_reward':
+            case 'marketing':
+                return '/marketing/transactions';
+
+            case 'marketing_target':
+                return '/marketing/targets';
+
             case 'rewards':
             case 'coins':
+            case 'reward_scratch_card':
+            case 'reward_conversion':
+            case 'reward_adjustment':
                 return '/rewards';
+
+            case 'referral_joined':
+            case 'referral_new_member':
+                return '/refer';
+
             case 'kyc':
             case 'kyc_verified':
                 return '/profile/kyc';
-            case 'merchant':
+
             case 'merchant_approved':
-                return '/merchant/dashboard';
+                return '/merchant-subscribe';
+
             default:
                 return null;
         }
@@ -155,7 +190,8 @@ export default function NotificationsPage() {
         if (type.includes('order') || type.includes('delivery')) return <Package size={18} className="text-blue-600 dark:text-blue-400" />;
         if (type.includes('gift')) return <Gift size={18} className="text-purple-600 dark:text-purple-400" />;
         if (type.includes('wallet') || type.includes('credit')) return <Wallet size={18} className="text-emerald-600 dark:text-emerald-400" />;
-        if (type.includes('rewards') || type.includes('coin')) return <Sparkles size={18} className="text-amber-500" />;
+        if (type.includes('rewards') || type.includes('coin') || type.includes('challenge')) return <Sparkles size={18} className="text-amber-500" />;
+        if (type.includes('sponsor') || type.includes('marketing') || type.includes('campaign')) return <Tag size={18} className="text-indigo-600 dark:text-indigo-400" />;
         if (type.includes('kyc') || type.includes('verify')) return <ShieldCheck size={18} className="text-teal-600 dark:text-teal-400" />;
         return <Bell size={18} className="text-blue-600 dark:text-blue-400" />;
     };
@@ -164,6 +200,7 @@ export default function NotificationsPage() {
         if (activeFilter === 'unread') return !n.read;
         if (activeFilter === 'orders') return n.reference_type?.includes('order') || n.reference_type?.includes('delivery');
         if (activeFilter === 'rewards') return n.reference_type?.includes('reward') || n.reference_type?.includes('gift') || n.reference_type?.includes('coin');
+        if (activeFilter === 'marketing') return n.reference_type?.includes('sponsor') || n.reference_type?.includes('challenge') || n.reference_type?.includes('campaign') || n.reference_type?.includes('marketing');
         return true;
     });
 
@@ -217,6 +254,7 @@ export default function NotificationsPage() {
                     { id: 'unread', label: `Unread (${unreadCount})` },
                     { id: 'orders', label: 'Orders & Deliveries' },
                     { id: 'rewards', label: 'Cashback & Rewards' },
+                    { id: 'marketing', label: 'Challenges & Deals' }
                 ].map(tab => (
                     <button
                         key={tab.id}

@@ -42,6 +42,7 @@ import {
     Zap,
     Bell,
     ShieldCheck,
+    Megaphone,
     BookOpen,
     ChevronDown,
     Network,
@@ -115,6 +116,7 @@ const navigationGroups = [
     {
         title: 'Growth & Setup',
         items: [
+            { name: 'Marketing & Sponsorships', href: '/admin/marketing', icon: Megaphone },
             { name: 'Rewards', href: '/admin/rewards', icon: Trophy },
             { name: 'Flash Sale', href: '/admin/flash-sale', icon: Zap },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },

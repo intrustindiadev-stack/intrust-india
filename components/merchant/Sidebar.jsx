@@ -12,6 +12,7 @@ import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { useSubscription } from "./SubscriptionContext";
 import Image from "next/image";
 import { useCollapsibleNav } from "@/hooks/useCollapsibleNav";
+import SwitchPortalSection from "@/components/layout/shared/SwitchPortalSection";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
@@ -110,7 +111,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             />
 
             <aside
-                className={`fixed top-0 left-0 bottom-0 w-[280px] bg-white/90 dark:bg-[#0f111a]/95 backdrop-blur-2xl border-r border-black/5 dark:border-white/5 flex flex-col z-[70] transition-[transform,opacity,box-shadow] duration-500 ease-[cubic-bezier(0.3,1,0.3,1)] pb-24 lg:pb-0 ${isOpen ? "translate-x-0 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.5)] opacity-100" : "-translate-x-full opacity-0 lg:opacity-100 lg:translate-x-0"
+                className={`fixed top-0 left-0 bottom-0 h-full max-h-screen w-[280px] bg-white/90 dark:bg-[#0f111a]/95 backdrop-blur-2xl border-r border-black/5 dark:border-white/5 flex flex-col z-[70] transition-[transform,opacity,box-shadow] duration-500 ease-[cubic-bezier(0.3,1,0.3,1)] ${isOpen ? "translate-x-0 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.5)] opacity-100" : "-translate-x-full opacity-0 lg:opacity-100 lg:translate-x-0"
                     }`}
             >
                 {/* Decorative glow in dark mode */}
@@ -121,12 +122,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                 <div className="p-6 flex items-center justify-between space-x-3 relative z-10 shrink-0">
                     <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-[0_4px_15px_rgba(212,175,55,0.3)] relative overflow-hidden p-1">
-                            <Image src="/logo.png" alt="InTrust Logo" fill className="object-contain p-1" />
+                        <div className="relative w-9 h-9 shrink-0">
+                            <Image src="/icons/intrustLogo.png" alt="InTrust Logo" fill className="object-contain" priority />
                         </div>
                         <div>
-                            <h1 className="font-display text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-[#D4AF37] dark:to-[#f3e5ab]">InTrust</h1>
-                            <p className="text-[9px] uppercase tracking-[0.3em] text-slate-500 dark:text-[#D4AF37]/70 font-black">Merchant Pro</p>
+                            <h1 className="font-display text-xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">InTrust</h1>
+                            <p className="text-[9px] uppercase tracking-[0.22em] text-[#D4AF37] font-black leading-none mt-0.5">Merchant Pro</p>
                         </div>
                     </div>
                     {/* Mobile close button */}
@@ -248,38 +249,54 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     </LayoutGroup>
                 </nav>
 
-                <div className="p-4 mt-auto shrink-0 relative z-10">
-                    <div className="bg-white/50 dark:bg-[#1a1c23]/60 p-2.5 rounded-2xl flex items-center space-x-3 mb-3 shadow-sm border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:shadow-md">
-                        <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#2a2c33] shadow-sm overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative group">
-                            {merchant?.user_profiles?.avatar_url ? (
-                                <Image
-                                    src={merchant.user_profiles.avatar_url || '/placeholder.png'}
-                                    alt={merchant.business_name || 'Merchant Avatar'}
-                                    fill
-                                    sizes="40px"
-                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
-                            ) : (
-                                <span className="material-icons-round text-slate-400 text-2xl">storefront</span>
-                            )}
+                <div className="p-3 pb-4 lg:pb-3 mt-auto shrink-0 relative z-10 border-t border-black/5 dark:border-white/5 bg-white/70 dark:bg-[#0f111a]/85 backdrop-blur-md space-y-2">
+                    <SwitchPortalSection 
+                        currentPortal="merchant" 
+                        role={merchant?.user_profiles?.role}
+                        isMerchant={true} 
+                        isAdmin={merchant?.user_profiles?.role === 'admin' || merchant?.user_profiles?.role === 'super_admin'} 
+                        isSuperAdmin={merchant?.user_profiles?.role === 'super_admin'}
+                        onNavigate={() => setIsOpen(false)} 
+                    />
+
+                    <div className="bg-white/50 dark:bg-[#1a1c23]/60 p-2 rounded-2xl flex items-center justify-between shadow-2xs border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:shadow-sm">
+                        <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                            <div className="w-8 h-8 rounded-full border-2 border-white dark:border-[#2a2c33] shadow-xs overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative group">
+                                {merchant?.user_profiles?.avatar_url ? (
+                                    <Image
+                                        src={merchant.user_profiles.avatar_url || '/placeholder.png'}
+                                        alt={merchant.business_name || 'Merchant Avatar'}
+                                        fill
+                                        sizes="32px"
+                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                    />
+                                ) : (
+                                    <span className="material-icons-round text-slate-400 text-lg">storefront</span>
+                                )}
+                            </div>
+                            <div className="overflow-hidden flex-1 leading-tight">
+                                <p className="text-[11px] font-black truncate text-slate-800 dark:text-white uppercase tracking-tighter">
+                                    {merchant?.business_name || "Merchant"}
+                                </p>
+                                <Link 
+                                    href="/merchant/profile" 
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-[9px] text-slate-500 dark:text-slate-400 truncate block hover:text-slate-900 dark:hover:text-white font-bold transition-colors uppercase tracking-widest mt-0.5"
+                                >
+                                    View Profile
+                                </Link>
+                            </div>
                         </div>
-                        <div className="overflow-hidden flex-1">
-                            <p className="text-[12px] font-black truncate text-slate-800 dark:text-white uppercase tracking-tighter">
-                                {merchant?.business_name || "Merchant"}
-                            </p>
-                            <Link href="/merchant/profile" className="text-[9px] text-slate-500 dark:text-slate-400 truncate block hover:text-slate-900 dark:hover:text-white font-bold transition-colors uppercase tracking-widest mt-0.5">
-                                View Profile
-                            </Link>
-                        </div>
+
+                        <button
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0"
+                            title="Log out"
+                        >
+                            <span className="material-icons-round text-base">logout</span>
+                        </button>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        disabled={isLoggingOut}
-                        className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl border border-red-500/10 text-red-500/80 dark:text-red-400/80 hover:bg-red-500/5 hover:text-red-500 transition-all text-[12px] font-bold disabled:opacity-50"
-                    >
-                        <span className="material-icons-round text-[16px]">logout</span>
-                        <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
-                    </button>
                 </div>
             </aside>
 

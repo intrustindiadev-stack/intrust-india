@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Package, Truck, ShoppingBag, Wallet, TrendingUp,
-    BarChart3, Settings, Store, X, Zap, ArrowRight, LayoutGrid
+    BarChart3, Settings, Store, X, Zap, ArrowRight, LayoutGrid, Search
 } from 'lucide-react';
 
 const actions = [
@@ -17,6 +18,8 @@ const actions = [
     { icon: Zap,         label: 'AI Orders',  sub: 'Instant profit',     href: '/merchant/ai-orders',          bg: 'bg-[#D4AF37]/10',                      iconColor: 'text-[#D4AF37]' },
     { icon: BarChart3,   label: 'Analytics',  sub: 'Revenue & trends',   href: '/merchant/analytics',          bg: 'bg-cyan-50 dark:bg-cyan-500/15',       iconColor: 'text-cyan-500' },
     { icon: Store,       label: 'My Shop',    sub: 'Storefront view',    href: '/merchant/shopping/inventory', bg: 'bg-orange-50 dark:bg-orange-500/15',   iconColor: 'text-orange-500' },
+    { icon: Store,       label: 'Wholesale',  sub: 'B2B Wholesale Hub', href: '/merchant/shopping/wholesale', bg: 'bg-teal-50 dark:bg-teal-500/15',     iconColor: 'text-teal-500' },
+    { icon: Settings,    label: 'Settings',   sub: 'Store & Account',    href: '/merchant/settings',           bg: 'bg-slate-50 dark:bg-slate-500/15',     iconColor: 'text-slate-500' },
 ];
 
 // Container variants — stagger children
@@ -31,15 +34,30 @@ const itemVariants = {
 
 export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingOrdersCount = 0 }) {
     const [open, setOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const router = useRouter();
+
+    const filteredActions = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return actions;
+        return actions.filter(a => 
+            a.label.toLowerCase().includes(q) || 
+            a.sub.toLowerCase().includes(q)
+        );
+    }, [searchQuery]);
 
     // Global ⌘K / Ctrl+K and Escape listeners
     useEffect(() => {
         const handler = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
-                setOpen(prev => !prev);
+                setOpen(prev => {
+                    if (prev) setSearchQuery('');
+                    return !prev;
+                });
             } else if (e.key === 'Escape' && open) {
                 setOpen(false);
+                setSearchQuery('');
             }
         };
         window.addEventListener('keydown', handler);
@@ -144,6 +162,37 @@ export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingO
                                     </button>
                                 </div>
 
+                                {/* Search Filter Input */}
+                                <div className="px-4 pt-3.5 pb-1">
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Type to filter actions..."
+                                            autoFocus
+                                            className="w-full pl-8 pr-7 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] transition-all text-slate-800 dark:text-slate-100"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && filteredActions.length > 0) {
+                                                    router.push(filteredActions[0].href);
+                                                    setOpen(false);
+                                                    setSearchQuery('');
+                                                }
+                                            }}
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchQuery('')}
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
                                 {/* Icon Grid */}
                                 <motion.div
                                     variants={gridVariants}
@@ -151,7 +200,7 @@ export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingO
                                     animate="show"
                                     className="p-4 grid grid-cols-4 gap-2.5"
                                 >
-                                    {actions.map((a) => {
+                                    {filteredActions.map((a) => {
                                         const badge = getBadge(a);
                                         return (
                                             <motion.div key={a.href} variants={itemVariants}>

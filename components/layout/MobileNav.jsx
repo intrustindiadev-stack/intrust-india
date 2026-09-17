@@ -18,7 +18,8 @@ import {
     Wallet, 
     User, 
     LogOut,
-    ShoppingCart
+    ShoppingCart,
+    Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -191,6 +192,22 @@ export default function MobileNav({
                                         <span>InTrust Mart & Shop</span>
                                     </div>
                                     <ChevronRight size={14} className="text-slate-400" />
+                                </Link>
+
+                                <Link
+                                    href="/marketing"
+                                    onClick={onClose}
+                                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                        pathname.startsWith('/marketing')
+                                            ? 'bg-blue-600 text-white font-black'
+                                            : 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Sparkles size={17} className={pathname.startsWith('/marketing') ? 'text-white' : 'text-blue-600'} />
+                                        <span>✦ Marketing Workspace</span>
+                                    </div>
+                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-600 text-white">NEW</span>
                                 </Link>
 
                                 <Link

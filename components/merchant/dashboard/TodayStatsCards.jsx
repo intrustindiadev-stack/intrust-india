@@ -55,7 +55,7 @@ export default function TodayStatsCards({ todayStats }) {
             {/* 3-Column Today's Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 {/* 1. Today's Sale */}
-                <Link href="/merchant/shopping/orders#kpi-summary" className="block outline-none">
+                <Link href="/merchant/shopping/orders?kpi=sales#kpi-summary" className="block outline-none">
                     <motion.div
                         whileHover={{ y: -2 }}
                         className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
@@ -85,7 +85,7 @@ export default function TodayStatsCards({ todayStats }) {
                 </Link>
 
                 {/* 2. Today's Revenue */}
-                <Link href="/merchant/shopping/orders#kpi-summary" className="block outline-none">
+                <Link href="/merchant/shopping/orders?kpi=revenue#kpi-summary" className="block outline-none">
                 <motion.div
                     whileHover={{ y: -2 }}
                     className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"
@@ -114,7 +114,7 @@ export default function TodayStatsCards({ todayStats }) {
                 </Link>
 
                 {/* 3. Today's Orders / Conversions */}
-                <Link href="/merchant/shopping/orders#kpi-summary" className="block outline-none group">
+                <Link href="/merchant/shopping/orders?kpi=orders#kpi-summary" className="block outline-none group">
                 <motion.div
                     whileHover={{ y: -2 }}
                     className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md cursor-pointer"

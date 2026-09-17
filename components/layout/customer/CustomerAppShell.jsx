@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { 
     LayoutGrid, 
     LayoutDashboard,
@@ -15,16 +15,13 @@ import {
     Users, 
     Heart, 
     Layers, 
-    Settings, 
     MapPin, 
     Wallet, 
     Plus, 
-    Bell, 
     Sun, 
     Moon, 
     Menu, 
     X, 
-    ChevronRight, 
     Store, 
     ShieldCheck, 
     User,
@@ -34,20 +31,21 @@ import {
     Crown,
     LogOut,
     LogIn,
-    BadgeCheck,
-    Check,
     FileText,
     Lock,
     Truck,
-    RefreshCcw
+    RefreshCcw,
+    ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
-import toast from 'react-hot-toast';
+
 import Image from 'next/image';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import SwitchPortalSection from '@/components/layout/shared/SwitchPortalSection';
+import { useCollapsibleNav } from '@/hooks/useCollapsibleNav';
 
 const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search'];
 
@@ -83,6 +81,7 @@ const NAV_GROUPS = [
         title: 'Rewards & Growth',
         items: [
             { label: 'Rewards & Coins', href: '/rewards', icon: Trophy },
+            { label: 'Daily Quiz & Earn', href: '/marketing/daily-challenge', icon: Sparkles, badge: 'Win ₹' },
             { label: 'Refer & Earn', href: '/refer', icon: Users, badge: '₹50' },
             { label: 'Champions Rank', href: '/rewards/leaderboard', icon: Crown },
         ]
@@ -119,6 +118,16 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
     const [walletBalance, setWalletBalance] = useState(0);
     const [cartCount, setCartCount] = useState(0);
     const [wishlistCount, setWishlistCount] = useState(0);
+
+    const activeGroupTitle = NAV_GROUPS.find(g => g.items.some(item => 
+        item.href === '/' ? pathname === '/' : (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+    ))?.title || 'Explore & Marketplace';
+
+    const { isOpen: isGroupOpen, toggleGroup } = useCollapsibleNav({
+        storageKey: 'intrust:customer:sidebar-groups-v2',
+        groupTitles: NAV_GROUPS.map(g => g.title),
+        activeGroupTitle
+    });
 
     const isDarkMode = theme === 'dark';
     const isGuest = !user;
@@ -255,194 +264,214 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
     const isKycVerified = profile?.kyc_status === 'verified' || profile?.kyc_status === 'approved';
     const userName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member';
     const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+    const initials = (userName || 'U')
+        .split(' ')
+        .filter(Boolean)
+        .map(n => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'U';
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-surface text-slate-900 dark:text-on-surface flex relative antialiased selection:bg-primary/20">
-            {/* ── DESKTOP SIDEBAR DRAWER ── */}
-            <aside className="hidden lg:flex fixed left-0 top-0 h-full w-72 bg-white dark:bg-surface-container-lowest border-r border-slate-200 dark:border-outline-variant/30 z-50 flex-col justify-between shadow-[0_2px_16px_rgba(0,0,0,0.03)] overflow-hidden">
-                <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                    {/* Brand Header */}
-                    <div className="h-20 px-6 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-outline-variant/20 shrink-0">
-                        <Link href={isGuest ? "/shop" : "/dashboard"} className="flex items-center gap-3 group">
-                            <div className="relative w-10 h-10 rounded-2xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
-                                <Image src="/icons/intrustLogo.png" alt="InTrust Logo" width={32} height={32} className="object-contain" priority />
+            {/* ── MOBILE OVERLAY ── */}
+            <div
+                className={`fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-sm transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={() => setMobileMenuOpen(false)}
+            />
+
+            {/* ── UNIFIED SIDEBAR (desktop fixed + mobile slide-in) ── */}
+            <aside
+                className={`fixed top-0 left-0 bottom-0 h-[100dvh] max-h-[100dvh] w-[280px] max-w-[88vw] bg-white dark:bg-[#0f1117] border-r border-black/[0.06] dark:border-white/[0.06] flex flex-col z-[70] transition-transform duration-300 ease-[cubic-bezier(0.3,1,0.3,1)] shadow-[2px_0_24px_rgba(0,0,0,0.06)] overflow-hidden ${
+                    mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+                }`}
+            >
+                {/* ── SCROLLABLE NAV AREA ── */}
+                <div className="flex flex-col flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden min-h-0">
+
+                    {/* ── Brand Header ── */}
+                    <div className="h-[64px] px-5 flex items-center gap-3 border-b border-black/[0.06] dark:border-white/[0.05] shrink-0">
+                        <Link href={isGuest ? '/shop' : '/dashboard'} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 group min-w-0">
+                            <div className="relative w-8 h-8 shrink-0">
+                                <Image src="/icons/intrustLogo.png" alt="InTrust" fill className="object-contain" priority />
                             </div>
-                            <div className="flex flex-col">
-                                <span className="font-black text-xl tracking-tight text-slate-900 dark:text-on-surface">InTrust</span>
-                                <span className="text-[10px] font-bold text-slate-500 dark:text-brand-steel uppercase tracking-widest">{isGuest ? 'Unified Commerce' : 'Customer Portal'}</span>
+                            <div className="flex flex-col min-w-0">
+                                <span className="font-black text-[17px] tracking-tight text-slate-900 dark:text-white leading-none">InTrust</span>
+                                <span className="text-[9.5px] font-bold text-slate-400 dark:text-white/35 uppercase tracking-[0.12em] leading-none mt-0.5">
+                                    {isGuest ? 'Commerce' : 'Customer'}
+                                </span>
                             </div>
                         </Link>
+                        {/* Close button (mobile only) */}
+                        <button
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="lg:hidden ml-auto w-8 h-8 rounded-xl flex items-center justify-center bg-black/[0.05] dark:bg-white/[0.06] text-slate-500 dark:text-white/50 hover:bg-black/[0.08] dark:hover:bg-white/[0.1] transition-colors shrink-0"
+                        >
+                            <X size={17} />
+                        </button>
+                        {/* Live dot (desktop only) */}
+                        <span className="hidden lg:flex ml-auto w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50 shrink-0" />
                     </div>
 
-                    {/* Member Tier Card / Guest Welcome */}
-                    <div className="px-5 py-3.5">
-                        {isGuest ? (
-                            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex flex-col gap-2 shadow-xs">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-primary">
-                                        <User size={16} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] font-black text-slate-400 dark:text-brand-steel uppercase tracking-wider">Welcome Guest</span>
-                                        <span className="text-xs font-bold text-slate-700 dark:text-on-surface">Explore Local Stores</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <Link
-                                        href={`/login?next=${encodeURIComponent(pathname)}`}
-                                        className="flex-1 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold text-center transition-colors shadow-xs"
+                    {/* ── Navigation Groups ── */}
+                    <nav className="flex-1 px-3 py-3 space-y-1">
+                        {NAV_GROUPS.map((group, gIdx) => {
+                            const isOpen = isGroupOpen(group.title);
+                            return (
+                                <div key={gIdx} className="mb-0.5">
+                                    {/* Section label button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleGroup(group.title)}
+                                        className="w-full px-2.5 py-1.5 flex items-center justify-between text-left rounded-lg hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors group/header"
                                     >
-                                        Sign In
-                                    </Link>
-                                    <Link
-                                        href="/signup"
-                                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-[11px] font-bold text-center transition-colors border border-slate-200 dark:border-outline-variant/20"
-                                    >
-                                        Sign Up
-                                    </Link>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex items-center justify-between shadow-xs">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center font-black text-blue-600 text-xs overflow-hidden shrink-0">
-                                        {avatarUrl ? (
-                                            <Image src={avatarUrl} alt={userName} fill className="object-cover" />
-                                        ) : (
-                                            userName.charAt(0).toUpperCase()
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="text-xs font-black text-slate-900 dark:text-on-surface truncate">{userName}</span>
-                                            {isKycVerified && (
-                                                <span title="KYC Verified" className="inline-flex shrink-0">
-                                                    <svg className="w-4 h-4 text-blue-600 fill-blue-600 shrink-0" viewBox="0 0 24 24">
-                                                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                                    </svg>
-                                                </span>
-                                            )}
-                                        </div>
-                                        <span className={`text-[10px] font-bold truncate ${isKycVerified ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-brand-steel'}`}>
-                                            {isKycVerified ? 'Verified Member' : 'KYC Pending'}
+                                        <span className="text-[9.5px] font-black uppercase tracking-[0.14em] text-slate-400 group-hover/header:text-slate-600 dark:text-white/30 dark:group-hover/header:text-white/60 transition-colors">
+                                            {group.title}
                                         </span>
-                                    </div>
-                                </div>
-                                {isKycVerified ? (
-                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-xs shrink-0 flex items-center gap-0.5">
-                                        <Check size={10} strokeWidth={3} /> Verified
-                                    </span>
-                                ) : (
-                                    <Link href="/profile" className="text-[9px] font-bold text-amber-600 dark:text-amber-400 hover:underline shrink-0">
-                                        Verify
-                                    </Link>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                        <ChevronDown 
+                                            size={13} 
+                                            className={`text-slate-400 dark:text-white/30 transition-transform duration-200 ${
+                                                isOpen ? 'rotate-180' : ''
+                                            }`} 
+                                        />
+                                    </button>
 
-                    {/* Structured Navigation Groups */}
-                    <nav className="flex-1 px-4 py-1 space-y-4">
-                        {NAV_GROUPS.map((group, gIdx) => (
-                            <div key={gIdx} className="space-y-1">
-                                <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-brand-steel">
-                                    {group.title}
-                                </div>
-                                {group.items.map((item) => {
-                                    const Icon = item.icon;
-                                    const baseHref = item.href.split('?')[0];
-                                    const destHref = isGuest && !PUBLIC_HREFS.includes(baseHref)
-                                        ? `/login?next=${encodeURIComponent(item.href)}`
-                                        : item.href;
-                                    const isActive = item.href === '/' 
-                                        ? pathname === '/' 
-                                        : (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)));
+                                    {/* Items */}
+                                    {isOpen && (
+                                        <div className="space-y-0.5 mt-0.5 animate-in fade-in duration-150">
+                                            {group.items.map((item) => {
+                                                const Icon = item.icon;
+                                                const baseHref = item.href.split('?')[0];
+                                                const destHref = isGuest && !PUBLIC_HREFS.includes(baseHref)
+                                                    ? `/login?next=${encodeURIComponent(item.href)}`
+                                                    : item.href;
+                                                const isActive = item.href === '/'
+                                                    ? pathname === '/'
+                                                    : (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)));
 
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={destHref}
-                                            className={`flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                                                isActive
-                                                    ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/20'
-                                                    : 'text-slate-600 dark:text-on-surface-variant hover:bg-slate-100 dark:hover:bg-surface-container-low hover:text-slate-900 dark:hover:text-on-surface'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400 dark:text-brand-steel'} />
-                                                <span>{item.label}</span>
-                                            </div>
-                                            
-                                            {/* Badges */}
-                                            {item.isCart && cartCount > 0 ? (
-                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                                    isActive 
-                                                        ? 'bg-white/20 text-white' 
-                                                        : 'bg-rose-500 text-white'
-                                                }`}>
-                                                    {cartCount}
-                                                </span>
-                                            ) : item.isWishlist && wishlistCount > 0 ? (
-                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                                    isActive 
-                                                        ? 'bg-white/20 text-white' 
-                                                        : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                                                }`}>
-                                                    {wishlistCount}
-                                                </span>
-                                            ) : item.badge ? (
-                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                    isActive 
-                                                        ? 'bg-white/20 text-white' 
-                                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                                                }`}>
-                                                    {item.badge}
-                                                </span>
-                                            ) : null}
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        ))}
+                                                return (
+                                                    <Link
+                                                        key={item.href}
+                                                        href={destHref}
+                                                        onClick={() => setMobileMenuOpen(false)}
+                                                        className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold transition-all duration-150 ${
+                                                            isActive
+                                                                ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25 font-bold'
+                                                                : 'text-slate-600 dark:text-white/55 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-white'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-2.5 min-w-0">
+                                                            <Icon
+                                                                size={15}
+                                                                strokeWidth={isActive ? 2.5 : 2}
+                                                                className={isActive ? 'text-white' : 'text-slate-400 dark:text-white/40 group-hover:text-slate-600 dark:group-hover:text-white/70 transition-colors'}
+                                                            />
+                                                            <span className="leading-none truncate">{item.label}</span>
+                                                        </div>
+                                                        {/* Badges */}
+                                                        {item.isCart && cartCount > 0 ? (
+                                                            <span className={`text-[9.5px] font-black min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 ${
+                                                                isActive ? 'bg-white/25 text-white' : 'bg-rose-500 text-white'
+                                                            }`}>{cartCount}</span>
+                                                        ) : item.isWishlist && wishlistCount > 0 ? (
+                                                            <span className={`text-[9.5px] font-black min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 ${
+                                                                isActive ? 'bg-white/25 text-white' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-400/30'
+                                                            }`}>{wishlistCount}</span>
+                                                        ) : item.badge ? (
+                                                            <span className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md ${
+                                                                isActive
+                                                                    ? 'bg-white/20 text-white'
+                                                                    : 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                                            }`}>{item.badge}</span>
+                                                        ) : null}
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </nav>
                 </div>
 
-                {/* Bottom Merchant Banner & Logout */}
-                <div className="p-4 border-t border-slate-200 dark:border-outline-variant/20 shrink-0 space-y-2.5">
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 flex flex-col gap-2.5">
-                        <div className="flex items-start gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-primary flex items-center justify-center shrink-0 mt-0.5">
-                                <Store size={16} />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-900 dark:text-on-surface">Become a Merchant</p>
-                                <p className="text-[10px] text-slate-500 dark:text-on-surface-variant leading-snug mt-0.5">Sell across India with zero gateway fees.</p>
-                            </div>
-                        </div>
-                        <Link
-                            href="/merchant-apply"
-                            className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-on-surface dark:text-surface text-xs font-bold text-center transition-all shadow-xs"
-                        >
-                            Register Store
-                        </Link>
-                    </div>
+                {/* ── Sidebar Footer ── */}
+                <div className="p-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 border-t border-black/[0.06] dark:border-white/[0.06] shrink-0 space-y-2 bg-white/95 dark:bg-[#0f1117]/95 backdrop-blur-md">
+                    <SwitchPortalSection
+                        currentPortal="customer"
+                        role={profile?.role}
+                        isMerchant={profile?.role === 'merchant'}
+                        isAdmin={profile?.role === 'admin' || profile?.role === 'super_admin'}
+                        isSuperAdmin={profile?.role === 'super_admin'}
+                        onNavigate={() => setMobileMenuOpen(false)}
+                    />
 
-                    {!isGuest && (
-                        <button
-                            onClick={triggerLogoutConfirm}
-                            className="w-full py-2.5 px-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/60 dark:border-red-900/30 active:scale-[0.98]"
-                        >
-                            <LogOut size={15} />
-                            <span>Sign Out</span>
-                        </button>
+                    {!isGuest ? (
+                        <div className="bg-slate-50 dark:bg-white/[0.04] p-2.5 rounded-2xl flex items-center justify-between border border-black/[0.06] dark:border-white/[0.06] shadow-2xs transition-all hover:shadow-xs">
+                            <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                                <div className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xs overflow-hidden bg-blue-100 dark:bg-slate-800 flex items-center justify-center shrink-0 relative">
+                                    {avatarUrl ? (
+                                        <Image
+                                            src={avatarUrl}
+                                            alt={userName}
+                                            fill
+                                            sizes="32px"
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-xs font-black text-blue-600 dark:text-blue-400">
+                                            {initials}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="overflow-hidden flex-1 leading-tight">
+                                    <p className="text-[11px] font-black truncate text-slate-800 dark:text-white uppercase tracking-tight">
+                                        {userName}
+                                    </p>
+                                    <Link 
+                                        href="/profile" 
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-[9px] text-slate-500 dark:text-slate-400 truncate block hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-colors uppercase tracking-widest mt-0.5"
+                                    >
+                                        {isKycVerified ? 'Verified Profile' : 'View Profile'}
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={triggerLogoutConfirm}
+                                disabled={isSigningOut}
+                                className="p-1.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors shrink-0 ml-1"
+                                title="Log out"
+                            >
+                                <LogOut size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-50 dark:bg-white/[0.04] p-2 rounded-2xl flex items-center gap-2 border border-black/[0.06] dark:border-white/[0.06]">
+                            <Link
+                                href={`/login?next=${encodeURIComponent(pathname)}`}
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold text-center transition-colors shadow-xs"
+                            >
+                                Sign In
+                            </Link>
+                            <Link
+                                href="/signup"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="flex-1 py-2 rounded-xl bg-white dark:bg-white/[0.07] text-slate-700 dark:text-white/80 text-[11px] font-bold text-center border border-black/[0.08] dark:border-white/[0.08] transition-colors hover:bg-slate-100 dark:hover:bg-white/[0.1]"
+                            >
+                                Sign Up
+                            </Link>
+                        </div>
                     )}
                 </div>
             </aside>
 
             {/* ── MAIN CONTENT CONTAINER ── */}
-            <div className="flex-1 flex flex-col min-h-screen lg:pl-72 w-full">
+            <div className="flex-1 flex flex-col min-h-screen lg:pl-[280px] w-full">
                 {/* ── DESKTOP HEADER ── */}
-                <header className="hidden lg:flex fixed top-0 left-72 right-0 h-20 bg-white/80 dark:bg-surface-container-lowest/80 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-50 px-8 items-center justify-between gap-6 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
+                <header className="hidden lg:flex fixed top-0 left-[280px] right-0 h-20 bg-white/80 dark:bg-[#0f1117]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] z-30 px-8 items-center justify-between gap-6 shadow-[0_1px_8px_rgba(0,0,0,0.02)]">
                     {/* Header Title / Breadcrumb */}
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
@@ -573,21 +602,21 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                 </header>
 
                 {/* ── MOBILE HEADER ── */}
-                <header className="lg:hidden sticky top-0 bg-white/95 dark:bg-surface-container-lowest/90 backdrop-blur-xl border-b border-slate-200 dark:border-outline-variant/20 z-50">
+                <header className="lg:hidden sticky top-0 bg-white/95 dark:bg-[#0f1117]/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] z-30">
                     <div className="h-16 px-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setMobileMenuOpen(true)}
                                 aria-label="Open Navigation Menu"
-                                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-800 dark:text-on-surface active:scale-95"
+                                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center text-slate-800 dark:text-white active:scale-95"
                             >
                                 <Menu size={19} />
                             </button>
-                            <Link href={isGuest ? "/shop" : "/dashboard"} className="flex items-center gap-2">
+                            <Link href={isGuest ? "/" : "/dashboard"} className="flex items-center gap-2">
                                 <div className="relative w-8 h-8 rounded-xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-xs overflow-hidden">
                                     <Image src="/icons/intrustLogo.png" alt="InTrust" width={24} height={24} className="object-contain" priority />
                                 </div>
-                                <span className="font-black text-base tracking-tight text-slate-900 dark:text-on-surface">InTrust</span>
+                                <span className="font-black text-base tracking-tight text-slate-900 dark:text-white">InTrust</span>
                             </Link>
                         </div>
 
@@ -596,7 +625,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                             <Link
                                 href="/shop/cart"
                                 aria-label="Shopping Cart"
-                                className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
+                                className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center text-slate-700 dark:text-white/80"
                             >
                                 <ShoppingCart size={16} />
                                 {cartCount > 0 && (
@@ -611,7 +640,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                 <NotificationBell
                                     apiPath="/api/notifications"
                                     variant="navbar"
-                                    className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
+                                    className="relative w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center text-slate-700 dark:text-white/80"
                                 />
                             )}
 
@@ -619,20 +648,20 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                             <button
                                 onClick={(e) => toggleTheme(e)}
                                 aria-label="Toggle Theme"
-                                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-800 dark:text-on-surface"
+                                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center text-slate-800 dark:text-white active:scale-95"
                             >
                                 {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
                             </button>
 
                             {/* Mobile Auth / Profile / Login Button */}
                             {!isGuest ? (
-                                <Link href="/profile" className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-blue-500/20 flex items-center justify-center bg-slate-200 dark:bg-surface-container-high text-xs font-bold text-slate-800 dark:text-on-surface">
-                                        {avatarUrl ? (
-                                            <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span>{userName[0]?.toUpperCase() || 'U'}</span>
-                                        )}
-                                    </Link>
+                                <Link href="/profile" className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-blue-500/20 flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white">
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span>{initials}</span>
+                                    )}
+                                </Link>
                             ) : (
                                 <Link
                                     href={`/login?next=${encodeURIComponent(pathname)}`}
@@ -644,230 +673,59 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                             )}
                         </div>
                     </div>
-
-
                 </header>
 
-                {/* ── MOBILE DRAWER OVERLAY ── */}
-                <AnimatePresence>
-                    {mobileMenuOpen && (
-                        <>
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[70]"
-                            />
-                            <motion.div
-                                initial={{ x: '-100%' }}
-                                animate={{ x: 0 }}
-                                exit={{ x: '-100%' }}
-                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="lg:hidden fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface-container-lowest z-[80] flex flex-col justify-between shadow-2xl p-5 overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-                            >
-                                <div>
-                                    <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-outline-variant/20 mb-4">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="relative w-9 h-9 rounded-xl bg-white dark:bg-white/10 p-1 flex items-center justify-center border border-slate-200 dark:border-white/10 shadow-xs overflow-hidden">
-                                                <Image src="/icons/intrustLogo.png" alt="InTrust" width={26} height={26} className="object-contain" priority />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-extrabold text-base text-slate-900 dark:text-on-surface">InTrust</h3>
-                                                <p className="text-[10px] text-slate-400 dark:text-brand-steel font-bold uppercase tracking-wider">Customer Portal</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-surface-container-low flex items-center justify-center text-slate-700 dark:text-on-surface"
-                                        >
-                                            <X size={18} />
-                                        </button>
-                                    </div>
-
-                                    {/* User Mini Card */}
-                                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-surface-container-low border border-slate-200 dark:border-outline-variant/20 mb-6">
-                                        {isGuest ? (
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-primary flex items-center justify-center">
-                                                        <User size={16} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-sm text-slate-900 dark:text-on-surface">Welcome Guest</p>
-                                                        <p className="text-[11px] text-slate-500 dark:text-brand-steel font-medium">Sign in to unlock all features</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Link
-                                                        href={`/login?next=${encodeURIComponent(pathname)}`}
-                                                        className="flex-1 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold text-center"
-                                                    >
-                                                        Sign In
-                                                    </Link>
-                                                    <Link
-                                                        href="/signup"
-                                                        className="flex-1 py-1.5 rounded-xl bg-slate-200 dark:bg-surface-container-high text-slate-800 dark:text-on-surface text-xs font-bold text-center"
-                                                    >
-                                                        Sign Up
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-primary font-black flex items-center justify-center overflow-hidden border border-blue-500/20 shrink-0">
-                                                        {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : userName[0]?.toUpperCase()}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center gap-1 min-w-0">
-                                                            <p className="font-extrabold text-sm text-slate-900 dark:text-on-surface truncate">{userName}</p>
-                                                            {isKycVerified && (
-                                                                <span title="KYC Verified" className="inline-flex shrink-0">
-                                                                    <svg className="w-4 h-4 text-blue-600 fill-blue-600 shrink-0" viewBox="0 0 24 24">
-                                                                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                                                    </svg>
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className={`text-[11px] font-bold ${isKycVerified ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-brand-steel'}`}>
-                                                            {isKycVerified ? 'Verified Member' : 'KYC Pending'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {isKycVerified ? (
-                                                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0 flex items-center gap-0.5">
-                                                        <Check size={10} strokeWidth={3} /> Verified
-                                                    </span>
-                                                ) : (
-                                                    <Link href="/profile" className="text-[9px] font-bold text-amber-600 dark:text-amber-400 hover:underline shrink-0">
-                                                        Verify
-                                                    </Link>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Grouped Nav Items */}
-                                    <nav className="space-y-4">
-                                        {NAV_GROUPS.map((group, gIdx) => (
-                                            <div key={gIdx} className="space-y-1">
-                                                <div className="px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-brand-steel">
-                                                    {group.title}
-                                                </div>
-                                                {group.items.map((item) => {
-                                                    const Icon = item.icon;
-                                                    const baseHref = item.href.split('?')[0];
-                                                    const destHref = isGuest && !PUBLIC_HREFS.includes(baseHref)
-                                                        ? `/login?next=${encodeURIComponent(item.href)}`
-                                                        : item.href;
-                                                    const isActive = item.href === '/' 
-                                                        ? pathname === '/' 
-                                                        : (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)));
-                                                    return (
-                                                        <Link
-                                                            key={item.href}
-                                                            href={destHref}
-                                                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                                                                isActive
-                                                                    ? 'bg-blue-600 text-white shadow-md'
-                                                                    : 'text-slate-600 dark:text-on-surface-variant hover:bg-slate-100 dark:hover:bg-surface-container-low hover:text-slate-900 dark:hover:text-on-surface'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400 dark:text-brand-steel'} />
-                                                                <span>{item.label}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                {item.isCart && cartCount > 0 ? (
-                                                                    <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
-                                                                        isActive ? 'bg-white/20 text-white' : 'bg-rose-500 text-white'
-                                                                    }`}>
-                                                                        {cartCount}
-                                                                    </span>
-                                                                ) : item.isWishlist && wishlistCount > 0 ? (
-                                                                    <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
-                                                                        isActive ? 'bg-white/20 text-white' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                                                                    }`}>
-                                                                        {wishlistCount}
-                                                                    </span>
-                                                                ) : item.badge ? (
-                                                                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
-                                                                        isActive ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600'
-                                                                    }`}>
-                                                                        {item.badge}
-                                                                    </span>
-                                                                ) : null}
-                                                                <ChevronRight size={13} className="opacity-40" />
-                                                            </div>
-                                                        </Link>
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
-                                    </nav>
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-200 dark:border-outline-variant/20 mt-4 space-y-2">
-                                    <Link
-                                        href="/merchant-apply"
-                                        className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-on-surface dark:text-surface text-xs font-bold flex items-center justify-center gap-2 shadow-xs"
-                                    >
-                                        <Store size={15} />
-                                        <span>Become an InTrust Merchant</span>
-                                    </Link>
-                                    {!isGuest && (
-                                        <button
-                                            onClick={triggerLogoutConfirm}
-                                            className="w-full py-2.5 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-200/60 dark:border-red-900/30 active:scale-[0.98]"
-                                        >
-                                            <LogOut size={14} />
-                                            <span>Sign Out</span>
-                                        </button>
-                                    )}
-                                </div>
-                            </motion.div>
-                        </>
-                    )}
-                </AnimatePresence>
-
                 {/* ── PAGE VIEWPORT CONTENT ── */}
-                <main className={`flex-1 w-full pt-4 lg:pt-24 ${fullWidth ? 'p-0 max-w-none' : 'px-4 lg:px-8 pb-[calc(84px+env(safe-area-inset-bottom,0px))] lg:pb-16 max-w-7xl mx-auto'}`}>
+                <main className={`flex-1 w-full pt-3 sm:pt-4 lg:pt-24 ${
+                    fullWidth 
+                        ? 'p-0 max-w-none' 
+                        : `px-4 lg:px-8 ${hideBottomNav ? 'pb-6 lg:pb-16' : 'pb-[calc(76px+env(safe-area-inset-bottom,0px))] lg:pb-16'} max-w-7xl mx-auto`
+                }`}>
                     {children}
                 </main>
 
                 {/* ── MOBILE STICKY BOTTOM NAVIGATION BAR ── */}
                 {!hideBottomNav && (
-                    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-[calc(68px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,4px)] bg-white/95 dark:bg-surface-container-lowest/95 backdrop-blur-xl border-t border-slate-200 dark:border-outline-variant/20 z-40 px-3 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                    <nav 
+                        aria-label="Mobile Bottom Navigation"
+                        className="lg:hidden fixed bottom-0 left-0 right-0 h-[calc(60px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] bg-white/95 dark:bg-[#0f1117]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/[0.08] z-40 px-2 flex items-center justify-around shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
+                    >
                         {[
-                            { label: isGuest ? 'Explore' : 'Dashboard', href: isGuest ? '/shop' : '/dashboard', icon: LayoutGrid },
+                            { label: isGuest ? 'Explore' : 'Dashboard', href: isGuest ? '/' : '/dashboard', icon: isGuest ? Store : LayoutGrid },
                             { label: 'Shop', href: '/shop', icon: ShoppingBag },
                             { label: 'Orders', href: isGuest ? `/login?next=${encodeURIComponent('/orders')}` : '/orders', icon: Package },
                             { label: 'Wallet', href: isGuest ? `/login?next=${encodeURIComponent('/wallet')}` : '/wallet', icon: Wallet },
                             { label: isGuest ? 'Login' : 'Profile', href: isGuest ? `/login?next=${encodeURIComponent(pathname)}` : '/profile', icon: isGuest ? LogIn : User },
                         ].map((item) => {
                             const Icon = item.icon;
-                            const isActive = pathname === item.href || (item.href !== '/dashboard' && item.href !== '/shop' && pathname.startsWith(item.href));
+                            const isActive = item.href === '/'
+                                ? pathname === '/'
+                                : item.href === '/shop'
+                                    ? pathname === '/shop' || pathname.startsWith('/shop/category')
+                                    : item.href === '/dashboard'
+                                        ? pathname === '/dashboard'
+                                        : pathname === item.href || (item.href !== '/dashboard' && item.href !== '/shop' && pathname.startsWith(item.href));
 
                             return (
                                 <Link
                                     key={item.label}
                                     href={item.href}
-                                    className={`flex flex-col items-center justify-center w-14 h-full relative transition-all ${
-                                        isActive ? 'text-blue-600 dark:text-primary' : 'text-slate-400 dark:text-brand-steel hover:text-slate-700 dark:hover:text-on-surface'
+                                    className={`flex flex-col items-center justify-center flex-1 h-full relative transition-all duration-150 active:scale-95 ${
+                                        isActive 
+                                            ? 'text-blue-600 dark:text-blue-400 font-bold' 
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                                     }`}
                                 >
-                                    <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50 dark:bg-primary/10 scale-110' : ''}`}>
-                                        <Icon size={19} strokeWidth={isActive ? 2.5 : 2} />
+                                    <div className={`p-1 rounded-xl transition-all duration-200 ${
+                                        isActive ? 'bg-blue-50 dark:bg-blue-950/50 scale-105' : ''
+                                    }`}>
+                                        <Icon size={19} strokeWidth={isActive ? 2.5 : 1.9} />
                                     </div>
-                                    <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? 'font-black' : 'font-semibold'}`}>
+                                    <span className="text-[10px] leading-tight mt-0.5 tracking-tight truncate max-w-[62px]">
                                         {item.label}
                                     </span>
                                     {isActive && (
-                                        <motion.div
-                                            layoutId="bottomNavDot"
-                                            className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-primary"
-                                        />
+                                        <span className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
                                     )}
                                 </Link>
                             );

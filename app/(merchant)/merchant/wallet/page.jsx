@@ -71,6 +71,19 @@ function WalletContent() {
     const [merchantData, setMerchantData] = useState(null); // New state for merchant data
     const searchParams = useSearchParams();
 
+    // Auto-scroll and highlight target transaction if ?txId= is provided
+    useEffect(() => {
+        const txId = searchParams.get('txId');
+        if (txId && transactions.length > 0) {
+            setTimeout(() => {
+                const el = document.getElementById(`tx-${txId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 300);
+        }
+    }, [searchParams, transactions]);
+
     const fetchWalletData = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -442,14 +455,21 @@ function WalletContent() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    {filteredTransactions.map((tx) => (
-                        <div
-                            key={tx.id}
-                            onClick={() => router.push(`/merchant/wallet/transactions/${tx.id}?source=${tx.source}`)}
-                            className="bg-white/60 dark:bg-[#1a1c23]/80 backdrop-blur-md p-4 flex items-center border border-black/5 dark:border-white/5 rounded-2xl active:scale-95 transition-transform cursor-pointer shadow-sm relative overflow-hidden group"
-                        >
-                            {/* Hover accent */}
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    {filteredTransactions.map((tx) => {
+                        const isTarget = searchParams.get('txId') === tx.id || (searchParams.get('txId') && tx.id?.includes(searchParams.get('txId')));
+                        return (
+                            <div
+                                key={tx.id}
+                                id={`tx-${tx.id}`}
+                                onClick={() => router.push(`/merchant/wallet/transactions/${tx.id}?source=${tx.source}`)}
+                                className={`bg-white/60 dark:bg-[#1a1c23]/80 backdrop-blur-md p-4 flex items-center border rounded-2xl active:scale-95 transition-all cursor-pointer shadow-sm relative overflow-hidden group ${
+                                    isTarget
+                                        ? 'border-blue-500 ring-2 ring-blue-500/80 bg-blue-50/40 dark:bg-blue-950/40 shadow-md shadow-blue-500/20'
+                                        : 'border-black/5 dark:border-white/5'
+                                }`}
+                            >
+                                {/* Hover accent */}
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                             <div className={`w-12 h-12 rounded-[1rem] flex items-center justify-center shrink-0 border ${tx.transaction_type === 'SETTLEMENT' ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : tx.transaction_type === 'CREDIT' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
                                 <span className="material-icons-round text-xl">{tx.transaction_type === 'SETTLEMENT' ? 'account_balance' : tx.transaction_type === 'CREDIT' ? 'south_west' : 'north_east'}</span>
@@ -476,7 +496,8 @@ function WalletContent() {
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    );
+                })}
 
                     {loading && filteredTransactions.length === 0 && (
                         <div className="flex flex-col gap-3">

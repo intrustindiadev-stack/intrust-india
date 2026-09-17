@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -49,6 +49,7 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
     const dropdownRef = useRef(null);
     const pollRef = useRef(null);
     const router = useRouter();
+    const pathname = usePathname();
 
     const fetchNotifications = useCallback(async (isLoadMore = false) => {
         try {
@@ -218,6 +219,10 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             case 'product_rejected': return 'inventory_2';
             case 'admin_task': return 'assignment';
             case 'hire_approval': return 'how_to_reg';
+            case 'sponsorship': return 'campaign';
+            case 'daily_challenge': return 'emoji_events';
+            case 'marketing': return 'campaign';
+            case 'referral_reward': return 'savings';
             default: break;
         }
 
@@ -249,9 +254,9 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
 
         if (!n.reference_type) return;
 
-        // Determine user context from the API path used by this bell instance
-        const isAdmin = apiPath.includes('/admin');
-        const isMerchant = apiPath.includes('/merchant');
+        // Determine context based on apiPath or current route
+        const isAdmin = apiPath.includes('/admin') || pathname?.startsWith('/admin');
+        const isMerchant = apiPath.includes('/merchant') || pathname?.startsWith('/merchant');
 
         switch (n.reference_type) {
             // ── Merchant onboarding ──────────────────────────────────────────
@@ -268,6 +273,25 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             case 'merchant_subscription':
                 // Merchant gets notified after subscription payment
                 router.push('/merchant/dashboard');
+                break;
+
+            // ── Marketing & Challenges ───────────────────────────────────────
+            case 'sponsorship':
+                if (isMerchant) router.push('/marketing/sponsorships');
+                else router.push('/marketing/daily-challenge');
+                break;
+
+            case 'daily_challenge':
+                router.push('/marketing/daily-challenge');
+                break;
+
+            case 'campaign_reward':
+            case 'marketing':
+                router.push('/marketing/transactions');
+                break;
+
+            case 'marketing_target':
+                router.push('/marketing/targets');
                 break;
 
             // ── Shopping orders ──────────────────────────────────────────────
@@ -438,25 +462,6 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
                 ? 'relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-90 duration-200'
                 : 'relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors');
 
-    // In Customer UI, clicking the bell routes directly to the dedicated full-page notifications hub
-    if (isCustomer) {
-        return (
-            <Link
-                href="/notifications"
-                className={buttonClass}
-                title="Notifications"
-                aria-label="Notifications"
-            >
-                <span className="material-icons-round text-slate-600 dark:text-slate-300 text-xl pointer-events-none">notifications</span>
-                {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center leading-none pointer-events-none">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                )}
-            </Link>
-        );
-    }
-
     return (
         <div ref={containerRef} className="relative inline-flex items-center">
             <button
@@ -593,6 +598,18 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
                                 </button>
                             </div>
                         )}
+                    </div>
+
+                    {/* Contextual Footer Hub Link */}
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/60 border-t border-black/5 dark:border-white/5 text-center">
+                        <Link
+                            href={pathname?.startsWith('/marketing') ? '/marketing/notifications' : pathname?.startsWith('/admin') ? '/admin/tasks' : '/notifications'}
+                            onClick={() => setOpen(false)}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
+                            <span>{pathname?.startsWith('/marketing') ? 'Open Marketing Alerts' : 'View Full Notifications'}</span>
+                            <span className="material-icons-round text-xs">arrow_forward</span>
+                        </Link>
                     </div>
                 </div>
             )}

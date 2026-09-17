@@ -236,6 +236,7 @@ export default function MerchantOrdersClient({
 }) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const selectedKpi = searchParams.get("kpi");
     const supabase = createClient();
     const [orders, setOrders] = useState(initialOrders || []);
     const [selectedPeriod, setSelectedPeriod] = useState("all"); // 'all' | 'this_month' | '30d' | '7d' | 'today'
@@ -716,10 +717,17 @@ export default function MerchantOrdersClient({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     {/* 1. Total Sales Card */}
-                    <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md">
+                    <div className={`relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border p-5 shadow-xs transition-all hover:shadow-md ${
+                        selectedKpi === 'sales'
+                            ? 'border-blue-500 ring-2 ring-blue-500/30 shadow-blue-500/10'
+                            : 'border-slate-200/80 dark:border-white/10'
+                    }`}>
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
                                 Total Sales
+                                {selectedKpi === 'sales' && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-blue-600 text-white text-[8px] font-black uppercase tracking-wider">SELECTED</span>
+                                )}
                             </span>
                             <div className="w-9 h-9 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
                                 <CircleDollarSign size={20} />
@@ -739,10 +747,17 @@ export default function MerchantOrdersClient({
                     </div>
 
                     {/* 2. Total Orders Card */}
-                    <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md">
+                    <div className={`relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border p-5 shadow-xs transition-all hover:shadow-md ${
+                        selectedKpi === 'orders'
+                            ? 'border-purple-500 ring-2 ring-purple-500/30 shadow-purple-500/10'
+                            : 'border-slate-200/80 dark:border-white/10'
+                    }`}>
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
                                 Total Orders
+                                {selectedKpi === 'orders' && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-purple-600 text-white text-[8px] font-black uppercase tracking-wider">SELECTED</span>
+                                )}
                             </span>
                             <div className="w-9 h-9 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20">
                                 <ShoppingBag size={20} />
@@ -764,7 +779,7 @@ export default function MerchantOrdersClient({
                     <div 
                         onClick={() => setFilter(filter === "pending" ? "all" : "pending")}
                         className={`relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border p-5 shadow-xs transition-all hover:shadow-md cursor-pointer group ${
-                            filter === "pending"
+                            filter === "pending" || selectedKpi === "pending"
                                 ? "border-amber-400 ring-2 ring-amber-400/20 shadow-amber-500/10"
                                 : "border-slate-200/80 dark:border-white/10"
                         }`}
@@ -772,6 +787,9 @@ export default function MerchantOrdersClient({
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
                                 Pending Action
+                                {selectedKpi === "pending" && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500 text-white text-[8px] font-black uppercase tracking-wider">SELECTED</span>
+                                )}
                                 <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
                             </span>
                             <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
@@ -797,10 +815,17 @@ export default function MerchantOrdersClient({
                     </div>
 
                     {/* 4. Settled Profit Card */}
-                    <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 p-5 shadow-xs transition-shadow hover:shadow-md">
+                    <div className={`relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900/90 border p-5 shadow-xs transition-all hover:shadow-md ${
+                        selectedKpi === 'revenue' || selectedKpi === 'profit'
+                            ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-emerald-500/10'
+                            : 'border-slate-200/80 dark:border-white/10'
+                    }`}>
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
                                 Net Profit
+                                {(selectedKpi === 'revenue' || selectedKpi === 'profit') && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[8px] font-black uppercase tracking-wider">SELECTED</span>
+                                )}
                             </span>
                             <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
                                 <TrendingUp size={20} />

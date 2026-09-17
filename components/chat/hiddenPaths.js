@@ -30,6 +30,7 @@ export const CHAT_HIDDEN_PATHS = [
   '/crm',
   '/merchant',
   '/employee',
+  '/marketing',
 ];
 
 export const MERCHANT_CHAT_HIDDEN_PATHS = [
@@ -37,4 +38,5 @@ export const MERCHANT_CHAT_HIDDEN_PATHS = [
   '/merchant-status/rejected',
   '/merchant-status/suspended',
   '/merchant-apply',
+  '/marketing',
 ];
