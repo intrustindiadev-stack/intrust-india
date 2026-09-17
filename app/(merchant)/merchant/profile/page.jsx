@@ -27,6 +27,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
 import InstaVerifiedBadge from '@/components/ui/InstaVerifiedBadge';
+import { pickDirtyFields } from '@/lib/utils';
 
 function AvatarUpload({ userId, avatarUrl, displayName, isVerified, onUpload }) {
     const [uploading, setUploading] = useState(false);
@@ -184,27 +185,28 @@ export default function ProfilePage() {
             const isReservedName = formData.business_name.trim().toLowerCase() === 'intrust';
             const isNameChanged = formData.business_name !== merchant?.business_name;
             
-            const merchantUpdatePayload = {
+            // Update Merchants Table — only send fields that actually changed.
+            // Sending the whole form back can trip the merchants_sensitive_column_guard
+            // DB trigger for columns the user never touched.
+            const merchantUpdatePayload = pickDirtyFields({
                 gst_number: formData.gst_number,
                 owner_name: formData.owner_name,
                 business_phone: formData.business_phone,
                 business_email: formData.business_email,
                 business_address: formData.business_address,
                 department: formData.department || 'general',
-                shopping_banner_url: formData.shopping_banner_url
-            };
+                shopping_banner_url: formData.shopping_banner_url,
+                ...(!(isReservedName && isNameChanged) ? { business_name: formData.business_name } : {}),
+            }, merchant);
 
-            if (!(isReservedName && isNameChanged)) {
-                merchantUpdatePayload.business_name = formData.business_name;
+            if (Object.keys(merchantUpdatePayload).length > 0) {
+                const { error: merchantUpdateError } = await supabase
+                    .from('merchants')
+                    .update(merchantUpdatePayload)
+                    .eq('id', merchant.id);
+
+                if (merchantUpdateError) throw merchantUpdateError;
             }
-
-            // Update Merchants Table
-            const { error: merchantUpdateError } = await supabase
-                .from('merchants')
-                .update(merchantUpdatePayload)
-                .eq('id', merchant.id);
-
-            if (merchantUpdateError) throw merchantUpdateError;
 
             // Update user_profiles Table
             const profileUpdatePayload = {

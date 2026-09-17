@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useMerchant } from '@/hooks/useMerchant';
 import { displayEmail } from '@/lib/auth';
+import { pickDirtyFields, toNullableText } from '@/lib/utils';
 
 // ─── Login & Security card (Account tab) ────────────────────────────────────
 // Mirrors the customer LoginMethodsSection (Ticket 2) but styled for merchant
@@ -418,24 +419,37 @@ export default function MerchantSettingsPage() {
 
             const isReservedName = formData.business_name.trim().toLowerCase() === 'intrust';
             const isNameChanged = formData.business_name !== merchantProfile?.business_name;
-            
-            const merchantUpdatePayload = {
-                gst_number: formData.gst_number,
-                pan_number: formData.pan_number,
-                business_phone: formData.business_phone,
-                business_email: formData.business_email,
+
+            // Build the candidate business fields, then send ONLY the ones the
+            // user actually changed.
+            // Sending the whole form back trips the DB guard
+            // (merchants_sensitive_column_guard) in two ways:
+            //   · an unrelated protected column rides along in the UPDATE, and
+            //   · a blank nullable input round-trips as '' which is DISTINCT
+            //     FROM NULL — e.g. empty PAN input vs NULL pan_number raised
+            //     "Column pan_number is protected and set during onboarding only."
+            //     even when the merchant only edited their phone number.
+            const businessCandidate = {
+                gst_number: toNullableText(formData.gst_number),
+                pan_number: toNullableText(formData.pan_number),
+                business_phone: toNullableText(formData.business_phone),
+                business_email: toNullableText(formData.business_email),
             };
 
             if (!(isReservedName && isNameChanged)) {
-                merchantUpdatePayload.business_name = formData.business_name;
+                businessCandidate.business_name = formData.business_name;
             }
 
-            const { error: updateError } = await supabase
-                .from('merchants')
-                .update(merchantUpdatePayload)
-                .eq('user_id', user.id);
+            const merchantUpdatePayload = pickDirtyFields(businessCandidate, merchantProfile);
 
-            if (updateError) throw updateError;
+            if (Object.keys(merchantUpdatePayload).length > 0) {
+                const { error: updateError } = await supabase
+                    .from('merchants')
+                    .update(merchantUpdatePayload)
+                    .eq('user_id', user.id);
+
+                if (updateError) throw updateError;
+            }
 
             const { error: profileUpdateError } = await supabase
                 .from('user_profiles')

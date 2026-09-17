@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>InTrust India - Enterprise Email Theme Gallery</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+        header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .logo-group { display: flex; align-items: center; gap: 12px; }
+        .badge { background: #1d4ed8; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px; }
+        nav { display: flex; gap: 8px; overflow-x: auto; padding: 4px; }
+        button.tab-btn { background: #334155; color: #cbd5e1; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        button.tab-btn:hover { background: #475569; color: #fff; }
+        button.tab-btn.active { background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); }
+        .container { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+        .frame-wrapper { width: 100%; max-width: 680px; background: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); border: 1px solid #334155; display: flex; flex-direction: column; height: 850px; }
+        .frame-header { padding: 10px 16px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #94a3b8; }
+        iframe { width: 100%; flex: 1; border: none; background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-group">
+            <strong style="font-size: 17px; color: #fff; letter-spacing: -0.2px;">InTrust India</strong>
+            <span class="badge">Enterprise Email System</span>
+        </div>
+        <nav>
+            <button class="tab-btn active" onclick="loadTemplate('confirmation.html', this)">Account Confirmation</button>
+            <button class="tab-btn" onclick="loadTemplate('recovery.html', this)">Password Recovery</button>
+            <button class="tab-btn" onclick="loadTemplate('magic_link.html', this)">Magic Link OTP</button>
+            <button class="tab-btn" onclick="loadTemplate('email_change.html', this)">Email Change</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="frame-wrapper">
+            <div class="frame-header">
+                <span id="template-title">confirmation.html</span>
+                <span>Responsive View (600px Preview)</span>
+            </div>
+            <iframe id="preview-frame" src="confirmation.html"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function loadTemplate(file, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('preview-frame').src = file;
+            document.getElementById('template-title').textContent = file;
+        }
+    </script>
+</body>
+</html>

@@ -204,7 +204,7 @@ export async function POST(request) {
             const { data: admins } = await adminSupabase
                 .from('user_profiles')
                 .select('id')
-                .eq('role', 'admin');
+                .in('role', ['admin', 'super_admin']);
 
             if (admins && admins.length > 0) {
                 const notifications = admins.map(admin => ({
@@ -236,9 +236,11 @@ export async function POST(request) {
 
         console.log('✅ Merchant application submitted and queued for manual review.');
 
-        // Fire-and-forget emails: confirmation to applicant + alert to admin
-        fireAndForgetEmail(async () => {
-            await sendMerchantAlert({
+        // Fire-and-forget emails: confirmation to applicant + alert to admin.
+        // Dispatched as SEPARATE tasks so a failure in one (e.g. SMTP error on the
+        // merchant confirmation) can never suppress the other (admin email + WhatsApp alert).
+        fireAndForgetEmail(
+            () => sendMerchantAlert({
                 type: 'application_received',
                 to: email,
                 data: {
@@ -247,8 +249,12 @@ export async function POST(request) {
                 },
                 actorId: user.id,
                 metadata: { merchantId: merchant.id },
-            });
-            await sendAdminAlert({
+            }),
+            { category: 'merchant_kyc', entityId: merchant.id }
+        );
+
+        fireAndForgetEmail(
+            () => sendAdminAlert({
                 type: 'new_merchant_application',
                 data: {
                     businessName,
@@ -259,8 +265,9 @@ export async function POST(request) {
                 },
                 actorId: user.id,
                 metadata: { merchantId: merchant.id },
-            });
-        }, { category: 'merchant_kyc', entityId: merchant.id });
+            }),
+            { category: 'admin_merchant_application', entityId: merchant.id }
+        );
 
         return NextResponse.json(
             {

@@ -83,7 +83,45 @@ async function seedTestUser(supabase, { balancePaise = 50000 } = {}) {
 
 /** Delete the test user and all related rows. */
 async function teardownTestUser(supabase, userId) {
-    await supabase.auth.admin.deleteUser(userId);
+    if (!supabase || !userId) return;
+    try {
+        // 1. Orders and Cart
+        const { data: groups } = await supabase.from('shopping_order_groups').select('id').eq('customer_id', userId);
+        if (groups && groups.length > 0) {
+            const gids = groups.map(g => g.id);
+            await supabase.from('shopping_order_items').delete().in('group_id', gids);
+            await supabase.from('shopping_order_groups').delete().in('id', gids);
+        }
+        await supabase.from('orders').delete().eq('user_id', userId);
+        await supabase.from('shopping_cart').delete().eq('customer_id', userId);
+        await supabase.from('coupons').delete().eq('purchased_by', userId);
+
+        // 2. Rewards
+        await supabase.from('reward_distribution_log').delete().eq('source_user_id', userId);
+        await supabase.from('reward_transactions').delete().or(`user_id.eq.${userId},source_user_id.eq.${userId}`);
+        await supabase.from('reward_points_balance').delete().eq('user_id', userId);
+        await supabase.from('reward_daily_caps').delete().eq('user_id', userId);
+
+        // 3. Wallets
+        await supabase.from('customer_wallet_transactions').delete().eq('user_id', userId);
+        await supabase.from('customer_wallets').delete().eq('user_id', userId);
+
+        // 4. CRM Leads & Routing logs
+        const { data: leads } = await supabase.from('crm_leads').select('id').or(`created_by.eq.${userId},assigned_to.eq.${userId}`);
+        if (leads && leads.length > 0) {
+            const lIds = leads.map(l => l.id);
+            await supabase.from('crm_lead_routing_log').delete().in('lead_id', lIds);
+            await supabase.from('crm_leads').delete().in('id', lIds);
+        }
+
+        // 5. User Profiles
+        await supabase.from('user_profiles').delete().eq('id', userId);
+
+        // 6. Auth user
+        await supabase.auth.admin.deleteUser(userId);
+    } catch (err) {
+        console.error(`teardownTestUser failed for ${userId}:`, err?.message || err);
+    }
 }
 
 // ── Gift-card wallet checkout tests ───────────────────────────────────────
@@ -126,10 +164,6 @@ describe('Wallet gift-card checkout — reward issuance', () => {
 
         if (seedErr) throw new Error(`Seed coupon error: ${seedErr.message}`);
         couponId = seeded.id;
-    });
-
-    afterAll(async () => {
-        await teardownTestUser(supabase, testUser.id);
     });
 
     it('credits purchase rewards exactly once after wallet gift-card buy', async () => {
@@ -184,6 +218,10 @@ describe('Wallet gift-card checkout — reward issuance', () => {
         const rewardsAfter = await countRewards(supabase, couponId, 'gift_card_purchase');
         expect(rewardsAfter).toBe(rewardsBefore); // no new row
     });
+
+    afterAll(async () => {
+        await teardownTestUser(supabase, testUser?.id);
+    });
 });
 
 // ── Wallet cart checkout tests ─────────────────────────────────────────────
@@ -216,10 +254,6 @@ describe('Wallet cart checkout — reward issuance', () => {
             quantity: 1,
             is_platform_item: true,
         });
-    });
-
-    afterAll(async () => {
-        await teardownTestUser(supabase, testUser.id);
     });
 
     it('credits purchase rewards exactly once after wallet cart checkout', async () => {
@@ -274,6 +308,10 @@ describe('Wallet cart checkout — reward issuance', () => {
         const rewardsAfter = await countRewards(supabase, groupId, 'shopping_order');
         expect(rewardsAfter).toBe(rewardsBefore); // idempotent — no new row
     });
+
+    afterAll(async () => {
+        await teardownTestUser(supabase, testUser?.id);
+    });
 });
 
 // ── Concurrency regression — wallet top-up during failed gift-card purchase ─
@@ -285,10 +323,6 @@ describe('Concurrency — wallet top-up does not get erased during gift-card pur
     beforeAll(async () => {
         supabase = adminClient();
         testUser = await seedTestUser(supabase, { balancePaise: 100_00 }); // ₹100
-    });
-
-    afterAll(async () => {
-        await teardownTestUser(supabase, testUser.id);
     });
 
     it('a concurrent top-up during purchase failure is preserved by the atomic RPC', async () => {
@@ -318,5 +352,9 @@ describe('Concurrency — wallet top-up does not get erased during gift-card pur
         // CRITICAL: the concurrent top-up must still be intact
         const balanceAfterFailure = await walletBalance(supabase, testUser.id);
         expect(balanceAfterFailure).toBe(balanceAfterTopUp);
+    });
+
+    afterAll(async () => {
+        await teardownTestUser(supabase, testUser?.id);
     });
 });

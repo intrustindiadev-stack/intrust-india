@@ -13,6 +13,26 @@ import { toast } from 'react-hot-toast';
 import { verifyGSTIN } from '@/app/actions/sprintVerifyActions';
 import MerchantApplyShowcase from '@/components/merchant/MerchantApplyShowcase';
 import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
+import { useForm } from 'react-hook-form';
+
+export const DRAFT_STORAGE_KEY = 'intrust_merchant_apply_draft';
+
+const DEFAULT_FORM_VALUES = {
+    businessName: '',
+    gstNumber: '',
+    ownerName: '',
+    phone: '',
+    email: '',
+    address: '',
+    bankAccount: '',
+    bankAccountName: '',
+    bankName: '',
+    ifscCode: '',
+    confirmBankAccount: '',
+    panCard: '',
+    merchantReferralCode: '',
+    department: 'grocery',
+};
 
 // Confetti Component
 const Confetti = () => {
@@ -68,12 +88,102 @@ function MerchantApplyPageInner() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(true);
+    const [isMounted, setIsMounted] = useState(false);
+
+    // react-hook-form instance for state tracking & draft persistence
+    const { watch, reset, setValue, getValues } = useForm({
+        defaultValues: DEFAULT_FORM_VALUES,
+    });
 
     // Verification States
     const [verifying, setVerifying] = useState({ gstin: false });
     const [verified, setVerified] = useState({ gstin: null }); // null, 'verified', 'pending', 'failed'
     const [successStatus, setSuccessStatus] = useState('approved');
 
+    // Form State (kept in sync with useForm)
+    const [formData, setFormData] = useState(DEFAULT_FORM_VALUES);
+
+    // Task 1: Form Hydration (Load Draft on client mount)
+    useEffect(() => {
+        setIsMounted(true);
+        try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+                const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+                if (savedDraft) {
+                    const parsedData = JSON.parse(savedDraft);
+                    if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+                        const sanitizedDraft = { ...DEFAULT_FORM_VALUES };
+                        for (const key of Object.keys(DEFAULT_FORM_VALUES)) {
+                            if (parsedData[key] !== undefined && parsedData[key] !== null) {
+                                sanitizedDraft[key] = String(parsedData[key]);
+                            }
+                        }
+                        reset(sanitizedDraft);
+                        setFormData(sanitizedDraft);
+
+                        const hasEnteredData = Object.entries(sanitizedDraft).some(([k, v]) => {
+                            if (k === 'department') return false;
+                            return v && typeof v === 'string' && v.trim().length > 0;
+                        });
+                        if (hasEnteredData) {
+                            setShowIntro(false);
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load merchant apply draft from localStorage:', err);
+        }
+    }, [reset]);
+
+    // Task 2: Continuous Auto-Save with watch subscription & debounce
+    useEffect(() => {
+        if (!isMounted) return;
+
+        let debounceTimer;
+        const subscription = watch((value) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                try {
+                    if (typeof window !== 'undefined' && window.localStorage) {
+                        const hasContent = Object.entries(value).some(([k, v]) => {
+                            if (k === 'department') return v && v !== 'grocery';
+                            return v && typeof v === 'string' && v.trim().length > 0;
+                        });
+
+                        if (hasContent) {
+                            localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(value));
+                        }
+                    }
+                } catch (saveErr) {
+                    console.error('Failed to auto-save merchant apply draft:', saveErr);
+                }
+            }, 300); // 300ms debounce
+        });
+
+        // Also ensure draft is saved on beforeunload
+        const handleBeforeUnload = () => {
+            try {
+                const currentVals = getValues();
+                if (typeof window !== 'undefined' && window.localStorage && currentVals) {
+                    const hasContent = Object.entries(currentVals).some(([k, v]) => {
+                        if (k === 'department') return v && v !== 'grocery';
+                        return v && typeof v === 'string' && v.trim().length > 0;
+                    });
+                    if (hasContent) {
+                        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(currentVals));
+                    }
+                }
+            } catch (_) {}
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            clearTimeout(debounceTimer);
+            subscription.unsubscribe();
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [watch, isMounted, getValues]);
 
     // Check if user already applied
     useEffect(() => {
@@ -108,35 +218,20 @@ function MerchantApplyPageInner() {
     useEffect(() => {
         const ref = searchParams.get('ref');
         if (ref) {
+            const cleanRef = ref.toUpperCase().trim();
+            setValue('merchantReferralCode', cleanRef, { shouldDirty: true });
             setFormData(prev => ({
                 ...prev,
-                merchantReferralCode: ref.toUpperCase().trim()
+                merchantReferralCode: cleanRef
             }));
         }
-    }, [searchParams]);
-
-// Form State
-    const [formData, setFormData] = useState({
-        businessName: '',
-        gstNumber: '',
-        ownerName: '',
-        phone: '',
-        email: '',
-        address: '',
-        bankAccount: '',
-        bankAccountName: '',
-        bankName: '',
-        ifscCode: '',
-        confirmBankAccount: '',
-        panCard: '',
-        merchantReferralCode: '',
-        department: 'grocery',
-    });
+    }, [searchParams, setValue]);
 
     const [touched, setTouched] = useState({});
     const markTouched = (k) => setTouched(p => ({ ...p, [k]: true }));
 
     const handleFieldChange = (key, value) => {
+        setValue(key, value, { shouldDirty: true, shouldTouch: true });
         setFormData(prev => ({ ...prev, [key]: value }));
         if (touched[key]) {
             markTouched(key);
@@ -215,10 +310,20 @@ function MerchantApplyPageInner() {
                 setVerified(prev => ({ ...prev, gstin: 'verified' }));
 
                 // Auto-fill form if empty
+                const updatedBusinessName = formData.businessName || businessName;
+                const updatedAddress = formData.address || address;
+
+                if (!formData.businessName && businessName) {
+                    setValue('businessName', businessName, { shouldDirty: true });
+                }
+                if (!formData.address && address) {
+                    setValue('address', address, { shouldDirty: true });
+                }
+
                 setFormData(prev => ({
                     ...prev,
-                    businessName: prev.businessName || businessName,
-                    address: prev.address || address
+                    businessName: updatedBusinessName,
+                    address: updatedAddress
                 }));
             } else if (result.valid === 'manual_review') {
                 toast(result.message || 'GSTIN service degraded, manual review will be performed', { icon: '⚠️' });
@@ -276,6 +381,20 @@ function MerchantApplyPageInner() {
 
             // Success! Merchant account created
             console.log('✅ Merchant account created:', data);
+
+            // Task 3: Draft Cleanup (Garbage Collection)
+            // Immediately upon successful submission, remove draft from localStorage
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    localStorage.removeItem(DRAFT_STORAGE_KEY);
+                }
+            } catch (storageErr) {
+                console.warn('Could not remove merchant apply draft from localStorage:', storageErr);
+            }
+
+            // Reset useForm and state to clean slate
+            reset(DEFAULT_FORM_VALUES);
+            setFormData(DEFAULT_FORM_VALUES);
 
             // Success step will handle status-specific message
             setSuccessStatus(data.status || 'approved');
@@ -400,8 +519,8 @@ function MerchantApplyPageInner() {
     // Calculate progress for the progress bar
     const progress = (step / 2) * 100;
 
-    // Show blank page while auth is loading or checking merchant status to avoid flashing
-    if (authLoading || checkingStatus) {
+    // Show blank page while auth is loading or checking merchant status or before client mount to avoid flashing / SSR mismatch
+    if (authLoading || checkingStatus || !isMounted) {
         return (
             <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-[#020617] transition-colors">
                 <Loader2 className="animate-spin text-[#D4AF37]" size={32} />
@@ -620,7 +739,7 @@ function MerchantApplyPageInner() {
                                             <div className="relative">
                                                 <select
                                                     value={formData.department || 'grocery'}
-                                                    onChange={e => setFormData({ ...formData, department: e.target.value })}
+                                                    onChange={e => handleFieldChange('department', e.target.value)}
                                                     className="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
                                                 >
                                                     {MERCHANT_DEPARTMENTS.map(dept => (

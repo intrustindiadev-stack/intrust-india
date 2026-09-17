@@ -1,6 +1,7 @@
 import './load_env.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { authHeaders } from './auth_cookie.mjs';
+import { teardownTestAccount } from './teardown_helper.mjs';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,15 +37,7 @@ async function getTestUserId() {
 }
 
 async function cleanupData() {
-    const uid = await getTestUserId();
-    if (uid) {
-        // Delete merchant row first
-        await supabaseAdmin.from('merchants').delete().eq('user_id', uid);
-        // Delete user profile
-        await supabaseAdmin.from('user_profiles').delete().eq('id', uid);
-        // Delete auth user
-        await supabaseAdmin.auth.admin.deleteUser(uid);
-    }
+    await teardownTestAccount(supabaseAdmin, { email: TEST_EMAIL });
 }
 
 async function run() {

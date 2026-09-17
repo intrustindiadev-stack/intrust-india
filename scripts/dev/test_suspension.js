@@ -18,20 +18,24 @@ async function runTests() {
     const testEmail = `test_suspension_${Date.now()}@example.com`;
     const password = 'Password123!';
 
-    // Create a test user directly via Admin API
-    const { data: userRecord, error: createErr } = await adminSupabase.auth.admin.createUser({
-        email: testEmail,
-        password: password,
-        email_confirm: true,
-        user_metadata: { role: 'employee' }
-    });
+    let userId = null;
+    let adminUserId = null;
 
-    if (createErr) {
-        console.error("Failed to create test user:", createErr.message);
-        return;
-    }
-    const userId = userRecord.user.id;
-    console.log(`Created test user: ${userId}`);
+    try {
+        // Create a test user directly via Admin API
+        const { data: userRecord, error: createErr } = await adminSupabase.auth.admin.createUser({
+            email: testEmail,
+            password: password,
+            email_confirm: true,
+            user_metadata: { role: 'employee' }
+        });
+
+        if (createErr) {
+            console.error("Failed to create test user:", createErr.message);
+            return;
+        }
+        userId = userRecord.user.id;
+        console.log(`Created test user: ${userId}`);
 
     // Add profile
     await adminSupabase.from('user_profiles').update({
@@ -76,9 +80,10 @@ async function runTests() {
     const { data: adminRecord } = await adminSupabase.auth.admin.createUser({
         email: adminEmail, password: password, email_confirm: true, user_metadata: { role: 'super_admin' }
     });
+    adminUserId = adminRecord?.user?.id;
     const { error: adminUpdateErr } = await adminSupabase.from('user_profiles').update({
         role: 'super_admin'
-    }).eq('id', adminRecord.user.id);
+    }).eq('id', adminUserId);
     if (adminUpdateErr) console.error("Failed to make admin:", adminUpdateErr.message);
     const { data: adminLogin } = await authSupabase.auth.signInWithPassword({ email: adminEmail, password });
     const adminToken = adminLogin.session.access_token;
@@ -144,10 +149,26 @@ async function runTests() {
          console.log("❌ FAIL - Re-login failed", restoreErr.message);
     }
 
-    // Cleanup
-    await adminSupabase.auth.admin.deleteUser(userId);
-    await adminSupabase.auth.admin.deleteUser(adminRecord.user.id);
-    console.log("\nTests complete and users cleaned up.");
+    } finally {
+        console.log("\n[Cleanup] Cleaning up test users and dependent data...");
+        for (const uid of [userId, adminUserId]) {
+            if (!uid) continue;
+            try {
+                const { data: leads } = await adminSupabase.from('crm_leads').select('id').or(`created_by.eq.${uid},assigned_to.eq.${uid}`);
+                if (leads && leads.length > 0) {
+                    const lIds = leads.map(l => l.id);
+                    await adminSupabase.from('crm_lead_routing_log').delete().in('lead_id', lIds);
+                    await adminSupabase.from('crm_leads').delete().in('id', lIds);
+                }
+                await adminSupabase.from('user_profiles').delete().eq('id', uid);
+                await adminSupabase.auth.admin.deleteUser(uid);
+                console.log(`  Deleted test user: ${uid}`);
+            } catch (cleanupErr) {
+                console.error(`  Cleanup error for ${uid}:`, cleanupErr.message);
+            }
+        }
+        console.log("Tests complete and users cleaned up.");
+    }
 }
 
 runTests();

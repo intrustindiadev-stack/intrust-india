@@ -61,6 +61,28 @@ describe('CUST-06: Wishlist rows scoped to authenticated user only (RLS)', () =>
     });
 
     describe('2. Live Database RLS Verification (Read-Only)', () => {
+        let newlyCreatedUserId = null;
+
+        afterAll(async () => {
+            if (newlyCreatedUserId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+                if (CUSTOMER_EMAIL === 'e2e.hr2@intrust-test.com') return;
+                try {
+                    const adminClient = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+                    await adminClient.from('user_wishlists').delete().eq('user_id', newlyCreatedUserId);
+                    const { data: leads } = await adminClient.from('crm_leads').select('id').or(`created_by.eq.${newlyCreatedUserId},assigned_to.eq.${newlyCreatedUserId}`);
+                    if (leads && leads.length > 0) {
+                        const lIds = leads.map(l => l.id);
+                        await adminClient.from('crm_lead_routing_log').delete().in('lead_id', lIds);
+                        await adminClient.from('crm_leads').delete().in('id', lIds);
+                    }
+                    await adminClient.from('user_profiles').delete().eq('id', newlyCreatedUserId);
+                    await adminClient.auth.admin.deleteUser(newlyCreatedUserId);
+                } catch (e) {
+                    console.error('Failed to cleanup newly created wishlist test user:', e?.message || e);
+                }
+            }
+        });
+
         it('should verify that RLS restricts query results to the authenticated user only', async () => {
             if (!SUPABASE_URL || !ANON_KEY || !CUSTOMER_EMAIL || !CUSTOMER_PASS) {
                 console.log('Skipping live DB check: Supabase credentials or test emails are not defined in the environment.');
@@ -88,6 +110,7 @@ describe('CUST-06: Wishlist rows scoped to authenticated user only (RLS)', () =>
                     }
                 });
                 if (!signUpErr && signUpData?.user) {
+                    newlyCreatedUserId = signUpData.user.id;
                     const adminClient = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
                     await adminClient.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
                     const retry = await customerSupabase.auth.signInWithPassword({

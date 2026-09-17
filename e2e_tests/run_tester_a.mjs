@@ -1,6 +1,8 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+import { teardownTestAccount } from './teardown_helper.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +80,18 @@ const totPassPad = globalTotalPass.toString().padStart(4).padEnd(5);
 const totFailPad = globalTotalFail.toString().padStart(4).padEnd(6);
 console.log(`   │ TOTAL                           │ ${totPassPad} │ ${totFailPad} │`);
 console.log('   └─────────────────────────────────┴───────┴────────┘\n');
+
+// Teardown test accounts after testing
+if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.log('🧹 Cleaning up test accounts created during testing...');
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  await teardownTestAccount(supabaseAdmin, { email: 'tester_a@intrustindia.com' });
+  console.log('✅ Test accounts cleanup complete.\n');
+}
 
 if (globalTotalFail > 0) {
   process.exit(1);
