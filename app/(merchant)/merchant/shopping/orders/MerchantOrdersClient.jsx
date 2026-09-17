@@ -353,10 +353,15 @@ export default function MerchantOrdersClient({
         return calculateMerchantOrderKPIs(orders, selectedPeriod);
     }, [orders, selectedPeriod]);
 
+    // Filter out invalid / unpaid / cancelled draft orders
+    const validOrders = useMemo(() => {
+        return orders.filter(isValidOrder);
+    }, [orders]);
+
     // Orders filtered by period first
     const periodOrders = useMemo(() => {
-        return filterOrdersByPeriod(orders, selectedPeriod);
-    }, [orders, selectedPeriod]);
+        return filterOrdersByPeriod(validOrders, selectedPeriod);
+    }, [validOrders, selectedPeriod]);
 
     // Compute status counts for the selected period
     const statusCounts = useMemo(() => {

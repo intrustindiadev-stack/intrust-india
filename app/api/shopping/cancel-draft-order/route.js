@@ -104,7 +104,7 @@ export async function POST(request) {
         // 4. Guarded UPDATE — compound .eq chain prevents overwriting a concurrently finalized row
         const { error: updateError } = await adminSupabase
             .from('shopping_order_groups')
-            .update({ status: 'cancelled', payment_status: 'cancelled' })
+            .update({ status: 'cancelled', payment_status: 'failed', delivery_status: 'cancelled' })
             .eq('id', groupId)
             .eq('customer_id', userId)
             .eq('payment_method', 'gateway')

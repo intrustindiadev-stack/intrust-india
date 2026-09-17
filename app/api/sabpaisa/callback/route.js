@@ -221,7 +221,7 @@ export async function POST(request) {
                 // finalize_gateway_orders sets payment_status='paid', so checking that is sufficient.
                 await supabaseAdmin
                     .from('shopping_order_groups')
-                    .update({ status: 'failed', payment_status: 'failed' })
+                    .update({ status: 'failed', payment_status: 'failed', delivery_status: 'cancelled' })
                     .eq('id', groupId)
                     .neq('payment_status', 'paid');
                 console.log(`[Callback] Cart checkout marked as failed/aborted for txn ${clientTxnId}`);

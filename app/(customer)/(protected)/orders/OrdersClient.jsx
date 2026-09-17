@@ -115,7 +115,13 @@ const OrdersClient = ({ userId }) => {
 
       const [shoppingRes, nfcRes, giftcardsRes, udhariRes, solarRes] = await Promise.all([shoppingPromise, nfcPromise, giftcardsPromise, udhariPromise, solarPromise]);
 
-      setGroups(shoppingRes.data || []);
+      // Exclude unpaid gateway drafts and cancelled drafts
+      const validShoppingOrders = (shoppingRes.data || []).filter(o =>
+          !(o.payment_method === 'gateway' && o.payment_status !== 'paid') &&
+          o.status !== 'cancelled' &&
+          o.delivery_status !== 'cancelled'
+      );
+      setGroups(validShoppingOrders);
       setNfcOrders(nfcRes.orders || []);
       setSolarLeads(solarRes.data || []);
       
