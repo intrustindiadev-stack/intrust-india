@@ -77,7 +77,7 @@ export default async function MerchantRootLayout({ children }) {
     // Fetch full merchant data so we can pass it to the subscription provider
     const { data: merchant } = await supabase
         .from('merchants')
-        .select('id, business_name, status, subscription_status, subscription_expires_at, business_email, business_phone')
+        .select('id, business_name, status, subscription_status, subscription_expires_at, business_email, business_phone, show_lockin, show_ai_grow, show_ai_orders')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -99,6 +99,25 @@ export default async function MerchantRootLayout({ children }) {
     }
     if (merchant.status !== 'approved' && !['pending', 'rejected', 'suspended'].includes(merchant.status)) {
         redirect('/merchant-apply');
+    }
+
+    // ── 3.5 Super-admin feature-visibility gate ────────────────────────────────
+    // Columns show_lockin / show_ai_grow / show_ai_orders are managed per merchant
+    // by a super admin (PATCH /api/admin/merchants/[id]/visibility). When a flag
+    // is false, any direct URL access to the corresponding page is bounced back
+    // to the merchant dashboard — this is the real access boundary; the sidebar
+    // filtering in components/merchant/Sidebar.jsx is only cosmetic on top.
+    // `show_ai_orders: false` also hides the dependent My Vault pages.
+    const featureRouteGuards = [
+        { enabled: merchant.show_lockin !== false, prefixes: ['/merchant/lockin'] },
+        { enabled: merchant.show_ai_grow !== false, prefixes: ['/merchant/investments'] },
+        { enabled: merchant.show_ai_orders !== false, prefixes: ['/merchant/ai-orders', '/merchant/vault'] },
+    ];
+    const blockedFeature = featureRouteGuards.find(
+        (g) => !g.enabled && g.prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'))
+    );
+    if (blockedFeature) {
+        redirect('/merchant/dashboard');
     }
 
     // 4. Validate Subscription Active/Expired

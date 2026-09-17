@@ -172,9 +172,12 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise,
                   </div>
                 </div>
                 
-                {/* AI Actions Group */}
+                {/* AI Actions Group — hidden entirely when both AI features are
+                    disabled by a super admin (feature visibility toggles) */}
+                {(merchant?.show_ai_grow !== false || merchant?.show_ai_orders !== false) && (
                 <div className="flex items-center gap-3 sm:gap-4 p-1.5 sm:p-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-xs">
                   {/* AI Orders Button with Dynamic Counter and Redirection */}
+                  {merchant?.show_ai_orders !== false && (
                   <button
                     onClick={() => router.push(pendingAIOrdersCount > 0 ? '/merchant/ai-orders?tab=PENDING' : '/merchant/ai-orders')}
                     className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm active:scale-95"
@@ -187,8 +190,10 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise,
                       </span>
                     )}
                   </button>
+                  )}
                   
                   {/* AI Grow Button (Clean & Green) */}
+                  {merchant?.show_ai_grow !== false && (
                   <button
                     onClick={() => setIsAIGrowModalOpen(true)}
                     className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all shadow-sm"
@@ -196,7 +201,9 @@ export default function DashboardHeader({ merchant, profile, walletBalancePaise,
                     <TrendingUp className="w-4 h-4" />
                     AI Grow
                   </button>
+                  )}
                 </div>
+                )}
               </div>
             </div>
 

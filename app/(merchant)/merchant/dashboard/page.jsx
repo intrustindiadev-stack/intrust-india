@@ -37,7 +37,7 @@ export default async function MerchantDashboardPage() {
 
     const { data: merchantData } = await supabase
         .from('merchants')
-        .select('id, user_id, business_name, status, wallet_balance_paise, total_commission_paid_paise, subscription_status, subscription_expires_at, auto_mode, is_open, auto_mode_status, auto_mode_valid_until')
+        .select('id, user_id, business_name, status, wallet_balance_paise, total_commission_paid_paise, subscription_status, subscription_expires_at, auto_mode, is_open, auto_mode_status, auto_mode_valid_until, show_lockin, show_ai_grow, show_ai_orders')
         .eq('user_id', user.id)
         .single();
 
@@ -306,6 +306,7 @@ export default async function MerchantDashboardPage() {
                 pendingUdhariCount={pendingUdhariCount} 
                 pendingOrdersCount={pendingOrdersCount} 
                 pendingAIOrdersCount={pendingAIOrdersCount}
+                showAiOrders={merchant.show_ai_orders !== false}
             />
 
             {/* Performance Metrics / Stats Cards with Direct Redirection & AI Orders */}
@@ -314,6 +315,7 @@ export default async function MerchantDashboardPage() {
                 aiStats={aiStats} 
                 ecommerceStats={ecommerceStats} 
                 referralStats={referralStats} 
+                showAiOrders={merchant.show_ai_orders !== false}
             />
 
             {/* Recent Transactions */}

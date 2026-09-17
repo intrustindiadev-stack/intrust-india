@@ -19,7 +19,7 @@ import {
     Gift
 } from 'lucide-react';
 
-export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = {}, referralStats = {} }) {
+export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = {}, referralStats = {}, showAiOrders = true }) {
     const totalSales = stats?.totalSales ?? 0;
     const pendingOrders = stats?.pendingOrders ?? 0;
     const activeCoupons = stats?.activeCoupons ?? 0;
@@ -162,7 +162,9 @@ export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = 
                     </motion.div>
                 </Link>
 
-                {/* 3. AI Orders & Vault Card (Highlights pending orders and redirects) */}
+                {/* 3. AI Orders & Vault Card (Highlights pending orders and redirects)
+                    Hidden entirely when AI Orders is disabled by a super admin */}
+                {showAiOrders && (
                 <Link 
                     href={aiPendingCount > 0 ? '/merchant/ai-orders?tab=PENDING' : '/merchant/ai-orders'} 
                     className="block outline-none group"
@@ -225,6 +227,7 @@ export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = 
                         </div>
                     </motion.div>
                 </Link>
+                )}
 
                 {/* 4. Refer & Earn Network Card */}
                 <Link href="/merchant/referrals" className="block outline-none group">

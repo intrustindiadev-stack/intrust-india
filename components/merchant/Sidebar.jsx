@@ -15,10 +15,25 @@ import { useCollapsibleNav } from "@/hooks/useCollapsibleNav";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
-    const { merchant } = useMerchant();
+    const { merchant, isAdmin } = useMerchant();
     const { isSubscribed, requireSubscription } = useSubscription();
 
-    const groups = [
+    // Super-admin feature-visibility gate (columns on merchants).
+    // Admins always see everything. While merchant data is loading the flags
+    // are treated as enabled to avoid nav flicker.
+    const featureVisible = {
+        lockin: isAdmin || merchant?.show_lockin !== false,
+        aiGrow: isAdmin || merchant?.show_ai_grow !== false,
+        aiOrders: isAdmin || merchant?.show_ai_orders !== false,
+    };
+    const hiddenItemsByLabel = {
+        'Lockin Portfolio': !featureVisible.lockin,
+        'AI Grow': !featureVisible.aiGrow,
+        'AI Orders': !featureVisible.aiOrders,
+        'My Vault': !featureVisible.aiOrders, // Vault depends on AI Orders
+    };
+
+    const allGroups = [
         {
             title: "Home",
             items: [
@@ -71,6 +86,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             ]
         }
     ];
+
+    // Drop hidden feature items (and any group left empty by it)
+    const groups = allGroups
+        .map((g) => ({ ...g, items: g.items.filter((i) => !hiddenItemsByLabel[i.label]) }))
+        .filter((g) => g.items.length > 0);
 
     const activeGroupTitle = groups.find(g => g.items.some(item => pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/')))?.title || "Home";
 

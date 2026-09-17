@@ -7,8 +7,9 @@ import {
     Package, Truck, ShoppingBag, Wallet, TrendingUp,
     BarChart3, Settings, Store, X, Zap, ArrowRight, LayoutGrid
 } from 'lucide-react';
+import { useMerchant } from '@/hooks/useMerchant';
 
-const actions = [
+const allActions = [
     { icon: Package,     label: 'Inventory',  sub: 'Stock & listings',   href: '/merchant/inventory',          bg: 'bg-indigo-50 dark:bg-indigo-500/15',   iconColor: 'text-indigo-500',   highlight: true },
     { icon: Truck,       label: 'Orders',     sub: 'Track deliveries',   href: '/merchant/shopping/orders',    bg: 'bg-emerald-50 dark:bg-emerald-500/15', iconColor: 'text-emerald-500',  badge: 'orders' },
     { icon: ShoppingBag, label: 'Coupons',    sub: 'Manage coupons',     href: '/merchant/purchase',           bg: 'bg-amber-50 dark:bg-amber-500/15',     iconColor: 'text-amber-500' },
@@ -18,6 +19,13 @@ const actions = [
     { icon: BarChart3,   label: 'Analytics',  sub: 'Revenue & trends',   href: '/merchant/analytics',          bg: 'bg-cyan-50 dark:bg-cyan-500/15',       iconColor: 'text-cyan-500' },
     { icon: Store,       label: 'My Shop',    sub: 'Storefront view',    href: '/merchant/shopping/inventory', bg: 'bg-orange-50 dark:bg-orange-500/15',   iconColor: 'text-orange-500' },
 ];
+
+// Super-admin feature-visibility flags (columns on public.merchants) mapped to
+// palette actions. Actions not listed here are always visible.
+const featureFlagByLabel = {
+    'AI Grow': 'show_ai_grow',
+    'AI Orders': 'show_ai_orders',
+};
 
 // Container variants — stagger children
 const gridVariants = {
@@ -31,6 +39,16 @@ const itemVariants = {
 
 export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingOrdersCount = 0 }) {
     const [open, setOpen] = useState(false);
+    const { merchant, isAdmin } = useMerchant();
+
+    // Super-admin feature-visibility gate: hide AI Grow / AI Orders actions
+    // when the merchant's corresponding flag is false (admins always see all).
+    const actions = allActions.filter((a) => {
+        const flagCol = featureFlagByLabel[a.label];
+        if (!flagCol) return true;
+        if (isAdmin) return true;
+        return merchant?.[flagCol] !== false;
+    });
 
     // Global ⌘K / Ctrl+K and Escape listeners
     useEffect(() => {

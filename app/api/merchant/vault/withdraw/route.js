@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { getMerchantFeatureVisibility } from '@/lib/merchant/featureVisibility';
 import { sendEmail } from '@/lib/email';
 import { fireAndForgetEmail } from '@/lib/email/dispatch';
 import { aiOrderWithdrawalNotificationTemplate } from '@/lib/email/templates/aiOrderWithdrawalNotification';
@@ -11,6 +12,12 @@ export async function POST(req) {
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Super-admin feature-visibility guard: withdrawals follow AI Orders visibility
+        const visibility = await getMerchantFeatureVisibility(user.id);
+        if (!visibility.showAiOrders) {
+            return NextResponse.json({ error: 'Feature disabled by administrator' }, { status: 403 });
         }
 
         const body = await req.json();

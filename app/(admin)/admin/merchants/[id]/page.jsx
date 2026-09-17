@@ -4,6 +4,7 @@ import { Building2, Phone, Mail, FileText, CheckCircle, XCircle, Clock, MapPin, 
 import Link from 'next/link';
 import MerchantActions from './MerchantActions';
 import MerchantWalletAdjustSection from './MerchantWalletAdjustSection';
+import MerchantFeatureVisibility from '@/components/admin/merchants/MerchantFeatureVisibility';
 import { getDepartmentMeta } from '@/lib/constants/departments';
 
 export const dynamic = 'force-dynamic';
@@ -300,6 +301,12 @@ export default async function AdminMerchantDetailPage({ params }) {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+                {/* Super-admin-only: per-merchant investment feature visibility */}
+                {isSuperAdmin && (
+                    <div className="lg:col-span-3">
+                        <MerchantFeatureVisibility merchantId={merchant.id} />
+                    </div>
+                )}
                 {/* Left Col: Details & Bank */}
                 <div className="space-y-6 sm:space-y-8 lg:col-span-2">
                     <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 border border-slate-200 shadow-sm transition-all hover:shadow-md">

@@ -25,6 +25,12 @@ export default function AIOrderNotificationModal() {
         };
         window.addEventListener('trigger-ai-order-notification', handleTrigger);
 
+        // Super-admin feature-visibility guard: merchants with AI Orders hidden
+        // (merchants.show_ai_orders = false) must not receive AI order popups.
+        if (merchant?.show_ai_orders === false) {
+            return () => window.removeEventListener('trigger-ai-order-notification', handleTrigger);
+        }
+
         if (!merchant) {
             return () => window.removeEventListener('trigger-ai-order-notification', handleTrigger);
         }

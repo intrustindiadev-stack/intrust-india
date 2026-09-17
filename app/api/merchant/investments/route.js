@@ -1,10 +1,18 @@
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+import { getMerchantFeatureVisibility } from '@/lib/merchant/featureVisibility';
+
 // GET /api/merchant/investments — fetch all investments + aggregated order profit + ai grow wallet
 export async function GET(request) {
     try {
         const { user, admin: supabase } = await getAuthUser(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // Super-admin feature-visibility guard: AI Grow can be hidden per merchant
+        const visibility = await getMerchantFeatureVisibility(user.id);
+        if (!visibility.showAiGrow) {
+            return NextResponse.json({ error: 'Feature disabled by administrator' }, { status: 403 });
+        }
 
         const { data: merchant } = await supabase
             .from('merchants')
