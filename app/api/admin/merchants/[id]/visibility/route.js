@@ -8,7 +8,7 @@ const VISIBILITY_COLUMNS = ['show_lockin', 'show_ai_grow', 'show_ai_orders'];
 // GET /api/admin/merchants/[id]/visibility — current feature-visibility flags (super_admin only)
 export async function GET(request, { params }) {
     try {
-        const merchantId = params?.id;
+        const { id: merchantId } = await params;
         const { user, profile, admin } = await getAuthUser(request);
 
         if (!user) {
@@ -38,7 +38,7 @@ export async function GET(request, { params }) {
 // PATCH /api/admin/merchants/[id]/visibility — toggle feature visibility (super_admin only)
 export async function PATCH(request, { params }) {
     try {
-        const merchantId = params?.id;
+        const { id: merchantId } = await params;
         const body = await request.json();
         const { user, profile, admin } = await getAuthUser(request);
 
