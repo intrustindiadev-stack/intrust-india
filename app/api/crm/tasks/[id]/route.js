@@ -11,7 +11,7 @@ export async function PATCH(request, { params }) {
         if (!CRM_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
-        const { id } = params;
+        const { id } = await params;
 
         // Verify task ownership/access
         const { data: existingTask } = await admin
@@ -65,7 +65,7 @@ export async function DELETE(request, { params }) {
         if (!CRM_ROLES.includes(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const isManager = ['relationship_manager', 'admin', 'super_admin'].includes(profile.role);
-        const { id } = params;
+        const { id } = await params;
 
         // Verify task ownership/access
         const { data: existingTask } = await admin
