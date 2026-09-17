@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Warehouse, Package, ShoppingCart, Gift, Wallet, CreditCard, BarChart3, Zap, ArrowRight } from 'lucide-react';
 
-export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount, pendingAIOrdersCount = 0, showAiOrders = true }) {
+export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount, pendingAIOrdersCount = 0, showAiOrders = false }) {
     const allAccessItems = [
         {
             icon: <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400" />,

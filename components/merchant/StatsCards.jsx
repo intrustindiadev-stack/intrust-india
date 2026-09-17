@@ -19,7 +19,7 @@ import {
     Gift
 } from 'lucide-react';
 
-export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = {}, referralStats = {}, showAiOrders = true }) {
+export default function StatsCards({ stats = {}, aiStats = {}, ecommerceStats = {}, referralStats = {}, showAiOrders = false }) {
     const totalSales = stats?.totalSales ?? 0;
     const pendingOrders = stats?.pendingOrders ?? 0;
     const activeCoupons = stats?.activeCoupons ?? 0;

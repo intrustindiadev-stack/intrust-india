@@ -306,7 +306,7 @@ export default async function MerchantDashboardPage() {
                 pendingUdhariCount={pendingUdhariCount} 
                 pendingOrdersCount={pendingOrdersCount} 
                 pendingAIOrdersCount={pendingAIOrdersCount}
-                showAiOrders={merchant.show_ai_orders !== false}
+                showAiOrders={Boolean(merchant.show_ai_orders)}
             />
 
             {/* Performance Metrics / Stats Cards with Direct Redirection & AI Orders */}
@@ -315,7 +315,7 @@ export default async function MerchantDashboardPage() {
                 aiStats={aiStats} 
                 ecommerceStats={ecommerceStats} 
                 referralStats={referralStats} 
-                showAiOrders={merchant.show_ai_orders !== false}
+                showAiOrders={Boolean(merchant.show_ai_orders)}
             />
 
             {/* Recent Transactions */}

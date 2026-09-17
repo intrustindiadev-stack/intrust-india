@@ -42,12 +42,12 @@ export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingO
     const { merchant, isAdmin } = useMerchant();
 
     // Super-admin feature-visibility gate: hide AI Grow / AI Orders actions
-    // when the merchant's corresponding flag is false (admins always see all).
+    // unless enabled by a super admin (admins always see all).
     const actions = allActions.filter((a) => {
         const flagCol = featureFlagByLabel[a.label];
         if (!flagCol) return true;
         if (isAdmin) return true;
-        return merchant?.[flagCol] !== false;
+        return Boolean(merchant?.[flagCol]);
     });
 
     // Global ⌘K / Ctrl+K and Escape listeners

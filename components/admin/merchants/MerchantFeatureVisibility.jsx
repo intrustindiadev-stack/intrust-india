@@ -104,12 +104,11 @@ export default function MerchantFeatureVisibility({ merchantId }) {
             </div>
 
             <p className="text-sm text-slate-500 mb-6 max-w-2xl">
-                Hide or reveal investment features for this merchant. A hidden feature disappears from their
-                sidebar, and any direct URL access is redirected to their dashboard. Vault follows AI Orders.
+                Enable or hide investment features for this merchant. Features are hidden by default for all merchants until explicitly enabled by a super admin. A hidden feature disappears from their sidebar, and direct URL access redirects to their dashboard.
             </p>
             <div className="space-y-4">
                 {FEATURES.map(({ key, label, description, icon: Icon }) => {
-                    const enabled = visibility[key] !== false;
+                    const enabled = Boolean(visibility[key]);
                     const isPending = pendingKey === key;
 
                     return (

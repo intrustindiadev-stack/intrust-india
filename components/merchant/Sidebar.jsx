@@ -19,12 +19,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     const { isSubscribed, requireSubscription } = useSubscription();
 
     // Super-admin feature-visibility gate (columns on merchants).
-    // Admins always see everything. While merchant data is loading the flags
-    // are treated as enabled to avoid nav flicker.
+    // Admins always see everything. Features default to hidden (false) for merchants
+    // until explicitly enabled by a super admin.
     const featureVisible = {
-        lockin: isAdmin || merchant?.show_lockin !== false,
-        aiGrow: isAdmin || merchant?.show_ai_grow !== false,
-        aiOrders: isAdmin || merchant?.show_ai_orders !== false,
+        lockin: isAdmin || Boolean(merchant?.show_lockin),
+        aiGrow: isAdmin || Boolean(merchant?.show_ai_grow),
+        aiOrders: isAdmin || Boolean(merchant?.show_ai_orders),
     };
     const hiddenItemsByLabel = {
         'Lockin Portfolio': !featureVisible.lockin,
