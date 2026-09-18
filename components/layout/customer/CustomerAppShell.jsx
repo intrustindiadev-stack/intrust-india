@@ -139,10 +139,15 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
         try {
             setIsSigningOut(true);
             await signOut();
-            window.location.href = '/login';
+            // Navigate, then purge the Next.js client-side Router Cache so cached
+            // Server Component payloads rendered under the old session are dropped
+            // instantly — no stale "logged in" UI, no manual browser refresh needed.
+            router.push('/login');
+            router.refresh();
         } catch (e) {
             console.error('Sign out error:', e);
-            window.location.href = '/login';
+            router.push('/login');
+            router.refresh();
         } finally {
             setIsSigningOut(false);
             setShowLogoutModal(false);

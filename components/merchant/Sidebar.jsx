@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useMerchant } from "@/hooks/useMerchant";
-import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useState } from 'react';
 import KycStatusCard from "./KycStatusCard";
@@ -15,6 +16,8 @@ import { useCollapsibleNav } from "@/hooks/useCollapsibleNav";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const { signOut } = useAuth();
     const { merchant, isAdmin } = useMerchant();
     const { isSubscribed, requireSubscription } = useSubscription();
 
@@ -111,11 +114,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         setShowLogoutModal(false);
         setIsLoggingOut(true);
         try {
-            await supabase.auth.signOut();
-            window.location.href = "/login";
+            // Use the AuthContext signOut — it clears the client session AND
+            // POSTs /auth/logout to purge the server-side HttpOnly cookie jar.
+            await signOut();
+            // Navigate, then purge the Next.js client-side Router Cache so cached
+            // Server Component payloads rendered under the old session are dropped
+            // instantly — no stale "logged in" UI, no manual browser refresh needed.
+            router.push('/login');
+            router.refresh();
         } catch (error) {
             console.error('Logout error:', error);
-            window.location.href = "/login";
+            router.push('/login');
+            router.refresh();
         } finally {
             setIsLoggingOut(false);
         }

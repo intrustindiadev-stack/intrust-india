@@ -97,32 +97,71 @@ export async function middleware(request) {
         return response;
     }
 
-    // ─── Read session from cookie (NO network call, instant) ─────────────────
-    // getSession() reads the JWT stored in the HTTP-only cookie by Supabase SSR.
-    // This is instant and never causes false-logouts due to Supabase/network timeouts.
+    // ─── Session validation + token refresh ───────────────────────────────────
+    // PRIMARY (protected routes): getUser() makes a live server-side check with
+    // Supabase. This both validates the access token AND — critically — refreshes
+    // it when expired: the SSR client rotates the sb-* cookies via setAll(),
+    // which we persist onto the response below. Fix: previously getSession()
+    // only decoded the (possibly stale) cookie and never refreshed, so users
+    // with an expired access token were wrongly bounced to /login.
     //
-    // getUser() (old approach) makes a live HTTPS request to Supabase on EVERY page
-    // load — a timeout causes middleware to see user=null and wrongly redirect to /login.
+    // FALLBACK (public routes / transient network failure): getSession() decodes
+    // the cookie locally with zero network cost. On getUser() failure we fail
+    // OPEN (pass through) so a transient Supabase timeout never causes a false
+    // logout — the layout-level getUser() still re-verifies after render.
     //
-    // The layout-level getUser() still handles full server-side token verification
-    // after the page renders.
-    let session = null;
+    // Backend is loopback HTTP (see lib/supabaseServer.js), so the live call on
+    // protected routes adds negligible latency vs. the correctness win.
+    let user = null;
     let userRole = null;
     let isSuspended = false;
+    let authRejected = false;
 
     try {
-        const { data } = await supabase.auth.getSession()
-        session = data?.session ?? null
-        userRole = session?.user?.user_metadata?.role ?? null
-        isSuspended = session?.user?.user_metadata?.is_suspended ?? false
+        const isProtectedPath = PROTECTED_PREFIXES.some(prefix =>
+            pathname === prefix || pathname.startsWith(prefix + '/')
+        );
+
+        if (isProtectedPath) {
+            // Server-validated + auto-refreshed (refreshed cookies flow into `response` via setAll)
+            const { data, error } = await supabase.auth.getUser();
+            if (!error && data?.user) {
+                user = data.user;
+            } else if (error) {
+                // The server REJECTED the session (invalid/expired token, network
+                // failure). Remember this — we must NOT resurrect a session from
+                // the cookie below, otherwise a stale token gates access or a
+                // transient failure false-logs the user out on refresh.
+                console.warn('[MIDDLEWARE] getUser error:', error?.message)
+                authRejected = true;
+            }
+        }
+
+        // Fallback / public-route decode: cheap cookie read, no network call.
+        // ONLY trusted when getUser() did NOT reject the session — i.e. for
+        // public routes (no live check was made) or when the user simply has
+        // no cookies at all. On rejection we fail OPEN (return below) and let
+        // the layout-level getUser() make the authoritative decision.
+        if (!user) {
+            if (authRejected) {
+                // Fail open: pass through; the layout will re-verify and, if the
+                // session is genuinely invalid, redirect to /login itself.
+                return response
+            }
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+            if (!sessionError) {
+                user = sessionData?.session?.user ?? null
+            }
+        }
+
+        userRole = user?.user_metadata?.role ?? null
+        isSuspended = user?.user_metadata?.is_suspended ?? false
     } catch (err) {
-        // Cookie reading should never fail, but if it does — do NOT redirect.
+        // Cookie reading / decoding should never fail, but if it does — do NOT redirect.
         // Fail safe: let the request through; the layout will re-verify.
-        console.warn('[MIDDLEWARE] getSession error, passing through:', err?.message)
+        console.warn('[MIDDLEWARE] session error, passing through:', err?.message)
         return response
     }
-
-    const user = session?.user ?? null
 
     // ─── CSRF Protection ───────────────────────────────────────────────────────
     const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
@@ -253,7 +292,14 @@ export async function middleware(request) {
                     const url = request.nextUrl.clone()
                     url.pathname = portalForRole(userRole)
                     url.search = ''
-                    return NextResponse.redirect(url)
+                    const redirectResponse = NextResponse.redirect(url)
+                    // Propagate refreshed auth cookies to the redirect response too —
+                    // otherwise a token refresh triggered by getUser() above is lost
+                    // when the user is being routed to their correct portal.
+                    response.cookies.getAll().forEach(cookie => {
+                        redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+                    })
+                    return redirectResponse
                 }
                 break;
             }

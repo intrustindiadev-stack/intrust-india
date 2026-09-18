@@ -1,8 +1,30 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { FastProgressLoader } from '@/components/ui/InTrustProgressLoader';
+
+// Routes that require an authenticated session. Used to decide whether a
+// SIGNED_OUT event (e.g. fired in Tab B after Tab A logs out) should force a
+// redirect to /login or just purge the client-side Router Cache in place.
+const PROTECTED_PREFIXES = [
+    '/dashboard',
+    '/orders',
+    '/profile',
+    '/wallet',
+    '/transactions',
+    '/wishlist',
+    '/refer',
+    '/rewards',
+    '/my-giftcards',
+    '/store-credits',
+    '/merchant',
+    '/admin',
+    '/crm',
+    '/employee',
+    '/hrm',
+];
 
 const AuthContext = createContext({});
 
@@ -15,6 +37,17 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }) {
+    const router = useRouter();
+    const pathname = usePathname();
+    // The auth listener effect mounts once ([]), so `pathname` in its closure
+    // would go stale. Keep a live ref so SIGNED_OUT always evaluates the
+    // CURRENT route when deciding whether to redirect.
+    const pathnameRef = useRef(pathname);
+
+    useEffect(() => {
+        pathnameRef.current = pathname;
+    }, [pathname]);
+
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -162,6 +195,26 @@ export function AuthProvider({ children }) {
                     profileCache = null;
                     setShowAuthLoader(false);
                     setLoading(false);
+
+                    // ── Cross-tab session sync ──
+                    // When sign-out happens in Tab A, Supabase broadcasts SIGNED_OUT
+                    // to every open tab. Tab B must (a) purge the Next.js client-side
+                    // Router Cache so cached Server Component payloads rendered under
+                    // the old session are discarded, and (b) kick the user to /login
+                    // if they are currently sitting on a protected route.
+                    if (event === 'SIGNED_OUT') {
+                        const currentPath = pathnameRef.current || '';
+                        const isProtectedRoute = PROTECTED_PREFIXES.some(prefix =>
+                            currentPath === prefix || currentPath.startsWith(prefix + '/')
+                        );
+                        if (isProtectedRoute && currentPath !== '/login') {
+                            router.push('/login');
+                        }
+                        // CRITICAL: purges the Next.js client-side Router Cache.
+                        // Without this, cached RSC payloads keep the UI looking
+                        // "logged in" even after the cookies are cleared.
+                        router.refresh();
+                    }
                 }
             }
         );
@@ -171,7 +224,7 @@ export function AuthProvider({ children }) {
             mounted = false;
             subscription?.unsubscribe();
         };
-    }, []);
+    }, [router]);
 
     // 3. Proactive daily login reward trigger
     useEffect(() => {
