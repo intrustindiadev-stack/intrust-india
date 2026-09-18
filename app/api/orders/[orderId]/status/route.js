@@ -31,7 +31,7 @@ export async function PATCH(request, { params }) {
         }
 
         // 2. Fetch the customer ID to send the WhatsApp message
-        if (['shipped', 'out_for_delivery', 'delivered'].includes(newStatus)) {
+        if (['confirmed', 'shipped', 'out_for_delivery', 'delivered'].includes(newStatus)) {
             const adminClient = createAdminClient();
             const { data: order } = await adminClient
                 .from('shopping_order_groups')
@@ -49,11 +49,12 @@ export async function PATCH(request, { params }) {
                 .single();
             
             if (order?.customer_id) {
+                const formattedStatus = newStatus ? (newStatus.charAt(0).toUpperCase() + newStatus.slice(1)).replace(/_/g, ' ') : newStatus;
                 // Fire and forget WhatsApp notification
                 notifyCustomerOrderStatus({ 
                     userId: order.customer_id, 
                     orderId: orderId.substring(0, 8).toUpperCase(), 
-                    newStatus: newStatus 
+                    newStatus: formattedStatus 
                 }).catch(e => console.error('[Order Status API] Customer WhatsApp failed:', e));
 
                 // Fire and forget email notification to customer

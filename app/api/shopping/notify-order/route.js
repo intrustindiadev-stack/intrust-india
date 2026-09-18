@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { notifyCustomerOrderStatus } from '@/lib/notifications/userWhatsapp';
 import { notifyMerchantNewOrder } from '@/lib/notifications/merchantWhatsapp';
 import { fireAndForgetEmail } from '@/lib/email/dispatch';
 import { sendCustomerOrderEmail, sendAdminAlert, sendMerchantAlert } from '@/lib/email';
@@ -79,6 +80,19 @@ export async function POST(request) {
 
         if (notifyError) {
             console.error('[Notify Order] Failed to insert notification:', notifyError.message);
+        }
+
+        // Fire-and-forget Customer WhatsApp confirmation (Best-effort)
+        try {
+            notifyCustomerOrderStatus({
+                userId: customerId,
+                orderId: group_id.slice(0, 8).toUpperCase(),
+                newStatus: 'Confirmed'
+            }).catch(e => {
+                console.error('[Notify Order] Customer WhatsApp dispatch failed:', e?.message || e);
+            });
+        } catch (e) {
+            console.error('[Notify Order] Customer WhatsApp dispatch failed:', e?.message || e);
         }
 
         // Notify all admins of the new order

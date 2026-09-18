@@ -52,16 +52,38 @@ export default function AdminStoreStatusPage() {
     };
 
     const handleToggle = async (merchantId, newIsOpen) => {
-        const { error } = await supabase
-            .from('merchants')
-            .update({ is_open: newIsOpen })
-            .eq('id', merchantId);
+        const previous = merchants.find(m => m.id === merchantId)?.is_open;
+        // Optimistic update; rolled back below on any failure.
+        setMerchants(prev => prev.map(m => m.id === merchantId ? { ...m, is_open: newIsOpen } : m));
 
-        if (!error) {
-            setMerchants(prev => prev.map(m => m.id === merchantId ? { ...m, is_open: newIsOpen } : m));
-            toast.success('Store status updated');
-        } else {
-            toast.error('Failed to update status');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                throw new Error('Session expired. Please log in again.');
+            }
+
+            const res = await fetch(`/api/admin/merchants/${merchantId}/store-status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ is_open: newIsOpen }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to update store status');
+            }
+
+            // Trust the server's returned value, not the optimistic one.
+            setMerchants(prev => prev.map(m => m.id === merchantId ? { ...m, is_open: data.merchant?.is_open ?? newIsOpen } : m));
+            toast.success(`Store is now ${newIsOpen ? 'OPEN' : 'CLOSED'}`);
+        } catch (err) {
+            console.error('[StoreStatus] toggle failed:', err);
+            // Roll back the optimistic flip so the UI reflects reality.
+            setMerchants(prev => prev.map(m => m.id === merchantId ? { ...m, is_open: previous } : m));
+            toast.error(err.message || 'Failed to update store status');
         }
     };
 
