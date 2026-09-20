@@ -103,6 +103,11 @@ export async function middleware(request) {
                 return NextResponse.next();
             }
 
+            // Allow maintenance subscription and notification APIs to process requests
+            if (pathname.startsWith('/api/maintenance/')) {
+                return NextResponse.next();
+            }
+
             // API routes: return hard 503 JSON to prevent frontend fetch crashes
             if (pathname.startsWith('/api/')) {
                 return NextResponse.json(

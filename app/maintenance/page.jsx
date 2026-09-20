@@ -10,11 +10,18 @@ import {
   Mail, 
   CheckCircle2, 
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  Bell,
+  Send,
+  MessageSquare
 } from 'lucide-react';
 
 export default function MaintenancePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [notifyType, setNotifyType] = useState('whatsapp');
+  const [contactValue, setContactValue] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subscribeStatus, setSubscribeStatus] = useState(null);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -23,9 +30,40 @@ export default function MaintenancePage() {
     }, 400);
   };
 
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!contactValue.trim()) return;
+
+    setIsSubmitting(true);
+    setSubscribeStatus(null);
+
+    try {
+      const res = await fetch('/api/maintenance/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactType: notifyType,
+          contactValue: contactValue.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSubscribeStatus({ success: true, message: data.message });
+        setContactValue('');
+      } else {
+        setSubscribeStatus({ success: false, message: data.error || 'Failed to submit. Please try again.' });
+      }
+    } catch (err) {
+      setSubscribeStatus({ success: false, message: 'Network error. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen min-h-[100dvh] bg-[#070b14] text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-blue-300 relative overflow-x-hidden font-sans">
-      {/* Background ambient lighting effects (sized safely for mobile) */}
+      {/* Background ambient lighting effects */}
       <div 
         aria-hidden="true" 
         className="pointer-events-none absolute -top-32 sm:-top-40 left-1/2 -translate-x-1/2 w-[340px] sm:w-[720px] h-[360px] sm:h-[520px] bg-gradient-to-b from-blue-600/20 via-indigo-600/10 to-transparent blur-2xl sm:blur-3xl opacity-70"
@@ -101,7 +139,7 @@ export default function MaintenancePage() {
           </p>
 
           {/* Professional 12-24 Hours Window Callout */}
-          <div className="max-w-xl mx-auto mb-6 sm:mb-10 p-3.5 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-950/70 via-slate-900/90 to-blue-950/70 border border-blue-500/30 backdrop-blur-md flex items-center gap-3 sm:gap-4 text-left shadow-xl shadow-blue-950/40">
+          <div className="max-w-xl mx-auto mb-6 sm:mb-8 p-3.5 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-950/70 via-slate-900/90 to-blue-950/70 border border-blue-500/30 backdrop-blur-md flex items-center gap-3 sm:gap-4 text-left shadow-xl shadow-blue-950/40">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
               <Clock className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
@@ -113,6 +151,114 @@ export default function MaintenancePage() {
                 Our services are expected to be back online within <span className="text-amber-300 font-bold underline decoration-amber-400/40 decoration-2 underline-offset-2">12 to 24 hours</span>.
               </p>
             </div>
+          </div>
+
+          {/* Visitor "Notify Me" Box */}
+          <div className="max-w-xl mx-auto mb-8 p-4 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-md text-left">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <Bell className="w-4 h-4" />
+              </div>
+              <h2 className="text-sm sm:text-base font-bold text-white">
+                Get Notified When We're Back Online
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Drop your WhatsApp number or email below to receive an instant alert the moment InTrust India is back live.
+            </p>
+
+            {subscribeStatus ? (
+              <div className={`p-3.5 rounded-xl text-xs sm:text-sm flex items-start gap-2.5 ${subscribeStatus.success ? 'bg-emerald-950/50 border border-emerald-500/30 text-emerald-300' : 'bg-rose-950/50 border border-rose-500/30 text-rose-300'}`}>
+                {subscribeStatus.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />}
+                <div className="flex-1">
+                  <span>{subscribeStatus.message}</span>
+                  {subscribeStatus.success && (
+                    <button
+                      type="button"
+                      onClick={() => setSubscribeStatus(null)}
+                      className="block text-[11px] text-emerald-400 underline mt-1 cursor-pointer"
+                    >
+                      Subscribe another contact
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="space-y-3">
+                {/* Toggle Channels */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setNotifyType('whatsapp'); setContactValue(''); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${notifyType === 'whatsapp' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-800/80 text-slate-400 hover:text-white'}`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setNotifyType('email'); setContactValue(''); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${notifyType === 'email' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-800/80 text-slate-400 hover:text-white'}`}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Email</span>
+                  </button>
+                </div>
+
+                {/* Input with inline submit */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    {notifyType === 'whatsapp' ? (
+                      <div className="flex items-center rounded-xl bg-slate-950/80 border border-slate-700/80 focus-within:border-emerald-500 overflow-hidden transition-colors">
+                        <span className="px-3 text-xs font-bold text-slate-400 select-none border-r border-slate-800">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          value={contactValue}
+                          onChange={(e) => setContactValue(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="10-digit mobile number"
+                          className="w-full bg-transparent px-3 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center rounded-xl bg-slate-950/80 border border-slate-700/80 focus-within:border-blue-500 overflow-hidden transition-colors">
+                        <span className="px-3 text-slate-500">
+                          <Mail className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="email"
+                          value={contactValue}
+                          onChange={(e) => setContactValue(e.target.value)}
+                          placeholder="name@example.com"
+                          className="w-full bg-transparent pr-3 py-2.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !contactValue.trim()}
+                    className={`px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${notifyType === 'whatsapp' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500'}`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Notify Me</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           {/* Assurance Pillars */}
