@@ -49,9 +49,82 @@ const PORTAL_ROLE_MAP = {
 }
 
 export async function middleware(request) {
+    const pathname = request.nextUrl.pathname;
+
+    // ─── Maintenance Mode & Admin Bypass ─────────────────────────────────────────
+    const isMaintenanceMode = process.env.MAINTENANCE_MODE === 'true';
+    const bypassKey = process.env.MAINTENANCE_BYPASS_KEY;
+    const bypassCookie = request.cookies.get('intrust_maintenance_bypass')?.value;
+    const bypassParam = request.nextUrl.searchParams.get('bypass');
+    const isBypassParamValid = Boolean(bypassKey && bypassParam === bypassKey);
+    const hasValidBypassCookie = bypassCookie === 'true';
+
+    // 1. Admin Bypass via Query Parameter (?bypass=[MAINTENANCE_BYPASS_KEY])
+    if (isBypassParamValid) {
+        if (pathname.startsWith('/api/')) {
+            const apiResponse = NextResponse.next();
+            apiResponse.cookies.set('intrust_maintenance_bypass', 'true', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 7, // 7 days
+            });
+            return apiResponse;
+        }
+
+        // For page routes, redirect to clean URL without ?bypass= query param
+        const cleanUrl = request.nextUrl.clone();
+        cleanUrl.searchParams.delete('bypass');
+        const redirectResponse = NextResponse.redirect(cleanUrl);
+        redirectResponse.cookies.set('intrust_maintenance_bypass', 'true', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+        return redirectResponse;
+    }
+
+    // 2. Maintenance Mode Interceptor
+    if (isMaintenanceMode) {
+        // Top check: If valid bypass cookie is present, completely skip maintenance
+        if (hasValidBypassCookie) {
+            if (pathname.startsWith('/api/')) {
+                return NextResponse.next();
+            }
+            // Fall through to normal site logic below...
+        } else {
+            // Unbypassed traffic during active maintenance:
+
+            // Allow /maintenance page to render directly without rewrite loop
+            if (pathname === '/maintenance') {
+                return NextResponse.next();
+            }
+
+            // API routes: return hard 503 JSON to prevent frontend fetch crashes
+            if (pathname.startsWith('/api/')) {
+                return NextResponse.json(
+                    { error: 'Service temporarily unavailable due to maintenance.' },
+                    { status: 503, headers: { 'Retry-After': '3600' } }
+                );
+            }
+
+            // Page routes: rewrite to /maintenance without changing the user's URL
+            const maintenanceUrl = new URL('/maintenance', request.url);
+            return NextResponse.rewrite(maintenanceUrl);
+        }
+    }
+
+    // When maintenance is inactive (or bypassed), pass API routes through immediately
+    if (pathname.startsWith('/api/')) {
+        return NextResponse.next();
+    }
+
     const requestHeaders = new Headers(request.headers);
     // Expose pathname to server components via custom header
-    requestHeaders.set('x-current-path', request.nextUrl.pathname);
+    requestHeaders.set('x-current-path', pathname);
 
     let response = NextResponse.next({
         request: { headers: requestHeaders },
@@ -83,8 +156,6 @@ export async function middleware(request) {
             },
         }
     )
-
-    const pathname = request.nextUrl.pathname
 
     const isWebhook = pathname.startsWith('/api/sabpaisa/') || pathname.startsWith('/api/webhooks/') || pathname.startsWith('/api/whatsapp/webhook');
 
@@ -312,13 +383,13 @@ export async function middleware(request) {
 export const config = {
     matcher: [
         /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes — auth handled inside the route handler)
+         * Match all request paths except for:
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico
+         * - images (static assets folder)
          * - Common static asset extensions
          */
-        '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|images|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)',
     ],
 }

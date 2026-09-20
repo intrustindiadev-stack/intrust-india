@@ -35,7 +35,7 @@ REMOTE_UPLOAD  = f"/var/www/intrustindia.com/{TAR_NAME}"
 REMOTE_APP_DIR = "/var/www/intrustindia.com/app"
 
 # What to include in the deployment package
-INCLUDE_PATHS  = [".next", "public", "lib", "middleware.js", "package.json", "package-lock.json", "next.config.mjs"]
+INCLUDE_PATHS  = [".next", "public", "lib", "app", "components", "middleware.js", "package.json", "package-lock.json", "next.config.mjs"]
 # NOTE: .next/cache is intentionally NOT excluded.
 # Keeping the image optimisation cache means Next.js does NOT re-fetch and
 # re-encode every source image after each deploy (was the main egress amplifier).
