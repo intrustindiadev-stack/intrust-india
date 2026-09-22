@@ -93,21 +93,25 @@ export async function POST(req) {
             return NextResponse.json({ success: false, error: 'Merchant profile not found or unauthorized' }, { status: 400 });
         }
 
-        // 4. Resolve Products Information
-        let cleanProducts = [];
+        // 4. Resolve Products Information — product_ids are merchant_inventory.id values
+        let validProductIds = [];
         if (Array.isArray(productIds) && productIds.length > 0) {
-            const { data: prods } = await adminClient
-                .from('shopping_products')
-                .select('id, title, slug, product_images, suggested_retail_price_paise, selling_price_paise')
+            // Verify these IDs exist in merchant_inventory for this merchant
+            const { data: invProds } = await adminClient
+                .from('merchant_inventory')
+                .select('id')
                 .in('id', productIds);
 
-            cleanProducts = (prods || []).map(p => ({
-                id: p.id,
-                product_name: p.title,
-                price: Math.round((p.selling_price_paise || p.suggested_retail_price_paise || 24900) / 100),
-                image_url: (Array.isArray(p.product_images) && p.product_images[0]) || '/icons/intrustLogo.png',
-                slug: p.slug
-            }));
+            if (invProds && invProds.length > 0) {
+                validProductIds = invProds.map(p => p.id);
+            } else {
+                // Fallback: try shopping_products if IDs don't match merchant_inventory
+                const { data: shopProds } = await adminClient
+                    .from('shopping_products')
+                    .select('id')
+                    .in('id', productIds);
+                validProductIds = (shopProds || []).map(p => p.id);
+            }
         }
 
         let newBalancePaise = 0;
@@ -176,18 +180,16 @@ export async function POST(req) {
             }
         }
 
-        // 6. Insert Sponsorship Record
+        // 6. Insert Sponsorship Record using correct column names matching DB schema
         const { data: bookingRecord, error: bookErr } = await adminClient
             .from('daily_challenge_sponsorships')
             .insert({
                 merchant_id: merchantRow.id,
                 sponsor_date: sponsorDate,
-                products: cleanProducts,
+                product_ids: validProductIds,
                 campaign_message: campaignMessage || '',
-                fee_paid_paise: baseFeePaise,
-                payment_method: paymentMethod,
-                payment_status: 'completed',
-                status: 'confirmed'
+                fee_paise: baseFeePaise,
+                status: 'booked'
             })
             .select('id')
             .single();

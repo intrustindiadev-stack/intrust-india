@@ -865,7 +865,9 @@ export default function DailyChallengeClient({
             isTimeOut: true,
             correctText,
             selectedText: 'Time Ran Out',
-            explanation
+            explanation,
+            pointsEarned: 0,
+            totalPoints: score * 10
         });
 
         setTimeout(() => {
@@ -892,12 +894,17 @@ export default function DailyChallengeClient({
         const selectedText = currentQ?.options?.[index] || '';
         const explanation = currentQ?.explanation || '';
 
+        const pointsEarned = isCorrect ? 10 : 0;
+        const nextTotalScore = score + (isCorrect ? 1 : 0);
+
         setAnswerFeedback({
             isCorrect,
             isTimeOut: false,
             correctText,
             selectedText,
-            explanation
+            explanation,
+            pointsEarned,
+            totalPoints: nextTotalScore * 10
         });
 
         if (isCorrect) {
@@ -949,6 +956,21 @@ export default function DailyChallengeClient({
                         detail: { balance_paise: data.new_balance_paise }
                     }));
                 }
+
+                // Dispatch marketingStreakUpdated so sidebar StreakRibbon and parent pages update live
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('marketingStreakUpdated', {
+                        detail: {
+                            current_streak: data.current_streak,
+                            highest_streak: data.highest_streak,
+                            played_today: true,
+                            freezes_left: data.freeze_used ? Math.max(0, streakData.freezesLeft - 1) : streakData.freezesLeft
+                        }
+                    }));
+                }
+            } else if (data && !data.success) {
+                // RPC returned a business logic failure (e.g. already played, KYC required)
+                alert(data.message || 'Could not submit quiz. Please try again.');
             }
         } catch (e) {
             console.error('Error recording quiz play:', e);
@@ -964,6 +986,7 @@ export default function DailyChallengeClient({
             }
         }
     };
+
 
     // Sponsorship Calendar Generation (next 14 days)
     const calendarDays = useMemo(() => {
@@ -1345,7 +1368,14 @@ export default function DailyChallengeClient({
                                     {/* Left: Back / Exit Button */}
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => setQuizStage('select_category')}
+                                            onClick={() => {
+                                                // If already played today, go to already_completed instead of select_category
+                                                if (streakData.playedToday) {
+                                                    setQuizStage('already_completed');
+                                                } else {
+                                                    setQuizStage('select_category');
+                                                }
+                                            }}
                                             className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                                             title="Exit Quiz"
                                         >
@@ -1575,6 +1605,23 @@ export default function DailyChallengeClient({
                                                 }`}>
                                                     {answerFeedback.isCorrect ? 'CORRECT! 🎉' : 'INCORRECT! ❌'}
                                                 </h4>
+                                            </div>
+
+                                            {/* Dynamic Points Pill / Score Badge */}
+                                            <div className="flex items-center justify-center gap-2 w-full">
+                                                <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-black shadow-xs ${
+                                                    answerFeedback.isCorrect
+                                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700 animate-pulse'
+                                                        : 'bg-slate-100 border-slate-200 text-slate-500'
+                                                }`}>
+                                                    <Star size={14} className={answerFeedback.isCorrect ? 'fill-emerald-500 text-emerald-600' : 'text-slate-400'} />
+                                                    <span>{answerFeedback.isCorrect ? '+10 PTS EARNED' : '+0 PTS'}</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold">
+                                                    <span className="text-[10px] uppercase text-slate-400 font-extrabold">Total:</span>
+                                                    <span className="font-black text-slate-900">{answerFeedback.totalPoints ?? (score * 10)} pts</span>
+                                                </div>
                                             </div>
 
                                             {/* Correct Answer Display */}
