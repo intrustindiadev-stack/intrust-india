@@ -129,8 +129,12 @@ export async function GET(request) {
             let txType = (tx.amount_paise || 0) < 0 ? 'DEBIT' : 'CREDIT';
             if (tx.transaction_type === 'payout') {
                 txType = 'SETTLEMENT';
+            } else if (tx.transaction_type === 'sponsorship') {
+                txType = 'DEBIT';
             }
-            const desc = tx.description || tx.transaction_type || 'Transaction';
+            const desc = tx.transaction_type === 'sponsorship'
+                ? (tx.description || 'Daily Challenge Prime Placement Sponsorship')
+                : (tx.description || tx.transaction_type || 'Transaction');
             const amountVal = Math.abs(tx.amount_paise || 0) / 100;
             const key = tx.created_at; // PG transaction time is identical for items in same cart
 

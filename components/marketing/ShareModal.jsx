@@ -1,67 +1,132 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    X, 
-    Copy, 
-    Check, 
-    Share2, 
-    MessageCircle, 
-    Instagram, 
-    Facebook, 
-    Sparkles,
-    Gift,
-    ExternalLink
+    X, Copy, Check, MessageCircle, Send, Facebook, Linkedin,
+    Gift, ExternalLink, Share2, Sparkles
 } from 'lucide-react';
 import SuccessAnimationModal from './animations/SuccessAnimationModal';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function ShareModal({ 
-    isOpen, 
-    onClose, 
-    product, 
+// ─── Platform share helpers (each opens a new tab with the right URL) ────────
+
+function buildWhatsAppUrl(text) {
+    return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function buildTelegramUrl(url, text) {
+    return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+}
+
+function buildTwitterUrl(url, text) {
+    return `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+}
+
+function buildFacebookUrl(url) {
+    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+}
+
+function buildLinkedInUrl(url) {
+    return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+}
+
+// ─── Try to share with product image file via Web Share API ──────────────────
+async function fetchImageFile(imageUrl, productId) {
+    if (!imageUrl) return null;
+    try {
+        const res = await fetch(imageUrl);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        const mimeType = blob.type || 'image/jpeg';
+        const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+        return new File([blob], `intrust-deal-${productId || 'offer'}.${ext}`, { type: mimeType });
+    } catch {
+        return null;
+    }
+}
+
+async function nativeShare(imgFile, title, text, url) {
+    if (typeof navigator === 'undefined' || !navigator.share) return false;
+    try {
+        const payload = { title, text, url };
+        if (imgFile && navigator.canShare?.({ files: [imgFile] })) {
+            payload.files = [imgFile];
+        }
+        await navigator.share(payload);
+        return true;
+    } catch (err) {
+        if (err.name === 'AbortError') return true; // User cancelled — treat as shared
+        return false;
+    }
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function ShareModal({
+    isOpen,
+    onClose,
+    product,
     user,
     merchant,
     rewardsConfig
 }) {
-    const [copied, setCopied] = useState(false);
-    const [shortCode, setShortCode] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [copied, setCopied]               = useState(false);
+    const [shortCode, setShortCode]         = useState('');
+    const [loading, setLoading]             = useState(false);
+    const [sharing, setSharing]             = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [imgFile, setImgFile]             = useState(null);
+    const [imgPreviewOk, setImgPreviewOk]   = useState(true);
 
-    const registrationBonus = (rewardsConfig?.campaign_share_bonus_paise || rewardsConfig?.referral_registration_bonus_paise || 5000) / 100;
-    const orderCashback = ((product?.promo_cashback_paise || product?.referral_cashback_paise || rewardsConfig?.product_promo_default_cashback_paise || rewardsConfig?.referral_order_default_cashback_paise || 10000) / 100);
+    const registrationBonus = Math.round(
+        (rewardsConfig?.campaign_share_bonus_paise
+        || rewardsConfig?.referral_registration_bonus_paise
+        || 5000) / 100
+    );
+    const orderCashback = Math.round(
+        (product?.promo_cashback_paise
+        || product?.referral_cashback_paise
+        || rewardsConfig?.product_promo_default_cashback_paise
+        || rewardsConfig?.referral_order_default_cashback_paise
+        || 10000) / 100
+    );
 
-    // Generate/fetch code on open
+    // ── Generate / fetch share code on open ──────────────────────────────────
     useEffect(() => {
         if (!isOpen || !product?.id || !user?.id) return;
+        let cancelled = false;
 
         const initLink = async () => {
             setLoading(true);
             try {
-                // Check if existing link exists for user + product
-                const { data: existing } = await supabase
+                const isValidUUID = (s) =>
+                    typeof s === 'string' &&
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+                const safeProductId = isValidUUID(product.id) ? product.id : null;
+
+                let query = supabase
                     .from('marketing_share_links')
                     .select('code')
-                    .eq('user_id', user.id)
-                    .eq('product_id', product.id)
-                    .maybeSingle();
+                    .eq('user_id', user.id);
+                query = safeProductId
+                    ? query.eq('product_id', safeProductId)
+                    : query.is('product_id', null);
+
+                const { data: existing } = await query.maybeSingle();
+                if (cancelled) return;
 
                 if (existing?.code) {
                     setShortCode(existing.code);
                 } else {
-                    // Generate a 7-character clean alphanumeric code
                     const generatedCode = Math.random().toString(36).substring(2, 9).toUpperCase();
-                    const isMerchant = !!merchant?.id;
-
                     const { data: created, error } = await supabase
                         .from('marketing_share_links')
                         .insert({
                             user_id: user.id,
-                            user_type: isMerchant ? 'merchant' : 'customer',
-                            merchant_id: isMerchant ? merchant.id : null,
-                            product_id: product.id,
+                            user_type: merchant?.id ? 'merchant' : 'customer',
+                            merchant_id: merchant?.id || null,
+                            product_id: safeProductId,
                             product_type: product.is_merchant_inventory ? 'merchant' : 'platform',
                             code: generatedCode,
                             source: 'direct',
@@ -69,216 +134,245 @@ export default function ShareModal({
                         })
                         .select('code')
                         .single();
-
-                    if (!error && created) {
-                        setShortCode(created.code);
-                    } else {
-                        setShortCode(generatedCode);
-                    }
+                    if (!cancelled) setShortCode(!error && created ? created.code : generatedCode);
                 }
-            } catch (err) {
-                console.error('Error generating share link:', err);
-                setShortCode('REF' + Math.floor(1000 + Math.random() * 9000));
+            } catch {
+                if (!cancelled) setShortCode('REF' + Math.floor(1000 + Math.random() * 9000));
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         initLink();
+        return () => { cancelled = true; };
     }, [isOpen, product?.id, user?.id, merchant?.id]);
+
+    // ── Pre-fetch image file for native share ─────────────────────────────────
+    useEffect(() => {
+        if (!isOpen || !product) return;
+        const imgUrl = product.image || product.image_url;
+        if (!imgUrl) return;
+        fetchImageFile(imgUrl, product.id).then(f => setImgFile(f));
+    }, [isOpen, product?.id]);
+
+    // ── Close on Escape ───────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
 
     if (!isOpen || !product) return null;
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://intrust.in';
-    const shareUrl = `${origin}/r/${shortCode || '7K92XA'}`;
+    const origin     = typeof window !== 'undefined' ? window.location.origin : 'https://intrust.in';
+    const shareUrl   = `${origin}/r/${shortCode || 'LOADING'}`;
+    const prodPrice  = product.price || (product.selling_price_paise ? Math.round(product.selling_price_paise / 100) : 249);
+    const prodTitle  = product.name || product.title || 'Verified Deal';
+    const prodImage  = product.image || product.image_url;
+
+    // ── Formatted share message ────────────────────────────────────────────────
+    // Single clean message: image shows as OG preview from the /r/[code] route
+    const shareText = `🛍️ *${prodTitle}*\n💰 Price: ₹${prodPrice}\n\n🎁 Earn ₹${registrationBonus} cashback when a friend joins\n🎁 Earn ₹${orderCashback} cashback when they order\n\n🔗 Get the deal here → ${shareUrl}`;
+    const shareTitleShort = `${prodTitle} — ₹${prodPrice} on InTrust`;
+
+    // ── Fire SHARE event (non-blocking) ───────────────────────────────────────
+    const trackShare = useCallback(async () => {
+        if (!shortCode) return;
+        try {
+            await supabase.rpc('process_marketing_conversion_reward', {
+                p_event_type: 'SHARE',
+                p_ref_code: shortCode,
+                p_converted_user_id: user?.id,
+                p_product_id: product?.id || null
+            });
+            // Increment shares_count locally in DB
+            await supabase
+                .from('marketing_share_links')
+                .update({ shares_count: supabase.rpc ? undefined : 1 })
+                .eq('code', shortCode)
+                .then(() => {});
+        } catch { /* non-critical */ }
+        setShowSuccessModal(true);
+    }, [shortCode, user?.id, product?.id]);
 
     const handleCopy = () => {
-        if (typeof navigator !== 'undefined') {
-            navigator.clipboard.writeText(shareUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-            triggerSuccessDispatch();
-        }
+        if (typeof navigator === 'undefined') return;
+        navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2200);
+        trackShare();
     };
 
-    const triggerSuccessDispatch = async () => {
-        // Record share event
+    // ── Per-channel share handlers ────────────────────────────────────────────
+    const shareChannel = async (channelFn) => {
+        if (sharing) return;
+        setSharing(true);
         try {
-            if (shortCode) {
-                await supabase.rpc('process_marketing_conversion_reward', {
-                    p_event_type: 'SHARE',
-                    p_ref_code: shortCode,
-                    p_converted_user_id: user?.id,
-                    p_product_id: product.id
-                });
+            // Try native share with image first (best UX on mobile)
+            const shared = await nativeShare(imgFile, shareTitleShort, shareText, shareUrl);
+            if (!shared) {
+                // Fall back to platform-specific URL
+                window.open(channelFn(), '_blank', 'noopener,noreferrer');
             }
-        } catch (e) {
-            // Non-critical
-        }
-        setShowSuccessModal(true);
-    };
-
-    const shareToWhatsApp = () => {
-        const text = encodeURIComponent(
-            `Check out ${product.name || product.title} on InTrust India!\nSpecial Price: ₹${product.price || product.selling_price_paise / 100 || 249}\nBuy here: ${shareUrl}`
-        );
-        window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
-        triggerSuccessDispatch();
-    };
-
-    const shareToFacebook = () => {
-        const url = encodeURIComponent(shareUrl);
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-        triggerSuccessDispatch();
-    };
-
-    const shareNative = async () => {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: product.name || product.title,
-                    text: `Special offer on InTrust: ${product.name || product.title}`,
-                    url: shareUrl,
-                });
-                triggerSuccessDispatch();
-            } catch (err) {
-                // User cancelled or unsupported
-            }
-        } else {
-            handleCopy();
+            trackShare();
+        } finally {
+            setSharing(false);
         }
     };
+
+    const shareWhatsApp  = () => shareChannel(() => buildWhatsAppUrl(shareText));
+    const shareTelegram  = () => shareChannel(() => buildTelegramUrl(shareUrl, shareText));
+    const shareTwitter   = () => shareChannel(() => buildTwitterUrl(shareUrl, shareTitleShort + ' #InTrust #Deals'));
+    const shareFacebook  = () => shareChannel(() => buildFacebookUrl(shareUrl));
+    const shareLinkedIn  = () => shareChannel(() => buildLinkedInUrl(shareUrl));
+    const shareNative    = () => shareChannel(() => buildWhatsAppUrl(shareText)); // fallback
+
+    // ── Social channel buttons config ─────────────────────────────────────────
+    const channels = [
+        { id: 'whatsapp',  label: 'WhatsApp',  icon: <MessageCircle size={20} />, color: 'bg-emerald-500 hover:bg-emerald-600', fn: shareWhatsApp },
+        { id: 'telegram',  label: 'Telegram',  icon: <Send size={20} />,          color: 'bg-sky-500 hover:bg-sky-600',         fn: shareTelegram },
+        { id: 'twitter',   label: 'X / Twitter', icon: <span className="font-black text-base leading-none">𝕏</span>, color: 'bg-slate-900 hover:bg-black', fn: shareTwitter },
+        { id: 'facebook',  label: 'Facebook',  icon: <Facebook size={20} />,      color: 'bg-blue-600 hover:bg-blue-700',       fn: shareFacebook },
+        { id: 'linkedin',  label: 'LinkedIn',  icon: <Linkedin size={20} />,      color: 'bg-blue-700 hover:bg-blue-800',       fn: shareLinkedIn },
+        { id: 'more',      label: sharing ? '…' : 'More',  icon: <Share2 size={20} />,       color: 'bg-violet-600 hover:bg-violet-700',   fn: shareNative },
+    ];
 
     return (
         <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            {/* Backdrop */}
+            <div
+                onClick={onClose}
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm cursor-pointer"
+            >
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-slate-800 text-left overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    initial={{ opacity: 0, y: 32 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 24 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    className="relative w-full sm:max-w-sm bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 dark:border-slate-800 cursor-default"
                 >
-                    {/* Modal Header */}
-                    <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-                        <div>
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                                Product Marketing
-                            </span>
-                            <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-                                Share & Earn Rewards
-                            </h3>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <X size={18} />
-                        </button>
-                    </div>
+                    {/* ── CLOSE BUTTON ───────────────────────────── */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-3.5 right-3.5 z-20 p-1.5 rounded-full bg-white/80 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white shadow-xs transition-colors cursor-pointer"
+                    >
+                        <X size={16} strokeWidth={2.5} />
+                    </button>
 
-                    {/* Product Summary Preview */}
-                    <div className="py-4 flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
-                            {product.image_url ? (
-                                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-xs font-black text-slate-400">ITEM</span>
-                            )}
+                    {/* ── PRODUCT IMAGE — full-width hero ─────────── */}
+                    {prodImage && imgPreviewOk ? (
+                        <div className="relative w-full bg-slate-100 dark:bg-slate-800" style={{ aspectRatio: '16/9' }}>
+                            <img
+                                src={prodImage}
+                                alt={prodTitle}
+                                className="w-full h-full object-contain"
+                                onError={() => setImgPreviewOk(false)}
+                            />
+                            {/* Gradient to blend into card */}
+                            <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white dark:from-slate-900 to-transparent" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                                {product.name || product.title}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="text-sm font-black text-slate-900 dark:text-white">
-                                    ₹{product.price || (product.selling_price_paise ? product.selling_price_paise / 100 : 249)}
-                                </span>
-                                {product.discount_percent && (
-                                    <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                    ) : (
+                        <div className="w-full h-28 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center">
+                            <Sparkles size={32} className="text-blue-400" />
+                        </div>
+                    )}
+
+                    {/* ── CONTENT ──────────────────────────────────── */}
+                    <div className="px-4 pb-5 pt-1 space-y-3.5">
+
+                        {/* Product name + price */}
+                        <div>
+                            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug line-clamp-2">
+                                {prodTitle}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-lg font-black text-slate-900 dark:text-white">₹{prodPrice}</span>
+                                {product.discount_percent > 0 && (
+                                    <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                                         {product.discount_percent}% OFF
                                     </span>
                                 )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Dynamic Rewards Teaser Box */}
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-3.5 mb-5 flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                            <Gift size={16} />
-                        </div>
-                        <div className="text-xs">
-                            <span className="font-extrabold text-emerald-900 dark:text-emerald-300 block">
-                                Dual Promotion Cashbacks
-                            </span>
-                            <p className="text-emerald-700 dark:text-emerald-400 text-[11px] leading-relaxed mt-0.5">
-                                • Earn <strong className="font-black text-emerald-800 dark:text-emerald-200">₹{registrationBonus}</strong> when a new buyer registers through your campaign link.<br />
-                                • Earn <strong className="font-black text-emerald-800 dark:text-emerald-200">₹{orderCashback}</strong> when they complete this product order!
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Share Link Copy Field */}
-                    <div className="mb-5">
-                        <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1.5">
-                            Attributed Share Link
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 truncate">
-                                {loading ? 'Generating link...' : shareUrl}
+                        {/* Cashback reward badges */}
+                        <div className="flex gap-2">
+                            <div className="flex-1 flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60">
+                                <Gift size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider leading-none">New User Joins</p>
+                                    <p className="text-xs font-black text-emerald-900 dark:text-emerald-200">Assured Cashback</p>
+                                </div>
                             </div>
+                            <div className="flex-1 flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60">
+                                <Gift size={13} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wider leading-none">They Order</p>
+                                    <p className="text-xs font-black text-blue-900 dark:text-blue-200">Instant Cashback</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Share link — clickable anchor */}
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={loading ? undefined : shareUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 truncate hover:underline"
+                            >
+                                <ExternalLink size={11} className="shrink-0 text-slate-400" />
+                                {loading ? 'Generating link…' : shareUrl}
+                            </a>
                             <button
                                 onClick={handleCopy}
-                                className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                                className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
                             >
-                                {copied ? <Check size={16} /> : <Copy size={16} />}
-                                <span>{copied ? 'Copied' : 'Copy'}</span>
+                                {copied ? <Check size={13} strokeWidth={3} /> : <Copy size={13} />}
+                                <span>{copied ? 'Copied!' : 'Copy'}</span>
                             </button>
                         </div>
-                    </div>
 
-                    {/* Instant Share Channels */}
-                    <div>
-                        <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-2">
-                            Quick Dispatch Channels
-                        </span>
-                        <div className="grid grid-cols-3 gap-2.5">
-                            <button
-                                onClick={shareToWhatsApp}
-                                className="flex flex-col items-center justify-center py-3 px-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm active:scale-95 gap-1.5"
-                            >
-                                <MessageCircle size={20} />
-                                <span>WhatsApp</span>
-                            </button>
-
-                            <button
-                                onClick={shareToFacebook}
-                                className="flex flex-col items-center justify-center py-3 px-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95 gap-1.5"
-                            >
-                                <Facebook size={20} />
-                                <span>Facebook</span>
-                            </button>
-
-                            <button
-                                onClick={shareNative}
-                                className="flex flex-col items-center justify-center py-3 px-2 rounded-2xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold transition-all shadow-sm active:scale-95 gap-1.5"
-                            >
-                                <Share2 size={20} />
-                                <span>More Channels</span>
-                            </button>
+                        {/* Divider */}
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Share via</span>
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                         </div>
+
+                        {/* Social channel grid — each shares image + text + link */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {channels.map((ch) => (
+                                <button
+                                    key={ch.id}
+                                    onClick={ch.fn}
+                                    disabled={sharing || loading}
+                                    className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl ${ch.color} text-white text-[10px] font-bold transition-all active:scale-95 shadow-xs disabled:opacity-60 cursor-pointer`}
+                                >
+                                    <span className="flex items-center justify-center w-5 h-5">{ch.icon}</span>
+                                    <span className="leading-none">{ch.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Footer note */}
+                        <p className="text-center text-[10px] text-slate-400 dark:text-slate-600 font-medium">
+                            Product image + deal link included with every share
+                        </p>
                     </div>
                 </motion.div>
             </div>
 
-            {/* Success Celebration Modal */}
+            {/* Success celebration */}
             <SuccessAnimationModal
                 isOpen={showSuccessModal}
                 onClose={() => {
                     setShowSuccessModal(false);
                     onClose();
                 }}
-                productName={product.name || product.title}
+                productName={prodTitle}
                 sharesCount={10}
             />
         </>

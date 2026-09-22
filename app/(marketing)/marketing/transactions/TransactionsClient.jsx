@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -17,22 +17,18 @@ import {
     X,
     CheckCircle2,
     Copy,
-    FileText
+    FileText,
+    Sparkles,
+    ShoppingBag
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
 
-export default function TransactionsClient({ user, isMerchant, initialTransactions }) {
+export default function TransactionsClient({ user, isMerchant, initialTransactions = [] }) {
     const searchParams = useSearchParams();
     const [filterType, setFilterType] = useState('ALL');
     const [selectedTx, setSelectedTx] = useState(null);
 
-    const transactions = initialTransactions?.length > 0 ? initialTransactions : [
-        { id: 'tx1', type: 'CREDIT', amount_paise: 2500, description: 'Daily Challenge Completed Challenge', created_at: new Date(Date.now() - 3600000).toISOString(), category: 'CHALLENGE' },
-        { id: 'tx2', type: 'CREDIT', amount_paise: 50000, description: 'Target Reward 25 Customers Target', created_at: new Date(Date.now() - 86400000).toISOString(), category: 'TARGET' },
-        { id: 'tx3', type: 'CREDIT', amount_paise: 10000, description: 'Product Share Cashback Organic Atta', created_at: new Date(Date.now() - 172800000).toISOString(), category: 'CAMPAIGN' },
-        { id: 'tx4', type: 'CREDIT', amount_paise: 20000, description: 'Challenge Reward Monsoon Wellness', created_at: new Date(Date.now() - 259200000).toISOString(), category: 'CHALLENGE' },
-        { id: 'tx5', type: 'DEBIT', amount_paise: 99900, description: 'Daily Challenge Sponsorship Booking', created_at: new Date(Date.now() - 345600000).toISOString(), category: 'SPONSORSHIP' }
-    ];
+    const transactions = initialTransactions || [];
 
     // Deep link detection for ?txId=...
     useEffect(() => {
@@ -51,35 +47,58 @@ export default function TransactionsClient({ user, isMerchant, initialTransactio
         }
     }, [searchParams, transactions]);
 
-    const filtered = transactions.filter(tx => {
-        if (filterType === 'ALL') return true;
-        if (filterType === 'CASHBACK') return tx.type === 'CREDIT' && (tx.description?.includes('Challenge') || tx.description?.includes('Cashback'));
-        if (filterType === 'REWARDS') return tx.description?.includes('Target') || tx.description?.includes('Reward');
-        if (filterType === 'CAMPAIGN') return tx.description?.includes('Campaign') || tx.description?.includes('Share') || tx.description?.includes('Product');
-        if (filterType === 'SPONSORSHIP') return tx.description?.includes('Sponsorship');
-        return true;
-    });
+    // Close open modal on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setSelectedTx(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const filtered = useMemo(() => {
+        return transactions.filter(tx => {
+            const desc = (tx.description || '').toLowerCase();
+            const type = (tx.type || tx.transaction_type || '').toUpperCase();
+            if (filterType === 'ALL') return true;
+            if (filterType === 'CASHBACK') {
+                return type.includes('CREDIT') || desc.includes('challenge') || desc.includes('cashback') || desc.includes('streak');
+            }
+            if (filterType === 'REWARDS') {
+                return desc.includes('target') || desc.includes('reward') || desc.includes('milestone');
+            }
+            if (filterType === 'CAMPAIGN') {
+                return desc.includes('campaign') || desc.includes('share') || desc.includes('product');
+            }
+            if (filterType === 'SPONSORSHIP') {
+                return desc.includes('sponsor') || type.includes('SPONSOR');
+            }
+            return true;
+        });
+    }, [transactions, filterType]);
 
     const walletHref = isMerchant ? '/merchant/wallet' : '/wallet';
 
     return (
-        <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+        <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
             {/* Header with Breadcrumbs & Filter Pills */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
                 <MarketingBreadcrumbs
                     customTitle="Marketing Transactions"
                     customSubtitle="Surfaced directly from your authentic InTrust financial wallet ledger."
                 />
 
                 {/* Filter Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none shrink-0">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none shrink-0 self-start sm:self-auto max-w-full">
                     {['ALL', 'CASHBACK', 'REWARDS', 'CAMPAIGN', 'SPONSORSHIP'].map((type) => (
                         <button
                             key={type}
                             onClick={() => setFilterType(type)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                                 filterType === type
-                                    ? 'bg-blue-600 text-white shadow-xs'
+                                    ? 'bg-blue-600 text-white shadow-2xs'
                                     : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
                             }`}
                         >
@@ -90,84 +109,108 @@ export default function TransactionsClient({ user, isMerchant, initialTransactio
             </div>
 
             {/* Transactions List Card */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800 text-[10px] sm:text-xs font-extrabold text-slate-400 uppercase tracking-wider">
                     <span>Transaction Details</span>
                     <span>Amount</span>
                 </div>
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {filtered.map((tx) => {
-                        const isCredit = tx.type === 'CREDIT';
-                        const amount = (tx.amount_paise / 100).toLocaleString('en-IN');
-                        const isSelected = selectedTx?.id === tx.id || searchParams.get('txId') === tx.id;
-                        const dateStr = new Date(tx.created_at).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
+                {filtered.length > 0 ? (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        {filtered.map((tx) => {
+                            const isCredit = tx.type === 'CREDIT' || (Number(tx.amount_paise) > 0 && !tx.transaction_type?.includes('debit') && tx.transaction_type !== 'sponsorship_fee');
+                            const amount = (Math.abs(Number(tx.amount_paise || 0)) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                            const isSelected = selectedTx?.id === tx.id || searchParams.get('txId') === tx.id;
+                            const dateStr = new Date(tx.created_at).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
 
-                        return (
-                            <button
-                                key={tx.id}
-                                id={`tx-${tx.id}`}
-                                onClick={() => setSelectedTx(tx)}
-                                className={`w-full text-left py-4 flex items-center justify-between group px-3 rounded-2xl transition-all ${
-                                    isSelected 
-                                        ? 'bg-blue-50/80 dark:bg-blue-950/50 ring-2 ring-blue-500/80 shadow-md shadow-blue-500/10' 
-                                        : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3.5 min-w-0 pr-4">
-                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                                        isCredit 
-                                            ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60'
-                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                                    }`}>
-                                        {isCredit ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                            return (
+                                <button
+                                    key={tx.id}
+                                    id={`tx-${tx.id}`}
+                                    onClick={() => setSelectedTx(tx)}
+                                    className={`w-full text-left py-3 px-2 sm:py-3.5 sm:px-3 flex items-center justify-between group rounded-xl sm:rounded-2xl transition-all ${
+                                        isSelected 
+                                            ? 'bg-blue-50/80 dark:bg-blue-950/50 ring-2 ring-blue-500/80 shadow-2xs' 
+                                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 pr-2 sm:pr-4">
+                                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${
+                                            isCredit 
+                                                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                        }`}>
+                                            {isCredit ? <ArrowDownLeft size={16} className="sm:w-5 sm:h-5" /> : <ArrowUpRight size={16} className="sm:w-5 sm:h-5" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
+                                                {tx.description || (isCredit ? 'Cashback Credit' : 'Payment Debit')}
+                                            </h4>
+                                            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 block mt-0.5">
+                                                {dateStr}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
-                                            {tx.description}
-                                        </h4>
-                                        <span className="text-[11px] font-semibold text-slate-400 block mt-0.5">
-                                            {dateStr}
+
+                                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                        <span className={`text-xs sm:text-sm md:text-base font-black ${
+                                            isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                                        }`}>
+                                            {isCredit ? '+' : '-'} ₹{amount}
                                         </span>
+                                        <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
                                     </div>
-                                </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="py-8 sm:py-12 text-center space-y-2.5 sm:space-y-3">
+                        <Wallet size={32} className="text-slate-300 dark:text-slate-600 mx-auto" />
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                            {filterType === 'ALL' ? 'No marketing transactions yet' : `No ${filterType.toLowerCase()} transactions recorded`}
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-slate-400 max-w-sm mx-auto">
+                            Complete daily quiz challenges, unlock target milestones, or share product links to start earning instant wallet credits.
+                        </p>
+                        <div className="pt-2 flex items-center justify-center gap-2">
+                            <Link
+                                href="/marketing/daily-challenge"
+                                className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-2xs"
+                            >
+                                Play Daily Challenge
+                            </Link>
+                            <Link
+                                href="/marketing/products"
+                                className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 transition-all"
+                            >
+                                Share Products
+                            </Link>
+                        </div>
+                    </div>
+                )}
 
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <span className={`text-sm sm:text-base font-black ${
-                                        isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
-                                    }`}>
-                                        {isCredit ? '+' : '-'} ₹{amount}
-                                    </span>
-                                    <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                <div className="pt-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[11px] sm:text-xs text-slate-500">
                     <span>Click any transaction for verified ledger details.</span>
                     <Link href={walletHref} className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
                         <span>Open Complete InTrust Wallet</span>
-                        <ExternalLink size={12} />
+                        <ExternalLink size={11} />
                     </Link>
                 </div>
             </div>
 
             {/* Transaction Receipt & Detail Modal */}
             {selectedTx && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fadeIn">
                     <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6">
-                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                                    selectedTx.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-700'
-                                }`}>
+                                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
                                     <FileText size={18} />
                                 </div>
                                 <div>
@@ -190,12 +233,12 @@ export default function TransactionsClient({ user, isMerchant, initialTransactio
                         {/* Amount Highlight */}
                         <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center space-y-1">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                {selectedTx.type === 'CREDIT' ? 'Wallet Credit' : 'Wallet Debit'}
+                                {selectedTx.type === 'CREDIT' || Number(selectedTx.amount_paise) > 0 ? 'Wallet Credit' : 'Wallet Debit'}
                             </span>
                             <div className={`text-3xl font-black ${
-                                selectedTx.type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                                selectedTx.type === 'CREDIT' || Number(selectedTx.amount_paise) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
                             }`}>
-                                {selectedTx.type === 'CREDIT' ? '+' : '-'} ₹{(selectedTx.amount_paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                {(selectedTx.type === 'CREDIT' || Number(selectedTx.amount_paise) > 0) ? '+' : '-'} ₹{(Math.abs(Number(selectedTx.amount_paise || 0)) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </div>
                             <div className="flex items-center justify-center gap-1 text-xs font-bold text-emerald-600">
                                 <CheckCircle2 size={13} />
@@ -210,8 +253,8 @@ export default function TransactionsClient({ user, isMerchant, initialTransactio
                                 <span className="font-bold text-slate-900 dark:text-white text-right max-w-[200px] truncate">{selectedTx.description}</span>
                             </div>
                             <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60">
-                                <span className="text-slate-400 font-semibold">Category</span>
-                                <span className="font-mono font-bold text-blue-600">{selectedTx.category || 'MARKETING'}</span>
+                                <span className="text-slate-400 font-semibold">Type</span>
+                                <span className="font-mono font-bold text-blue-600">{selectedTx.type || selectedTx.transaction_type || 'MARKETING'}</span>
                             </div>
                             <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60">
                                 <span className="text-slate-400 font-semibold">Date & Time</span>

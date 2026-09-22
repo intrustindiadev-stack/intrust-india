@@ -44,22 +44,22 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
     const [loading, setLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(false);
-    const [offset, setOffset] = useState(0);
+    const offsetRef = useRef(0);
     const containerRef = useRef(null);
     const dropdownRef = useRef(null);
     const pollRef = useRef(null);
     const router = useRouter();
     const pathname = usePathname();
 
-    const fetchNotifications = useCallback(async (isLoadMore = false) => {
+    const fetchNotifications = useCallback(async (isLoadMore = false, isSilent = false) => {
         try {
             if (isLoadMore) setLoadingMore(true);
-            else setLoading(true);
+            else if (!isSilent) setLoading(true);
 
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
-            const currentOffset = isLoadMore ? offset : 0;
+            const currentOffset = isLoadMore ? offsetRef.current : 0;
             const res = await fetch(`${apiPath}?limit=20&offset=${currentOffset}`, {
                 headers: { Authorization: `Bearer ${session.access_token}` }
             });
@@ -69,28 +69,31 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
 
             if (isLoadMore) {
                 setNotifications(prev => [...prev, ...(data.notifications || [])]);
+                offsetRef.current = currentOffset + (data.notifications?.length || 0);
             } else {
                 setNotifications(data.notifications || []);
+                offsetRef.current = data.notifications?.length || 0;
             }
 
             setUnreadCount(data.unreadCount || 0);
             setHasMore(data.hasMore || false);
-            if (data.notifications?.length > 0) {
-                setOffset(currentOffset + data.notifications.length);
-            }
         } catch (err) {
             console.error('Error fetching notifications:', err);
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [apiPath, offset]);
+    }, [apiPath]);
 
     useEffect(() => {
-        fetchNotifications();
+        fetchNotifications(false, false);
 
-        // Polling for count primarily
-        pollRef.current = setInterval(() => fetchNotifications(false), 30000);
+        // Polling for count primarily (silent in background every 45s)
+        pollRef.current = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetchNotifications(false, true);
+            }
+        }, 45000);
 
         // Supabase Realtime subscription for instant notification updates
         let realtimeChannel = null;
@@ -109,7 +112,7 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
                     (payload) => {
                         setNotifications(prev => [payload.new, ...prev]);
                         setUnreadCount(prev => prev + 1);
-                        setOffset(prev => prev + 1);
+                        offsetRef.current += 1;
 
                         // When merchant approval arrives, refresh the JWT so middleware
                         // picks up the corrected user_metadata.role immediately.
@@ -127,10 +130,11 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
         };
     }, []); // Only once on mount
 
-    // Close on outside click or Escape key
+    // Close on outside click or Escape key, and lock body scroll on mobile
     useEffect(() => {
         function handleOutside(e) {
-            if (containerRef.current && !containerRef.current.contains(e.target)) {
+            // On desktop only close if clicked outside container
+            if (window.innerWidth >= 640 && containerRef.current && !containerRef.current.contains(e.target)) {
                 setOpen(false);
             }
         }
@@ -140,10 +144,15 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             }
         }
         if (open) {
+            const originalOverflow = document.body.style.overflow;
+            if (window.innerWidth < 640) {
+                document.body.style.overflow = 'hidden';
+            }
             document.addEventListener('mousedown', handleOutside);
             document.addEventListener('touchstart', handleOutside);
             window.addEventListener('keydown', handleKeyDown);
             return () => {
+                document.body.style.overflow = originalOverflow;
                 document.removeEventListener('mousedown', handleOutside);
                 document.removeEventListener('touchstart', handleOutside);
                 window.removeEventListener('keydown', handleKeyDown);
@@ -277,7 +286,7 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
 
             // ── Marketing & Challenges ───────────────────────────────────────
             case 'sponsorship':
-                if (isMerchant) router.push('/marketing/sponsorships');
+                if (isMerchant) router.push('/marketing/daily-challenge?tab=sponsor');
                 else router.push('/marketing/daily-challenge');
                 break;
 
@@ -484,19 +493,32 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
             {open && (
                 <div
                     ref={dropdownRef}
-                    className="absolute right-0 top-full mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                    className="fixed inset-0 z-[9999] w-full h-[100dvh] flex flex-col bg-white dark:bg-slate-900 overflow-hidden sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 sm:h-auto sm:max-h-[34rem] sm:rounded-2xl sm:shadow-2xl sm:border sm:border-black/10 dark:sm:border-white/10 animate-in fade-in slide-in-from-top-2 sm:slide-in-from-top-2 duration-150"
                     role="region"
-                    aria-label="Notifications Dropdown"
+                    aria-label="Notifications Panel"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">Notifications</span>
-                            {unreadCount > 0 && (
-                                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#D4AF37]/20 text-[#D4AF37] rounded-full">
-                                    {unreadCount} new
-                                </span>
-                            )}
+                    <div className="flex items-center justify-between px-4 py-3 sm:py-3 border-b border-black/5 dark:border-white/5 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md shrink-0">
+                        <div className="flex items-center gap-2.5">
+                            {/* Mobile Back / Close Button */}
+                            <button
+                                type="button"
+                                onClick={() => setOpen(false)}
+                                className="sm:hidden -ml-1 p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all"
+                                aria-label="Close notifications"
+                            >
+                                <span className="material-icons-round text-xl">arrow_back</span>
+                            </button>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-sm">Notifications</span>
+                                    {unreadCount > 0 && (
+                                        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#D4AF37]/20 text-[#D4AF37] rounded-full">
+                                            {unreadCount} new
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             {apiPath?.includes('/admin') && (
@@ -521,24 +543,33 @@ export default function NotificationBell({ apiPath, variant = 'admin', className
                                 <button
                                     type="button"
                                     onClick={() => markRead(null)}
-                                    className="text-xs text-[#D4AF37] hover:underline font-semibold"
+                                    className="text-xs text-[#D4AF37] hover:underline font-semibold px-2 py-1 rounded-lg hover:bg-[#D4AF37]/10"
                                 >
                                     Mark all read
                                 </button>
                             )}
                             <button
                                 type="button"
-                                onClick={() => fetchNotifications(false)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                onClick={() => fetchNotifications(false, false)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                                 title="Refresh notifications"
                             >
                                 <span className={`material-icons-round text-sm ${(loading && !loadingMore) ? 'animate-spin' : ''}`}>refresh</span>
+                            </button>
+                            {/* Mobile direct close button */}
+                            <button
+                                type="button"
+                                onClick={() => setOpen(false)}
+                                className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5"
+                                aria-label="Close"
+                            >
+                                <span className="material-icons-round text-sm">close</span>
                             </button>
                         </div>
                     </div>
 
                     {/* List */}
-                    <div className="max-h-96 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 bg-white dark:bg-slate-900">
+                    <div className="flex-1 sm:flex-initial sm:max-h-96 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 bg-white dark:bg-slate-900 pb-16 sm:pb-0">
                         {notifications.length === 0 && !loading ? (
                             <div className="py-10 text-center">
                                 <span className="material-icons-round text-slate-300 dark:text-slate-600 text-4xl">notifications_none</span>

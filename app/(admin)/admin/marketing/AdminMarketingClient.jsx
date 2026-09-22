@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import Image from 'next/image';
 import { 
     LayoutDashboard,
     Settings, 
@@ -48,6 +49,8 @@ import {
     Flame
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import toast from 'react-hot-toast';
+import MarketingImageUploader from '@/components/marketing/admin/MarketingImageUploader';
 
 const CATEGORY_ICON_OPTIONS = [
     { name: 'Building2', label: 'Enterprise / Corporate', icon: Building2 },
@@ -74,9 +77,134 @@ export default function AdminMarketingClient({
     initialClaims,
     initialTrackingLogs,
     initialMerchants = [],
-    overviewStats = {}
+    initialUsers = [],
+    overviewStats = {},
+    officialProducts = [],
+    initialSelectedOfficialProductIds = [],
+    initialOfficialAudience = 'all',
+    initialAllowedUserIds = [],
+    initialAllowedMerchantIds = []
 }) {
     const [activeTab, setActiveTab] = useState('overview');
+
+    // ─── OFFICIAL PRODUCTS CURATION (Admin / Super Admin) ───
+    const [selectedOfficialProductIds, setSelectedOfficialProductIds] = useState(initialSelectedOfficialProductIds || []);
+    const [officialAudience, setOfficialAudience] = useState(initialOfficialAudience || 'all');
+    const [selectedAllowedUserIds, setSelectedAllowedUserIds] = useState(initialAllowedUserIds || []);
+    const [selectedAllowedMerchantIds, setSelectedAllowedMerchantIds] = useState(initialAllowedMerchantIds || []);
+    const [savingOfficialProducts, setSavingOfficialProducts] = useState(false);
+    const [officialProductSearch, setOfficialProductSearch] = useState('');
+    const [officialCategoryFilter, setOfficialCategoryFilter] = useState('all');
+    const [officialSubCategoryFilter, setOfficialSubCategoryFilter] = useState('all');
+    const [officialPage, setOfficialPage] = useState(1);
+    const [officialPageSize, setOfficialPageSize] = useState(24);
+
+    const handleAddAllowedMerchant = (merchantId) => {
+        if (!merchantId) return;
+        if (!selectedAllowedMerchantIds.includes(merchantId)) {
+            setSelectedAllowedMerchantIds(prev => [...prev, merchantId]);
+        }
+    };
+
+    const handleRemoveAllowedMerchant = (merchantId) => {
+        setSelectedAllowedMerchantIds(prev => prev.filter(id => id !== merchantId));
+    };
+
+    const handleAddAllowedUser = (userId) => {
+        if (!userId) return;
+        if (!selectedAllowedUserIds.includes(userId)) {
+            setSelectedAllowedUserIds(prev => [...prev, userId]);
+        }
+    };
+
+    const handleRemoveAllowedUser = (userId) => {
+        setSelectedAllowedUserIds(prev => prev.filter(id => id !== userId));
+    };
+
+    const officialProductCategories = useMemo(() => {
+        const cats = new Set();
+        (officialProducts || []).forEach(p => {
+            if (p.category) cats.add(p.category);
+        });
+        return Array.from(cats).sort();
+    }, [officialProducts]);
+
+    const officialProductSubCategories = useMemo(() => {
+        const subCats = new Set();
+        (officialProducts || []).forEach(p => {
+            if (p.sub_category) {
+                if (officialCategoryFilter === 'all' || p.category === officialCategoryFilter) {
+                    subCats.add(p.sub_category);
+                }
+            }
+        });
+        return Array.from(subCats).sort();
+    }, [officialProducts, officialCategoryFilter]);
+
+    const filteredOfficialProducts = useMemo(() => {
+        return (officialProducts || []).filter(p => {
+            const q = officialProductSearch.trim().toLowerCase();
+            const matchQuery = !q || 
+                (p.title || '').toLowerCase().includes(q) || 
+                (p.category || '').toLowerCase().includes(q) || 
+                (p.sub_category || '').toLowerCase().includes(q) ||
+                (p.slug || '').toLowerCase().includes(q);
+            const matchCategory = officialCategoryFilter === 'all' || p.category === officialCategoryFilter;
+            const matchSubCategory = officialSubCategoryFilter === 'all' || p.sub_category === officialSubCategoryFilter;
+            return matchQuery && matchCategory && matchSubCategory;
+        });
+    }, [officialProducts, officialProductSearch, officialCategoryFilter, officialSubCategoryFilter]);
+
+    // Reset page to 1 on filter changes
+    useEffect(() => {
+        setOfficialPage(1);
+    }, [officialProductSearch, officialCategoryFilter, officialSubCategoryFilter, officialPageSize]);
+
+    const totalOfficialPages = Math.max(1, Math.ceil(filteredOfficialProducts.length / officialPageSize));
+
+    const paginatedOfficialProducts = useMemo(() => {
+        const from = (officialPage - 1) * officialPageSize;
+        return filteredOfficialProducts.slice(from, from + officialPageSize);
+    }, [filteredOfficialProducts, officialPage, officialPageSize]);
+
+    const toggleOfficialProduct = (id) => {
+        setSelectedOfficialProductIds(prev => 
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllOfficial = () => {
+        const allFilteredIds = filteredOfficialProducts.map(p => p.id);
+        setSelectedOfficialProductIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+    };
+
+    const handleClearOfficialSelection = () => {
+        setSelectedOfficialProductIds([]);
+    };
+
+    const handleSaveOfficialProducts = async () => {
+        setSavingOfficialProducts(true);
+        try {
+            const { error } = await supabase
+                .from('marketing_settings')
+                .upsert({
+                    key: 'official_marketing_products',
+                    value: {
+                        product_ids: selectedOfficialProductIds,
+                        allowed_audience: officialAudience,
+                        allowed_user_ids: selectedAllowedUserIds,
+                        allowed_merchant_ids: selectedAllowedMerchantIds,
+                        updated_at: new Date().toISOString()
+                    }
+                }, { onConflict: 'key' });
+            if (error) throw error;
+            toast.success(`Saved ${selectedOfficialProductIds.length} official products & audience sharing permissions!`);
+        } catch (err) {
+            toast.error('Failed to save official products: ' + err.message);
+        } finally {
+            setSavingOfficialProducts(false);
+        }
+    };
 
     // ─── 1. DYNAMIC CATEGORIES STATE & HANDLERS ───
     const [categoriesList, setCategoriesList] = useState(initialCategories || []);
@@ -94,7 +222,7 @@ export default function AdminMarketingClient({
     const handleCreateCategory = async (e) => {
         e.preventDefault();
         if (!categoryForm.title.trim()) {
-            alert('Please provide a category title');
+            toast.error('Please provide a category title');
             return;
         }
 
@@ -128,9 +256,9 @@ export default function AdminMarketingClient({
                 sort_order: categoriesList.length + 2,
                 is_active: true
             });
-            alert(`Category "${data.title}" created successfully!`);
+            toast.success(`Category "${data.title}" created successfully!`);
         } catch (err) {
-            alert('Failed to create category: ' + err.message);
+            toast.error('Failed to create category: ' + err.message);
         } finally {
             setSavingCategory(false);
         }
@@ -143,7 +271,7 @@ export default function AdminMarketingClient({
     const handleUpdateCategory = async (e) => {
         e.preventDefault();
         if (!editingCategory?.title?.trim()) {
-            alert('Please provide a category title');
+            toast.error('Please provide a category title');
             return;
         }
 
@@ -168,9 +296,9 @@ export default function AdminMarketingClient({
 
             setCategoriesList(prev => prev.map(c => c.id === editingCategory.id ? { ...c, ...payload } : c).sort((a, b) => a.sort_order - b.sort_order));
             setEditingCategory(null);
-            alert('Category updated successfully!');
+            toast.success('Category updated successfully!');
         } catch (err) {
-            alert('Failed to update category: ' + err.message);
+            toast.error('Failed to update category: ' + err.message);
         } finally {
             setSavingCategory(false);
         }
@@ -188,7 +316,7 @@ export default function AdminMarketingClient({
 
             setCategoriesList(prev => prev.map(c => c.id === cat.id ? { ...c, is_active: updatedStatus } : c));
         } catch (err) {
-            alert('Failed to update category status: ' + err.message);
+            toast.error('Failed to update category status: ' + err.message);
         }
     };
 
@@ -205,9 +333,9 @@ export default function AdminMarketingClient({
             setCategoriesList(prev => prev.filter(c => c.id !== categoryId));
             setQuestionsList(prev => prev.filter(q => q.category_id !== categoryId));
             if (viewingCategory?.id === categoryId) setViewingCategory(null);
-            alert('Category deleted.');
+            toast.success('Category deleted.');
         } catch (err) {
-            alert('Failed to delete category: ' + err.message);
+            toast.error('Failed to delete category: ' + err.message);
         }
     };
 
@@ -234,11 +362,11 @@ export default function AdminMarketingClient({
     const handleCreateQuestion = async (e) => {
         e.preventDefault();
         if (!questionForm.question.trim()) {
-            alert('Please enter question text');
+            toast.error('Please enter question text');
             return;
         }
         if (questionForm.options.some(opt => !opt.trim())) {
-            alert('Please fill out all 4 question options.');
+            toast.error('Please fill out all 4 question options.');
             return;
         }
 
@@ -274,9 +402,9 @@ export default function AdminMarketingClient({
                 difficulty: 'medium',
                 points: 10
             });
-            alert('Question added successfully!');
+            toast.success('Question added successfully!');
         } catch (err) {
-            alert('Failed to add question: ' + err.message);
+            toast.error('Failed to add question: ' + err.message);
         } finally {
             setSavingQuestion(false);
         }
@@ -285,11 +413,11 @@ export default function AdminMarketingClient({
     const handleUpdateQuestion = async (e) => {
         e.preventDefault();
         if (!editingQuestion?.question?.trim()) {
-            alert('Please enter question text');
+            toast.error('Please enter question text');
             return;
         }
         if (editingQuestion.options?.some(opt => !opt.trim())) {
-            alert('Please fill out all 4 question options.');
+            toast.error('Please fill out all 4 question options.');
             return;
         }
 
@@ -320,9 +448,9 @@ export default function AdminMarketingClient({
                 daily_challenge_categories: categoryMatch ? { id: categoryMatch.id, title: categoryMatch.title, slug: categoryMatch.slug } : q.daily_challenge_categories 
             } : q));
             setEditingQuestion(null);
-            alert('Question updated successfully!');
+            toast.success('Question updated successfully!');
         } catch (err) {
-            alert('Failed to update question: ' + err.message);
+            toast.error('Failed to update question: ' + err.message);
         } finally {
             setSavingQuestion(false);
         }
@@ -340,7 +468,7 @@ export default function AdminMarketingClient({
 
             setQuestionsList(prev => prev.map(item => item.id === q.id ? { ...item, is_active: newStatus } : item));
         } catch (err) {
-            alert('Failed to update question status: ' + err.message);
+            toast.error('Failed to update question status: ' + err.message);
         }
     };
 
@@ -356,8 +484,9 @@ export default function AdminMarketingClient({
 
             setQuestionsList(prev => prev.filter(q => q.id !== questionId));
             if (viewingQuestion?.id === questionId) setViewingQuestion(null);
+            toast.success('Question deleted successfully.');
         } catch (err) {
-            alert('Failed to delete question: ' + err.message);
+            toast.error('Failed to delete question: ' + err.message);
         }
     };
 
@@ -418,7 +547,7 @@ export default function AdminMarketingClient({
     const handleCreateSponsorship = async (e) => {
         e.preventDefault();
         if (!sponsorshipForm.merchant_id || !sponsorshipForm.sponsor_date) {
-            alert('Please choose a merchant and sponsor date.');
+            toast.error('Please choose a merchant and sponsor date.');
             return;
         }
 
@@ -455,9 +584,9 @@ export default function AdminMarketingClient({
                 product_ids_str: '',
                 status: 'booked'
             });
-            alert('Sponsorship booking created successfully!');
+            toast.success('Sponsorship booking created successfully!');
         } catch (err) {
-            alert('Failed to create sponsorship: ' + err.message);
+            toast.error('Failed to create sponsorship: ' + err.message);
         } finally {
             setSavingSponsorship(false);
         }
@@ -476,9 +605,9 @@ export default function AdminMarketingClient({
             if (selectedSponsorship?.id === sponsorshipId) {
                 setSelectedSponsorship(prev => ({ ...prev, status: newStatus }));
             }
-            alert(`Sponsorship status updated to ${newStatus}.`);
+            toast.success(`Sponsorship status updated to ${newStatus}.`);
         } catch (err) {
-            alert('Failed to update status: ' + err.message);
+            toast.error('Failed to update status: ' + err.message);
         }
     };
 
@@ -494,9 +623,9 @@ export default function AdminMarketingClient({
 
             setSponsorshipsList(prev => prev.filter(s => s.id !== sponsorshipId));
             if (selectedSponsorship?.id === sponsorshipId) setSelectedSponsorship(null);
-            alert('Sponsorship removed.');
+            toast.success('Sponsorship removed.');
         } catch (err) {
-            alert('Failed to delete sponsorship: ' + err.message);
+            toast.error('Failed to delete sponsorship: ' + err.message);
         }
     };
 
@@ -512,6 +641,7 @@ export default function AdminMarketingClient({
         reward_type: 'cashback',
         reward_value_paise: 50000,
         gift_name: '',
+        gift_image_url: '',
         sort_order: targetsList.length + 1
     });
     const [savingTarget, setSavingTarget] = useState(false);
@@ -523,7 +653,7 @@ export default function AdminMarketingClient({
     const handleCreateTarget = async (e) => {
         e.preventDefault();
         if (!targetForm.title.trim()) {
-            alert('Please enter target title');
+            toast.error('Please enter target title');
             return;
         }
 
@@ -538,6 +668,7 @@ export default function AdminMarketingClient({
                 reward_type: targetForm.reward_type,
                 reward_value_paise: targetForm.reward_type === 'cashback' ? parseInt(targetForm.reward_value_paise, 10) : 0,
                 gift_name: targetForm.reward_type === 'physical_gift' ? targetForm.gift_name.trim() : null,
+                gift_image_url: targetForm.reward_type === 'physical_gift' ? (targetForm.gift_image_url?.trim() || null) : null,
                 sort_order: parseInt(targetForm.sort_order, 10) || 1,
                 is_active: true
             };
@@ -563,9 +694,9 @@ export default function AdminMarketingClient({
                 gift_name: '',
                 sort_order: targetsList.length + 2
             });
-            alert('Target created successfully!');
+            toast.success('Target created successfully!');
         } catch (err) {
-            alert('Failed to create target: ' + err.message);
+            toast.error('Failed to create target: ' + err.message);
         } finally {
             setSavingTarget(false);
         }
@@ -574,7 +705,7 @@ export default function AdminMarketingClient({
     const handleUpdateTarget = async (e) => {
         e.preventDefault();
         if (!editingTarget?.title?.trim()) {
-            alert('Please enter target title');
+            toast.error('Please enter target title');
             return;
         }
 
@@ -589,6 +720,7 @@ export default function AdminMarketingClient({
                 reward_type: editingTarget.reward_type,
                 reward_value_paise: editingTarget.reward_type === 'cashback' ? parseInt(editingTarget.reward_value_paise, 10) : 0,
                 gift_name: editingTarget.reward_type === 'physical_gift' ? editingTarget.gift_name?.trim() : null,
+                gift_image_url: editingTarget.reward_type === 'physical_gift' ? (editingTarget.gift_image_url?.trim() || null) : null,
                 sort_order: parseInt(editingTarget.sort_order, 10) || 1,
                 is_active: editingTarget.is_active
             };
@@ -602,9 +734,9 @@ export default function AdminMarketingClient({
 
             setTargetsList(prev => prev.map(t => t.id === editingTarget.id ? { ...t, ...payload } : t).sort((a, b) => a.sort_order - b.sort_order));
             setEditingTarget(null);
-            alert('Target updated successfully!');
+            toast.success('Target updated successfully!');
         } catch (err) {
-            alert('Failed to update target: ' + err.message);
+            toast.error('Failed to update target: ' + err.message);
         } finally {
             setSavingTarget(false);
         }
@@ -622,7 +754,7 @@ export default function AdminMarketingClient({
 
             setTargetsList(prev => prev.map(item => item.id === t.id ? { ...item, is_active: newStatus } : item));
         } catch (err) {
-            alert('Failed to update target status: ' + err.message);
+            toast.error('Failed to update target status: ' + err.message);
         }
     };
 
@@ -638,9 +770,9 @@ export default function AdminMarketingClient({
 
             setTargetsList(prev => prev.filter(t => t.id !== targetId));
             if (viewingTarget?.id === targetId) setViewingTarget(null);
-            alert('Target deleted.');
+            toast.success('Target deleted.');
         } catch (err) {
-            alert('Failed to delete target: ' + err.message);
+            toast.error('Failed to delete target: ' + err.message);
         }
     };
 
@@ -650,6 +782,7 @@ export default function AdminMarketingClient({
     const [claimFilterStatus, setClaimFilterStatus] = useState('all');
     const [claimSearch, setClaimSearch] = useState('');
     const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
+    const [selectedAwardRecipientKey, setSelectedAwardRecipientKey] = useState('');
     const [viewingClaim, setViewingClaim] = useState(null);
     const [selectedTrackingLog, setSelectedTrackingLog] = useState(null);
     const [newGiftAward, setNewGiftAward] = useState({
@@ -662,6 +795,41 @@ export default function AdminMarketingClient({
         notes: 'Awarded by Admin for outstanding performance',
         status: 'earned'
     });
+
+    const handleAwardRecipientChange = (val) => {
+        setSelectedAwardRecipientKey(val);
+        if (!val) return;
+        if (val === 'custom') {
+            setNewGiftAward(prev => ({ ...prev, user_id: '' }));
+            return;
+        }
+        if (val.startsWith('user_')) {
+            const userId = val.replace('user_', '');
+            const u = initialUsers.find(user => user.id === userId);
+            if (u) {
+                setNewGiftAward(prev => ({
+                    ...prev,
+                    user_id: u.id,
+                    user_type: u.role === 'merchant' ? 'merchant' : 'customer',
+                    recipient_name: u.full_name || '',
+                    recipient_phone: u.phone || ''
+                }));
+            }
+        } else if (val.startsWith('merchant_')) {
+            const merchantId = val.replace('merchant_', '');
+            const m = initialMerchants.find(mer => mer.id === merchantId);
+            if (m) {
+                setNewGiftAward(prev => ({
+                    ...prev,
+                    user_id: m.user_id || m.id,
+                    user_type: 'merchant',
+                    recipient_name: m.store_name || m.business_name || '',
+                    recipient_phone: m.business_phone || ''
+                }));
+            }
+        }
+    };
+
     const [submittingAward, setSubmittingAward] = useState(false);
     const [editingClaim, setEditingClaim] = useState(null);
     const [trackingForm, setTrackingForm] = useState({
@@ -706,9 +874,9 @@ export default function AdminMarketingClient({
             if (error) throw error;
             setClaimsList(prev => prev.map(c => c.id === editingClaim.id ? { ...c, ...data } : c));
             setEditingClaim(null);
-            alert(`Fulfillment status updated for ${data.gift_title || 'Gift'}!`);
+            toast.success(`Fulfillment status updated for ${data.gift_title || 'Gift'}!`);
         } catch (err) {
-            alert('Error updating tracking: ' + err.message);
+            toast.error('Error updating tracking: ' + err.message);
         } finally {
             setUpdatingTracking(false);
         }
@@ -717,7 +885,7 @@ export default function AdminMarketingClient({
     const handleAwardGift = async (e) => {
         e.preventDefault();
         if (!newGiftAward.user_id || !newGiftAward.gift_title) {
-            alert('Please provide at least a User ID and Gift Title.');
+            toast.error('Please provide at least a User ID and Gift Title.');
             return;
         }
         setSubmittingAward(true);
@@ -740,6 +908,7 @@ export default function AdminMarketingClient({
             if (error) throw error;
             setClaimsList(prev => [data, ...prev]);
             setIsAwardModalOpen(false);
+            setSelectedAwardRecipientKey('');
             setNewGiftAward({
                 user_id: '',
                 user_type: 'customer',
@@ -750,9 +919,9 @@ export default function AdminMarketingClient({
                 notes: 'Awarded by Admin for outstanding performance',
                 status: 'earned'
             });
-            alert('Gift successfully awarded to winner!');
+            toast.success('Gift successfully awarded to winner!');
         } catch (err) {
-            alert('Failed to award gift: ' + err.message);
+            toast.error('Failed to award gift: ' + err.message);
         } finally {
             setSubmittingAward(false);
         }
@@ -889,7 +1058,7 @@ export default function AdminMarketingClient({
                         className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-sm transition-all"
                     >
                         <Plus size={15} />
-                        <span>Add Question</span>
+                        <span>New Question</span>
                     </button>
                 </div>
             </div>
@@ -898,10 +1067,10 @@ export default function AdminMarketingClient({
             <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200/80 dark:border-slate-800 scrollbar-none text-xs font-black">
                 <button
                     onClick={() => setActiveTab('overview')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'overview'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <LayoutDashboard size={15} />
@@ -909,11 +1078,32 @@ export default function AdminMarketingClient({
                 </button>
 
                 <button
+                    onClick={() => setActiveTab('official_products')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
+                        activeTab === 'official_products'
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                    }`}
+                >
+                    <Package size={15} />
+                    <span>Official Products Curation</span>
+                    {selectedOfficialProductIds.length > 0 && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            activeTab === 'official_products'
+                                ? 'bg-white/20 text-white'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
+                        }`}>
+                            {selectedOfficialProductIds.length}
+                        </span>
+                    )}
+                </button>
+
+                <button
                     onClick={() => setActiveTab('categories')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'categories'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <Building2 size={15} />
@@ -922,10 +1112,10 @@ export default function AdminMarketingClient({
 
                 <button
                     onClick={() => setActiveTab('quiz')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'quiz'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <Trophy size={15} />
@@ -934,10 +1124,10 @@ export default function AdminMarketingClient({
 
                 <button
                     onClick={() => setActiveTab('sponsorships')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'sponsorships'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <Calendar size={15} />
@@ -946,10 +1136,10 @@ export default function AdminMarketingClient({
 
                 <button
                     onClick={() => setActiveTab('targets')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'targets'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <Target size={15} />
@@ -958,10 +1148,10 @@ export default function AdminMarketingClient({
 
                 <button
                     onClick={() => setActiveTab('fulfillment')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'fulfillment'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <Truck size={15} />
@@ -970,10 +1160,10 @@ export default function AdminMarketingClient({
 
                 <button
                     onClick={() => setActiveTab('settings')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'settings'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <Settings size={15} />
@@ -982,10 +1172,10 @@ export default function AdminMarketingClient({
 
                 <button
                     onClick={() => setActiveTab('logs')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl whitespace-nowrap transition-all cursor-pointer ${
                         activeTab === 'logs'
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300'
                     }`}
                 >
                     <FileText size={15} />
@@ -994,78 +1184,140 @@ export default function AdminMarketingClient({
             </div>
 
             {/* ========================================================================= */}
-            {/* 1. EXECUTIVE OVERVIEW DASHBOARD                                           */}
+            {/* 1. EXECUTIVE OVERVIEW DASHBOARD                                            */}
             {/* ========================================================================= */}
             {activeTab === 'overview' && (
                 <div className="space-y-6">
-                    {/* KPI Stat Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                        {/* Total Reach */}
-                        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                    {/* KPI Stat Grid with Click-to-Redirect */}
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+                        {/* 1. Total Reach -> Logs */}
+                        <div 
+                            onClick={() => setActiveTab('logs')}
+                            className="group p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all cursor-pointer relative"
+                        >
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Platform Reach</span>
-                                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
-                                    <BarChart3 size={16} />
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Platform Reach</span>
+                                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                    <BarChart3 size={15} />
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tabular-nums">
+                                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
                                     {(overviewStats.totalClicks || 0).toLocaleString('en-IN')}
                                 </span>
-                                <p className="text-[11px] font-bold text-slate-400 mt-1">Total Link Clicks Generated</p>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1 group-hover:text-blue-600 transition-colors">
+                                    <span>View Stream</span>
+                                    <ArrowRight size={10} />
+                                </p>
                             </div>
                         </div>
 
-                        {/* Viral Share Links */}
-                        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                        {/* 2. Viral Share Links -> Logs */}
+                        <div 
+                            onClick={() => setActiveTab('logs')}
+                            className="group p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all cursor-pointer relative"
+                        >
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Share Links</span>
-                                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center">
-                                    <Share2 size={16} />
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Share Links</span>
+                                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                    <Share2 size={15} />
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tabular-nums">
+                                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
                                     {(overviewStats.totalLinks || 0).toLocaleString('en-IN')}
                                 </span>
-                                <p className="text-[11px] font-bold text-slate-400 mt-1">
-                                    {(overviewStats.totalShares || 0)} Total Shares
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1 group-hover:text-indigo-600 transition-colors">
+                                    <span>{(overviewStats.totalShares || 0)} Total Shares</span>
+                                    <ArrowRight size={10} />
                                 </p>
                             </div>
                         </div>
 
-                        {/* Sponsorship Revenue */}
-                        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                        {/* 3. Sponsorship Revenue -> Sponsorships */}
+                        <div 
+                            onClick={() => setActiveTab('sponsorships')}
+                            className="group p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md transition-all cursor-pointer relative"
+                        >
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Sponsor Revenue</span>
-                                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
-                                    <Calendar size={16} />
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sponsor Revenue</span>
+                                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                    <Calendar size={15} />
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                                     ₹{((overviewStats.totalSponsorshipRevenuePaise || 0) / 100).toLocaleString('en-IN')}
                                 </span>
-                                <p className="text-[11px] font-bold text-slate-400 mt-1">
-                                    {sponsorshipsList.length} Merchant Bookings
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
+                                    <span>{sponsorshipsList.length} Bookings</span>
+                                    <ArrowRight size={10} />
                                 </p>
                             </div>
                         </div>
 
-                        {/* Daily Challenge Engagement */}
-                        <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                        {/* 4. Daily Challenge Plays -> Quiz */}
+                        <div 
+                            onClick={() => setActiveTab('quiz')}
+                            className="group p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-md transition-all cursor-pointer relative"
+                        >
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-500 uppercase">Quiz Plays</span>
-                                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center">
-                                    <Trophy size={16} />
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quiz Plays</span>
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                    <Trophy size={15} />
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tabular-nums">
+                                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
                                     {(overviewStats.totalPlays || 0).toLocaleString('en-IN')}
                                 </span>
-                                <p className="text-[11px] font-bold text-slate-400 mt-1">
-                                    Across {categoriesList.length} Categories
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1 group-hover:text-amber-600 transition-colors">
+                                    <span>Manage Questions</span>
+                                    <ArrowRight size={10} />
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* 5. Curated Official Products -> Official Products */}
+                        <div 
+                            onClick={() => setActiveTab('official_products')}
+                            className="group p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all cursor-pointer relative"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Official Curated</span>
+                                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                    <Package size={15} />
+                                </div>
+                            </div>
+                            <div className="mt-3">
+                                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                                    {selectedOfficialProductIds.length} <span className="text-xs text-slate-400 font-bold">/ {officialProducts.length}</span>
+                                </span>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1 group-hover:text-blue-600 transition-colors">
+                                    <span>Curate Products</span>
+                                    <ArrowRight size={10} />
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* 6. Gift Fulfillment -> Fulfillment */}
+                        <div 
+                            onClick={() => setActiveTab('fulfillment')}
+                            className="group p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-md transition-all cursor-pointer relative"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pending Claims</span>
+                                <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 group-hover:scale-110 transition-transform flex items-center justify-center">
+                                    <Truck size={15} />
+                                </div>
+                            </div>
+                            <div className="mt-3">
+                                <span className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                                    {claimsList.filter(c => c.status === 'pending').length}
+                                </span>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1 group-hover:text-rose-600 transition-colors">
+                                    <span>{claimsList.length} Total Claims</span>
+                                    <ArrowRight size={10} />
                                 </p>
                             </div>
                         </div>
@@ -2013,6 +2265,425 @@ export default function AdminMarketingClient({
                 </div>
             )}
 
+            {/* ========================================================================= */}
+            {/* 8. OFFICIAL PRODUCTS CURATION (STRICTLY INTRUST PLATFORM INVENTORY)        */}
+            {/* ========================================================================= */}
+            {activeTab === 'official_products' && (
+                <div className="space-y-6">
+                    {/* Header Banner */}
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase">
+                                    InTrust Direct Platform
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                    Strictly Non-Merchant DB (submitted_by_merchant_id IS NULL)
+                                </span>
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight">
+                                Official Marketing Products
+                            </h2>
+                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium mt-0.5">
+                                Select and curate genuine InTrust platform items for consumers and merchants to share in <span className="font-mono text-blue-600 font-bold">/marketing/products</span>.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-stretch md:self-auto shrink-0">
+                            <button
+                                onClick={handleSaveOfficialProducts}
+                                disabled={savingOfficialProducts}
+                                className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                <Save size={14} />
+                                <span>{savingOfficialProducts ? 'Saving Selection...' : `Save Selection (${selectedOfficialProductIds.length})`}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Audience & Sharing Access Card */}
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <Users size={16} className="text-blue-600" />
+                                    <h3 className="text-sm sm:text-base font-black text-slate-950 dark:text-white">
+                                        Sharing Permissions & Audience Control
+                                    </h3>
+                                </div>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                    Define who is authorized to generate affiliate share links for curated InTrust official products.
+                                </p>
+                            </div>
+
+                            {/* Dropdown to select audience mode */}
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Allowed Promoters:</span>
+                                <select
+                                    value={officialAudience}
+                                    onChange={(e) => setOfficialAudience(e.target.value)}
+                                    className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20"
+                                >
+                                    <option value="all">🌍 All Users & Verified Merchants (Public)</option>
+                                    <option value="merchants">🏪 Verified Merchants Only</option>
+                                    <option value="customers">👥 Customers Only</option>
+                                    <option value="custom">🎯 Specific Users & Merchants (Custom Allowlist)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* When custom allowlist is selected, show dropdowns to pick specific merchants and users */}
+                        {officialAudience === 'custom' && (
+                            <div className="space-y-4 pt-1 animate-fadeIn">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Add Merchant Dropdown */}
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black text-slate-700 dark:text-slate-300">
+                                            Add Merchant to Allowlist
+                                        </label>
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleAddAllowedMerchant(e.target.value);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            defaultValue=""
+                                            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200"
+                                        >
+                                            <option value="">-- Choose Merchant to Allow --</option>
+                                            {initialMerchants.map(m => (
+                                                <option key={`m_${m.id}`} value={m.id} disabled={selectedAllowedMerchantIds.includes(m.id)}>
+                                                    {m.store_name ? `${m.store_name} — ` : ''}{m.business_name} {m.city ? `(${m.city})` : ''} {selectedAllowedMerchantIds.includes(m.id) ? '✓ (Added)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        {/* Selected Merchants Chips */}
+                                        <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
+                                            {selectedAllowedMerchantIds.length === 0 ? (
+                                                <span className="text-[11px] text-slate-400 font-medium italic">No merchants specifically selected</span>
+                                            ) : (
+                                                selectedAllowedMerchantIds.map(mId => {
+                                                    const mer = initialMerchants.find(m => m.id === mId);
+                                                    return (
+                                                        <span
+                                                            key={mId}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-[11px] font-bold"
+                                                        >
+                                                            <span>🏪 {mer?.store_name || mer?.business_name || mId.slice(0, 8)}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveAllowedMerchant(mId)}
+                                                                className="hover:text-rose-600 text-slate-400 p-0.5 rounded cursor-pointer"
+                                                            >
+                                                                <X size={11} />
+                                                            </button>
+                                                        </span>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Add User Dropdown */}
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black text-slate-700 dark:text-slate-300">
+                                            Add Customer / User to Allowlist
+                                        </label>
+                                        <select
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleAddAllowedUser(e.target.value);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            defaultValue=""
+                                            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200"
+                                        >
+                                            <option value="">-- Choose User to Allow --</option>
+                                            {initialUsers.map(u => (
+                                                <option key={`u_${u.id}`} value={u.id} disabled={selectedAllowedUserIds.includes(u.id)}>
+                                                    👤 {u.full_name || 'Customer'} {u.phone ? `(${u.phone})` : ''} {u.email ? `• ${u.email}` : ''} {selectedAllowedUserIds.includes(u.id) ? '✓ (Added)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        {/* Selected Users Chips */}
+                                        <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
+                                            {selectedAllowedUserIds.length === 0 ? (
+                                                <span className="text-[11px] text-slate-400 font-medium italic">No users specifically selected</span>
+                                            ) : (
+                                                selectedAllowedUserIds.map(uId => {
+                                                    const usr = initialUsers.find(u => u.id === uId);
+                                                    return (
+                                                        <span
+                                                            key={uId}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold"
+                                                        >
+                                                            <span>👤 {usr?.full_name || usr?.phone || uId.slice(0, 8)}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveAllowedUser(uId)}
+                                                                className="hover:text-rose-600 text-slate-400 p-0.5 rounded cursor-pointer"
+                                                            >
+                                                                <X size={11} />
+                                                            </button>
+                                                        </span>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-slate-500 font-medium">
+                                    💡 Only the {selectedAllowedMerchantIds.length} merchants and {selectedAllowedUserIds.length} users listed above will be permitted to share curated InTrust official products when saved.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Filter & Selection Control Bar */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-3">
+                        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2.5 flex-1">
+                                {/* Search */}
+                                <div className="relative w-full sm:w-64">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={officialProductSearch}
+                                        onChange={(e) => setOfficialProductSearch(e.target.value)}
+                                        placeholder="Search title, category, slug..."
+                                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                                    />
+                                </div>
+
+                                {/* Category Filter */}
+                                {officialProductCategories.length > 0 && (
+                                    <select
+                                        value={officialCategoryFilter}
+                                        onChange={(e) => {
+                                            setOfficialCategoryFilter(e.target.value);
+                                            setOfficialSubCategoryFilter('all');
+                                        }}
+                                        className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300"
+                                    >
+                                        <option value="all">📁 All Categories ({officialProducts.length})</option>
+                                        {officialProductCategories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                )}
+
+                                {/* Sub-Category Filter */}
+                                {officialProductSubCategories.length > 0 && (
+                                    <select
+                                        value={officialSubCategoryFilter}
+                                        onChange={(e) => setOfficialSubCategoryFilter(e.target.value)}
+                                        className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300"
+                                    >
+                                        <option value="all">📂 All Sub-Categories ({officialProductSubCategories.length})</option>
+                                        {officialProductSubCategories.map(subCat => (
+                                            <option key={subCat} value={subCat}>{subCat}</option>
+                                        ))}
+                                    </select>
+                                )}
+
+                                {/* Page Size */}
+                                <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+                                    <span className="text-[11px] font-bold text-slate-400">Show:</span>
+                                    <select
+                                        value={officialPageSize}
+                                        onChange={(e) => setOfficialPageSize(Number(e.target.value))}
+                                        className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300"
+                                    >
+                                        <option value={12}>12 / page</option>
+                                        <option value={24}>24 / page</option>
+                                        <option value={48}>48 / page</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
+                                <button
+                                    onClick={handleSelectAllOfficial}
+                                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                >
+                                    Select All Filtered ({filteredOfficialProducts.length})
+                                </button>
+                                <button
+                                    onClick={handleClearOfficialSelection}
+                                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Showing count indicator */}
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                            <span>
+                                Showing {filteredOfficialProducts.length > 0 ? (officialPage - 1) * officialPageSize + 1 : 0} – {Math.min(officialPage * officialPageSize, filteredOfficialProducts.length)} of {filteredOfficialProducts.length} Official Products
+                            </span>
+                            <span>
+                                {selectedOfficialProductIds.length} currently selected for marketing
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Products Grid */}
+                    {filteredOfficialProducts.length === 0 ? (
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+                            <Package size={36} className="mx-auto text-slate-300 dark:text-slate-600" />
+                            <h3 className="text-base font-black text-slate-900 dark:text-white">No Official Products Match</h3>
+                            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                Adjust your search or category filters to find products from the platform inventory.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {paginatedOfficialProducts.map(p => {
+                                    const isSelected = selectedOfficialProductIds.includes(p.id);
+                                    const img = (Array.isArray(p.product_images) && p.product_images[0]) || '/icons/intrustLogo.png';
+                                    const retailPrice = p.suggested_retail_price_paise 
+                                        ? Math.round(p.suggested_retail_price_paise / 100) 
+                                        : 299;
+                                    const wholesalePrice = p.wholesale_price_paise
+                                        ? Math.round(p.wholesale_price_paise / 100)
+                                        : null;
+                                    const marginPercent = wholesalePrice && retailPrice > wholesalePrice
+                                        ? Math.round(((retailPrice - wholesalePrice) / retailPrice) * 100)
+                                        : null;
+
+                                    return (
+                                        <div
+                                            key={p.id}
+                                            onClick={() => toggleOfficialProduct(p.id)}
+                                            className={`group rounded-2xl p-4 border transition-all cursor-pointer relative flex flex-col justify-between ${
+                                                isSelected 
+                                                    ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/20 shadow-md' 
+                                                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 shadow-2xs'
+                                            }`}
+                                        >
+                                            {/* Selection Checkbox Badge & Categories */}
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <div className="min-w-0 flex flex-wrap items-center gap-1">
+                                                    <span className="text-[9px] font-black text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200/60 dark:border-blue-800/60 uppercase truncate">
+                                                        {p.category || 'General'}
+                                                    </span>
+                                                    {p.sub_category && (
+                                                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate">
+                                                            {p.sub_category}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-lg shrink-0 flex items-center justify-center transition-all ${
+                                                    isSelected 
+                                                        ? 'bg-blue-600 text-white shadow-xs' 
+                                                        : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                                                }`}>
+                                                    {isSelected && <Check size={12} strokeWidth={3} />}
+                                                </div>
+                                            </div>
+
+                                            {/* Image Frame */}
+                                            <div className="relative w-full h-36 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mb-3 flex items-center justify-center p-2">
+                                                <Image
+                                                    src={img}
+                                                    alt={p.title || 'Product'}
+                                                    fill
+                                                    sizes="200px"
+                                                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-200"
+                                                />
+                                            </div>
+
+                                            {/* Title & Pricing */}
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug mb-2">
+                                                    {p.title || 'Official InTrust Product'}
+                                                </h4>
+
+                                                <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] text-slate-400 font-bold">MRP:</span>
+                                                        <span className="text-sm font-black text-slate-950 dark:text-white">₹{retailPrice}</span>
+                                                    </div>
+
+                                                    {wholesalePrice && (
+                                                        <div className="flex items-center justify-between text-[11px]">
+                                                            <span className="text-slate-400 font-bold">Wholesale:</span>
+                                                            <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                                                                ₹{wholesalePrice} {marginPercent && <span className="text-[10px] text-emerald-500 font-bold">({marginPercent}% off)</span>}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="pt-1 flex items-center justify-between">
+                                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Status</span>
+                                                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
+                                                            isSelected 
+                                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200/60' 
+                                                                : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                                                        }`}>
+                                                            {isSelected ? '✓ In Marketing' : 'Click to Add'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {totalOfficialPages > 1 && (
+                                <div className="flex items-center justify-between pt-4 border-t border-slate-200/80 dark:border-slate-800">
+                                    <button
+                                        onClick={() => setOfficialPage(p => Math.max(1, p - 1))}
+                                        disabled={officialPage === 1}
+                                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+                                    >
+                                        ◀ Previous
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: totalOfficialPages }, (_, i) => i + 1)
+                                            .filter(page => page === 1 || page === totalOfficialPages || Math.abs(page - officialPage) <= 1)
+                                            .map((page, idx, arr) => (
+                                                <div key={page} className="flex items-center">
+                                                    {idx > 0 && arr[idx - 1] !== page - 1 && (
+                                                        <span className="px-1 text-slate-400 text-xs">...</span>
+                                                    )}
+                                                    <button
+                                                        onClick={() => setOfficialPage(page)}
+                                                        className={`w-8 h-8 rounded-xl text-xs font-black transition cursor-pointer ${
+                                                            officialPage === page
+                                                                ? 'bg-blue-600 text-white shadow-xs'
+                                                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => setOfficialPage(p => Math.min(totalOfficialPages, p + 1))}
+                                        disabled={officialPage === totalOfficialPages}
+                                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 transition cursor-pointer"
+                                    >
+                                        Next ▶
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* ─── MODAL: CREATE CATEGORY (DYNAMIC) ─── */}
             {isAddCategoryModalOpen && (
                 <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -2317,6 +2988,7 @@ export default function AdminMarketingClient({
                                     >
                                         <option value="customer">Customer</option>
                                         <option value="merchant">Merchant</option>
+                                        <option value="all">All Users</option>
                                     </select>
                                 </div>
                                 <div>
@@ -2330,6 +3002,10 @@ export default function AdminMarketingClient({
                                         <option value="quiz_streak">Quiz Streak</option>
                                         <option value="store_sales">Store Sales</option>
                                         <option value="link_clicks">Link Clicks</option>
+                                        <option value="user_registration">Welcome / Registration Milestone</option>
+                                        <option value="daily_login">Daily Login Milestone</option>
+                                        <option value="first_order">First Order Milestone</option>
+                                        <option value="custom">Custom</option>
                                     </select>
                                 </div>
                             </div>
@@ -2368,14 +3044,21 @@ export default function AdminMarketingClient({
                                     />
                                 </div>
                             ) : (
-                                <div>
-                                    <label className="block text-slate-700 dark:text-slate-300 mb-1">Physical Gift Item Name</label>
-                                    <input
-                                        type="text"
-                                        value={targetForm.gift_name}
-                                        onChange={(e) => setTargetForm(prev => ({ ...prev, gift_name: e.target.value }))}
-                                        placeholder="e.g. Wireless Smart Earbuds"
-                                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-slate-700 dark:text-slate-300 mb-1">Physical Gift Item Name</label>
+                                        <input
+                                            type="text"
+                                            value={targetForm.gift_name}
+                                            onChange={(e) => setTargetForm(prev => ({ ...prev, gift_name: e.target.value }))}
+                                            placeholder="e.g. Titanium Sapphire Chrono Smartwatch"
+                                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                        />
+                                    </div>
+                                    <MarketingImageUploader
+                                        value={targetForm.gift_image_url}
+                                        onChange={(url) => setTargetForm(prev => ({ ...prev, gift_image_url: url }))}
+                                        label="Physical Gift Photo"
                                     />
                                 </div>
                             )}
@@ -2417,14 +3100,42 @@ export default function AdminMarketingClient({
 
                         <form onSubmit={handleAwardGift} className="space-y-3 text-xs">
                             <div>
-                                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">User ID *</label>
+                                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                    Select Winner (Customer or Merchant) *
+                                </label>
+                                <select
+                                    value={selectedAwardRecipientKey}
+                                    onChange={(e) => handleAwardRecipientChange(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 mb-2 focus:ring-2 focus:ring-indigo-500/20"
+                                >
+                                    <option value="">-- Choose User or Merchant --</option>
+                                    <optgroup label="Registered Customers & Users">
+                                        {initialUsers.map(u => (
+                                            <option key={`user_${u.id}`} value={`user_${u.id}`}>
+                                                👤 {u.full_name || 'Customer'} {u.phone ? `(${u.phone})` : ''} {u.email ? `• ${u.email}` : ''}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Verified Merchants & Stores">
+                                        {initialMerchants.map(m => (
+                                            <option key={`merchant_${m.id}`} value={`merchant_${m.id}`}>
+                                                🏪 {m.store_name ? `${m.store_name} — ` : ''}{m.business_name} {m.business_phone ? `(${m.business_phone})` : ''}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <option value="custom">✏️ Enter custom UUID manually</option>
+                                </select>
+
+                                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                                    Recipient User ID *
+                                </label>
                                 <input
                                     type="text"
                                     required
                                     value={newGiftAward.user_id}
                                     onChange={(e) => setNewGiftAward(prev => ({ ...prev, user_id: e.target.value }))}
                                     placeholder="UUID of Customer or Merchant"
-                                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono"
+                                    className="w-full px-3.5 py-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono text-[11px] text-slate-700 dark:text-slate-300"
                                 />
                             </div>
 
@@ -3082,7 +3793,7 @@ export default function AdminMarketingClient({
                                     <option value="">-- Choose Merchant --</option>
                                     {initialMerchants?.map(m => (
                                         <option key={m.id} value={m.id}>
-                                            {m.business_name} ({m.business_phone || m.id.slice(0, 8)})
+                                            🏪 {m.store_name ? `${m.store_name} — ` : ''}{m.business_name} {m.city ? `(${m.city})` : ''} {m.business_phone ? `• ${m.business_phone}` : ''}
                                         </option>
                                     ))}
                                 </select>
@@ -3366,6 +4077,9 @@ export default function AdminMarketingClient({
                                         <option value="quiz_streak">Quiz Streak</option>
                                         <option value="store_sales">Store Sales</option>
                                         <option value="link_clicks">Link Clicks</option>
+                                        <option value="user_registration">Welcome / Registration Milestone</option>
+                                        <option value="daily_login">Daily Login Milestone</option>
+                                        <option value="first_order">First Order Milestone</option>
                                         <option value="custom">Custom</option>
                                     </select>
                                 </div>
@@ -3405,13 +4119,20 @@ export default function AdminMarketingClient({
                                     />
                                 </div>
                             ) : (
-                                <div>
-                                    <label className="block text-slate-700 dark:text-slate-300 mb-1">Physical Gift Item Name</label>
-                                    <input
-                                        type="text"
-                                        value={editingTarget.gift_name || ''}
-                                        onChange={(e) => setEditingTarget(prev => ({ ...prev, gift_name: e.target.value }))}
-                                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-slate-700 dark:text-slate-300 mb-1">Physical Gift Item Name</label>
+                                        <input
+                                            type="text"
+                                            value={editingTarget.gift_name || ''}
+                                            onChange={(e) => setEditingTarget(prev => ({ ...prev, gift_name: e.target.value }))}
+                                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                                        />
+                                    </div>
+                                    <MarketingImageUploader
+                                        value={editingTarget.gift_image_url || ''}
+                                        onChange={(url) => setEditingTarget(prev => ({ ...prev, gift_image_url: url }))}
+                                        label="Physical Gift Photo"
                                     />
                                 </div>
                             )}
@@ -3588,7 +4309,7 @@ export default function AdminMarketingClient({
                                             type="button"
                                             onClick={() => {
                                                 navigator.clipboard.writeText(viewingClaim.shipping_address);
-                                                alert('Address copied to clipboard!');
+                                                toast.success('Address copied to clipboard!');
                                             }}
                                             className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
                                         >
@@ -3716,7 +4437,7 @@ export default function AdminMarketingClient({
                                         type="button"
                                         onClick={() => {
                                             navigator.clipboard.writeText(JSON.stringify(selectedTrackingLog.metadata, null, 2));
-                                            alert('Payload copied!');
+                                            toast.success('Payload copied to clipboard!');
                                         }}
                                         className="text-[10px] text-blue-600 font-sans hover:underline flex items-center gap-1"
                                     >

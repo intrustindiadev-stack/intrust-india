@@ -134,10 +134,34 @@ export async function POST(request) {
                     totalDistributed: rewardData?.total_distributed,
                     referenceId: groupId,
                     referenceType: 'shopping_order'
-                }).catch(() => {});
+                }).catch(() => { });
             }
         } catch (rewardErr) {
             console.error(JSON.stringify({ correlationId, stage: 'reward_distribution_error', userId, groupId, error: rewardErr?.message }));
+        }
+
+        // Marketing affiliate ORDER cashback
+        try {
+            const affiliateCookie = request.cookies.get('intrust_affiliate_code')?.value;
+            if (affiliateCookie) {
+                // Get primary product_id from order items
+                const { data: orderItems } = await supabaseAdmin
+                    .from('shopping_order_items')
+                    .select('product_id')
+                    .eq('order_group_id', groupId)
+                    .limit(1)
+                    .maybeSingle();
+
+                await supabaseAdmin.rpc('process_marketing_referral_reward', {
+                    p_event_type: 'ORDER',
+                    p_ref_code: affiliateCookie,
+                    p_converted_user_id: userId,
+                    p_product_id: orderItems?.product_id || null
+                });
+            }
+        } catch (affiliateErr) {
+            console.error('[WalletCheckout] marketing affiliate ORDER cashback failed:', affiliateErr?.message);
+            // Non-fatal
         }
 
         // ── 4. Fire-and-forget order notification ───────────────────────────────

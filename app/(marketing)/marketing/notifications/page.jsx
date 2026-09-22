@@ -92,7 +92,7 @@ export default function MarketingNotificationsPage() {
 
         switch (n.reference_type) {
             case 'sponsorship':
-                router.push('/marketing/sponsorships');
+                router.push('/marketing/daily-challenge?tab=sponsor');
                 break;
             case 'daily_challenge':
                 router.push('/marketing/daily-challenge');

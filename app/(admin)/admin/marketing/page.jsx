@@ -6,6 +6,9 @@ export const metadata = {
     title: 'Marketing Control Center | Admin | InTrust India',
 };
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminMarketingPage() {
     const supabase = await createServerSupabaseClient();
 
@@ -77,12 +80,19 @@ export default async function AdminMarketingPage() {
         .order('sponsor_date', { ascending: false })
         .limit(60);
 
-    // 4b. Fetch Verified Merchants List for Manual Admin Sponsorship Assignment
+    // 4b. Fetch Verified Merchants List for Manual Admin Sponsorship Assignment & Control
     const { data: merchantsList } = await supabase
         .from('merchants')
-        .select('id, business_name, business_phone, store_name')
+        .select('id, user_id, business_name, store_name, business_phone, business_email, status, city')
         .order('business_name', { ascending: true })
-        .limit(100);
+        .limit(250);
+
+    // 4c. Fetch Users List for Admin Targeting, Gift Awards & Attribution
+    const { data: usersList } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, phone, email, role, avatar_url')
+        .order('created_at', { ascending: false })
+        .limit(250);
 
     // 5. Fetch Targets
     const { data: targets } = await supabase
@@ -104,7 +114,28 @@ export default async function AdminMarketingPage() {
         .order('created_at', { ascending: false })
         .limit(60);
 
-    // 8. Fetch Aggregate Performance Stats for Executive Overview
+    // 8. Fetch InTrust Official Products (Strictly submitted_by_merchant_id IS NULL)
+    const { data: rawOfficialProducts } = await supabase
+        .from('shopping_products')
+        .select('id, title, slug, product_images, suggested_retail_price_paise, wholesale_price_paise, category, sub_category, is_active')
+        .is('submitted_by_merchant_id', null)
+        .eq('is_active', true)
+        .order('title', { ascending: true })
+        .limit(1000);
+
+    // 8b. Fetch Saved Official Products Selection
+    const { data: officialProductsSetting } = await supabase
+        .from('marketing_settings')
+        .select('value')
+        .eq('key', 'official_marketing_products')
+        .maybeSingle();
+
+    const selectedOfficialProductIds = officialProductsSetting?.value?.product_ids || [];
+    const officialSharingAudience = officialProductsSetting?.value?.allowed_audience || 'all';
+    const initialAllowedUserIds = officialProductsSetting?.value?.allowed_user_ids || [];
+    const initialAllowedMerchantIds = officialProductsSetting?.value?.allowed_merchant_ids || [];
+
+    // 9. Fetch Aggregate Performance Stats for Executive Overview
     const { data: shareLinks, count: totalLinksCount } = await supabase
         .from('marketing_share_links')
         .select('clicks_count, shares_count, orders_count, total_earnings_paise', { count: 'exact' });
@@ -113,11 +144,22 @@ export default async function AdminMarketingPage() {
         .from('daily_challenge_plays')
         .select('id', { count: 'exact', head: true });
 
-    const totalClicks = shareLinks?.reduce((sum, l) => sum + (l.clicks_count || 0), 0) || 0;
-    const totalShares = shareLinks?.reduce((sum, l) => sum + (l.shares_count || 0), 0) || 0;
-    const totalOrders = shareLinks?.reduce((sum, l) => sum + (l.orders_count || 0), 0) || 0;
-    const totalEarningsPaise = shareLinks?.reduce((sum, l) => sum + (l.total_earnings_paise || 0), 0) || 0;
-    const totalSponsorshipRevenuePaise = sponsorships?.reduce((sum, s) => sum + (s.fee_paise || 0), 0) || 0;
+    let totalClicks = 0;
+    let totalShares = 0;
+    let totalOrders = 0;
+    let totalEarningsPaise = 0;
+
+    (shareLinks || []).forEach(l => {
+        totalClicks += (l.clicks_count || 0);
+        totalShares += (l.shares_count || 0);
+        totalOrders += (l.orders_count || 0);
+        totalEarningsPaise += (l.total_earnings_paise || 0);
+    });
+
+    const totalSponsorshipRevenuePaise = (sponsorships || []).reduce(
+        (sum, s) => sum + (s.payment_status === 'paid' ? (s.fee_paise || 0) : 0),
+        0
+    );
 
     const overviewStats = {
         totalLinks: totalLinksCount || 0,
@@ -144,7 +186,13 @@ export default async function AdminMarketingPage() {
             initialClaims={claims || []}
             initialTrackingLogs={trackingLogs || []}
             initialMerchants={merchantsList || []}
+            initialUsers={usersList || []}
             overviewStats={overviewStats}
+            officialProducts={rawOfficialProducts || []}
+            initialSelectedOfficialProductIds={selectedOfficialProductIds}
+            initialOfficialAudience={officialSharingAudience}
+            initialAllowedUserIds={initialAllowedUserIds}
+            initialAllowedMerchantIds={initialAllowedMerchantIds}
         />
     );
 }

@@ -27,3 +27,11 @@ mappings.forEach(({ match, target }) => {
         console.warn(`Could not find file matching ${match}`);
     }
 });
+
+// Copy uploaded mystery box spectrum
+const uploadedMysteryBox = 'C:\\Users\\yoges\\.gemini\\antigravity-ide\\brain\\7b5bca05-7373-45c9-8ae4-856cdee5de5a\\.user_uploaded\\media_1789997450429.png';
+if (fs.existsSync(uploadedMysteryBox)) {
+    fs.copyFileSync(uploadedMysteryBox, path.join(destDir, 'mystery_box_spectrum.png'));
+    console.log('Copied mystery_box_spectrum.png to public/marketing');
+}
+

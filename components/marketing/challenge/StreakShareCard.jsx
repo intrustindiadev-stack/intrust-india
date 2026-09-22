@@ -39,7 +39,7 @@ export default function StreakShareCard({
     };
 
     return (
-        <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 text-white rounded-3xl p-5 sm:p-6 border border-amber-500/30 shadow-xl space-y-5 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-amber-500/30 shadow-xl space-y-4 sm:space-y-5 relative overflow-hidden">
             {/* Ambient fire glow */}
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl pointer-events-none" />
 

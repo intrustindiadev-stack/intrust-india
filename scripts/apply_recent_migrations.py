@@ -89,6 +89,14 @@ def apply_recent_migrations(since: str = ""):
                 print("  STDERR:", err.strip())
 
             client.exec_command(f"rm {remote_path}")
+
+            # Record in supabase_migrations.schema_migrations if table exists
+            version = mig_file.split('_')[0] if '_' in mig_file else mig_file
+            rec_cmd = (
+                f"docker exec {SUPABASE_CONTAINER} psql -U {PG_ADMIN_ROLE} -d postgres -c "
+                f"\"INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('{version}', '{mig_file}') ON CONFLICT DO NOTHING;\""
+            )
+            client.exec_command(rec_cmd)
             print(f"  ✅ Done: {mig_file}")
 
         sftp.close()

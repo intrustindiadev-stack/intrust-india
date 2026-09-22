@@ -32,7 +32,16 @@ const PAGE_SIZE = 24;
 const FlashSale = React.lazy(() => import('@/components/customer/shop/FlashSale'));
 const ConfirmModal = React.lazy(() => import('@/components/ui/ConfirmModal'));
 
-export default function StorefrontV2Client({ merchant, initialInventory, initialTotalCount, customer, categories, initialFilters = {}, currentPage = 1 }) {
+export default function StorefrontV2Client({ 
+    merchant, 
+    initialInventory, 
+    initialTotalCount, 
+    customer, 
+    categories, 
+    initialFilters = {}, 
+    currentPage = 1,
+    initialFlashSaleItems = []
+}) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -887,14 +896,22 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                     ))}
                                 </div>
                             ) : filteredItems.length === 0 ? (
-                                <div className={`py-16 text-center rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-white border-slate-200/80 shadow-xs'}`}>
-                                    <Package className={isDark ? 'text-white/10 mx-auto mb-3' : 'text-slate-300 mx-auto mb-3'} size={44} />
-                                    <h3 className={`text-base font-black uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-600'}`}>No products available</h3>
-                                    <p className={`text-xs mt-1 font-medium ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Try adjusting your filters or search terms</p>
+                                <div className={`py-14 sm:py-16 px-6 text-center rounded-3xl border ${isDark ? 'bg-white/[0.02] border-white/[0.08]' : 'bg-white border-slate-200/90 shadow-sm'}`}>
+                                    <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-3xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                        <Package size={42} strokeWidth={1.75} />
+                                    </div>
+                                    <h3 className={`text-base sm:text-lg font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                        No store products found
+                                    </h3>
+                                    <p className={`text-xs sm:text-sm mt-1.5 max-w-sm mx-auto font-medium leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {activeFiltersList.length > 0
+                                            ? 'Try clearing active filters to see all available items from this store.'
+                                            : 'This merchant is preparing their catalog. Check out official platform deals below!'}
+                                    </p>
                                     {activeFiltersList.length > 0 && (
                                         <button
                                             onClick={handleClearAllFilters}
-                                            className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-600 text-white transition-all shadow-sm"
+                                            className="mt-4 px-5 py-2.5 rounded-xl text-xs font-black bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm active:scale-95"
                                         >
                                             Clear All Filters
                                         </button>
@@ -931,6 +948,38 @@ export default function StorefrontV2Client({ merchant, initialInventory, initial
                                         />
                                     </div>
                                 </>
+                            )}
+
+                            {/* FLASH SALE OFFICIAL PRODUCTS SECTION (Always rendered below merchant products or empty state) */}
+                            {initialFlashSaleItems && initialFlashSaleItems.length > 0 && (
+                                <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-slate-200/80 dark:border-white/10">
+                                    <div className="mb-4">
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider mb-1.5">
+                                            <Zap size={11} className="fill-amber-500" />
+                                            <span>Platform Flash Deals</span>
+                                        </div>
+                                        <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                                            InTrust Official Flash Deals
+                                        </h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                            Handpicked genuine essentials with verified same-day delivery & assured cashbacks.
+                                        </p>
+                                    </div>
+
+                                    <Suspense fallback={
+                                        <div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-800/50 animate-pulse" />
+                                    }>
+                                        <FlashSale
+                                            initialItems={initialFlashSaleItems}
+                                            cart={cart}
+                                            onAdd={(item) => addToCart(item)}
+                                            onRemove={(item) => removeFromCart(item)}
+                                            isStoreOpen={true}
+                                            primaryColor={primaryColor}
+                                            secondaryColor={secondaryColor}
+                                        />
+                                    </Suspense>
+                                </div>
                             )}
                         </div>
                     </div>

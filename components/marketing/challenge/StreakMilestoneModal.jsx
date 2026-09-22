@@ -40,6 +40,17 @@ export default function StreakMilestoneModal({
         }
     }, []);
 
+    // Close on Escape key
+    React.useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const totalRewardRupees = ((baseRewardPaise + milestoneBonusPaise) / 100).toFixed(0);
@@ -47,7 +58,10 @@ export default function StreakMilestoneModal({
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
+            <div 
+                onClick={onClose}
+                className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn cursor-pointer"
+            >
                 {windowDimension.width > 0 && (
                     <div className="fixed inset-0 pointer-events-none z-[60]">
                         <Confetti
@@ -61,10 +75,11 @@ export default function StreakMilestoneModal({
                 )}
 
                 <motion.div
+                    onClick={(e) => e.stopPropagation()}
                     initial={{ scale: 0.9, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden text-center space-y-6 z-10"
+                    className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 border border-slate-200 dark:border-slate-800 shadow-2xl relative overflow-hidden text-center space-y-4 sm:space-y-5 z-10 max-h-[92vh] overflow-y-auto cursor-default"
                 >
                     {/* Background glow */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-b from-amber-500/20 to-orange-500/0 rounded-full blur-2xl pointer-events-none" />

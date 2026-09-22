@@ -56,7 +56,7 @@ def apply_migration(migration_path: str):
             print("STDERR:", err.strip())
 
         client.exec_command(f"rm {remote_path}")
-        print(f"✅ Migration applied successfully: {mig_file}")
+        print(f"[OK] Migration applied successfully: {mig_file}")
     finally:
         client.close()
 

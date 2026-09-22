@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { logRewardRpcResult, logRewardRpcFailure } from '@/lib/rewardRpcResult';
 import { notifyRewardEarned } from '@/lib/rewardNotifications';
+import { normalizePhone } from '@/lib/phoneUtils';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +23,7 @@ export async function POST(req) {
         const supabaseAdmin = createAdminClient();
 
         const body = await req.json();
-        const { services, occupation, referral_source, referral_code_entered } = body;
+        const { services, occupation, referral_source, referral_code_entered, phone } = body;
 
         const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
             .from('user_profiles')
@@ -83,6 +84,14 @@ export async function POST(req) {
         if (referralApplied && referredById) {
             updatePayload.referred_by = referredById;
             updatePayload.reward_parent_id = referredById;
+        }
+
+        // Attach normalized phone number if provided
+        if (phone) {
+            const { formattedPhone, isValid } = normalizePhone(phone);
+            if (isValid && formattedPhone) {
+                updatePayload.phone = formattedPhone;
+            }
         }
 
         const { error: updateError } = await supabaseAdmin
@@ -227,6 +236,24 @@ export async function POST(req) {
                     error: rewardError?.message || String(rewardError)
                 }));
                 // Don't fail onboarding if reward distribution fails
+            }
+
+            // Marketing affiliate REGISTER cashback
+            try {
+                const { cookies } = await import('next/headers');
+                const cookieStore = await cookies();
+                const affiliateCode = cookieStore.get('intrust_affiliate_code')?.value;
+                if (affiliateCode) {
+                    await supabaseAdmin.rpc('process_marketing_referral_reward', {
+                        p_event_type: 'REGISTER',
+                        p_ref_code: affiliateCode,
+                        p_converted_user_id: userId,
+                        p_product_id: null
+                    });
+                }
+            } catch (affiliateErr) {
+                console.error('[Onboarding] marketing affiliate REGISTER cashback failed:', affiliateErr?.message);
+                // Non-fatal
             }
         }
 

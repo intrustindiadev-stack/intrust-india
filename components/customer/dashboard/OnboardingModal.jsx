@@ -20,7 +20,8 @@ import {
     FileText,
     Briefcase,
     ChevronDown,
-    Lock
+    Lock,
+    Phone
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -129,11 +130,19 @@ const OCCUPATION_OPTIONS = [
     'Other'
 ];
 
-export default function OnboardingModal({ userId, onComplete }) {
+export default function OnboardingModal({ userId, initialPhone = '', onComplete }) {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
+
+    // Mobile Number State
+    const [phone, setPhone] = useState(() => {
+        if (!initialPhone) return '';
+        const digits = String(initialPhone).replace(/\D/g, '');
+        return digits.length >= 10 ? digits.slice(-10) : digits;
+    });
+    const [phoneError, setPhoneError] = useState('');
 
     // Form State (matching user_profiles schema)
     const [selectedServices, setSelectedServices] = useState([
@@ -186,6 +195,19 @@ export default function OnboardingModal({ userId, onComplete }) {
     };
 
     const handleSubmit = async () => {
+        // Mobile number validation
+        const cleanDigits = phone.replace(/\D/g, '');
+        if (!cleanDigits) {
+            setPhoneError('Please enter your 10-digit mobile number.');
+            setError('Please enter your 10-digit mobile number to complete your profile.');
+            return;
+        }
+        if (cleanDigits.length !== 10 || !/^[6-9]\d{9}$/.test(cleanDigits)) {
+            setPhoneError('Please enter a valid 10-digit Indian mobile number (starts with 6, 7, 8, or 9).');
+            setError('Please enter a valid 10-digit mobile number.');
+            return;
+        }
+
         if (!userId || userId === 'preview-user-id') {
             setSuccessMessage('Welcome to InTrust! Welcome bonus ₹50 added to your coins balance.');
             setTimeout(() => handleDismiss(), 1200);
@@ -194,6 +216,7 @@ export default function OnboardingModal({ userId, onComplete }) {
 
         setLoading(true);
         setError(null);
+        setPhoneError('');
 
         try {
             const res = await fetch('/api/user/onboarding', {
@@ -204,7 +227,8 @@ export default function OnboardingModal({ userId, onComplete }) {
                     services: selectedServices,
                     occupation: occupation || null,
                     referral_source: referralSource,
-                    referral_code_entered: referralCode
+                    referral_code_entered: referralCode,
+                    phone: cleanDigits
                 })
             });
 
@@ -234,13 +258,13 @@ export default function OnboardingModal({ userId, onComplete }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl p-0 sm:p-4 overflow-hidden">
             <motion.div
                 initial={{ scale: 0.95, opacity: 0, y: 12 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0, y: 12 }}
                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                className="w-full max-w-[420px] bg-white dark:bg-[#0c101c] rounded-[2.5rem] shadow-[0_20px_70px_-10px_rgba(0,0,0,0.18)] border border-slate-100 dark:border-white/10 overflow-hidden relative flex flex-col text-slate-900 dark:text-white my-auto max-h-[min(94vh,680px)] h-[680px]"
+                className="w-full h-[100dvh] sm:h-[680px] max-w-none sm:max-w-[420px] bg-white dark:bg-[#0c101c] rounded-none sm:rounded-[2.5rem] shadow-[0_20px_70px_-10px_rgba(0,0,0,0.18)] border-0 sm:border border-slate-100 dark:border-white/10 overflow-hidden relative flex flex-col text-slate-900 dark:text-white my-auto max-h-none sm:max-h-[min(94vh,680px)]"
             >
                 {/* Clean Top Navigation Bar */}
                 <div className="px-6 pt-5 pb-2 flex items-center justify-between shrink-0 bg-transparent z-20">
@@ -265,13 +289,10 @@ export default function OnboardingModal({ userId, onComplete }) {
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleDismiss}
-                        className="text-xs font-semibold text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-white transition-colors cursor-pointer px-2 py-1"
-                    >
-                        Skip
-                    </button>
+                    {/* Step indicator badge replacing Skip */}
+                    <div className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 text-[11px] font-black tracking-wide">
+                        Step {step} of 3
+                    </div>
                 </div>
 
                 {/* Main Body - Hidden scrollbars, compact, class-leading layout */}
@@ -556,6 +577,70 @@ export default function OnboardingModal({ userId, onComplete }) {
                                         <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
                                             This helps us personalize your experience and serve you better.
                                         </p>
+                                    </div>
+
+                                    {/* Mobile Number Field — Production-ready Indian Mobile Input */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                                Mobile Number <span className="text-rose-500">*</span>
+                                            </label>
+                                            {phone.length === 10 && /^[6-9]\d{9}$/.test(phone) && (
+                                                <span className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                                    <Check size={11} strokeWidth={3} />
+                                                    <span>Verified format</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div
+                                            className={`flex items-center gap-2 border rounded-xl px-2.5 py-1 bg-white dark:bg-slate-900/80 transition-all ${
+                                                phoneError
+                                                    ? 'border-rose-400 dark:border-rose-500/60 ring-1 ring-rose-400/30'
+                                                    : 'border-slate-200 dark:border-slate-800 focus-within:border-[#0052FF] focus-within:ring-2 focus-within:ring-blue-500/10'
+                                            }`}
+                                        >
+                                            {/* Country Code Pill */}
+                                            <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded-lg text-[10.5px] font-bold text-slate-700 dark:text-slate-300 shrink-0 select-none">
+                                                <span className="text-xs leading-none">🇮🇳</span>
+                                                <span>+91</span>
+                                            </div>
+
+                                            {/* Numeric Input */}
+                                            <input
+                                                type="tel"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                maxLength={10}
+                                                value={phone}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                                    setPhone(val);
+                                                    if (phoneError) setPhoneError('');
+                                                    if (error) setError(null);
+                                                }}
+                                                placeholder="10-digit mobile number"
+                                                className="flex-1 text-[11px] font-semibold outline-none bg-transparent placeholder:text-slate-400 placeholder:font-normal text-slate-900 dark:text-white"
+                                            />
+
+                                            {/* Status icon */}
+                                            {phone.length === 10 && /^[6-9]\d{9}$/.test(phone) ? (
+                                                <div className="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                                    <Check size={11} strokeWidth={3} />
+                                                </div>
+                                            ) : (
+                                                <Phone size={14} className="text-slate-400 shrink-0" />
+                                            )}
+                                        </div>
+
+                                        {phoneError ? (
+                                            <p className="text-[9.5px] font-medium text-rose-500 dark:text-rose-400 pl-0.5">
+                                                {phoneError}
+                                            </p>
+                                        ) : (
+                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 pl-0.5">
+                                                Used for order updates, instant refunds, and coins cashback alerts.
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Referral Code Field */}

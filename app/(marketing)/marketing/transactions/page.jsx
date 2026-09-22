@@ -1,6 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import TransactionsClient from './TransactionsClient';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function MarketingTransactionsPage() {
     const supabase = await createServerSupabaseClient();
 
@@ -36,7 +39,7 @@ export default async function MarketingTransactionsPage() {
         }
     } else {
         const { data } = await supabase
-            .from('wallet_transactions')
+            .from('customer_wallet_transactions')
             .select('*')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })

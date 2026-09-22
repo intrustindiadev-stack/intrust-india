@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import AdminClock from './AdminClock';
 import AdminStatsCards from '@/components/admin/AdminStatsCards';
+import MarketingKpiStrip from '@/components/admin/MarketingKpiStrip';
 import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
 import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
 import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
@@ -49,7 +50,8 @@ export default async function AdminDashboard() {
         shoppingStats,
         totalLeadsCount,
         totalEmployeesCount,
-        pendingAccessRequests
+        pendingAccessRequests,
+        marketingStats
     ] = await Promise.all([
         // 1. Total Revenue (from transactions table + shopping_order_groups confirmed sales)
         Promise.all([
@@ -219,7 +221,38 @@ export default async function AdminDashboard() {
         supabase.from('panel_access_requests')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'pending')
-            .then(({ count }) => count || 0)
+            .then(({ count }) => count || 0),
+
+        // 11. Marketing Overview KPIs
+        Promise.all([
+            supabase.from('marketing_share_links').select('*', { count: 'exact', head: true }),
+            supabase.from('marketing_tracking_events').select('*', { count: 'exact', head: true }).eq('event_type', 'CLICK'),
+            supabase.from('marketing_daily_challenge_attempts').select('*', { count: 'exact', head: true }),
+            supabase.from('marketing_challenge_sponsors').select('amount_paise').eq('status', 'confirmed'),
+            supabase.from('marketing_target_claims').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+            supabase.from('marketing_referral_rewards').select('amount_paise').eq('status', 'CREDITED')
+        ]).then(([sharesRes, clicksRes, playsRes, sponsorsRes, pendingClaimsRes, rewardsRes]) => {
+            const sponsorshipRev = (sponsorsRes.data || []).reduce((sum, s) => sum + (Number(s.amount_paise) || 0), 0);
+            const cashbacksPaid = (rewardsRes.data || []).reduce((sum, r) => sum + (Number(r.amount_paise) || 0), 0);
+            return {
+                totalShares: sharesRes.count || 0,
+                totalClicks: clicksRes.count || 0,
+                dailyPlays: playsRes.count || 0,
+                sponsorshipRevenuePaise: sponsorshipRev,
+                pendingGiftClaims: pendingClaimsRes.count || 0,
+                cashbacksPaidPaise: cashbacksPaid
+            };
+        }).catch(err => {
+            console.error('Error fetching marketing admin KPIs:', err);
+            return {
+                totalShares: 0,
+                totalClicks: 0,
+                dailyPlays: 0,
+                sponsorshipRevenuePaise: 0,
+                pendingGiftClaims: 0,
+                cashbacksPaidPaise: 0
+            };
+        })
     ]);
 
     return (
@@ -265,6 +298,9 @@ export default async function AdminDashboard() {
                         totalEmployeesCount,
                     }}
                 />
+
+                {/* Marketing Overview Strip with direct redirect */}
+                <MarketingKpiStrip stats={marketingStats} />
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     {/* Left Column: Transactions & Approvals */}
@@ -437,6 +473,16 @@ export default async function AdminDashboard() {
                                 </Link>
 
 
+
+                                <Link href="/admin/marketing" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-amber-100 transition-all">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-xl shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform">
+                                        🚀
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-slate-900 group-hover:text-amber-600 transition-colors">Marketing Suite</h3>
+                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Targets, billboard sponsorships & quizzes</p>
+                                    </div>
+                                </Link>
 
                                 <Link href="/admin/merchants" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-sky-100 transition-all">
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center text-white text-xl shadow-lg shadow-sky-500/20 group-hover:scale-110 transition-transform">

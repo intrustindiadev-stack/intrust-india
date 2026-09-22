@@ -25,7 +25,7 @@ export default async function MarketingRootLayout({ children }) {
     // 2. Fetch User Profile
     const { data: profile } = await supabase
         .from('user_profiles')
-        .select('id, role, full_name, email, phone, avatar_url')
+        .select('id, role, full_name, email, phone, avatar_url, kyc_status')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -44,7 +44,7 @@ export default async function MarketingRootLayout({ children }) {
     if (isMerchant || isAdmin) {
         const query = supabase
             .from('merchants')
-            .select('id, business_name, status, wallet_balance_paise, business_email, business_phone')
+            .select('id, business_name, status, wallet_balance_paise, business_email, business_phone, subscription_status, subscription_expires_at')
             .eq('user_id', user.id);
 
         const { data: merchant } = await query.maybeSingle();
@@ -56,7 +56,8 @@ export default async function MarketingRootLayout({ children }) {
                 id: 'admin-preview',
                 business_name: 'InTrust HQ (Admin)',
                 status: 'approved',
-                wallet_balance_paise: 1000000
+                wallet_balance_paise: 1000000,
+                subscription_status: 'active'
             };
         }
     }
@@ -72,6 +73,27 @@ export default async function MarketingRootLayout({ children }) {
         customerWalletBalancePaise = wallet?.balance_paise || 0;
     }
 
+    // 5. Enforce Access Gates
+    // - Regular Customers: Locked until KYC identity verification is approved
+    // - Merchants: Locked until merchant application is approved and subscription is active
+    let accessGate = null;
+    if (isMerchant) {
+        const isSubActive = merchantData?.status === 'approved' && 
+            merchantData?.subscription_status === 'active' && 
+            (!merchantData?.subscription_expires_at || new Date(merchantData.subscription_expires_at) > new Date());
+
+        if (!isSubActive) {
+            const subStatus = merchantData?.status !== 'approved' 
+                ? 'pending' 
+                : (merchantData?.subscription_status || 'inactive');
+            accessGate = { type: 'subscription', status: subStatus };
+        }
+    } else if (!isAdmin) {
+        if (profile?.kyc_status !== 'verified') {
+            accessGate = { type: 'kyc', status: profile?.kyc_status || 'not_started' };
+        }
+    }
+
     return (
         <MarketingLayout 
             user={user} 
@@ -80,6 +102,7 @@ export default async function MarketingRootLayout({ children }) {
             customerWalletBalancePaise={customerWalletBalancePaise}
             isMerchant={isMerchant}
             isAdmin={isAdmin}
+            accessGate={accessGate}
         >
             {children}
         </MarketingLayout>

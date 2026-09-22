@@ -68,10 +68,10 @@ for line in out_lines:
         errors.append("FUNCTION_ERROR: " + line)
 
 if errors:
-    print("❌ SCHEMA VALIDATION FAILED:")
+    print("[FAIL] SCHEMA VALIDATION FAILED:")
     for e in errors:
         print("  -", e)
     sys.exit(1)
 else:
-    print("✅ SCHEMA VALIDATION PASSED")
+    print("[OK] SCHEMA VALIDATION PASSED")
     sys.exit(0)

@@ -45,10 +45,12 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
     // Dedicated PLATFORM OFFICIAL STORE branch
     // Resolves /shop/official directly to centralized platform catalog in shopping_products
     if (normalizedSlug === 'official') {
+        const now = new Date().toISOString();
         const [
             inventoryResult,
             platformSettingsResult,
-            categoriesResult
+            categoriesResult,
+            flashSaleResult
         ] = await Promise.all([
             supabase.rpc('get_storefront_page', {
                 p_merchant_slug: 'official',
@@ -67,8 +69,51 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
             createAdminClient().from('platform_settings').select('value').eq('key', 'platform_store').maybeSingle(),
             supabase.rpc('get_merchant_categories', {
                 p_merchant_slug: 'official'
-            })
+            }),
+            createAdminClient()
+                .from('flash_sale_items')
+                .select(`
+                    id,
+                    product_id,
+                    discount_percent,
+                    sale_price_paise,
+                    position,
+                    ends_at,
+                    starts_at,
+                    shopping_products:product_id (
+                        id,
+                        slug,
+                        title,
+                        product_images,
+                        mrp_paise,
+                        suggested_retail_price_paise,
+                        admin_stock,
+                        is_active
+                    )
+                `)
+                .eq('is_active', true)
+                .or(`ends_at.is.null,ends_at.gt.${now}`)
+                .lte('starts_at', now)
+                .order('position', { ascending: true })
+                .limit(8)
         ]);
+
+        const rawFlashItems = (flashSaleResult.data || [])
+            .filter(r => r.shopping_products && r.shopping_products.is_active)
+            .map(r => ({
+                id: `flash-${r.id}`,
+                product_id: r.shopping_products.id,
+                name: r.shopping_products.title,
+                original_price: r.shopping_products.mrp_paise || r.shopping_products.suggested_retail_price_paise,
+                sale_price: r.sale_price_paise,
+                discount_percent: r.discount_percent,
+                thumbnail: r.shopping_products.product_images?.[0] || null,
+                url: `/shop/product/${r.shopping_products.slug}`,
+                ends_at: r.ends_at,
+                shopping_products: {
+                    admin_stock: r.shopping_products.admin_stock
+                }
+            }));
 
         let platformStoreStatus = { is_open: true };
         try {
@@ -113,6 +158,7 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                         categories={categories}
                         initialFilters={initialFilters}
                         currentPage={currentPage}
+                        initialFlashSaleItems={rawFlashItems}
                     />
                 </main>
             </div>
@@ -181,12 +227,14 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
 
     // Run all remaining fetches in parallel
     const adminClient = createAdminClient();
+    const nowIso = new Date().toISOString();
     const [
         profileResult,
         ratingResult,
         inventoryResult,
         categoriesResult,
-        platformSettingsResult
+        platformSettingsResult,
+        flashSaleResult
     ] = await Promise.all([
         // Avatar
         fetchedMerchant.user_id
@@ -212,8 +260,54 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
         // Optimized categories query
         supabase.rpc('get_merchant_categories', {
             p_merchant_slug: fetchedMerchant.slug
-        })
+        }),
+        // Platform settings
+        adminClient.from('platform_settings').select('value').eq('key', 'platform_store').maybeSingle(),
+        // Flash sale active platform products
+        adminClient
+            .from('flash_sale_items')
+            .select(`
+                id,
+                product_id,
+                discount_percent,
+                sale_price_paise,
+                position,
+                ends_at,
+                starts_at,
+                shopping_products:product_id (
+                    id,
+                    slug,
+                    title,
+                    product_images,
+                    mrp_paise,
+                    suggested_retail_price_paise,
+                    admin_stock,
+                    is_active
+                )
+            `)
+            .eq('is_active', true)
+            .or(`ends_at.is.null,ends_at.gt.${nowIso}`)
+            .lte('starts_at', nowIso)
+            .order('position', { ascending: true })
+            .limit(8)
     ]);
+
+    const rawFlashItems = (flashSaleResult.data || [])
+        .filter(r => r.shopping_products && r.shopping_products.is_active)
+        .map(r => ({
+            id: `flash-${r.id}`,
+            product_id: r.shopping_products.id,
+            name: r.shopping_products.title,
+            original_price: r.shopping_products.mrp_paise || r.shopping_products.suggested_retail_price_paise,
+            sale_price: r.sale_price_paise,
+            discount_percent: r.discount_percent,
+            thumbnail: r.shopping_products.product_images?.[0] || null,
+            url: `/shop/product/${r.shopping_products.slug}`,
+            ends_at: r.ends_at,
+            shopping_products: {
+                admin_stock: r.shopping_products.admin_stock
+            }
+        }));
 
     categories = ['All', ...(categoriesResult?.data || [])];
 
@@ -239,6 +333,7 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                     categories={categories}
                     initialFilters={initialFilters}
                     currentPage={currentPage}
+                    initialFlashSaleItems={rawFlashItems}
                 />
             </main>
         </div>

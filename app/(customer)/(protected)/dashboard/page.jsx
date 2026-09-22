@@ -507,6 +507,7 @@ export default function CustomerDashboardPage() {
             {!userData.completedOnboarding && user && (
                 <OnboardingModal
                     userId={user.id}
+                    initialPhone={user?.phone || userData?.phone || ''}
                     onComplete={() => {
                         setUserData(prev => ({ ...prev, completedOnboarding: true }));
                     }}

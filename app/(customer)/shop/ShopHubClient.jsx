@@ -252,7 +252,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
 
     // Filter merchants based on search, department, open status & rating
     const filteredMerchants = useMemo(() => {
-        return merchants.filter((m) => {
+        const list = merchants.filter((m) => {
             if (m.id === 'official' || m.slug === 'official' || m.slug === 'intrust-official') return false; // Handled in dedicated hub
             if (searchQuery && !m.business_name?.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return false;
@@ -266,6 +266,33 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
             if (filterMinRating > 0 && rating < filterMinRating) return false;
             return true;
         });
+
+        // Always prepend InTrust Official Store at the top of the verified store directory
+        const matchesOfficial = (!searchQuery || 'intrust official store platform wholesale direct'.includes(searchQuery.toLowerCase())) &&
+            (selectedDepartment === 'all' || selectedDepartment === 'general');
+
+        if (matchesOfficial) {
+            const officialStore = {
+                id: 'official',
+                slug: 'official',
+                business_name: 'InTrust Official Store',
+                business_address: 'InTrust Direct Platform Hub • Fast Delivery',
+                department: 'general',
+                is_open: true,
+                is_official: true,
+                avg_rating: 4.9,
+                total_ratings: 2450,
+                shopping_banner_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80',
+                logo_url: '/icons/intrustLogo.png',
+                user_profiles: {
+                    avatar_url: '/icons/intrustLogo.png',
+                    full_name: 'InTrust Official'
+                }
+            };
+            return [officialStore, ...list];
+        }
+
+        return list;
     }, [merchants, searchQuery, selectedDepartment, filterOnlyOpen, filterMinRating, ratingsMap]);
 
 
