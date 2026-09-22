@@ -31,16 +31,71 @@ function buildLinkedInUrl(url) {
     return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
 }
 
-// ─── Try to share with product image file via Web Share API ──────────────────
+// ─── Convert any image (including WebP) to clean JPEG for social apps ─────────
 async function fetchImageFile(imageUrl, productId) {
-    if (!imageUrl) return null;
+    if (!imageUrl || typeof window === 'undefined') return null;
     try {
-        const res = await fetch(imageUrl);
-        if (!res.ok) return null;
-        const blob = await res.blob();
-        const mimeType = blob.type || 'image/jpeg';
-        const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
-        return new File([blob], `intrust-deal-${productId || 'offer'}.${ext}`, { type: mimeType });
+        const cleanName = `deal-${(productId || 'offer').toString().replace(/[^a-zA-Z0-9_-]/g, '')}.jpg`;
+
+        // 1. Fetch source blob
+        const res = await fetch(imageUrl, { mode: 'cors' }).catch(() => null);
+        if (!res || !res.ok) return null;
+        const sourceBlob = await res.blob();
+
+        // 2. If it is already clean JPEG or PNG and not WebP, return directly
+        if ((sourceBlob.type === 'image/jpeg' || sourceBlob.type === 'image/png') && !sourceBlob.type.includes('webp')) {
+            const ext = sourceBlob.type === 'image/png' ? 'png' : 'jpg';
+            return new File([sourceBlob], `deal-${productId || 'offer'}.${ext}`, { type: sourceBlob.type });
+        }
+
+        // 3. Canvas transcode pipeline: Convert WebP / any image format to standard JPEG
+        return await new Promise((resolve) => {
+            const img = document.createElement('img');
+            img.crossOrigin = 'anonymous';
+            const blobUrl = URL.createObjectURL(sourceBlob);
+
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width || 600;
+                    canvas.height = img.naturalHeight || img.height || 600;
+
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        URL.revokeObjectURL(blobUrl);
+                        return resolve(new File([sourceBlob], cleanName, { type: 'image/jpeg' }));
+                    }
+
+                    // Fill solid white background in case of transparent webp/png
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    canvas.toBlob(
+                        (jpegBlob) => {
+                            URL.revokeObjectURL(blobUrl);
+                            if (jpegBlob) {
+                                resolve(new File([jpegBlob], cleanName, { type: 'image/jpeg' }));
+                            } else {
+                                resolve(new File([sourceBlob], cleanName, { type: 'image/jpeg' }));
+                            }
+                        },
+                        'image/jpeg',
+                        0.92
+                    );
+                } catch {
+                    URL.revokeObjectURL(blobUrl);
+                    resolve(new File([sourceBlob], cleanName, { type: 'image/jpeg' }));
+                }
+            };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(blobUrl);
+                resolve(null);
+            };
+
+            img.src = blobUrl;
+        });
     } catch {
         return null;
     }
@@ -50,13 +105,14 @@ async function nativeShare(imgFile, title, text, url) {
     if (typeof navigator === 'undefined' || !navigator.share) return false;
     try {
         const payload = { title, text, url };
+        // Only attach file if browser confirms support
         if (imgFile && navigator.canShare?.({ files: [imgFile] })) {
             payload.files = [imgFile];
         }
         await navigator.share(payload);
         return true;
     } catch (err) {
-        if (err.name === 'AbortError') return true; // User cancelled — treat as shared
+        if (err.name === 'AbortError') return true; // User cancelled / dismissed — treat as handled
         return false;
     }
 }
@@ -69,10 +125,12 @@ export default function ShareModal({
     product,
     user,
     merchant,
-    rewardsConfig
+    rewardsConfig,
+    onMetricUpdated
 }) {
     const [copied, setCopied]               = useState(false);
     const [shortCode, setShortCode]         = useState('');
+    const [linkMetrics, setLinkMetrics]     = useState({ shares: 1, clicks: 0, registrations: 0, orders: 0 });
     const [loading, setLoading]             = useState(false);
     const [sharing, setSharing]             = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -92,9 +150,9 @@ export default function ShareModal({
         || 10000) / 100
     );
 
-    // ── Generate / fetch share code on open ──────────────────────────────────
+    // ── Generate / fetch share code & authentic metrics on open ──────────────
     useEffect(() => {
-        if (!isOpen || !product?.id || !user?.id) return;
+        if (!isOpen || !product || !user?.id) return;
         let cancelled = false;
 
         const initLink = async () => {
@@ -103,11 +161,14 @@ export default function ShareModal({
                 const isValidUUID = (s) =>
                     typeof s === 'string' &&
                     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-                const safeProductId = isValidUUID(product.id) ? product.id : null;
+                
+                // For merchant items, resolve the genuine underlying product ID
+                const rawId = product.product_id || product.id;
+                const safeProductId = isValidUUID(rawId) ? rawId : null;
 
                 let query = supabase
                     .from('marketing_share_links')
-                    .select('code')
+                    .select('id, code, clicks_count, shares_count, registrations_count, orders_count')
                     .eq('user_id', user.id);
                 query = safeProductId
                     ? query.eq('product_id', safeProductId)
@@ -118,6 +179,12 @@ export default function ShareModal({
 
                 if (existing?.code) {
                     setShortCode(existing.code);
+                    setLinkMetrics({
+                        shares: Number(existing.shares_count || 1),
+                        clicks: Number(existing.clicks_count || 0),
+                        registrations: Number(existing.registrations_count || 0),
+                        orders: Number(existing.orders_count || 0)
+                    });
                 } else {
                     const generatedCode = Math.random().toString(36).substring(2, 9).toUpperCase();
                     const { data: created, error } = await supabase
@@ -132,9 +199,18 @@ export default function ShareModal({
                             source: 'direct',
                             shares_count: 1
                         })
-                        .select('code')
+                        .select('id, code, clicks_count, shares_count, registrations_count, orders_count')
                         .single();
-                    if (!cancelled) setShortCode(!error && created ? created.code : generatedCode);
+                    if (!cancelled) {
+                        const finalCode = !error && created ? created.code : generatedCode;
+                        setShortCode(finalCode);
+                        setLinkMetrics({
+                            shares: Number(created?.shares_count || 1),
+                            clicks: Number(created?.clicks_count || 0),
+                            registrations: Number(created?.registrations_count || 0),
+                            orders: Number(created?.orders_count || 0)
+                        });
+                    }
                 }
             } catch {
                 if (!cancelled) setShortCode('REF' + Math.floor(1000 + Math.random() * 9000));
@@ -145,15 +221,15 @@ export default function ShareModal({
 
         initLink();
         return () => { cancelled = true; };
-    }, [isOpen, product?.id, user?.id, merchant?.id]);
+    }, [isOpen, product?.id, product?.product_id, user?.id, merchant?.id]);
 
-    // ── Pre-fetch image file for native share ─────────────────────────────────
+    // ── Pre-fetch & convert image file for native share (No WebP) ────────────
     useEffect(() => {
         if (!isOpen || !product) return;
         const imgUrl = product.image || product.image_url;
         if (!imgUrl) return;
-        fetchImageFile(imgUrl, product.id).then(f => setImgFile(f));
-    }, [isOpen, product?.id]);
+        fetchImageFile(imgUrl, product.product_id || product.id).then(f => setImgFile(f));
+    }, [isOpen, product?.id, product?.product_id]);
 
     // ── Close on Escape ───────────────────────────────────────────────────────
     useEffect(() => {
@@ -163,38 +239,44 @@ export default function ShareModal({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
 
-    if (!isOpen || !product) return null;
-
-    const origin     = typeof window !== 'undefined' ? window.location.origin : 'https://intrust.in';
-    const shareUrl   = `${origin}/r/${shortCode || 'LOADING'}`;
-    const prodPrice  = product.price || (product.selling_price_paise ? Math.round(product.selling_price_paise / 100) : 249);
-    const prodTitle  = product.name || product.title || 'Verified Deal';
-    const prodImage  = product.image || product.image_url;
-
-    // ── Formatted share message ────────────────────────────────────────────────
-    // Single clean message: image shows as OG preview from the /r/[code] route
-    const shareText = `🛍️ *${prodTitle}*\n💰 Price: ₹${prodPrice}\n\n🎁 Earn ₹${registrationBonus} cashback when a friend joins\n🎁 Earn ₹${orderCashback} cashback when they order\n\n🔗 Get the deal here → ${shareUrl}`;
-    const shareTitleShort = `${prodTitle} — ₹${prodPrice} on InTrust`;
-
-    // ── Fire SHARE event (non-blocking) ───────────────────────────────────────
+    // ── Fire SHARE event & refresh real telemetry ─────────────────────────────
     const trackShare = useCallback(async () => {
-        if (!shortCode) return;
+        if (!shortCode || !product) return;
         try {
+            const rawId = product.product_id || product.id;
+            const safeProductId = typeof rawId === 'string' && rawId.length === 36 ? rawId : null;
+
             await supabase.rpc('process_marketing_conversion_reward', {
                 p_event_type: 'SHARE',
                 p_ref_code: shortCode,
                 p_converted_user_id: user?.id,
-                p_product_id: product?.id || null
+                p_product_id: safeProductId
             });
-            // Increment shares_count locally in DB
-            await supabase
+
+            // Re-fetch updated link metrics
+            const { data: updatedLink } = await supabase
                 .from('marketing_share_links')
-                .update({ shares_count: supabase.rpc ? undefined : 1 })
+                .select('shares_count, clicks_count, registrations_count, orders_count')
                 .eq('code', shortCode)
-                .then(() => {});
+                .maybeSingle();
+
+            if (updatedLink) {
+                const nextMetrics = {
+                    shares: Number(updatedLink.shares_count || 1),
+                    clicks: Number(updatedLink.clicks_count || 0),
+                    registrations: Number(updatedLink.registrations_count || 0),
+                    orders: Number(updatedLink.orders_count || 0)
+                };
+                setLinkMetrics(nextMetrics);
+                if (onMetricUpdated) {
+                    onMetricUpdated(rawId, nextMetrics);
+                }
+            } else {
+                setLinkMetrics(prev => ({ ...prev, shares: prev.shares + 1 }));
+            }
         } catch { /* non-critical */ }
         setShowSuccessModal(true);
-    }, [shortCode, user?.id, product?.id]);
+    }, [shortCode, user?.id, product?.id, product?.product_id, onMetricUpdated]);
 
     const handleCopy = () => {
         if (typeof navigator === 'undefined') return;
@@ -365,7 +447,7 @@ export default function ShareModal({
                 </motion.div>
             </div>
 
-            {/* Success celebration */}
+            {/* Authentic Success & Link Telemetry Modal */}
             <SuccessAnimationModal
                 isOpen={showSuccessModal}
                 onClose={() => {
@@ -373,7 +455,9 @@ export default function ShareModal({
                     onClose();
                 }}
                 productName={prodTitle}
-                sharesCount={10}
+                shortCode={shortCode}
+                shareUrl={shareUrl}
+                metrics={linkMetrics}
             />
         </>
     );

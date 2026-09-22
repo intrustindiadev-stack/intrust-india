@@ -180,7 +180,7 @@ export default function MarketingNotificationsPage() {
                         </div>
                         <h4 className="text-sm font-black text-slate-900 dark:text-white">All caught up!</h4>
                         <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                            No marketing alerts right now. Participate in today's daily challenge or share product links to earn rewards!
+                            No marketing alerts right now. Participate in today&apos;s daily challenge or share product links to earn rewards!
                         </p>
                     </div>
                 ) : (

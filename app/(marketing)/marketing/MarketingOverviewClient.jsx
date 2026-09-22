@@ -23,10 +23,16 @@ import {
     ChevronRight,
     ArrowUpRight
 } from 'lucide-react';
-import ShareModal from '@/components/marketing/ShareModal';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
 import RocketGrowthVector from '@/components/marketing/graphics/RocketGrowthVector';
-import ExclusivePrizesShowcase from '@/components/marketing/rewards/ExclusivePrizesShowcase';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
+
+const ShareModal = dynamic(() => import('@/components/marketing/ShareModal'), { ssr: false });
+const ExclusivePrizesShowcase = dynamic(() => import('@/components/marketing/rewards/ExclusivePrizesShowcase'), {
+    ssr: false,
+    loading: () => <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-7 bg-white dark:bg-slate-900 animate-pulse h-44" />,
+});
 
 export default function MarketingOverviewClient({
     user,
@@ -37,7 +43,8 @@ export default function MarketingOverviewClient({
     initialStreak,
     initialPrimaryTarget,
     initialTransactions,
-    initialTopProducts
+    initialTopProducts,
+    showcasePrizes = []
 }) {
     const [selectedShareProduct, setSelectedShareProduct] = useState(null);
 
@@ -65,8 +72,11 @@ export default function MarketingOverviewClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Breadcrumb Navigation */}
-            <MarketingBreadcrumbs />
+            {/* Breadcrumb Navigation + fullscreen guide */}
+            <div className="flex items-start justify-between gap-3">
+                <MarketingBreadcrumbs className="flex-1 min-w-0" />
+                <GuideInfoButton pageKey="/marketing" scope="marketing" className="mt-1 shrink-0" />
+            </div>
 
             {/* 1. HERO BANNER WITH CULTURAL MONUMENT ARTWORK */}
             <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-100/90 dark:from-slate-900 dark:via-blue-950/40 dark:to-slate-900 border border-blue-100/80 dark:border-slate-800 p-4 sm:p-6 lg:p-7 shadow-2xs">
@@ -365,7 +375,7 @@ export default function MarketingOverviewClient({
             </div>
 
             {/* 3.5. WHAT YOU CAN WIN — EXCLUSIVE PRIZES & PHYSICAL REWARDS */}
-            <ExclusivePrizesShowcase isMerchant={isMerchant} />
+            <ExclusivePrizesShowcase isMerchant={isMerchant} targets={showcasePrizes} />
 
             {/* 4. THREE-COLUMN SECTION: CHALLENGE, TOP PRODUCTS, TRANSACTIONS */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
@@ -406,7 +416,7 @@ export default function MarketingOverviewClient({
                         <div className="bg-amber-50/80 dark:bg-amber-950/30 rounded-2xl p-3 border border-amber-200/80 dark:border-amber-800/60 mb-5 flex items-center justify-between">
                             <div>
                                 <span className="text-[10px] font-extrabold uppercase text-amber-700 dark:text-amber-400 block">
-                                    Today's Prize
+                                    Today&apos;s Prize
                                 </span>
                                 <span className="text-base font-black text-amber-900 dark:text-amber-300">
                                     Fixed ₹{dailyRewardRupees} Cashback

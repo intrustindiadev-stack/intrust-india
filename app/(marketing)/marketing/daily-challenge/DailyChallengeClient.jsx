@@ -43,13 +43,16 @@ import {
     Lightbulb,
     Receipt
 } from 'lucide-react';
-import CashbackAnimationModal from '@/components/marketing/animations/CashbackAnimationModal';
-import GiftBoxAnimationModal from '@/components/marketing/animations/GiftBoxAnimationModal';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
+
+const CashbackAnimationModal = dynamic(() => import('@/components/marketing/animations/CashbackAnimationModal'), { ssr: false });
+const GiftBoxAnimationModal = dynamic(() => import('@/components/marketing/animations/GiftBoxAnimationModal'), { ssr: false });
+const SabpaisaPaymentModal = dynamic(() => import('@/components/payment/SabpaisaPaymentModal'), { ssr: false });
+const SponsorshipCelebrationModal = dynamic(() => import('@/components/marketing/animations/SponsorshipCelebrationModal'), { ssr: false });
 import StreakRibbon from '@/components/marketing/challenge/StreakRibbon';
 import StreakMilestoneModal from '@/components/marketing/challenge/StreakMilestoneModal';
-import SponsorshipCelebrationModal from '@/components/marketing/animations/SponsorshipCelebrationModal';
 import TrophyChampionVector from '@/components/marketing/graphics/TrophyChampionVector';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -1106,12 +1109,16 @@ export default function DailyChallengeClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Header with Breadcrumbs & Role Tabs for Merchants */}
+            {/* Header with Breadcrumbs, guide & Role Tabs for Merchants */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
-                <MarketingBreadcrumbs
-                    customTitle="Daily Challenge & Quiz"
-                    customSubtitle="Test your knowledge, earn instant cashbacks, and discover featured local merchants."
-                />
+                <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <MarketingBreadcrumbs
+                        customTitle="Daily Challenge & Quiz"
+                        customSubtitle="Test your knowledge, earn instant cashbacks, and discover featured local merchants."
+                        className="flex-1 min-w-0"
+                    />
+                    <GuideInfoButton pageKey="/marketing/daily-challenge" scope="marketing" className="mt-1 shrink-0" />
+                </div>
 
                 {/* Tabs for Merchants (Customers never see this switcher) - Clean Parity with Sponsor Portal */}
                 {isMerchant && (
@@ -1177,7 +1184,7 @@ export default function DailyChallengeClient({
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                                            ⭐ Today's Official Sponsor
+                                            ⭐ Today&apos;s Official Sponsor
                                         </span>
                                         <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 shadow-2xs">
                                             <svg className="w-3 h-3 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -1188,7 +1195,7 @@ export default function DailyChallengeClient({
                                         {todaySponsor?.merchants?.business_name || "InTrust Verified Partner Marketplace"}
                                     </h4>
                                     <p className="text-xs text-slate-500 truncate mt-0.5 font-medium italic">
-                                        "{todaySponsor?.campaign_message || "Exclusive quiz cashbacks & authentic community specials."}"
+                                        &quot;{todaySponsor?.campaign_message || "Exclusive quiz cashbacks & authentic community specials."}&quot;
                                     </p>
                                 </div>
                             </div>
@@ -1284,13 +1291,13 @@ export default function DailyChallengeClient({
                                 </div>
                                 <div>
                                     <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        ✓ Today's Challenge Completed
+                                        ✓ Today&apos;s Challenge Completed
                                     </span>
                                     <h3 className="text-xl sm:text-2xl font-black text-slate-950 mt-2">
                                         Streak Secured for Today!
                                     </h3>
                                     <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1 max-w-md mx-auto">
-                                        You've already claimed today's cashback and secured your {streakData.streak}-day streak. The next daily challenge unlocks at 12:00 AM IST midnight!
+                                        You&apos;ve already claimed today&apos;s cashback and secured your {streakData.streak}-day streak. The next daily challenge unlocks at 12:00 AM IST midnight!
                                     </p>
                                 </div>
 
@@ -1308,7 +1315,7 @@ export default function DailyChallengeClient({
                                         <span>Assured Instant Cashback</span>
                                     </div>
                                     <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
-                                        Choose Today's Challenge
+                                        Choose Today&apos;s Challenge
                                     </h2>
                                     <p className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5">
                                         10 questions to solve. Select any category to begin immediately!
@@ -1678,7 +1685,7 @@ export default function DailyChallengeClient({
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Today's Official Sponsor</span>
+                                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Today&apos;s Official Sponsor</span>
                                                 <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200/80">
                                                     <svg className="w-2.5 h-2.5 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                                                     <span>Verified Partner</span>
@@ -1937,7 +1944,7 @@ export default function DailyChallengeClient({
                                             className="w-full py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-100/80 transition-colors"
                                         >
                                             <Store size={14} />
-                                            <span>Sponsor Tomorrow's Challenge & Lock Slot →</span>
+                                            <span>Sponsor Tomorrow&apos;s Challenge & Lock Slot →</span>
                                         </Link>
                                     </div>
                                 )}
@@ -1950,7 +1957,7 @@ export default function DailyChallengeClient({
                                         <div>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                                                    Featured Products from Today's Sponsor
+                                                    Featured Products from Today&apos;s Sponsor
                                                 </span>
                                                 <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/60">
                                                     ✓ Verified
@@ -1960,13 +1967,13 @@ export default function DailyChallengeClient({
                                                 {todaySponsor?.merchants?.business_name || "Partner Store"}
                                             </h3>
                                         </div>
-                                        <a
+                                        <Link
                                             href="/shop"
                                             className="text-xs font-black text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 shrink-0"
                                         >
                                             <span>Explore Shop</span>
                                             <ArrowRight size={12} />
-                                        </a>
+                                        </Link>
                                     </div>
 
                                     <p className="text-xs font-medium text-slate-600 dark:text-slate-400 line-clamp-2">

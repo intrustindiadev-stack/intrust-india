@@ -27,12 +27,14 @@ import {
     Calendar,
     Command
 } from 'lucide-react';
-import NotificationBell from '@/components/notifications/NotificationBell';
-import SwitchPortalSection from '@/components/layout/shared/SwitchPortalSection';
-import ConfirmModal from '@/components/ui/ConfirmModal';
+import dynamic from 'next/dynamic';
 import MarketingAccessGate from '@/components/marketing/layout/MarketingAccessGate';
-import MarketingOnboardingModal from '@/components/marketing/onboarding/MarketingOnboardingModal';
 import { supabase } from '@/lib/supabaseClient';
+
+const NotificationBell = dynamic(() => import('@/components/notifications/NotificationBell'), { ssr: false });
+const SwitchPortalSection = dynamic(() => import('@/components/layout/shared/SwitchPortalSection'), { ssr: false });
+const ConfirmModal = dynamic(() => import('@/components/ui/ConfirmModal'), { ssr: false });
+const MarketingOnboardingModal = dynamic(() => import('@/components/marketing/onboarding/MarketingOnboardingModal'), { ssr: false });
 
 export default function MarketingLayout({ 
     children, 

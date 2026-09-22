@@ -1,17 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/navigation';
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request, { params }) {
-    const { code } = await params;
+    const rawParams = await params;
+    const code = rawParams?.code;
+
+    // Safe origin resolver that never throws
+    const getBaseUrl = () => {
+        try {
+            if (request?.nextUrl?.origin) return request.nextUrl.origin;
+            if (request?.url) return new URL(request.url).origin;
+        } catch {
+            // fallback
+        }
+        return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    };
+
+    const baseUrl = getBaseUrl();
 
     if (!code) {
-        return NextResponse.redirect(new URL('/shop', request.url));
+        return NextResponse.redirect(new URL('/shop', baseUrl));
     }
 
     try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        if (!supabaseUrl || !supabaseKey) {
+            return NextResponse.redirect(new URL('/shop', baseUrl));
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
 
         // 1. Fetch link
         const { data: link, error } = await supabase
@@ -21,51 +49,66 @@ export async function GET(request, { params }) {
             .maybeSingle();
 
         if (error || !link) {
-            return NextResponse.redirect(new URL('/shop', request.url));
+            return NextResponse.redirect(new URL('/shop', baseUrl));
         }
 
-        // 2. Increment clicks count asynchronously
-        const nextClicks = (Number(link.clicks_count) || 0) + 1;
-        await supabase
-            .from('marketing_share_links')
-            .update({ clicks_count: nextClicks })
-            .eq('id', link.id);
+        // 2. Increment clicks count asynchronously without blocking redirection if it fails
+        try {
+            const nextClicks = (Number(link.clicks_count) || 0) + 1;
+            await supabase
+                .from('marketing_share_links')
+                .update({ clicks_count: nextClicks })
+                .eq('id', link.id);
+        } catch (e) {
+            console.warn('[Referral Route] Failed to update clicks count:', e?.message || e);
+        }
 
-        // 3. Log CLICK event
-        const forwarded = request.headers.get('x-forwarded-for');
-        const ip = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown';
-        const userAgent = request.headers.get('user-agent') || 'unknown';
-        const referer = request.headers.get('referer') || 'direct';
+        // 3. Log CLICK event safely
+        try {
+            const forwarded = request.headers?.get ? request.headers.get('x-forwarded-for') : null;
+            const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers?.get ? request.headers.get('x-real-ip') : null) || 'unknown';
+            const userAgent = request.headers?.get ? request.headers.get('user-agent') || 'unknown' : 'unknown';
+            const referer = request.headers?.get ? request.headers.get('referer') || 'direct' : 'direct';
 
-        await supabase
-            .from('marketing_tracking_events')
-            .insert({
-                link_id: link.id,
-                event_type: 'CLICK',
-                visitor_ip: ip,
-                user_agent: userAgent,
-                metadata: { referer, code: link.code }
-            });
+            await supabase
+                .from('marketing_tracking_events')
+                .insert({
+                    link_id: link.id,
+                    event_type: 'CLICK',
+                    visitor_ip: ip,
+                    user_agent: userAgent,
+                    metadata: { referer, code: link.code }
+                });
+        } catch (e) {
+            console.warn('[Referral Route] Failed to log tracking event:', e?.message || e);
+        }
 
         // 4. Determine destination URL & fetch product metadata for rich social previews
-        let destinationUrl = '/shop';
+        let destinationPath = '/shop';
         let prod = null;
 
         if (link.product_id) {
-            const { data: fetchedProd } = await supabase
-                .from('shopping_products')
-                .select('slug, id, title, product_images, selling_price_paise, suggested_retail_price_paise')
-                .eq('id', link.product_id)
-                .maybeSingle();
+            try {
+                const { data: fetchedProd } = await supabase
+                    .from('shopping_products')
+                    .select('slug, id, title, product_images, suggested_retail_price_paise, platform_price_paise')
+                    .eq('id', link.product_id)
+                    .maybeSingle();
 
-            prod = fetchedProd;
+                prod = fetchedProd;
 
-            if (prod?.slug) {
-                destinationUrl = `/shop/product/${prod.slug}`;
-            } else {
-                destinationUrl = `/shop?ref_prod=${link.product_id}`;
+                if (prod?.slug) {
+                    destinationPath = `/shop/product/${prod.slug}`;
+                } else {
+                    destinationPath = `/shop?ref_prod=${link.product_id}`;
+                }
+            } catch (e) {
+                console.warn('[Referral Route] Failed to query product details:', e?.message || e);
+                destinationPath = '/shop';
             }
         }
+
+        const userAgent = request.headers?.get ? request.headers.get('user-agent') || '' : '';
 
         // 5. Bot Crawler Detection (WhatsApp, Telegram, Twitter, Facebook, LinkedIn, etc.)
         const isBot = /bot|crawler|spider|facebookexternalhit|whatsapp|telegram|twitter|slack|linkedin|discord|embedly/i.test(userAgent);
@@ -73,14 +116,14 @@ export async function GET(request, { params }) {
         if (isBot) {
             const prodTitle = prod?.title || 'Exclusive Deal on InTrust';
             const rawImages = prod?.product_images;
-            const prodImage = (Array.isArray(rawImages) && rawImages[0]) || (typeof rawImages === 'string' ? rawImages : 'https://intrust.in/icons/intrustLogo.png');
-            const pricePaise = prod?.selling_price_paise || prod?.suggested_retail_price_paise;
+            const prodImage = (Array.isArray(rawImages) && rawImages[0]) || (typeof rawImages === 'string' ? rawImages : `${baseUrl}/icons/intrustLogo.png`);
+            const pricePaise = prod?.platform_price_paise || prod?.suggested_retail_price_paise;
             const priceStr = pricePaise ? `₹${Math.round(pricePaise / 100)}` : '';
             const prodDesc = priceStr 
                 ? `Get "${prodTitle}" for ${priceStr} with guaranteed InTrust cashback and verified partner delivery.`
                 : `Check out "${prodTitle}" on InTrust and earn instant cashback!`;
 
-            const fullDestUrl = new URL(destinationUrl, request.url).toString();
+            const fullDestUrl = new URL(destinationPath, baseUrl).toString();
 
             const html = `<!DOCTYPE html>
 <html lang="en">
@@ -100,7 +143,7 @@ export async function GET(request, { params }) {
     <meta name="twitter:image" content="${prodImage}">
 </head>
 <body>
-    <script>window.location.href = "${destinationUrl}";</script>
+    <script>window.location.href = "${destinationPath}";</script>
 </body>
 </html>`;
 
@@ -111,7 +154,7 @@ export async function GET(request, { params }) {
         }
 
         // 6. Build Redirect response to destination URL with referral code parameter & attribution cookies
-        const destUrl = new URL(destinationUrl, request.url);
+        const destUrl = new URL(destinationPath, baseUrl);
         destUrl.searchParams.set('ref', link.code);
 
         const response = NextResponse.redirect(destUrl);
@@ -133,7 +176,8 @@ export async function GET(request, { params }) {
         return response;
     } catch (err) {
         console.error('Error handling marketing share link:', err);
-        return NextResponse.redirect(new URL('/shop', request.url));
+        return NextResponse.redirect(new URL('/shop', baseUrl));
     }
 }
+
 

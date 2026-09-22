@@ -29,12 +29,18 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import GiftBoxAnimationModal from '@/components/marketing/animations/GiftBoxAnimationModal';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
+
+const GiftBoxAnimationModal = dynamic(() => import('@/components/marketing/animations/GiftBoxAnimationModal'), { ssr: false });
+const ExclusivePrizesShowcase = dynamic(() => import('@/components/marketing/rewards/ExclusivePrizesShowcase'), {
+    ssr: false,
+    loading: () => <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-7 bg-white dark:bg-slate-900 animate-pulse h-44" />,
+});
 import TreasureChestVector from '@/components/marketing/graphics/TreasureChestVector';
 import TrophyChampionVector from '@/components/marketing/graphics/TrophyChampionVector';
 import RocketGrowthVector from '@/components/marketing/graphics/RocketGrowthVector';
-import ExclusivePrizesShowcase from '@/components/marketing/rewards/ExclusivePrizesShowcase';
 
 export default function TargetsClient({
     user,
@@ -164,9 +170,23 @@ export default function TargetsClient({
         return false;
     });
 
-    // Determine primary target: first target that hasn't been claimed yet
+    // Determine primary target: nearest-to-complete unclaimed target first
+    // (production rule: target complete → gift). Falls back to first row.
     const claimedTargetIds = new Set(claims.map(c => c.target_id));
-    const activePrimaryTarget = relevantTargets.find(t => !claimedTargetIds.has(t.id)) || relevantTargets[0];
+    const progressOf = (t) => {
+        const cur = getTargetMetricValue(t);
+        const goal = Number(t.target_value || 1);
+        return { cur, goal, pct: Math.min(100, Math.round((cur / goal) * 100)), left: Math.max(0, goal - cur) };
+    };
+    const unclaimed = relevantTargets.filter(t => !claimedTargetIds.has(t.id));
+    const ranked = [...unclaimed].sort((a, b) => {
+        const pa = progressOf(a); const pb = progressOf(b);
+        // Eligible (100%) first, then highest %, then smallest "left"
+        if ((pb.pct >= 100) !== (pa.pct >= 100)) return (pb.pct >= 100 ? 1 : 0) - (pa.pct >= 100 ? 1 : 0);
+        if (pb.pct !== pa.pct) return pb.pct - pa.pct;
+        return pa.left - pb.left;
+    });
+    const activePrimaryTarget = ranked[0] || relevantTargets.find(t => !claimedTargetIds.has(t.id)) || relevantTargets[0];
     const secondaryTargets = relevantTargets.filter(t => t.id !== activePrimaryTarget?.id);
 
     // Primary target calculations
@@ -196,8 +216,18 @@ export default function TargetsClient({
         setTimeout(() => setCopiedAwb(null), 2000);
     };
 
-    // Execute claim API request
+    // Execute claim API request (optimistic, idempotent per target)
     const executeClaim = async (target, shippingDetails = null) => {
+        if (!target || claimingTargetId) return;
+        // Physical gifts require valid recipient details (PIN + 10-digit phone)
+        if (target.reward_type === 'physical_gift' || target.reward_type === 'mystery_box') {
+            const phone = String(shippingDetails?.recipientPhone || '').replace(/\D/g, '').slice(-10);
+            const pin = String(shippingDetails?.shippingAddress || '').match(/\b\d{6}\b/);
+            if (!shippingDetails?.recipientName?.trim() || phone.length !== 10 || !shippingDetails?.shippingAddress?.trim() || !pin) {
+                setClaimError('Add full name, 10-digit phone and address with 6-digit PIN to dispatch your gift.');
+                return;
+            }
+        }
         setClaimingTargetId(target.id);
         setClaimError(null);
 
@@ -219,19 +249,21 @@ export default function TargetsClient({
                 return;
             }
 
-            // Successfully claimed
-            setClaims(prev => [data.claim, ...prev]);
+            // Successfully claimed — optimistic prepend (dedupe by id)
+            setClaims(prev => (prev.some(c => c.id === data.claim.id) ? prev : [data.claim, ...prev]));
             setShippingModalTarget(null);
 
-            // Trigger celebratory animation
+            // Trigger celebratory animation (real gift value, merchant vs user copy)
+            const isCash = target.reward_type === 'cashback';
+            const cashVal = Math.round(Number(target.reward_value_paise || 0) / 100);
             setSelectedGiftReward({
-                title: target.reward_type === 'cashback'
-                    ? `₹${(Number(target.reward_value_paise || 0) / 100).toFixed(2)} Wallet Credit`
-                    : 'Milestone Mystery Surprise Box',
-                desc: data.message || 'Reward milestone conquered!',
-                value: target.reward_type === 'cashback'
-                    ? Math.round(Number(target.reward_value_paise || 0) / 100)
-                    : 1000
+                title: isCash
+                    ? `₹${cashVal.toLocaleString('en-IN')} Wallet Credit`
+                    : (target.gift_name || data.claim?.gift_title || 'Milestone Mystery Surprise Box'),
+                desc: data.message || (isMerchant
+                    ? 'Reward milestone conquered! Credit applied to your merchant wallet.'
+                    : 'Reward milestone conquered! Credit applied to your InTrust wallet.'),
+                value: isCash ? cashVal : cashVal || 0
             });
             setShowGiftModal(true);
         } catch (err) {
@@ -253,12 +285,16 @@ export default function TargetsClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn w-full max-w-full overflow-hidden">
-            {/* Header with Breadcrumbs & Live Stats Row */}
+            {/* Header with Breadcrumbs, guide & Live Stats Row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
-                <MarketingBreadcrumbs
-                    customTitle="Targets & Mystery Rewards"
-                    customSubtitle="Achieve real activity milestones to unlock guaranteed wallet cashbacks and certified mystery goodie crates."
-                />
+                <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <MarketingBreadcrumbs
+                        customTitle="Targets & Mystery Rewards"
+                        customSubtitle="Achieve real activity milestones to unlock guaranteed wallet cashbacks and certified mystery goodie crates."
+                        className="flex-1 min-w-0"
+                    />
+                    <GuideInfoButton pageKey="/marketing/targets" scope="marketing" className="mt-1 shrink-0" />
+                </div>
 
                 {/* Status Chips */}
                 <div className="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-auto">

@@ -30,8 +30,8 @@ export default async function MarketingOverviewPage() {
         merchant = m;
     }
 
-    // Fetch marketing stats via RPC
-    let stats = {
+    // Fetch marketing stats + streak in parallel (multi-user fast path)
+    const statsDefault = {
         total_shares: 0,
         link_clicks: 0,
         new_customers: 0,
@@ -44,10 +44,16 @@ export default async function MarketingOverviewPage() {
             sponsorship_fee_paise: 99900
         }
     };
+    let stats = { ...statsDefault };
+    let streakData = { current_streak: 0, highest_streak: 0, played_today: false, freezes_left: 1 };
 
     try {
-        const { data: rpcStats, error: rpcErr } = await supabase.rpc('get_marketing_dashboard_stats', { p_user_id: user.id });
-        if (!rpcErr && rpcStats) {
+        const [rpcStatsRes, streakRes] = await Promise.allSettled([
+            supabase.rpc('get_marketing_dashboard_stats', { p_user_id: user.id }),
+            supabase.rpc('get_user_quiz_streak'),
+        ]);
+        if (rpcStatsRes.status === 'fulfilled' && !rpcStatsRes.value.error && rpcStatsRes.value.data) {
+            const rpcStats = rpcStatsRes.value.data;
             stats = {
                 ...stats,
                 ...rpcStats,
@@ -59,19 +65,11 @@ export default async function MarketingOverviewPage() {
                 rewards_config: rpcStats.rewards_config || stats.rewards_config
             };
         }
-    } catch (e) {
-        console.error('Error fetching marketing stats:', e);
-    }
-
-    // Fetch user quiz streak
-    let streakData = { current_streak: 0, highest_streak: 0, played_today: false, freezes_left: 1 };
-    try {
-        const { data: sData } = await supabase.rpc('get_user_quiz_streak');
-        if (sData) {
-            streakData = sData;
+        if (streakRes.status === 'fulfilled' && streakRes.value.data) {
+            streakData = streakRes.value.data;
         }
     } catch (e) {
-        console.error('Error fetching streak:', e);
+        console.error('Error fetching marketing stats:', e);
     }
 
     // Fetch active primary target & user's current progress
@@ -115,42 +113,55 @@ export default async function MarketingOverviewPage() {
     }
 
     // Fetch recent marketing transactions
-    let recentTransactions = [];
-    if (isMerchant && merchant?.id) {
-        const { data: txs } = await supabase
+    const txPromise = isMerchant && merchant?.id
+        ? supabase
             .from('merchant_transactions')
             .select('id, amount_paise, transaction_type, description, created_at')
             .eq('merchant_id', merchant.id)
             .in('transaction_type', ['daily_challenge_cashback', 'marketing_cashback', 'referral_reward', 'sponsorship'])
             .order('created_at', { ascending: false })
-            .limit(5);
-        recentTransactions = (txs || []).map(t => ({
-            ...t,
-            type: t.transaction_type === 'sponsorship' ? 'DEBIT' : 'CREDIT'
-        }));
-    } else {
-        const { data: txs } = await supabase
+            .limit(5)
+        : supabase
             .from('customer_wallet_transactions')
             .select('id, amount_paise, type, description, created_at')
             .eq('user_id', user.id)
             .or('reference_type.in.(DAILY_CHALLENGE,MARKETING_REFERRAL),description.ilike.%Challenge%,description.ilike.%Referral%,description.ilike.%Marketing%')
             .order('created_at', { ascending: false })
             .limit(5);
-        recentTransactions = txs || [];
-    }
+
+    // Fetch active showcase prizes (real gift_name/image for the prizes strip)
+    const showcasePrizesPromise = supabase
+        .from('marketing_targets')
+        .select('id, title, gift_name, gift_image_url, reward_type, reward_value_paise, is_active, sort_order')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .limit(3);
 
     // Fetch user's top shared links with actual product info
+    const linksPromise = supabase
+        .from('marketing_share_links')
+        .select(`
+            id, code, clicks_count, shares_count, orders_count, product_id,
+            shopping_products:shopping_products!marketing_share_links_product_id_fkey(id, title, price, image_url, promo_cashback_paise, slug)
+        `)
+        .eq('user_id', user.id)
+        .order('clicks_count', { ascending: false })
+        .limit(3);
+
+    const [txRes, prizesRes, linksRes] = await Promise.allSettled([txPromise, showcasePrizesPromise, linksPromise]);
+
+    let recentTransactions = [];
+    if (txRes.status === 'fulfilled' && txRes.value.data) {
+        const txs = txRes.value.data;
+        recentTransactions = isMerchant
+            ? (txs || []).map(t => ({ ...t, type: t.transaction_type === 'sponsorship' ? 'DEBIT' : 'CREDIT' }))
+            : (txs || []);
+    }
+    const showcasePrizes = prizesRes.status === 'fulfilled' ? (prizesRes.value.data || []) : [];
+
     let topProducts = [];
     try {
-        const { data: links } = await supabase
-            .from('marketing_share_links')
-            .select(`
-                id, code, clicks_count, shares_count, orders_count, product_id,
-                shopping_products:shopping_products!marketing_share_links_product_id_fkey(id, title, price, image_url, promo_cashback_paise, slug)
-            `)
-            .eq('user_id', user.id)
-            .order('clicks_count', { ascending: false })
-            .limit(3);
+        const links = linksRes.status === 'fulfilled' ? linksRes.value.data : null;
 
         if (links && links.length > 0) {
             topProducts = links
@@ -201,6 +212,7 @@ export default async function MarketingOverviewPage() {
             initialPrimaryTarget={primaryTarget}
             initialTransactions={recentTransactions}
             initialTopProducts={topProducts}
+            showcasePrizes={showcasePrizes}
         />
     );
 }

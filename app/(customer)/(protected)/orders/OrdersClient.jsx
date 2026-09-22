@@ -20,6 +20,7 @@ import CouponCodeReveal from "./CouponCodeReveal";
 // LAZY: jsPDF + autotable + qrcode + jsbarcode (~500 KB) only load on click
 const generateOrderInvoice = (...args) => import("@/lib/invoiceGenerator").then(m => m.generateOrderInvoice(...args));
 import CustomerBreadcrumbs from "@/components/common/CustomerBreadcrumbs";
+import GuideInfoButton from "@/components/common/GuideInfoButton";
 
 const FILTER_OPTIONS = ['All', 'Shopping', 'NFC Cards', 'Gift Cards', 'Solar'];
 const SHOPPING_PAGE_SIZE = 20;
@@ -244,7 +245,10 @@ const OrdersClient = ({ userId }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      <CustomerBreadcrumbs items={[{ label: 'Orders & Tracking' }]} className="mb-0" />
+      <div className="flex items-start justify-between gap-3">
+        <CustomerBreadcrumbs items={[{ label: 'Orders & Tracking' }]} className="mb-0 flex-1 min-w-0" />
+        <GuideInfoButton pageKey="/orders" scope="customer" className="mt-1 shrink-0" />
+      </div>
 
       {isSuccess && (
         <div className={`rounded-2xl p-5 flex items-start gap-4 shadow-sm border ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>

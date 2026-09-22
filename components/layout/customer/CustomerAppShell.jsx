@@ -43,10 +43,19 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
 
 import Image from 'next/image';
-import NotificationBell from '@/components/notifications/NotificationBell';
-import ConfirmModal from '@/components/ui/ConfirmModal';
-import SwitchPortalSection from '@/components/layout/shared/SwitchPortalSection';
+import dynamic from 'next/dynamic';
 import { useCollapsibleNav } from '@/hooks/useCollapsibleNav';
+
+// Lazy-load heavy, non-critical shell chrome so the nav/content paints first.
+const NotificationBell = dynamic(() => import('@/components/notifications/NotificationBell'), {
+    ssr: false,
+    loading: () => <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 animate-pulse" aria-hidden="true" />
+});
+const ConfirmModal = dynamic(() => import('@/components/ui/ConfirmModal'), { ssr: false });
+const SwitchPortalSection = dynamic(() => import('@/components/layout/shared/SwitchPortalSection'), {
+    ssr: false,
+    loading: () => <div className="hidden lg:flex w-28 h-9 rounded-xl bg-slate-100 dark:bg-white/5 animate-pulse" aria-hidden="true" />
+});
 
 const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search', '/career'];
 
@@ -717,6 +726,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                 <Link
                                     key={item.label}
                                     href={item.href}
+                                    prefetch={true}
                                     className={`flex flex-col items-center justify-center flex-1 h-full relative transition-all duration-150 active:scale-95 ${
                                         isActive 
                                             ? 'text-blue-600 dark:text-blue-400 font-bold' 

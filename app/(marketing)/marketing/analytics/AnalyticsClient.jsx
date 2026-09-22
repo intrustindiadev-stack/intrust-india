@@ -18,18 +18,14 @@ import {
     Sparkles,
     AlertCircle
 } from 'lucide-react';
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend
-} from 'recharts';
-
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
+
+const AnalyticsChart = dynamic(() => import('./AnalyticsChart'), {
+    ssr: false,
+    loading: () => <div className="h-64 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />,
+});
 
 export default function AnalyticsClient({
     user,
@@ -106,7 +102,7 @@ export default function AnalyticsClient({
     const channels = useMemo(() => {
         const counts = { whatsapp: 0, instagram: 0, facebook: 0, other: 0 };
         userLinks.forEach(link => {
-            const ch = (link.channel || '').toLowerCase();
+            const ch = (link.source || link.channel || '').toLowerCase();
             if (ch.includes('whatsapp')) counts.whatsapp++;
             else if (ch.includes('insta')) counts.instagram++;
             else if (ch.includes('face')) counts.facebook++;
@@ -160,7 +156,7 @@ export default function AnalyticsClient({
         const prodMap = {};
         userLinks.forEach(link => {
             const pId = link.product_id || 'campaign';
-            const pName = link.products?.name || (link.product_id ? 'InTrust Product' : 'General Platform Campaign');
+            const pName = link.shopping_products?.title || link.products?.name || (link.product_id ? 'InTrust Product' : 'General Platform Campaign');
             if (!prodMap[pId]) {
                 prodMap[pId] = {
                     name: pName,
@@ -169,7 +165,7 @@ export default function AnalyticsClient({
                     orders: 0
                 };
             }
-            prodMap[pId].shares += 1;
+            prodMap[pId].shares += Number(link.shares_count || 1);
             prodMap[pId].clicks += Number(link.clicks_count || 0);
             prodMap[pId].orders += Number(link.orders_count || 0);
         });
@@ -186,12 +182,16 @@ export default function AnalyticsClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Header with Breadcrumbs & Range Filter */}
+            {/* Header with Breadcrumbs, guide & Range Filter */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
-                <MarketingBreadcrumbs
-                    customTitle="Marketing Analytics"
-                    customSubtitle="Track what's working across your products, channels, and campaigns with live telemetry."
-                />
+                <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <MarketingBreadcrumbs
+                        customTitle="Marketing Analytics"
+                        customSubtitle="Track what's working across your products, channels, and campaigns with live telemetry."
+                        className="flex-1 min-w-0"
+                    />
+                    <GuideInfoButton pageKey="/marketing/analytics" scope="marketing" className="mt-1 shrink-0" />
+                </div>
 
                 {/* Range Filter */}
                 <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shrink-0 self-start sm:self-auto">
@@ -294,63 +294,7 @@ export default function AnalyticsClient({
                     </div>
                 </div>
 
-                <div className="h-[220px] sm:h-[280px] lg:h-[340px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
-                            <XAxis 
-                                dataKey="date" 
-                                tickLine={false} 
-                                axisLine={false} 
-                                tick={{ fontSize: 10, fill: '#94A3B8' }} 
-                            />
-                            <YAxis 
-                                tickLine={false} 
-                                axisLine={false} 
-                                tick={{ fontSize: 10, fill: '#94A3B8' }} 
-                                allowDecimals={false} 
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: '#0F172A',
-                                    borderRadius: '0.75rem',
-                                    border: 'none',
-                                    color: '#fff',
-                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                    fontSize: '11px'
-                                }}
-                                itemStyle={{ color: '#fff' }}
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="clicks"
-                                stroke="#2563EB"
-                                strokeWidth={2}
-                                dot={{ r: 3, strokeWidth: 1.5, fill: '#fff' }}
-                                activeDot={{ r: 5 }}
-                                name="Link Clicks"
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="orders"
-                                stroke="#10B981"
-                                strokeWidth={2}
-                                dot={{ r: 3, strokeWidth: 1.5, fill: '#fff' }}
-                                activeDot={{ r: 5 }}
-                                name="Converted Orders"
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="shares"
-                                stroke="#6366F1"
-                                strokeWidth={1.5}
-                                strokeDasharray="4 4"
-                                dot={false}
-                                name="Shares Created"
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
+                <AnalyticsChart trendData={trendData} />
 
                 {!hasAnyActivity && (
                     <div className="mt-4 p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 flex items-center gap-3 text-xs text-blue-800 dark:text-blue-300">
@@ -461,7 +405,7 @@ export default function AnalyticsClient({
                                 No products shared yet
                             </h4>
                             <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-0.5 mb-3">
-                                Browse your catalog or merchant store and tap "Share & Earn" to generate your first tracked product share link.
+                                Browse your catalog or merchant store and tap &ldquo;Share &amp; Earn&rdquo; to generate your first tracked product share link.
                             </p>
                             <Link
                                 href="/marketing/products"

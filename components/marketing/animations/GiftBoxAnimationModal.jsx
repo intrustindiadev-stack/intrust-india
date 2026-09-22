@@ -213,19 +213,25 @@ export default function GiftBoxAnimationModal({
     onContinue
 }) {
     const [step, setStep] = useState(1);
+    const [wasOpen, setWasOpen] = useState(isOpen);
     const [windowDimension, setWindowDimension] = useState({ width: 0, height: 0 });
 
+    // Adjust state during render on close (React-recommended pattern, no effect setState)
+    if (wasOpen !== isOpen) {
+        setWasOpen(isOpen);
+        if (!isOpen) setStep(1);
+    }
+
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (typeof window === 'undefined') return;
+        const raf = requestAnimationFrame(() => {
             setWindowDimension({ width: window.innerWidth, height: window.innerHeight });
-        }
+        });
+        return () => cancelAnimationFrame(raf);
     }, []);
 
     useEffect(() => {
-        if (!isOpen) {
-            setStep(1);
-            return;
-        }
+        if (!isOpen) return;
 
         // Automatic progression through unboxing sequence
         const t1 = setTimeout(() => setStep(2), 1200); // unwrapping / wobbling
@@ -296,7 +302,7 @@ export default function GiftBoxAnimationModal({
                         >
                             <VectorGiftBox state="closed" />
                             <h3 className="text-xl font-black text-slate-900 dark:text-white mt-3 mb-1">
-                                You've Earned a Mystery Gift!
+                                You&apos;ve Earned a Mystery Gift!
                             </h3>
                             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                 Unlocking your milestone achievement...
@@ -347,7 +353,7 @@ export default function GiftBoxAnimationModal({
                             </motion.div>
 
                             <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-2 mb-1 tracking-tight">
-                                It's Yours!
+                                It&apos;s Yours!
                             </h3>
                             <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                                 Your milestone reward is revealed!

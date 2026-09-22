@@ -38,6 +38,7 @@ import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import MerchantCard from '@/components/customer/shop/MerchantCard';
 import MiniCartDrawer from '@/components/customer/shop/MiniCartDrawer';
@@ -531,7 +532,10 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
     return (
         <div className="w-full space-y-6 font-body-md text-slate-900 dark:text-on-surface transition-colors duration-500">
             {/* Top Breadcrumbs */}
-            <CustomerBreadcrumbs items={[{ label: 'Shop & Local Stores' }]} className="mb-2" />
+            <div className="flex items-start justify-between gap-3">
+                <CustomerBreadcrumbs items={[{ label: 'Shop & Local Stores' }]} className="mb-0 flex-1 min-w-0" />
+                <GuideInfoButton pageKey="/shop" scope="customer" className="mt-1 shrink-0" />
+            </div>
 
             {/* ── 1. MAIN HERO BANNER (Softened, Vibrant & Clean) ── */}
             <div className="relative w-full rounded-3xl overflow-hidden shadow-md border border-outline-variant/30 min-h-[190px] sm:min-h-[230px] flex items-center group bg-gradient-to-r from-blue-950/80 via-slate-900/60 to-slate-950/40">
@@ -857,7 +861,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                     <div className="p-10 rounded-3xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-2">
                         <Store size={36} className="mx-auto text-on-surface-variant/40" />
                         <h4 className="font-black text-base text-on-surface">No stores found in this department</h4>
-                        <p className="text-xs text-on-surface-variant">Try selecting "All Stores" to explore other verified sellers.</p>
+                        <p className="text-xs text-on-surface-variant">Try selecting &quot;All Stores&quot; to explore other verified sellers.</p>
                         <button
                             type="button"
                             onClick={() => setSelectedDepartment('all')}
@@ -885,7 +889,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                     <div>
                         <div className="flex items-center gap-2 mb-0.5">
                             <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider border border-rose-500/20">
-                                Today's Deals
+                                Today&apos;s Deals
                             </span>
                             <span className="text-[11px] text-slate-500 dark:text-brand-steel font-semibold">
                                 Best Value Picks
@@ -925,7 +929,7 @@ export default function ShopHubClient({ merchants = [], ratingsMap = {}, categor
                     <div className="p-10 rounded-3xl bg-surface-container-lowest border border-outline-variant/30 text-center space-y-2">
                         <Package size={36} className="mx-auto text-on-surface-variant/40" />
                         <h4 className="font-black text-base text-on-surface">No products match this deal filter</h4>
-                        <p className="text-xs text-on-surface-variant">Try selecting "All Deals" to see all curated products.</p>
+                        <p className="text-xs text-on-surface-variant">Try selecting &quot;All Deals&quot; to see all curated products.</p>
                         <button
                             type="button"
                             onClick={() => setDealFilter('all')}

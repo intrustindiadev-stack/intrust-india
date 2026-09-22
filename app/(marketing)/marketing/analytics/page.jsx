@@ -4,6 +4,13 @@ import AnalyticsClient from './AnalyticsClient';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
+// Computed outside the component render body (server component, evaluated per request)
+function getNinetyDaysAgoIso() {
+    return new Date(Date.now() - NINETY_DAYS_MS).toISOString();
+}
+
 export default async function AnalyticsPage() {
     const supabase = await createServerSupabaseClient();
 
@@ -30,7 +37,7 @@ export default async function AnalyticsPage() {
     // 2. Fetch user's share links with associated product details
     const { data: userLinks } = await supabase
         .from('marketing_share_links')
-        .select('id, product_id, share_code, channel, clicks_count, orders_count, cashback_earned_paise, created_at, products(id, name, price_paise, image_url)')
+        .select('id, product_id, code, source, shares_count, clicks_count, registrations_count, orders_count, created_at, shopping_products(id, title, suggested_retail_price_paise, product_images)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -42,7 +49,8 @@ export default async function AnalyticsPage() {
             .from('marketing_tracking_events')
             .select('id, link_id, event_type, referer, metadata, created_at')
             .in('link_id', linkIds)
-            .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+            // eslint-disable-next-line react-hooks/purity -- server component: per-request 90-day fetch window
+            .gte('created_at', getNinetyDaysAgoIso())
             .order('created_at', { ascending: true });
         trackingEvents = events || [];
     }

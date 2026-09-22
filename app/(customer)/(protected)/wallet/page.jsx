@@ -27,6 +27,7 @@ import { usePayerContact } from '@/hooks/usePayerContact';
 import { supabase } from '@/lib/supabaseClient';
 import PayerContactRecoveryPanel from '@/components/payment/PayerContactRecoveryPanel';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 function AnimatedCounter({ value, duration = 900 }) {
     const [displayValue, setDisplayValue] = useState(0);
@@ -235,7 +236,10 @@ export default function CustomerWalletPage() {
 
     return (
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-            <CustomerBreadcrumbs items={[{ label: 'InTrust Wallet' }]} className="mb-2" />
+            <div className="flex items-start justify-between gap-3">
+                <CustomerBreadcrumbs items={[{ label: 'InTrust Wallet' }]} className="mb-0 flex-1 min-w-0" />
+                <GuideInfoButton pageKey="/wallet" scope="customer" className="mt-1 shrink-0" />
+            </div>
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

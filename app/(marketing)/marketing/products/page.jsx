@@ -137,7 +137,7 @@ export default async function ProductMarketingPage() {
     // Fetch user's existing share links to compute authentic per-product share counts
     const { data: userShareLinks } = await supabase
         .from('marketing_share_links')
-        .select('id, code, product_id, clicks_count, shares_count, orders_count')
+        .select('id, code, product_id, clicks_count, shares_count, registrations_count, orders_count')
         .eq('user_id', user.id);
 
     return (

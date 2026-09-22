@@ -80,7 +80,7 @@ export default function SponsorshipGstInvoiceModal({ invoice, merchant, onClose 
                                 {invoice.invoiceNumber || 'INV-MKT-202609-001'}
                             </h4>
                             <p className="text-xs text-slate-500 mt-0.5">
-                                Date: {new Date(invoice.invoiceDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                Date: {(invoice.invoiceDate ? new Date(invoice.invoiceDate) : new Date()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </p>
                             <p className="text-xs text-slate-500">
                                 Service Date: {invoice.serviceDate || 'Upcoming Date'}

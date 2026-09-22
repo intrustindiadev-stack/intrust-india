@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 import KYCStatus from '@/components/kyc/KYCStatus';
 import KYCPopup from '@/components/kyc/KYCPopup';
@@ -254,7 +255,10 @@ function CustomerProfileContent() {
                         className="flex flex-col items-center"
                     >
                         <div className="w-full text-left mb-6">
-                            <CustomerBreadcrumbs items={[{ label: 'Profile & Settings' }]} className="mb-3" />
+                            <div className="flex items-start justify-between gap-3">
+                                <CustomerBreadcrumbs items={[{ label: 'Profile & Settings' }]} className="mb-0 flex-1 min-w-0" />
+                                <GuideInfoButton pageKey="/profile" scope="customer" className="mt-1 shrink-0" />
+                            </div>
                             <div className="flex items-center gap-4 mt-2">
                                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
                                     Profile

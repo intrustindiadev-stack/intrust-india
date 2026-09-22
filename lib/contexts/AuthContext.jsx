@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useCallback, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { FastProgressLoader } from '@/components/ui/InTrustProgressLoader';
@@ -54,7 +54,9 @@ export function AuthProvider({ children }) {
     const [showAuthLoader, setShowAuthLoader] = useState(false);
 
     // Fetch profile helper with timeout + one silent retry on AbortError.
-    // 8 s covers Vercel cold-start latency; two attempts give a ~16 s total budget.
+    // Slim-column select keeps the payload small for multi-user scale, and
+    // callers release the loading lock on JWT immediately (non-blocking).
+    // 8 s covers VPS latency; two attempts give a ~16 s total budget.
     const fetchProfile = async (userId) => {
         const attempt = async () => {
             const controller = new AbortController();
@@ -62,7 +64,7 @@ export function AuthProvider({ children }) {
             try {
                 const { data, error } = await supabase
                     .from('user_profiles')
-                    .select('*')
+                    .select('id, role, full_name, email, phone, avatar_url, kyc_status')
                     .eq('id', userId)
                     .single()
                     .abortSignal(controller.signal);
@@ -295,6 +297,13 @@ export function AuthProvider({ children }) {
         }
     };
 
+    // Fullscreen InTrust guide modal — shared by customer + marketing panels.
+    // Fullscreen, centered, ESC/backdrop close, clean illustration header.
+    const [guideKey, setGuideKey] = useState(null);
+    const openGuide = useCallback((key) => setGuideKey(key), []);
+    const closeGuide = useCallback(() => setGuideKey(null), []);
+    const guideValue = useMemo(() => ({ guideKey, openGuide, closeGuide }), [guideKey, openGuide, closeGuide]);
+
     const value = {
         user,
         profile,
@@ -307,6 +316,10 @@ export function AuthProvider({ children }) {
         refreshProfile,
         refreshUser,
         signOut,
+        guideKey,
+        openGuide,
+        closeGuide,
+        guide: guideValue,
     };
 
     return (

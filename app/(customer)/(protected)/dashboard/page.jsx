@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Breadcrumbs from '@/components/giftcards/Breadcrumbs';
 import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -518,7 +519,7 @@ export default function CustomerDashboardPage() {
                 <div className="w-full space-y-8">
                     {/* Welcome Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
+                        <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]" />
                                 <span className="text-[11px] font-bold text-brand-steel uppercase tracking-widest">Marketplace Hub • Live</span>
@@ -535,6 +536,7 @@ export default function CustomerDashboardPage() {
                                 Verified local commerce, essentials, and digital wallet services across India.
                             </p>
                         </div>
+                        <GuideInfoButton pageKey="/dashboard" scope="customer" className="shrink-0 self-start" />
                     </div>
 
                     {/* ── 1. Creative Hero Showcase: 8-col Banner Carousel + 4-col Wallet Hub on Laptop/Desktop ── */}

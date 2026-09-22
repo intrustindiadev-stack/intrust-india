@@ -97,8 +97,9 @@ export default function MerchantMarketingKpiSection({
 
                 {/* 2. Daily Quiz Sponsorship Status */}
                 <Link
-                    href="/marketing/daily-challenge?tab=sponsor"
-                    className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#13161f] border border-slate-200/80 dark:border-white/5 hover:border-amber-500/50 hover:shadow-sm transition-all flex flex-col justify-between group cursor-pointer"
+                    href="/marketing/daily-challenge/sponsor/history"
+                    prefetch
+                    className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#13161f] border border-slate-200/80 dark:border-white/5 hover:border-amber-500/50 hover:shadow-sm transition-all flex flex-col justify-between group cursor-pointer active:scale-[0.99]"
                 >
                     <div className="flex items-center justify-between mb-2 sm:mb-3">
                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">

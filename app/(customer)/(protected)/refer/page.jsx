@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const POINTS_PER_RUPEE = 100;
@@ -336,7 +337,10 @@ export default function ReferPage() {
     return (
         <div className="w-full pb-24 overflow-x-hidden">
             <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-                <CustomerBreadcrumbs items={[{ label: 'Refer & Earn' }]} />
+                <div className="flex items-start justify-between gap-3">
+                    <CustomerBreadcrumbs items={[{ label: 'Refer & Earn' }]} className="mb-0 flex-1 min-w-0" />
+                    <GuideInfoButton pageKey="/refer" scope="customer" className="mt-1 shrink-0" />
+                </div>
 
                 {/* Cross-navigation to Rewards */}
                 <motion.button

@@ -22,7 +22,10 @@ import {
     ExternalLink
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
-import SponsorshipGstInvoiceModal from '@/components/marketing/sponsor/SponsorshipGstInvoiceModal';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
+
+const SponsorshipGstInvoiceModal = dynamic(() => import('@/components/marketing/sponsor/SponsorshipGstInvoiceModal'), { ssr: false });
 
 export default function SponsorshipHistoryClient({
     user,
@@ -33,17 +36,25 @@ export default function SponsorshipHistoryClient({
 }) {
     const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'active' | 'completed'
     const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [visibleCount, setVisibleCount] = useState(12);
 
-    // Filter bookings
+    // Filter bookings (paginated for multi-user scale: 12 per page)
     const filteredBookings = useMemo(() => {
-        if (activeFilter === 'active') {
-            return bookings.filter(b => b.status === 'live' || b.status === 'upcoming');
-        }
-        if (activeFilter === 'completed') {
-            return bookings.filter(b => b.status === 'completed');
-        }
-        return bookings;
-    }, [bookings, activeFilter]);
+        const base = activeFilter === 'active'
+            ? bookings.filter(b => b.status === 'live' || b.status === 'upcoming')
+            : activeFilter === 'completed'
+                ? bookings.filter(b => b.status === 'completed')
+                : bookings;
+        return base.slice(0, visibleCount);
+    }, [bookings, activeFilter, visibleCount]);
+    const hasMore = useMemo(() => {
+        const total = activeFilter === 'active'
+            ? bookings.filter(b => b.status === 'live' || b.status === 'upcoming').length
+            : activeFilter === 'completed'
+                ? bookings.filter(b => b.status === 'completed').length
+                : bookings.length;
+        return visibleCount < total;
+    }, [bookings, activeFilter, visibleCount]);
 
     // Counts
     const activeCount = useMemo(() => {
@@ -60,12 +71,16 @@ export default function SponsorshipHistoryClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Top Bar with Breadcrumbs & Navigation Switcher */}
+            {/* Top Bar with Breadcrumbs, guide & Navigation Switcher */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
-                <MarketingBreadcrumbs
-                    customTitle="Sponsorship History & Invoices"
-                    customSubtitle="Track your historical daily challenge billboard promotions, featured products, and verified GST tax invoices."
-                />
+                <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <MarketingBreadcrumbs
+                        customTitle="Sponsorship History & Invoices"
+                        customSubtitle="Track your historical daily challenge billboard promotions, featured products, and verified GST tax invoices."
+                        className="flex-1 min-w-0"
+                    />
+                    <GuideInfoButton pageKey="/marketing/daily-challenge" scope="marketing" className="mt-1 shrink-0" />
+                </div>
 
                 <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl shrink-0 self-start sm:self-auto">
                     <Link
@@ -171,7 +186,7 @@ export default function SponsorshipHistoryClient({
                 <div className="flex items-center gap-1.5">
                     <button
                         type="button"
-                        onClick={() => setActiveFilter('all')}
+                        onClick={() => { setActiveFilter('all'); setVisibleCount(12); }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                             activeFilter === 'all'
                                 ? 'bg-blue-600 text-white shadow-2xs'
@@ -182,7 +197,7 @@ export default function SponsorshipHistoryClient({
                     </button>
                     <button
                         type="button"
-                        onClick={() => setActiveFilter('active')}
+                        onClick={() => { setActiveFilter('active'); setVisibleCount(12); }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                             activeFilter === 'active'
                                 ? 'bg-blue-600 text-white shadow-2xs'
@@ -193,7 +208,7 @@ export default function SponsorshipHistoryClient({
                     </button>
                     <button
                         type="button"
-                        onClick={() => setActiveFilter('completed')}
+                        onClick={() => { setActiveFilter('completed'); setVisibleCount(12); }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                             activeFilter === 'completed'
                                 ? 'bg-blue-600 text-white shadow-2xs'
@@ -300,7 +315,7 @@ export default function SponsorshipHistoryClient({
                                                 )}
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium italic mt-0.5 block">
-                                                "{booking.campaignMessage}"
+                                                &ldquo;{booking.campaignMessage}&rdquo;
                                             </span>
                                         </div>
                                     </div>
@@ -339,10 +354,13 @@ export default function SponsorshipHistoryClient({
                                                     className="p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 flex items-center gap-2.5"
                                                 >
                                                     <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-white shrink-0 border border-slate-200">
-                                                        <img
+                                                        <Image
                                                             src={prod.image || '/icons/intrustLogo.png'}
                                                             alt={prod.title}
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            sizes="44px"
+                                                            loading="lazy"
+                                                            className="object-cover"
                                                         />
                                                     </div>
                                                     <div className="min-w-0 flex-1">
@@ -366,6 +384,17 @@ export default function SponsorshipHistoryClient({
                             </div>
                         );
                     })}
+                    {hasMore && (
+                        <div className="flex justify-center pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setVisibleCount(c => c + 12)}
+                                className="px-5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-black text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-all active:scale-95 cursor-pointer"
+                            >
+                                Load more sponsorships
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -202,35 +202,39 @@ export default function CashbackAnimationModal({
     // stage: 1 = win splash celebration (0-1.1s), 2 = coins flying & counting into wallet
     const [stage, setStage] = useState(1);
     const [countingDone, setCountingDone] = useState(false);
+    const [wasOpen, setWasOpen] = useState(isOpen);
     const [windowDimension, setWindowDimension] = useState({ width: 0, height: 0 });
 
     const prevBalance = Math.max(0, Math.round(newBalance - cashbackAmount));
     const targetBalance = Math.round(newBalance);
     const [displayBalance, setDisplayBalance] = useState(prevBalance);
 
+    // Adjust state during render on open/close transitions (React-recommended pattern)
+    if (wasOpen !== isOpen) {
+        setWasOpen(isOpen);
+        setStage(1);
+        setCountingDone(false);
+        setDisplayBalance(prevBalance);
+    }
+
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (typeof window === 'undefined') return;
+        const raf = requestAnimationFrame(() => {
             setWindowDimension({ width: window.innerWidth, height: window.innerHeight });
-            const handleResize = () => {
-                setWindowDimension({ width: window.innerWidth, height: window.innerHeight });
-            };
-            window.addEventListener('resize', handleResize);
-            return () => window.removeEventListener('resize', handleResize);
-        }
+        });
+        const handleResize = () => {
+            setWindowDimension({ width: window.innerWidth, height: window.innerHeight });
+        };
+        window.addEventListener('resize', handleResize);
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', handleResize);
+        };
     }, []);
 
     // Sequence stages
     useEffect(() => {
-        if (!isOpen) {
-            setStage(1);
-            setCountingDone(false);
-            setDisplayBalance(prevBalance);
-            return;
-        }
-
-        setDisplayBalance(prevBalance);
-        setCountingDone(false);
-        setStage(1);
+        if (!isOpen) return;
 
         const timer = setTimeout(() => {
             setStage(2);

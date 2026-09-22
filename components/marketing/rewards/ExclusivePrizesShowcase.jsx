@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
     Sparkles, 
     Gift, 
@@ -11,7 +12,11 @@ import { motion } from 'framer-motion';
 
 import TreasureChestVector from '@/components/marketing/graphics/TreasureChestVector';
 
-export default function ExclusivePrizesShowcase({ isMerchant = false, className = '' }) {
+export default function ExclusivePrizesShowcase({ isMerchant = false, targets = [], className = '' }) {
+    const prizes = (Array.isArray(targets) ? targets : [])
+        .filter(t => t.is_active !== false)
+        .slice(0, 3);
+    const fmtCash = (paise) => `₹${(Number(paise || 0) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
     return (
         <div className={`relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-white border border-blue-100/90 p-5 sm:p-7 lg:p-8 shadow-xs ${className}`}>
             {/* Subtle light ambient glow */}
@@ -51,8 +56,29 @@ export default function ExclusivePrizesShowcase({ isMerchant = false, className 
                     </div>
                 </div>
 
-                {/* Right: 3D Isometric Mystery Box Illustration */}
+                {/* Right: real prizes or mystery box illustration */}
                 <div className="relative shrink-0 flex items-center justify-center">
+                    {prizes.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2 sm:gap-3 w-64 sm:w-80">
+                            {prizes.map((p) => (
+                                <div key={p.id} className="rounded-2xl bg-white/95 border border-slate-200/90 p-2.5 flex flex-col items-center text-center shadow-sm">
+                                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                                        {p.gift_image_url ? (
+                                            <Image src={p.gift_image_url} alt={p.gift_name || p.title} fill sizes="64px" loading="lazy" className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <TreasureChestVector animated={false} className="w-10 h-10" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] font-black text-slate-900 mt-1.5 leading-tight line-clamp-2">{p.gift_name || p.title}</p>
+                                    <span className="text-[10px] font-extrabold text-emerald-600 mt-0.5">
+                                        {p.reward_type === 'cashback' ? fmtCash(p.reward_value_paise) : 'Mystery gift'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
                     <motion.div 
                         whileHover={{ y: -3 }}
                         transition={{ duration: 0.2 }}
@@ -73,6 +99,7 @@ export default function ExclusivePrizesShowcase({ isMerchant = false, className 
                             Dynamic Certified Gifts
                         </span>
                     </motion.div>
+                    )}
                 </div>
             </div>
         </div>

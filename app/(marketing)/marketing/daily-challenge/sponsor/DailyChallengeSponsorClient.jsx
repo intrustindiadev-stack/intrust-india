@@ -30,9 +30,12 @@ import {
     ExternalLink
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
-import SabpaisaPaymentModal from '@/components/payment/SabpaisaPaymentModal';
-import SponsorshipCelebrationModal from '@/components/marketing/animations/SponsorshipCelebrationModal';
-import SponsorshipGstInvoiceModal from '@/components/marketing/sponsor/SponsorshipGstInvoiceModal';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
+
+const SabpaisaPaymentModal = dynamic(() => import('@/components/payment/SabpaisaPaymentModal'), { ssr: false });
+const SponsorshipCelebrationModal = dynamic(() => import('@/components/marketing/animations/SponsorshipCelebrationModal'), { ssr: false });
+const SponsorshipGstInvoiceModal = dynamic(() => import('@/components/marketing/sponsor/SponsorshipGstInvoiceModal'), { ssr: false });
 
 export default function DailyChallengeSponsorClient({
     user,
@@ -102,9 +105,10 @@ export default function DailyChallengeSponsorClient({
     // Production-ready pagination
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Reset pagination when search or category filter changes
+    // Reset pagination when search or category filter changes (deferred: no sync setState in effect)
     useEffect(() => {
-        setCurrentPage(1);
+        const t = setTimeout(() => setCurrentPage(1), 0);
+        return () => clearTimeout(t);
     }, [productSearch, categoryFilter, subCategoryFilter, pageSize]);
 
     const totalPages = Math.max(1, Math.ceil(filteredInventory.length / pageSize));
@@ -193,8 +197,13 @@ export default function DailyChallengeSponsorClient({
     }, [existingSponsorships, merchant?.id]);
 
     const handleBookSponsorship = async () => {
+        if (bookingLoading) return;
         if (!selectedDate) {
             setBookingError('Please select an available date on the calendar.');
+            return;
+        }
+        if (selectedDate.status && selectedDate.status !== 'available') {
+            setBookingError('This date is already booked. Please pick another available date.');
             return;
         }
         if (selectedProducts.length === 0) {
@@ -265,12 +274,16 @@ export default function DailyChallengeSponsorClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Top Bar with Breadcrumbs & Segmented Role Switcher */}
+            {/* Top Bar with Breadcrumbs, guide & Segmented Role Switcher */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
-                <MarketingBreadcrumbs
-                    customTitle="Daily Challenge & Quiz"
-                    customSubtitle="Test your knowledge, earn instant cashbacks, and discover featured local merchants."
-                />
+                <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <MarketingBreadcrumbs
+                        customTitle="Daily Challenge & Quiz"
+                        customSubtitle="Test your knowledge, earn instant cashbacks, and discover featured local merchants."
+                        className="flex-1 min-w-0"
+                    />
+                    <GuideInfoButton pageKey="/marketing/daily-challenge" scope="marketing" className="mt-1 shrink-0" />
+                </div>
 
                 <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl shrink-0 self-start sm:self-auto">
                     <Link
@@ -707,7 +720,7 @@ export default function DailyChallengeSponsorClient({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-1">
                                 {paginatedInventory.length === 0 ? (
                                     <div className="col-span-full py-8 text-center text-xs text-slate-500">
-                                        No products matched "{productSearch}".
+                                        No products matched &quot;{productSearch}&quot;.
                                         <button
                                             type="button"
                                             onClick={() => { setProductSearch(''); setCategoryFilter('all'); }}
@@ -859,7 +872,7 @@ export default function DailyChallengeSponsorClient({
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-[9px] font-black uppercase text-amber-700 tracking-wider">Today's Sponsor</span>
+                                                <span className="text-[9px] font-black uppercase text-amber-700 tracking-wider">Today&apos;s Sponsor</span>
                                                 <span className="text-[8px] font-black text-emerald-700 bg-emerald-100 px-1 py-0.2 rounded-full border border-emerald-200">
                                                     ✓ Verified
                                                 </span>
@@ -875,7 +888,7 @@ export default function DailyChallengeSponsorClient({
                                 </div>
 
                                 <p className="text-xs text-slate-600 dark:text-slate-300 italic mb-3">
-                                    "{campaignMessage || 'Proudly powering today\'s trivia challenge! Discover our store specials below.'}"
+                                    &quot;{campaignMessage || 'Proudly powering today&apos;s trivia challenge! Discover our store specials below.'}&quot;
                                 </p>
 
                                 {selectedProducts.length > 0 ? (

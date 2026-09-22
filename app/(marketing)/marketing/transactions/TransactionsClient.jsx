@@ -22,28 +22,27 @@ import {
     ShoppingBag
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 export default function TransactionsClient({ user, isMerchant, initialTransactions = [] }) {
     const searchParams = useSearchParams();
     const [filterType, setFilterType] = useState('ALL');
     const [selectedTx, setSelectedTx] = useState(null);
 
-    const transactions = initialTransactions || [];
+    const transactions = useMemo(() => initialTransactions || [], [initialTransactions]);
 
-    // Deep link detection for ?txId=...
+    // Deep link detection for ?txId=... (deferred to avoid cascading renders)
     useEffect(() => {
         const txId = searchParams.get('txId');
-        if (txId && transactions.length > 0) {
-            const match = transactions.find(t => t.id === txId || t.id.includes(txId));
-            if (match) {
+        if (!txId || transactions.length === 0) return;
+        const match = transactions.find(t => t.id === txId || t.id.includes(txId));
+        if (match) {
+            const timer = setTimeout(() => {
                 setSelectedTx(match);
-                setTimeout(() => {
-                    const el = document.getElementById(`tx-${match.id}`);
-                    if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 250);
-            }
+                const el = document.getElementById(`tx-${match.id}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 250);
+            return () => clearTimeout(timer);
         }
     }, [searchParams, transactions]);
 
@@ -83,12 +82,16 @@ export default function TransactionsClient({ user, isMerchant, initialTransactio
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Header with Breadcrumbs & Filter Pills */}
+            {/* Header with Breadcrumbs, guide & Filter Pills */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
-                <MarketingBreadcrumbs
-                    customTitle="Marketing Transactions"
-                    customSubtitle="Surfaced directly from your authentic InTrust financial wallet ledger."
-                />
+                <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
+                    <MarketingBreadcrumbs
+                        customTitle="Marketing Transactions"
+                        customSubtitle="Surfaced directly from your authentic InTrust financial wallet ledger."
+                        className="flex-1 min-w-0"
+                    />
+                    <GuideInfoButton pageKey="/marketing/transactions" scope="marketing" className="mt-1 shrink-0" />
+                </div>
 
                 {/* Filter Pills */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none shrink-0 self-start sm:self-auto max-w-full">

@@ -54,6 +54,7 @@ export default function SponsorshipCelebrationModal({
 
     if (!isOpen) return null;
 
+    // eslint-disable-next-line react-hooks/purity -- display-only fallback date when booking details absent
     const sponsorDateObj = new Date(bookingDetails?.sponsorDate || Date.now());
     const formattedDate = sponsorDateObj.toLocaleDateString('en-IN', {
         weekday: 'long',

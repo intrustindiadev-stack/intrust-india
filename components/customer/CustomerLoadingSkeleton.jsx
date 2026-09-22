@@ -1,13 +1,15 @@
-export function CustomerLoadingSkeleton() {
+export function CustomerLoadingSkeleton({ label = 'Loading...' }) {
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4 animate-fadeIn">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#92BCEA]/20 to-[#AFB3F7]/20 flex items-center justify-center">
-                    <div className="w-8 h-8 border-3 border-[#92BCEA]/30 border-t-[#92BCEA] rounded-full animate-spin" />
+        <div className="min-h-screen bg-[var(--bg-primary)] px-4 sm:px-6 py-6 animate-fadeIn" aria-busy="true" aria-label={label}>
+            <div className="max-w-7xl mx-auto space-y-4">
+                <div className="h-12 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
+                <div className="h-44 rounded-3xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    {[0, 1, 2, 3].map((i) => (
+                        <div key={i} className="h-28 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
+                    ))}
                 </div>
-                <p className="text-sm text-[var(--text-secondary)] font-medium animate-pulse">
-                    Loading...
-                </p>
+                <div className="h-36 rounded-3xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
             </div>
         </div>
     );

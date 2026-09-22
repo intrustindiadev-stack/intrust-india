@@ -19,8 +19,11 @@ import {
     Info,
     ExternalLink
 } from 'lucide-react';
-import ShareModal from '@/components/marketing/ShareModal';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
+import dynamic from 'next/dynamic';
+import GuideInfoButton from '@/components/common/GuideInfoButton';
+
+const ShareModal = dynamic(() => import('@/components/marketing/ShareModal'), { ssr: false });
 
 export default function ProductMarketingClient({
     user,
@@ -34,13 +37,19 @@ export default function ProductMarketingClient({
     const searchParams = useSearchParams();
     const paramQ = searchParams?.get('q') || '';
     const [activeTab, setActiveTab] = useState(isMerchant && initialMerchantInventory.length > 0 ? 'my_products' : 'intrust_products');
+    const [searchInput, setSearchInput] = useState(paramQ);
     const [searchQuery, setSearchQuery] = useState(paramQ);
 
+    // Debounced search: input updates instantly, filtering settles after 200ms
+    // paramQ seeds initial state only — no effect sync needed (avoids cascading renders).
     useEffect(() => {
-        if (paramQ) {
-            setSearchQuery(paramQ);
-        }
-    }, [paramQ]);
+        const t = setTimeout(() => setSearchQuery(searchInput), 200);
+        return () => clearTimeout(t);
+    }, [searchInput]);
+
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [inspectingProduct, setInspectingProduct] = useState(null);
+    const [liveMetricsOverrides, setLiveMetricsOverrides] = useState({});
 
     // Close open inspection modal on Escape key
     useEffect(() => {
@@ -54,36 +63,48 @@ export default function ProductMarketingClient({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [inspectingProduct, setInspectingProduct] = useState(null);
-
-    // Map user share link metrics by product_id
+    // Map user share link metrics by product_id and id
     const linkMetricsMap = useMemo(() => {
         const map = {};
         (initialUserShareLinks || []).forEach(l => {
             if (l.product_id) {
                 map[l.product_id] = {
-                    shares: l.shares_count || 1,
-                    clicks: l.clicks_count || 0,
-                    orders: l.orders_count || 0,
+                    shares: Number(l.shares_count || 1),
+                    clicks: Number(l.clicks_count || 0),
+                    registrations: Number(l.registrations_count || 0),
+                    orders: Number(l.orders_count || 0),
                     code: l.code
                 };
             }
         });
+        // Merge any live metric updates performed in the current session
+        Object.keys(liveMetricsOverrides).forEach(k => {
+            map[k] = { ...(map[k] || {}), ...liveMetricsOverrides[k] };
+        });
         return map;
-    }, [initialUserShareLinks]);
+    }, [initialUserShareLinks, liveMetricsOverrides]);
+
+    const handleMetricUpdated = (prodId, newMetrics) => {
+        if (!prodId) return;
+        setLiveMetricsOverrides(prev => ({
+            ...prev,
+            [prodId]: { ...(prev[prodId] || {}), ...newMetrics }
+        }));
+    };
 
     // Normalize platform products
     const inTrustProducts = useMemo(() => {
         return (initialPlatformProducts || []).map((p) => {
-            const metrics = linkMetricsMap[p.id] || { shares: 0, clicks: 0, orders: 0 };
+            const metrics = linkMetricsMap[p.id] || { shares: 0, clicks: 0, registrations: 0, orders: 0 };
             return {
                 id: p.id,
+                product_id: p.id,
                 title: p.title || p.name,
                 price: p.price || (p.wholesale_price_paise ? Math.round((p.wholesale_price_paise * 1.2) / 100) : 299),
                 image: p.image_url || '/icons/intrustLogo.png',
                 shares: metrics.shares,
                 clicks: metrics.clicks,
+                registrations: metrics.registrations,
                 orders: metrics.orders,
                 code: metrics.code || null,
                 promo_cashback_paise: p.promo_cashback_paise || rewardsConfig?.product_promo_default_cashback_paise || 10000,
@@ -92,17 +113,20 @@ export default function ProductMarketingClient({
         });
     }, [initialPlatformProducts, linkMetricsMap, rewardsConfig]);
 
-    // Normalize merchant products
+    // Normalize merchant products (match via product_id or item.id)
     const myProducts = useMemo(() => {
         return (initialMerchantInventory || []).map((item) => {
-            const metrics = linkMetricsMap[item.id] || { shares: 0, clicks: 0, orders: 0 };
+            const matchedKey = (item.product_id && linkMetricsMap[item.product_id]) ? item.product_id : item.id;
+            const metrics = linkMetricsMap[matchedKey] || linkMetricsMap[item.id] || { shares: 0, clicks: 0, registrations: 0, orders: 0 };
             return {
                 id: item.id,
+                product_id: item.product_id || item.id,
                 title: item.product_name,
                 price: item.price,
                 image: item.image_url || '/icons/intrustLogo.png',
                 shares: metrics.shares,
                 clicks: metrics.clicks,
+                registrations: metrics.registrations,
                 orders: metrics.orders,
                 code: metrics.code || null,
                 promo_cashback_paise: rewardsConfig?.product_promo_default_cashback_paise || 10000,
@@ -121,10 +145,14 @@ export default function ProductMarketingClient({
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-8 animate-fadeIn">
             {/* Breadcrumbs & Heading */}
-            <MarketingBreadcrumbs
-                customTitle="Product Marketing"
-                customSubtitle="Share products across WhatsApp & Socials. Track performance and earn promotion cashbacks."
-            />
+            <div className="flex items-start justify-between gap-3">
+                <MarketingBreadcrumbs
+                    customTitle="Product Marketing"
+                    customSubtitle="Share products across WhatsApp & Socials. Track performance and earn promotion cashbacks."
+                    className="flex-1 min-w-0"
+                />
+                <GuideInfoButton pageKey="/marketing/products" scope="marketing" className="mt-1 shrink-0" />
+            </div>
 
             {/* Navigation Tabs & Search Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
@@ -160,8 +188,8 @@ export default function ProductMarketingClient({
                     <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search products..."
                         className="w-full pl-9 pr-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
                     />
@@ -257,15 +285,19 @@ export default function ProductMarketingClient({
                                     </span>
                                 </div>
 
-                                {/* Performance Metrics: Shares & Clicks */}
-                                <div className="flex items-center justify-between text-[9px] sm:text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1.5 sm:mt-2.5 pt-1.5 sm:pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center gap-0.5 sm:gap-1">
-                                        <Share2 size={11} className="text-blue-500" />
+                                {/* Performance Metrics: Shares, Clicks/Visits & Orders */}
+                                <div className="grid grid-cols-3 gap-1 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1.5 sm:mt-2.5 pt-1.5 sm:pt-2.5 border-t border-slate-100 dark:border-slate-800 text-center">
+                                    <div className="flex items-center justify-center gap-0.5" title="Times shared">
+                                        <Share2 size={11} className="text-blue-500 shrink-0" />
                                         <span>{product.shares}</span>
                                     </div>
-                                    <div className="flex items-center gap-0.5 sm:gap-1">
-                                        <MousePointerClick size={11} className="text-amber-500" />
+                                    <div className="flex items-center justify-center gap-0.5" title="Unique visits & clicks">
+                                        <MousePointerClick size={11} className="text-amber-500 shrink-0" />
                                         <span>{product.clicks}</span>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-0.5" title="Converted orders">
+                                        <ShoppingBag size={11} className="text-emerald-500 shrink-0" />
+                                        <span>{product.orders}</span>
                                     </div>
                                 </div>
 
@@ -352,19 +384,23 @@ export default function ProductMarketingClient({
                             </div>
                         </div>
 
-                        {/* Performance KPIs */}
-                        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                            <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Shares</span>
-                                <div className="text-base sm:text-lg font-black text-blue-600">{inspectingProduct.shares}</div>
+                        {/* Performance KPIs: 4-tier funnel */}
+                        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                            <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Shares</span>
+                                <div className="text-sm sm:text-base font-black text-blue-600">{inspectingProduct.shares}</div>
                             </div>
-                            <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Clicks</span>
-                                <div className="text-base sm:text-lg font-black text-amber-600">{inspectingProduct.clicks}</div>
+                            <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Visits</span>
+                                <div className="text-sm sm:text-base font-black text-amber-600">{inspectingProduct.clicks}</div>
                             </div>
-                            <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Reward</span>
-                                <div className="text-base sm:text-lg font-black text-emerald-600">₹{(inspectingProduct.promo_cashback_paise || 10000) / 100}</div>
+                            <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Orders</span>
+                                <div className="text-sm sm:text-base font-black text-emerald-600">{inspectingProduct.orders}</div>
+                            </div>
+                            <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Cashback</span>
+                                <div className="text-sm sm:text-base font-black text-violet-600">₹{(inspectingProduct.promo_cashback_paise || 10000) / 100}</div>
                             </div>
                         </div>
 
@@ -412,6 +448,7 @@ export default function ProductMarketingClient({
                     user={user}
                     merchant={merchant}
                     rewardsConfig={rewardsConfig}
+                    onMetricUpdated={handleMetricUpdated}
                 />
             )}
         </div>
