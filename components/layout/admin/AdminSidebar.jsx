@@ -273,7 +273,8 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                         {/* Close button for mobile */}
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="lg:hidden text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-lg transition-colors"
+                            aria-label="Close navigation menu"
+                            className="lg:hidden flex items-center justify-center min-h-[44px] min-w-[44px] text-slate-400 hover:text-slate-600 bg-slate-100 rounded-lg transition-colors"
                         >
                             <ChevronLeft size={20} />
                         </button>

@@ -23,10 +23,15 @@ export async function POST(request) {
             return NextResponse.json({ error: 'merchantId is required' }, { status: 400 });
         }
 
-        // Confirm merchant has bank details before verifying
+        // Confirm the merchant has bank details before verifying.
+        //
+        // Bank details are OPTIONAL on the merchant application form (bank-optional
+        // onboarding was shipped to improve conversion), so an approved merchant may
+        // legitimately have no bank row yet. In that case we MUST NOT attempt any
+        // verification — not a penny-drop API call, not even a registry stub.
         const { data: merchant, error: fetchError } = await admin
             .from('merchants')
-            .select('id, bank_account_number, bank_data, bank_verified')
+            .select('id, bank_account_number, bank_ifsc_code, bank_data, bank_verified')
             .eq('id', merchantId)
             .single();
 
@@ -34,14 +39,33 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
         }
 
-        if (!merchant.bank_account_number && !merchant.bank_data?.account_number) {
-            return NextResponse.json({ error: 'Merchant has no bank details to verify' }, { status: 400 });
+        // Bank details can live in the flat columns (current write path) or in the
+        // bank_data JSONB (legacy rows written before the flat columns existed).
+        // Both are trimmed so a whitespace-only value counts as missing.
+        const norm = (v) => (typeof v === 'string' ? v.trim() : '');
+        const accountNumber = norm(merchant.bank_account_number) || norm(merchant.bank_data?.account_number);
+        const ifscCode = norm(merchant.bank_ifsc_code)
+            || norm(merchant.bank_data?.ifsc)
+            || norm(merchant.bank_data?.ifsc_code);
+
+        if (!accountNumber || !ifscCode) {
+            return NextResponse.json(
+                {
+                    error: 'Cannot verify. Merchant has not provided bank details yet.',
+                    code: 'BANK_DETAILS_MISSING',
+                },
+                { status: 400 }
+            );
         }
 
-        // Set bank_verified = true
+        // Set bank_verified = true and advance the lifecycle flag so the merchant
+        // drops out of the admin "pending bank verification" queue.
         const { error: updateError } = await admin
             .from('merchants')
-            .update({ bank_verified: true })
+            .update({
+                bank_verified: true,
+                bank_verification_status: 'verified',
+            })
             .eq('id', merchantId);
 
         if (updateError) throw updateError;

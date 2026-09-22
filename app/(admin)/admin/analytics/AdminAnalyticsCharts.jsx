@@ -70,8 +70,8 @@ export default function AdminAnalyticsCharts({ userGrowthData, revenueSourceData
                         Daily Metric
                     </span>
                 </div>
-                <div className="h-[320px] w-full mt-4 overflow-hidden">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <div className="h-[300px] w-full mt-4 overflow-hidden">
+                    <ResponsiveContainer width="100%" height={300} minWidth={0}>
                         <AreaChart
                             data={userGrowthData}
                             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -87,14 +87,17 @@ export default function AdminAnalyticsCharts({ userGrowthData, revenueSourceData
                                 dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 600 }}
+                                tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
                                 dy={15}
+                                interval="preserveStartEnd"
+                                minTickGap={24}
                             />
                             <YAxis
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 600 }}
+                                tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
                                 dx={-5}
+                                width={40}
                             />
                             <Tooltip content={<CustomTooltipArea />} cursor={{ stroke: '#94A3B8', strokeWidth: 1, strokeDasharray: '3 3' }} />
                             <Area
@@ -125,12 +128,12 @@ export default function AdminAnalyticsCharts({ userGrowthData, revenueSourceData
                         Aggregate
                     </span>
                 </div>
-                <div className="h-[320px] w-full mt-4 overflow-hidden">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <div className="h-[300px] w-full mt-4 overflow-hidden">
+                    <ResponsiveContainer width="100%" height={300} minWidth={0}>
                         <BarChart
                             data={revenueSourceData}
                             margin={{ top: 20, right: 10, left: -10, bottom: 5 }}
-                            barSize={50}
+                            maxBarSize={40}
                         >
                             <defs>
                                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">

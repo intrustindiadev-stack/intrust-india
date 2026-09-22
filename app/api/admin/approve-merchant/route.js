@@ -71,12 +71,19 @@ export async function POST(request) {
             );
         }
 
-        if (!existingMerchant.bank_verified) {
-            return NextResponse.json(
-                { error: 'Cannot approve merchant. Bank details must be verified first.' },
-                { status: 400 }
-            );
-        }
+        // NOTE — Account approval is deliberately DECOUPLED from financial
+        // (bank) verification. Bank details are optional at application time, so
+        // a merchant may be approved with no bank details on file; they collect
+        // them later from Merchant Settings → "Bank Details & Settlements"
+        // (POST /api/merchant/bank-details), which puts the row back in the
+        // admin verification queue while the merchant can already use the panel.
+        //
+        // The old hard gate (`if (!existingMerchant.bank_verified) → 400`) was
+        // removed here — payouts remain protected independently because
+        // request_merchant_payout() refuses to run unless bank_verified IS TRUE.
+        //
+        // A verified bank account is still required before any payout, so we
+        // surface the pending state in the audit metadata below.
 
         const targetUserId = userId || existingMerchant.user_id;
 
@@ -257,7 +264,12 @@ export async function POST(request) {
                     new_status: 'approved',
                     subscription_status: 'unpaid',
                     target_user_id: targetUserId,
-                    role_assigned: 'merchant'
+                    role_assigned: 'merchant',
+                    // Decoupled-flow traceability: an approval is valid with or
+                    // without bank details, so record which case this was.
+                    bank_verified: existingMerchant.bank_verified === true,
+                    bank_verification_status: existingMerchant.bank_verification_status
+                        || (existingMerchant.bank_verified ? 'verified' : 'not_submitted'),
                 }
             }
         ]);

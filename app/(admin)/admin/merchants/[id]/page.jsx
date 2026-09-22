@@ -266,12 +266,21 @@ export default async function AdminMerchantDetailPage({ params }) {
                     </div>
 
                     {/* Quick Access Actions / Stats */}
+                    {/* A verify action is only possible when BOTH the account number
+                        and the IFSC are on file — that is exactly what the
+                        /api/admin/verify-bank route requires. Bank details are
+                        optional at application time, so this can legitimately be
+                        false for an approvable application. */}
                     <MerchantActions 
                         merchantId={merchant.id} 
                         userId={merchant.user_id} 
                         status={merchant.status} 
-                        hasBankData={!!(merchant.bank_account_number || merchant.bank_data?.account_number)}
+                        hasBankData={!!(
+                            (merchant.bank_account_number || merchant.bank_data?.account_number) &&
+                            (merchant.bank_ifsc_code || merchant.bank_data?.ifsc || merchant.bank_data?.ifsc_code)
+                        )}
                         bankVerified={merchant.bank_verified}
+                        bankVerificationStatus={merchant.bank_verification_status}
                     />
 
                     {isApproved && (
@@ -377,9 +386,17 @@ export default async function AdminMerchantDetailPage({ params }) {
                                     <CheckCircle size={14} strokeWidth={3} /> Verified
                                 </span>
                             ) : (
-                                <span className="w-fit flex items-center gap-2 px-4 py-1.5 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-100 animate-pulse">
-                                    <AlertCircle size={14} strokeWidth={3} /> Pending Check
-                                </span>
+                                (merchant.bank_account_number || merchant.bank_data?.account_number) &&
+                                (merchant.bank_ifsc_code || merchant.bank_data?.ifsc || merchant.bank_data?.ifsc_code) ? (
+                                    <span className="w-fit flex items-center gap-2 px-4 py-1.5 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-100 animate-pulse">
+                                        <AlertCircle size={14} strokeWidth={3} />
+                                        {merchant.bank_verification_status === 'pending' ? 'Pending Check' : 'Awaiting Verification'}
+                                    </span>
+                                ) : (
+                                    <span className="w-fit flex items-center gap-2 px-4 py-1.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-slate-200">
+                                        <AlertCircle size={14} strokeWidth={3} /> Bank Details Missing
+                                    </span>
+                                )
                             )}
                         </div>
 

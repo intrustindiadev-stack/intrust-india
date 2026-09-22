@@ -25,8 +25,19 @@ export default function MerchantFloatingCart({
     gatewayLabel = 'Pay via UPI / Cards',
     // Disable gateway entirely
     disableGateway = false,
+    // Hide the floating FAB below `md` — used by pages that render their own sticky cart bar on phones
+    hideFabBelowMd = false,
+    // Keep the FAB at every width (pages that render the cart as an overlay instead of an in-flow column)
+    alwaysShowFab = false,
+    // Skip the in-flow desktop sticky panel (used when the cart is overlay-only)
+    hideDesktopPanel = false,
+    // Optional controlled drawer state so a parent (e.g. the wholesale sticky cart bar) can open the slip
+    isDrawerOpen,
+    onDrawerOpenChange,
 }) {
-    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [internalDrawerOpen, setInternalDrawerOpen] = useState(false);
+    const drawerOpen = isDrawerOpen ?? internalDrawerOpen;
+    const setDrawerOpen = onDrawerOpenChange ?? setInternalDrawerOpen;
     const commission = showCommission ? subtotalInRupees * commissionRate : 0;
     // SGST/CGST breakdown
     const sgstTotal = cartItems.reduce((sum, item) => {
@@ -53,7 +64,7 @@ export default function MerchantFloatingCart({
     const estProfit = Math.max(0, totalRetailValue - subtotalInRupees);
     const profitMarginPercent = subtotalInRupees > 0 ? (estProfit / subtotalInRupees) * 100 : 0;
 
-    const toggleDrawer = () => setDrawerOpen(prev => !prev);
+    const toggleDrawer = () => setDrawerOpen(!drawerOpen);
 
     const drawerVariants = {
         hidden: { y: '100%', opacity: 0 },
@@ -241,7 +252,7 @@ export default function MerchantFloatingCart({
     return (
         <>
             {/* ===== DESKTOP STICKY SIDEBAR ===== */}
-            <div className="hidden xl:block">
+            <div className={hideDesktopPanel ? 'hidden' : 'hidden xl:block'}>
                 <div className="sticky top-24 bg-slate-900 rounded-2xl p-5 text-white shadow-xl border border-slate-800 overflow-hidden flex flex-col max-h-[calc(100vh-7rem)]">
                     <div className="relative z-10 flex flex-col flex-1 min-h-0">
                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 flex-shrink-0">
@@ -266,8 +277,10 @@ export default function MerchantFloatingCart({
             </div>
 
             {/* ===== MOBILE: FAB + FULL-SCREEN / SHEET CART ===== */}
-            <div className="xl:hidden">
-                {/* FAB — bottom floating action pill */}
+            <div className={alwaysShowFab ? undefined : 'xl:hidden'}>
+                {/* FAB — bottom floating action pill. Suppressed below md when the host page
+                    renders its own sticky bulk-order bar. */}
+                <div className={hideFabBelowMd ? 'max-md:hidden' : undefined}>
                 <button
                     id="merchant-floating-cart-btn"
                     onClick={toggleDrawer}
@@ -293,6 +306,7 @@ export default function MerchantFloatingCart({
                     </div>
                     <ChevronUp size={16} className={`text-slate-400 transition-transform duration-200 ${drawerOpen ? 'rotate-180' : ''}`} />
                 </button>
+                </div>
 
                 {/* Mobile Drawer */}
                 <AnimatePresence>

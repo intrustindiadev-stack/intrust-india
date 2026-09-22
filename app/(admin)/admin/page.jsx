@@ -224,11 +224,11 @@ export default async function AdminDashboard() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-[family-name:var(--font-outfit)]">
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+            <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-8">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
                     <div className="space-y-1">
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
                             Platform Overview
                         </h1>
                         <p className="text-slate-500 font-medium">
@@ -266,7 +266,7 @@ export default async function AdminDashboard() {
                     }}
                 />
 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8">
                     {/* Left Column: Transactions & Approvals */}
                     <div className="xl:col-span-2 space-y-8">
                         {/* Pending Panel Access — summary card linking to Career Applications */}
@@ -294,17 +294,17 @@ export default async function AdminDashboard() {
                         {/* Pending Approvals Section */}
                         {pendingApprovals.length > 0 ? (
                             <div className="bg-white backdrop-blur-xl rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                        <div className="p-4 md:p-6 border-b border-gray-100 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-bold text-gray-900">Action Required</h2>
+                                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Action Required</h2>
                                             <p className="text-sm font-medium text-gray-500">Pending Merchant Approvals</p>
                                         </div>
                                     </div>
-                                    <Link href="/admin/merchants" className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-sm font-semibold text-slate-700 transition-colors">
+                                    <Link href="/admin/merchants" className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-sm font-semibold text-slate-700 transition-colors">
                                         View All
                                     </Link>
                                 </div>
@@ -326,7 +326,8 @@ export default async function AdminDashboard() {
                                                 </span>
                                                 <Link
                                                     href={`/admin/merchants?id=${merchant.id}`}
-                                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                                                    aria-label={`Review ${merchant.business_name}`}
+                                                    className="flex items-center justify-center min-h-[44px] min-w-[44px] p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                                                 >
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                                 </Link>
@@ -339,17 +340,48 @@ export default async function AdminDashboard() {
 
                         {/* Recent Transactions Section */}
                         <div className="bg-white backdrop-blur-xl rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div className="p-4 md:p-6 border-b border-gray-100 flex justify-between items-center">
                                 <div>
-                                    <h2 className="text-xl font-bold text-gray-900">Recent Transactions</h2>
+                                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h2>
                                     <p className="text-sm font-medium text-gray-500">Latest platform orders</p>
                                 </div>
-                                <Link href="/admin/transactions" className="px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-sm font-semibold text-slate-700 transition-colors">
+                                <Link href="/admin/transactions" className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-sm font-semibold text-slate-700 transition-colors">
                                     View All
                                 </Link>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
+                            {/* Mobile: stacked transaction cards (md:hidden) */}
+                            <div className="flex flex-col gap-3 md:hidden p-4">
+                                {recentTransactions.length > 0 ? (
+                                    recentTransactions.map((tx) => (
+                                        <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-10 h-10 shrink-0 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+                                                    {tx.buyer_name?.charAt(0)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-slate-900 truncate">{tx.buyer_name}</p>
+                                                    <p className="text-xs text-slate-500 truncate">
+                                                        {tx.type === 'GIFT_CARD' ? '🎁' : '🛍️'} {tx.brand} · {tx.source}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                                        {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <p className="shrink-0 text-sm font-bold text-slate-900">
+                                                {formatPrice(tx.amount)}
+                                            </p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-8 text-center text-gray-500">
+                                        <p>No recent transactions</p>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Desktop: table (hidden below md, horizontal scroll fallback) */}
+                            <div className="hidden md:block w-full overflow-x-auto whitespace-nowrap rounded-lg border border-gray-200 border-t-0">
+                                <table className="hidden md:table w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50/50 text-xs uppercase tracking-wider text-slate-500 font-semibold border-b border-gray-100">
                                             <th className="p-4 pl-6">Buyer</th>
@@ -413,8 +445,8 @@ export default async function AdminDashboard() {
 
                     {/* Right Column: Quick Links Map */}
                     <div className="xl:col-span-1">
-                        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm sticky top-28">
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
+                        <div className="bg-white rounded-3xl border border-gray-100 p-4 md:p-6 shadow-sm lg:sticky lg:top-28">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Quick Actions</h2>
                             <div className="space-y-4">
                                 <Link href="/admin/giftcards" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-blue-100 transition-all">
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl shadow-lg shadow-blue-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform">

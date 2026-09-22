@@ -183,11 +183,11 @@ export default async function AnalyticsPage() {
 
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] p-4 md:p-6 lg:p-8 transition-colors duration-300">
             {/* Header */}
             <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-[family-name:var(--font-outfit)]">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-[family-name:var(--font-outfit)]">
                         Platform Analytics
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
@@ -204,7 +204,7 @@ export default async function AnalyticsPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 {stats.map((stat, index) => (
                     <div
                         key={index}

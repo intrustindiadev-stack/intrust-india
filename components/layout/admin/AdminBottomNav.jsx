@@ -71,6 +71,7 @@ export default function AdminBottomNav({ isSidebarOpen, adminProfile }) {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                aria-label={item.label}
                                 className="relative flex flex-col items-center justify-center h-14 min-w-[3.5rem] group"
                             >
                                 {/* Active Pill Background */}
@@ -103,6 +104,7 @@ export default function AdminBottomNav({ isSidebarOpen, adminProfile }) {
                     <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}
+                        aria-label="Log out"
                         className="relative flex flex-col items-center justify-center h-14 min-w-[3.5rem] group disabled:opacity-60"
                     >
                         <div className="relative z-10 flex flex-col items-center justify-center gap-1">

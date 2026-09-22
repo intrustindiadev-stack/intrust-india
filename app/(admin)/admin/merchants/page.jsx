@@ -148,7 +148,14 @@ export default function AdminMerchantsPage() {
                 subscriptionStatus: m.subscription_status || 'unpaid',
                 subscriptionExpiresAt: m.subscription_expires_at || null,
                 bankVerified: m.bank_verified || false,
-                hasBankData: !!(m.bank_account_number || m.bank_data?.account_number),
+                bankVerificationStatus: m.bank_verification_status || 'not_submitted',
+                // Mirrors the /api/admin/verify-bank guard: BOTH the account number
+                // and the IFSC must be on file before an admin can verify. Bank
+                // details are optional at application time.
+                hasBankData: !!(
+                    (m.bank_account_number || m.bank_data?.account_number) &&
+                    (m.bank_ifsc_code || m.bank_data?.ifsc || m.bank_data?.ifsc_code)
+                ),
                 bankAccountName: m.bank_account_name || m.bank_data?.account_holder_name || null,
                 appliedDate: new Date(m.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }),
                 documents: 0,

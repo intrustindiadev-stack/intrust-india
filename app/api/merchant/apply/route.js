@@ -158,6 +158,7 @@ export async function POST(request) {
                         status: finalStatus,
                         pan_verified: panVerified,
                         bank_verified: bankVerified,
+                        bank_verification_status: hasBank ? 'pending' : 'not_submitted',
                         gstin_verified: gstVerified,
                         pan_data: null,
                         bank_data: hasBank ? {
