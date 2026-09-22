@@ -29,7 +29,8 @@ import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
-import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+// LAZY: jsPDF + autotable + qrcode + jsbarcode (~500 KB) only load on click
+const generateOrderInvoice = (...args) => import("@/lib/invoiceGenerator").then(m => m.generateOrderInvoice(...args));
 
 const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
     const router = useRouter();

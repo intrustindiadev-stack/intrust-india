@@ -10,8 +10,12 @@ export default function MobileFilterDrawer({
     onClearAll, 
     hasActiveFilters = false, 
     resultsCount, 
-    children 
+    children,
+    // Breakpoint the drawer is hidden at — `lg` (customer storefront) or `md` (merchant wholesale)
+    breakpoint = 'lg'
 }) {
+    const hideAtOrAbove = breakpoint === 'md' ? 'md:hidden' : 'lg:hidden';
+
     // Prevent scrolling behind drawer when open
     React.useEffect(() => {
         if (isOpen) {
@@ -34,7 +38,7 @@ export default function MobileFilterDrawer({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs lg:hidden"
+                        className={`fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs ${hideAtOrAbove}`}
                         aria-hidden="true"
                     />
 
@@ -44,7 +48,7 @@ export default function MobileFilterDrawer({
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-                        className="fixed inset-y-0 right-0 z-50 w-[88vw] max-w-[340px] sm:max-w-sm bg-white dark:bg-[#0c0e16] shadow-2xl flex flex-col border-l border-slate-200 dark:border-white/10 lg:hidden"
+                        className={`fixed inset-y-0 right-0 z-50 w-[88vw] max-w-[340px] sm:max-w-sm bg-white dark:bg-[#0c0e16] shadow-2xl flex flex-col border-l border-slate-200 dark:border-white/10 ${hideAtOrAbove}`}
                         role="dialog"
                         aria-modal="true"
                         aria-label="Filter products"

@@ -39,7 +39,7 @@ function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, labe
         <Link
             href={href}
             style={{ animationDelay: `${delay}ms` }}
-            className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards snap-center shrink-0 w-[85vw] sm:w-auto relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-[#EAEFF4] p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-[#EAEFF4] p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all active:scale-[0.98]"
         >
             {/* Decor blob */}
             <div className={`absolute top-0 right-0 w-32 h-32 ${bgDecor} rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500`} />
@@ -292,7 +292,7 @@ export default function AdminStatsCards({ initialData }) {
     ];
 
     return (
-        <div className="flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-6 hide-scrollbar snap-x snap-mandatory">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {cards.map(card => (
                 <StatCard 
                     key={card.id}

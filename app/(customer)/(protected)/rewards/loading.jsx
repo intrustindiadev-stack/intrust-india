@@ -1,4 +1,4 @@
-import { CustomerLoadingSkeleton } from '@/app/(customer)/layout';
+import { CustomerLoadingSkeleton } from '@/components/customer/CustomerLoadingSkeleton';
 
 export default function RewardsLoading() {
     return <CustomerLoadingSkeleton />;

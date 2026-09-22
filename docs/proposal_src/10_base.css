@@ -1,0 +1,58 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+:root{
+--navy-900:#04163F;--navy-800:#08225E;--navy-700:#0E2F7A;--navy-600:#123C9B;
+--blue-700:#1747C7;--blue-600:#1E56E0;--blue-500:#2E6BF0;--blue-400:#5B90FF;
+--blue-200:#C3D5FA;--blue-100:#E3ECFF;--blue-50:#F0F5FF;--blue-25:#F7FAFF;
+--ink:#0A1224;--ink-2:#1A2438;--grey-700:#3E4A61;--grey-600:#5B6780;--grey-500:#7C879C;--grey-400:#9BA5B8;
+--line:#E2E9F6;--line-2:#EFF3FB;--card-line:#E4EAF7;
+--green:#0F8F4F;--green-bg:#E6F7EE;--amber:#C87F00;--amber-bg:#FFF3DF;--red:#D0353B;--red-bg:#FDECEC;
+--f-d:'Plus Jakarta Sans','Inter',sans-serif;--f-b:'Inter',sans-serif;--f-s:'Caveat',cursive;}
+@page{size:A4 portrait;margin:0}
+html{background:#EEF1F8}
+body{font-family:var(--f-b);color:var(--ink);font-size:8pt;line-height:1.45;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+svg.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.page{position:relative;width:210mm;height:297mm;background:#fff;overflow:hidden;page-break-after:always;break-after:page;margin:0 auto}
+.page:last-of-type{page-break-after:auto;break-after:auto}
+.pglow{position:absolute;pointer-events:none;z-index:0}
+.pglow.a{width:190mm;height:130mm;right:-50mm;top:-40mm;background:radial-gradient(closest-side,rgba(46,107,240,.17),rgba(46,107,240,0) 72%)}
+.pglow.b{width:150mm;height:150mm;left:-70mm;bottom:-50mm;background:radial-gradient(closest-side,rgba(30,86,224,.13),rgba(30,86,224,0) 72%)}
+.pglow.c{width:130mm;height:120mm;left:45mm;top:25mm;background:radial-gradient(closest-side,rgba(91,144,255,.10),rgba(91,144,255,0) 72%)}
+.pglow.d{width:120mm;height:100mm;left:-40mm;top:-30mm;background:radial-gradient(closest-side,rgba(46,107,240,.13),rgba(46,107,240,0) 72%)}
+.p-in{position:relative;z-index:3;height:100%;padding:8.5mm 11mm 5.5mm;display:flex;flex-direction:column}
+/* ---------- header ---------- */
+.phead{display:flex;align-items:center;justify-content:space-between;padding-bottom:2.4mm;border-bottom:.3mm solid var(--line);flex:0 0 auto}
+.brand{display:flex;align-items:center;gap:1.9mm}
+.brand img{width:7.2mm;display:block}
+.brand .bt{font-family:var(--f-d);font-weight:800;font-size:13pt;letter-spacing:-.04em;color:var(--navy-800);line-height:1}
+.brand .bs{font-size:4.9pt;letter-spacing:.02em;color:var(--grey-500);line-height:1;margin-top:.5mm}
+.brand.tiny img{width:5.6mm}
+.brand.tiny .bt{font-size:10pt}
+.phead .cat{font-size:5.6pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--grey-400)}
+.pnum{font-family:var(--f-d);font-weight:800;font-size:11.5pt;color:var(--navy-800);letter-spacing:-.02em;line-height:1}
+.pnum i{font-style:normal;font-weight:600;font-size:7.6pt;color:#B7C2D8}
+/* ---------- typography ---------- */
+.eyebrow{font-size:5.7pt;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--blue-600)}
+.h1{font-family:var(--f-d);font-weight:800;font-size:26pt;line-height:1.04;letter-spacing:-.038em;color:var(--ink)}
+.h1 b{color:var(--blue-600);font-weight:800}
+.h1.sm{font-size:22pt}
+.h2{font-family:var(--f-d);font-weight:800;font-size:17pt;line-height:1.08;letter-spacing:-.032em;color:var(--ink)}
+.h2 b{color:var(--blue-600)}
+.h3{font-family:var(--f-d);font-weight:800;font-size:10.4pt;line-height:1.15;letter-spacing:-.022em;color:var(--ink)}
+.h4{font-family:var(--f-d);font-weight:700;font-size:7.4pt;line-height:1.2;color:var(--ink)}
+.lead{font-size:7.4pt;line-height:1.52;color:var(--grey-600)}
+.lead b{color:var(--ink-2);font-weight:600}
+.p{font-size:6.6pt;line-height:1.5;color:var(--grey-600)}
+.tiny{font-size:5.6pt;line-height:1.45;color:var(--grey-500)}
+.script{font-family:var(--f-s);font-size:14pt;line-height:1;color:var(--navy-700);letter-spacing:.01em;transform:rotate(-4deg)}
+.script.sm{font-size:11pt}
+.script.lg{font-size:17pt}
+.f-d{font-family:var(--f-d)}
+.blue{color:var(--blue-600)}
+.navy{color:var(--navy-800)}
+.grey{color:var(--grey-600)}
+.wht{color:#fff}
+.up{text-transform:uppercase;letter-spacing:.16em}
+.b{font-weight:700}
+.sb{font-weight:600}
+.center{text-align:center}
+.mono{font-family:ui-monospace,'Liberation Mono',monospace;font-size:5.4pt;letter-spacing:-.02em}

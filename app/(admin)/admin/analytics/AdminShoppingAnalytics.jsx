@@ -118,7 +118,7 @@ export default function AdminShoppingAnalytics({ initialShoppingStats, initialTo
             {/* Section Header */}
             <div className="flex items-center justify-between mb-5">
                 <div>
-                    <h2 className="text-xl font-extrabold text-slate-900 dark:text-white font-[family-name:var(--font-outfit)] tracking-tight">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white font-[family-name:var(--font-outfit)] tracking-tight">
                         Shopping Analytics
                     </h2>
                     <p className="text-slate-500 text-sm font-medium mt-0.5">
@@ -128,7 +128,7 @@ export default function AdminShoppingAnalytics({ initialShoppingStats, initialTo
                 <button
                     onClick={refresh}
                     disabled={refreshing}
-                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-amber-600 hover:border-amber-200 transition-all shadow-sm disabled:opacity-50"
+                    className="inline-flex items-center justify-center min-h-[44px] gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-amber-600 hover:border-amber-200 transition-all shadow-sm disabled:opacity-50"
                 >
                     <ShoppingBag size={13} className={refreshing ? 'animate-pulse' : ''} />
                     {refreshing ? 'Refreshing…' : 'Refresh'}
@@ -162,9 +162,9 @@ export default function AdminShoppingAnalytics({ initialShoppingStats, initialTo
                         <p className="text-slate-400 text-xs font-medium mt-0.5">Ranked by total sales value</p>
                     </div>
                     {top5Products.length > 0 ? (
-                        <div className="h-60">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={top5Products} margin={{ top: 5, right: 5, left: -10, bottom: 40 }} barSize={32}>
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={top5Products} margin={{ top: 5, right: 5, left: -10, bottom: 40 }} maxBarSize={32}>
                                     <defs>
                                         <linearGradient id="shopBarGrad" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="0%" stopColor="#f59e0b" stopOpacity={1} />
@@ -176,18 +176,20 @@ export default function AdminShoppingAnalytics({ initialShoppingStats, initialTo
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }}
+                                        tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
                                         dy={10}
                                         angle={-30}
                                         textAnchor="end"
-                                        interval={0}
+                                        interval="preserveStartEnd"
+                                        minTickGap={16}
                                     />
                                     <YAxis
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }}
+                                        tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
                                         tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
                                         dx={-5}
+                                        width={40}
                                     />
                                     <Tooltip content={<BarTooltip />} cursor={{ fill: '#F1F5F9', opacity: 0.4 }} />
                                     <Bar dataKey="revenue" fill="url(#shopBarGrad)" radius={[6, 6, 3, 3]} />
@@ -209,8 +211,8 @@ export default function AdminShoppingAnalytics({ initialShoppingStats, initialTo
                         </h3>
                         <p className="text-slate-400 text-xs font-medium mt-0.5">Daily shopping order volume</p>
                     </div>
-                    <div className="h-60">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height={300}>
                             <AreaChart data={ordersChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="shopAreaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -223,15 +225,18 @@ export default function AdminShoppingAnalytics({ initialShoppingStats, initialTo
                                     dataKey="date"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }}
+                                    tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
                                     dy={10}
+                                    interval="preserveStartEnd"
+                                    minTickGap={24}
                                 />
                                 <YAxis
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }}
+                                    tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
                                     allowDecimals={false}
                                     dx={-5}
+                                    width={40}
                                 />
                                 <Tooltip content={<AreaTooltip />} cursor={{ stroke: '#94A3B8', strokeWidth: 1, strokeDasharray: '3 3' }} />
                                 <Area

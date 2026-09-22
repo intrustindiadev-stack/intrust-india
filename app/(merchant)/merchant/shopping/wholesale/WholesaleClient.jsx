@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Minus, Sparkles, Search, ChevronRight, BadgeCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Package, Plus, Sparkles, Search, Sliders, BadgeCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,10 @@ import Image from 'next/image';
 import MerchantFloatingCart from '@/components/merchant/shopping/MerchantFloatingCart';
 import SuccessAnimation from '@/components/ui/SuccessAnimation';
 import WholesaleProductModal from '@/components/merchant/shopping/WholesaleProductModal';
+import WholesaleProductCard from '@/components/merchant/shopping/WholesaleProductCard';
+import WholesaleFilterSidebar from '@/components/merchant/shopping/WholesaleFilterSidebar';
+import WholesaleStickyCartBar from '@/components/merchant/shopping/WholesaleStickyCartBar';
+import MobileFilterDrawer from '@/components/shop/MobileFilterDrawer';
 import { generateOrderInvoice } from '@/lib/invoiceGenerator';
 import { PLATFORM_CONFIG } from '@/lib/config/platform';
 import { usePayerContact } from '@/hooks/usePayerContact';
@@ -140,6 +144,29 @@ function PartnerCarousel() {
     );
 }
 
+/**
+ * Fly-to-cart anchor resolver.
+ * Below `md` the wholesale page shows the sticky bulk-order bar; from `md` up the
+ * floating cart FAB takes over. Hidden elements report a 0x0 rect, so they are skipped
+ * and the animation falls back to bottom-centre.
+ */
+function resolveCartAnchor() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return { destX: 0, destY: 0 };
+    }
+    for (const id of ['wholesale-sticky-cart-target', 'merchant-floating-cart-btn']) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const isVisible = rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+        if (isVisible) {
+            // centre the 48px flying orb on the anchor
+            return { destX: rect.left + rect.width / 2 - 24, destY: rect.top + rect.height / 2 - 24 };
+        }
+    }
+    return { destX: window.innerWidth / 2, destY: window.innerHeight - 100 };
+}
+
 export default function WholesaleClient({
     products = [],
     merchant,
@@ -165,6 +192,8 @@ export default function WholesaleClient({
     const [flyingItems, setFlyingItems] = useState([]);
     const [lastBatchId, setLastBatchId] = useState(null);
     const [lastCartSnapshot, setLastCartSnapshot] = useState([]);
+    const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const isAutoModeActive = merchant?.auto_mode_active || false;
 
     // Sync state with props
@@ -246,15 +275,8 @@ export default function WholesaleClient({
         if (delta > 0 && currentQty < maxStock && rect) {
             const animId = Date.now() + Math.random();
 
-            // Get destination coordinates if cart button is present
-            let destX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
-            let destY = typeof window !== 'undefined' ? window.innerHeight - 50 : 0;
-            const cartBtn = document.getElementById('merchant-floating-cart-btn');
-            if (cartBtn) {
-                const btnRect = cartBtn.getBoundingClientRect();
-                destX = btnRect.left + btnRect.width / 2 - 24; // center the 48px flying icon
-                destY = btnRect.top + btnRect.height / 2 - 24;
-            }
+            // Anchor the flying orb on whichever cart surface is visible right now
+            const { destX, destY } = resolveCartAnchor();
 
             setFlyingItems(items => [...items, {
                 id: animId,
@@ -298,7 +320,11 @@ export default function WholesaleClient({
             title: product.title,
             unit_price: product.wholesale_price_paise / 100,
             wholesale_price: product.wholesale_price_paise / 100,
-            retail_price: (product.suggested_retail_price_paise || 0) / 100,
+            retail_price: Math.max(
+                product.suggested_retail_price_paise || 0,
+                product.mrp_paise || 0,
+                product.platform_price_paise || 0
+            ) / 100,
             quantity: qty,
             gst_percentage: product.gst_percentage || 0,
         };
@@ -503,6 +529,29 @@ export default function WholesaleClient({
 
     const filteredProducts = products;
 
+    // ── Derived B2B metrics & filter state ───────────────────────────────────
+    const subCategoryOptions = getSubCategories(selectedCategory);
+    const totalUnits = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalMsrp = cartItems.reduce(
+        (sum, item) => sum + ((item.retail_price || 0) * (item.quantity || 0)),
+        0
+    );
+    const estMarginValue = Math.max(0, totalMsrp - subtotal);
+    const estMarginPercent = subtotal > 0 ? Math.round((estMarginValue / subtotal) * 100) : 0;
+    const activeFilterCount =
+        (selectedCategory !== 'All' ? 1 : 0) + (selectedSubCategory ? 1 : 0) + (searchTerm ? 1 : 0);
+    const hasActiveFilters = activeFilterCount > 0;
+
+    const handleClearAllFilters = () => {
+        setSearchTerm('');
+        setSelectedCategory('All');
+        setSelectedSubCategory('');
+        const params = new URLSearchParams(window.location.search);
+        ['q', 'category', 'sub_category'].forEach((key) => params.delete(key));
+        params.set('page', '1');
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
+
     return (
         <>
             <WholesaleProductModal
@@ -576,7 +625,7 @@ export default function WholesaleClient({
                 } : null}
             />
 
-            <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-8 xl:items-start">
+            <div className="relative">
                 <div className="min-w-0 space-y-5">
                     {/* Auto Mode Indicator */}
                     {isAutoModeActive && (
@@ -599,30 +648,48 @@ export default function WholesaleClient({
                     {/* Partner Carousel Area */}
                     <PartnerCarousel />
 
-                    {/* Compact Sticky Search Bar */}
+                    {/* Compact Sticky Search Bar + mobile filter trigger */}
                     <div className="sticky top-[72px] z-30 py-2 bg-[#f8f9fb]/95 dark:bg-[#0b0e14]/95 backdrop-blur-md transition-all">
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                <Search size={16} />
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-1 min-w-0">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <Search size={16} />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search wholesale products..."
+                                    aria-label="Search wholesale products"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full h-11 min-h-[44px] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs transition-all"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchTerm('')}
+                                        aria-label="Clear search"
+                                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
                             </div>
-                            <input
-                                type="text"
-                                placeholder="Search products..."
-                                aria-label="Search products"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs transition-all"
-                            />
-                            {searchTerm && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchTerm('')}
-                                    aria-label="Clear search"
-                                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
-                                >
-                                    ✕
-                                </button>
-                            )}
+
+                            {/* Mobile-only filter trigger — the sidebar itself lives in the drawer below md */}
+                            <button
+                                type="button"
+                                onClick={() => setMobileFiltersOpen(true)}
+                                aria-label="Open filters"
+                                className="md:hidden inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 active:scale-95 transition-all shrink-0"
+                            >
+                                <Sliders size={16} className="text-blue-600 dark:text-sky-400" />
+                                <span>Filters</span>
+                                {activeFilterCount > 0 && (
+                                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     </div>
 
@@ -645,228 +712,161 @@ export default function WholesaleClient({
                         </Link>
                     </div>
 
-                    {/* Category Filters */}
-                    {categories.length > 0 && (
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
-                            <button
-                                onClick={() => handleCategoryChange('All')}
-                                className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all flex-shrink-0 border ${
-                                    selectedCategory === 'All'
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-                                }`}
-                            >
-                                All
-                            </button>
-                            {categories.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => handleCategoryChange(cat.name)}
-                                    className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 flex-shrink-0 border ${
-                                        selectedCategory === cat.name
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-                                    }`}
-                                >
-                                    <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${cat.color_gradient || 'from-blue-500 to-indigo-600'}`} />
-                                    {cat.name}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {/* Filters sidebar (md+) + product grid.
+                        Below md the sidebar is rendered inside <MobileFilterDrawer/> instead. */}
+                    <div className="md:grid md:grid-cols-[minmax(0,236px)_minmax(0,1fr)] md:gap-6 md:items-start">
+                        <aside className="hidden md:block sticky top-24 self-start">
+                            <WholesaleFilterSidebar
+                                categories={categories}
+                                selectedCategory={selectedCategory}
+                                onCategoryChange={handleCategoryChange}
+                                subCategories={subCategoryOptions}
+                                selectedSubCategory={selectedSubCategory}
+                                onSubCategoryChange={handleSubCategoryChange}
+                                onClearAll={handleClearAllFilters}
+                                hasActiveFilters={hasActiveFilters}
+                            />
+                        </aside>
 
-                    {/* Dynamic Sub-Category Filter */}
-                    {getSubCategories(selectedCategory).length > 0 && (
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">
-                                {selectedCategory === 'Fashion' ? 'Department:' : 'Sub-Category:'}
-                            </span>
-                            {getSubCategories(selectedCategory).map(sub => (
-                                <button
-                                    key={sub}
-                                    onClick={() => handleSubCategoryChange(sub)}
-                                    className={`px-2.5 py-1 rounded-md font-medium text-xs transition-all flex-shrink-0 border ${
-                                        selectedSubCategory === sub
-                                            ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-xs'
-                                            : 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300'
-                                    }`}
-                                >
-                                    {sub === 'Men' ? '👔 ' : sub === 'Women' ? '👗 ' : sub === 'Kids' ? '🧒 ' : ''}{sub}
-                                </button>
-                            ))}
-                            {selectedSubCategory && (
-                                <button
-                                    onClick={() => handleSubCategoryChange(selectedSubCategory)}
-                                    className="text-[11px] font-bold text-slate-400 hover:text-red-500 transition-colors ml-1 uppercase tracking-wider shrink-0"
-                                >
-                                    ✕ Clear
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Products Grid */}
-                    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 pb-4">
-                        {filteredProducts.length === 0 ? (
-                            <div className="col-span-full py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
-                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
-                                    <Package size={24} />
-                                </div>
-                                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-                                    {searchTerm ? 'No products match your search' : 'No products available'}
-                                </h3>
-                                <p className="text-slate-500 dark:text-slate-400 text-xs font-normal max-w-sm mx-auto mb-5">
-                                    {searchTerm
-                                        ? `No wholesale items found matching "${searchTerm}".`
-                                        : selectedCategory !== 'All'
-                                            ? `No products currently available in "${selectedCategory}".`
-                                            : 'No wholesale stock available at this time.'}
-                                </p>
-                                {(searchTerm || selectedCategory !== 'All') && (
+                        <div className="min-w-0 space-y-4 mt-4 md:mt-0">
+                            {/* Quick category pills — desktop only, mobile uses the drawer */}
+                            {categories.length > 0 && (
+                                <div className="hidden md:flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                                     <button
-                                        onClick={() => {
-                                            setSearchTerm('');
-                                            handleCategoryChange('All');
-                                        }}
-                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all"
+                                        type="button"
+                                        onClick={() => handleCategoryChange('All')}
+                                        className={`px-3 py-2.5 min-h-[44px] rounded-lg font-semibold text-xs transition-all flex-shrink-0 border ${
+                                            selectedCategory === 'All'
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                                        }`}
                                     >
-                                        Clear All Filters
+                                        All
                                     </button>
+                                    {categories.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => handleCategoryChange(cat.name)}
+                                            className={`px-3 py-2.5 min-h-[44px] rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 flex-shrink-0 border ${
+                                                selectedCategory === cat.name
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <span className={`w-2 h-2 rounded-full bg-gradient-to-br ${cat.color_gradient || 'from-blue-500 to-indigo-600'}`} />
+                                            {cat.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Active filter chips — one-tap removal */}
+                            {hasActiveFilters && (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                        Active
+                                    </span>
+                                    {selectedCategory !== 'All' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCategoryChange('All')}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-2 min-h-[36px] rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-500/20 text-[11px] font-semibold text-blue-700 dark:text-sky-300 active:scale-95 transition-all"
+                                        >
+                                            {selectedCategory}
+                                            <span className="text-blue-400 dark:text-sky-400">✕</span>
+                                        </button>
+                                    )}
+                                    {selectedSubCategory && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSubCategoryChange(selectedSubCategory)}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-2 min-h-[36px] rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-300 active:scale-95 transition-all"
+                                        >
+                                            {selectedSubCategory}
+                                            <span className="text-slate-400">✕</span>
+                                        </button>
+                                    )}
+                                    {searchTerm && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchTerm('')}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-2 min-h-[36px] rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-300 active:scale-95 transition-all"
+                                        >
+                                            “{searchTerm}”
+                                            <span className="text-slate-400">✕</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={handleClearAllFilters}
+                                        className="inline-flex items-center px-2.5 py-2 min-h-[36px] rounded-lg text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                    >
+                                        Clear all
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Products Grid — a single column on phones, then container-aware
+                                columns (min 190px each) so the 280px app rail + filter sidebar
+                                can never squash cards the way fixed column counts would. */}
+                            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4 p-4">
+                                {filteredProducts.length === 0 ? (
+                                    <div className="col-span-full py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+                                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
+                                            <Package size={24} />
+                                        </div>
+                                        <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                                            {searchTerm ? 'No products match your search' : 'No products available'}
+                                        </h3>
+                                        <p className="text-slate-500 dark:text-slate-400 text-xs font-normal max-w-sm mx-auto mb-5">
+                                            {searchTerm
+                                                ? `No wholesale items found matching "${searchTerm}".`
+                                                : selectedCategory !== 'All'
+                                                    ? `No products currently available in "${selectedCategory}".`
+                                                    : 'No wholesale stock available at this time.'}
+                                        </p>
+                                        {hasActiveFilters && (
+                                            <button
+                                                type="button"
+                                                onClick={handleClearAllFilters}
+                                                className="inline-flex items-center gap-1.5 px-4 py-3 min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95"
+                                            >
+                                                Clear All Filters
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    filteredProducts.map((product) => (
+                                        <WholesaleProductCard
+                                            key={product.id}
+                                            product={product}
+                                            qty={cart[product.id] || 0}
+                                            onAdd={(e) => updateQuantity(e, product, 1)}
+                                            onDecrement={(e) => updateQuantity(e, product, -1)}
+                                            onSelect={setSelectedProduct}
+                                        />
+                                    ))
                                 )}
                             </div>
-                        ) : (
-                            filteredProducts.map((product) => {
-                                const qty = cart[product.id] || 0;
-                                const isOutOfStock = product.admin_stock <= 0;
-                                const isLowStock = product.admin_stock > 0 && product.admin_stock <= 5;
 
-                                return (
-                                    <div
-                                        key={product.id}
-                                        className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col group overflow-hidden"
-                                    >
-                                        {/* Product Image */}
-                                        <div
-                                            className="aspect-[4/3] relative bg-slate-50 dark:bg-slate-800/40 p-3 flex items-center justify-center cursor-pointer overflow-hidden border-b border-slate-100 dark:border-slate-800/60"
-                                            onClick={() => setSelectedProduct(product)}
-                                        >
-                                            {product.product_images?.[0] ? (
-                                                <Image
-                                                    src={product.product_images[0]}
-                                                    alt={product.title}
-                                                    fill
-                                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <Package size={32} className="text-slate-300 dark:text-slate-600" />
-                                                </div>
-                                            )}
-
-                                            {/* Category badge */}
-                                            <div className="absolute top-2.5 left-2.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider border border-slate-200/80 dark:border-slate-700 shadow-xs">
-                                                {product.category || 'Standard'}
-                                            </div>
-
-                                            {/* In-cart badge */}
-                                            <AnimatePresence>
-                                                {qty > 0 && (
-                                                    <motion.div
-                                                        initial={{ scale: 0, opacity: 0 }}
-                                                        animate={{ scale: 1, opacity: 1 }}
-                                                        exit={{ scale: 0, opacity: 0 }}
-                                                        className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold shadow-xs flex items-center gap-1"
-                                                    >
-                                                        <span>{qty}</span>
-                                                        <span className="text-[9px] uppercase tracking-wider opacity-80">in cart</span>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-
-                                        {/* Product Information */}
-                                        <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between">
-                                            <div>
-                                                <h3
-                                                    onClick={() => setSelectedProduct(product)}
-                                                    className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                                    title={product.title}
-                                                >
-                                                    {product.title}
-                                                </h3>
-                                                {product.description && (
-                                                    <p className="text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs mt-1 line-clamp-1 font-normal">
-                                                        {product.description}
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
-                                                {/* Price & Stock Row */}
-                                                <div className="flex items-baseline justify-between">
-                                                    <div>
-                                                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-none">Wholesale</span>
-                                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 block leading-tight">
-                                                            ₹{(product.wholesale_price_paise / 100).toLocaleString('en-IN')}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block leading-none">Stock</span>
-                                                        <div className="flex items-center justify-end gap-1 mt-1">
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${isOutOfStock ? 'bg-slate-400' : isLowStock ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                                                            <span className={`text-xs font-semibold ${isOutOfStock ? 'text-slate-400' : isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                                {product.admin_stock} {product.admin_stock === 1 ? 'unit' : 'units'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Compact Quantity Control */}
-                                                <div className="flex items-center justify-between border border-slate-200 dark:border-slate-700/80 rounded-lg p-0.5 bg-slate-50 dark:bg-slate-800/40">
-                                                    <button
-                                                        onClick={(e) => updateQuantity(e, product, -1)}
-                                                        disabled={qty === 0}
-                                                        aria-label={`Decrease quantity of ${product.title}`}
-                                                        className="w-9 h-8 sm:w-10 sm:h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs hover:bg-slate-100 dark:hover:bg-slate-600 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    >
-                                                        <Minus size={14} strokeWidth={2.5} />
-                                                    </button>
-                                                    <span 
-                                                        className={`flex-1 text-center font-bold text-xs sm:text-sm ${qty > 0 ? 'text-blue-600 dark:text-blue-400 font-black' : 'text-slate-400 dark:text-slate-500'}`}
-                                                        aria-label={`Current quantity ${qty}`}
-                                                    >
-                                                        {qty}
-                                                    </span>
-                                                    <button
-                                                        onClick={(e) => updateQuantity(e, product, 1)}
-                                                        disabled={qty >= product.admin_stock || product.admin_stock === 0}
-                                                        aria-label={`Increase quantity of ${product.title}`}
-                                                        className="w-9 h-8 sm:w-10 sm:h-8 flex items-center justify-center rounded-md bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    >
-                                                        <Plus size={14} strokeWidth={2.5} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-
-                    <div className="mb-28 lg:mb-0">
-                        <Pagination
-                            page={page}
-                            totalPages={totalPages}
-                            totalCount={totalCount}
-                            pageSize={pageSize}
-                            onPageChange={handlePageChange}
-                        />
+                            {/* Extra bottom clearance only while the sticky bar is on screen */}
+                            <div className={totalUnits > 0 ? 'mb-44 md:mb-0' : 'mb-28 md:mb-0'}>
+                                <Pagination
+                                    page={page}
+                                    totalPages={totalPages}
+                                    totalCount={totalCount}
+                                    pageSize={pageSize}
+                                    onPageChange={handlePageChange}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-            {/* Cart — desktop sticky sidebar & mobile FAB */}
+                {/* Cart — overlay only on this page: the sticky bottom bar below md, the floating
+                    pill from md up, both opening the shared Order Slip drawer. Keeping the cart out
+                    of the layout flow is what gives the product grid room for 4 wide columns. */}
                 <aside>
                     <MerchantFloatingCart
                         cartItems={cartItems}
@@ -879,9 +879,45 @@ export default function WholesaleClient({
                         isProcessingGateway={isProcessingGateway}
                         walletLabel="Pay via Wallet"
                         gatewayLabel="Pay via UPI / Cards"
+                        isDrawerOpen={cartDrawerOpen}
+                        onDrawerOpenChange={setCartDrawerOpen}
+                        hideFabBelowMd
+                        alwaysShowFab
+                        hideDesktopPanel
                     />
                 </aside>
             </div>
+
+            {/* Mobile filter drawer — the same sidebar, never stacked at the top of the mobile view */}
+            <MobileFilterDrawer
+                isOpen={mobileFiltersOpen}
+                onClose={() => setMobileFiltersOpen(false)}
+                onClearAll={handleClearAllFilters}
+                hasActiveFilters={hasActiveFilters}
+                resultsCount={totalCount}
+                breakpoint="md"
+            >
+                <WholesaleFilterSidebar
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={handleCategoryChange}
+                    subCategories={subCategoryOptions}
+                    selectedSubCategory={selectedSubCategory}
+                    onSubCategoryChange={handleSubCategoryChange}
+                    onClearAll={handleClearAllFilters}
+                    hasActiveFilters={hasActiveFilters}
+                />
+            </MobileFilterDrawer>
+
+            {/* Sticky bulk-order bar — mobile only, opens the Order Slip */}
+            <WholesaleStickyCartBar
+                itemCount={totalUnits}
+                lineCount={cartItems.length}
+                total={subtotal}
+                estMargin={estMarginValue}
+                marginPercent={estMarginPercent}
+                onViewOrder={() => setCartDrawerOpen(true)}
+            />
         </>
     );
 }

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabaseClient";
+import dynamic from "next/dynamic";
 import {
-  Package, ChevronRight, CheckCircle2, ShoppingBag, ExternalLink, Store, ArrowRight, Clock, MapPin, X, CreditCard, Zap, Ticket, Download, Calendar, TrendingUp, Truck, Search
+  Package, ChevronRight, CheckCircle2, ShoppingBag, ExternalLink, Store, ArrowRight, Clock, MapPin, X, CreditCard, Zap, Ticket, Download, Calendar, TrendingUp, Truck, Search, Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -11,14 +12,17 @@ import Image from "next/image";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import ScratchCard from "@/components/ui/ScratchCard";
+// LAZY: ScratchCard (canvas interaction) only loads when a reward is revealed
+const ScratchCard = dynamic(() => import("@/components/ui/ScratchCard"), { ssr: false });
 import { useRewardsRealtime } from "@/lib/contexts/RewardsRealtimeContext";
 import { useTheme } from "@/lib/contexts/ThemeContext";
 import CouponCodeReveal from "./CouponCodeReveal";
-import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+// LAZY: jsPDF + autotable + qrcode + jsbarcode (~500 KB) only load on click
+const generateOrderInvoice = (...args) => import("@/lib/invoiceGenerator").then(m => m.generateOrderInvoice(...args));
 import CustomerBreadcrumbs from "@/components/common/CustomerBreadcrumbs";
 
 const FILTER_OPTIONS = ['All', 'Shopping', 'NFC Cards', 'Gift Cards', 'Solar'];
+const SHOPPING_PAGE_SIZE = 20;
 
 const OrdersClient = ({ userId }) => {
   const searchParams = useSearchParams();
@@ -30,6 +34,9 @@ const OrdersClient = ({ userId }) => {
   const [solarLeads, setSolarLeads] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [shoppingPage, setShoppingPage] = useState(0);
+  const [hasMoreShopping, setHasMoreShopping] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   
   const isSuccess = searchParams.get("success") === "true";
   const supabase = useMemo(() => createClient(), []);
@@ -51,6 +58,59 @@ const OrdersClient = ({ userId }) => {
   const [revealedCardIds, setRevealedCardIds] = useState(new Set());
   const [isProcessingReveal, setIsProcessingReveal] = useState(false);
   const hasAutoOpenedRef = useRef(false);
+
+  // Shared filter: exclude unpaid gateway drafts and cancelled drafts
+  const isValidShoppingOrder = (o) =>
+      !(o.payment_method === 'gateway' && o.payment_status !== 'paid') &&
+      o.status !== 'cancelled' &&
+      o.delivery_status !== 'cancelled';
+
+  // Format paid gift-card orders (orders table) into the unified giftcard shape
+  const formatGiftCardOrders = (giftcardRows) => {
+      const formatted = [];
+      (giftcardRows || []).forEach(order => {
+          if (order.coupons) {
+              formatted.push({ type: 'giftcard', id: order.id, created_at: order.created_at, coupon: order.coupons, paidAmount: order.amount, uiStatus: order.coupons.status, paymentMethod: order.payment_method });
+          }
+      });
+      return formatted;
+  };
+
+  // Per-source safety: one failing/slow source must never blank the page
+  const safe = (p) => p.then((v) => v).catch((err) => {
+      console.warn("[OrdersClient] A data source failed:", err?.message || err);
+      return null;
+  });
+
+  // Lazy profile: full_name/phone only feed the invoice modal, so the
+  // profile is fetched on demand instead of blocking the initial page load.
+  const getInvoiceProfile = useCallback(async () => {
+      if (userProfile) return userProfile;
+      try {
+          const { data } = await supabase.from("user_profiles").select("full_name, email, phone").eq("id", userId).single();
+          setUserProfile(data);
+          return data;
+      } catch {
+          return null;
+      }
+  }, [userProfile, supabase, userId]);
+
+  const loadMoreShopping = async () => {
+      if (loadingMore || !hasMoreShopping) return;
+      setLoadingMore(true);
+      try {
+          const nextPage = shoppingPage + 1;
+          const { data } = await supabase.from("shopping_order_groups").select(`*, shopping_order_items (*, shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, category), merchants (business_name))`).eq("customer_id", userId).in("status", ["completed", "pending"]).order("created_at", { ascending: false }).range(nextPage * SHOPPING_PAGE_SIZE, nextPage * SHOPPING_PAGE_SIZE + SHOPPING_PAGE_SIZE - 1);
+          setGroups(prev => [...prev, ...(data || []).filter(isValidShoppingOrder)]);
+          setShoppingPage(nextPage);
+          setHasMoreShopping((data || []).length === SHOPPING_PAGE_SIZE);
+      } catch (err) {
+          console.error("Error loading more orders:", err);
+          toast.error("Failed to load more orders");
+      } finally {
+          setLoadingMore(false);
+      }
+  };
 
   const closeModal = useCallback(() => {
     setSelectedCard(null);
@@ -104,33 +164,40 @@ const OrdersClient = ({ userId }) => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data: userProfileData } = await supabase.from("user_profiles").select("full_name, email, phone").eq("id", userId).single();
-      setUserProfile(userProfileData);
+      // Profile fetch moved to getInvoiceProfile() — lazy, on invoice click only.
 
-      const shoppingPromise = supabase.from("shopping_order_groups").select(`*, shopping_order_items (*, shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, category), merchants (business_name))`).eq("customer_id", userId).in("status", ["completed", "pending"]).order("created_at", { ascending: false });
-      const nfcPromise = fetch('/api/nfc/orders').then(r => r.json()).catch(() => ({ orders: [] }));
+      const shoppingPromise = supabase.from("shopping_order_groups").select(`*, shopping_order_items (*, shopping_products (title, product_images, mrp_paise, suggested_retail_price_paise, category), merchants (business_name))`).eq("customer_id", userId).in("status", ["completed", "pending"]).order("created_at", { ascending: false }).range(0, SHOPPING_PAGE_SIZE - 1);
       const giftcardsPromise = supabase.from('orders').select(`id, amount, created_at, payment_method, coupons:coupons!orders_giftcard_id_fkey(id, brand, title, selling_price_paise, face_value_paise, status, purchased_at, valid_until, merchant_id, merchant:merchants(business_name))`).eq('user_id', userId).eq('payment_status', 'paid').order('created_at', { ascending: false });
+
+      const [shoppingRes, giftcardsRes] = await Promise.all([shoppingPromise, giftcardsPromise]);
+
+      setGroups((shoppingRes?.data || []).filter(isValidShoppingOrder));
+      setHasMoreShopping((shoppingRes?.data || []).length === SHOPPING_PAGE_SIZE);
+      setGiftCards(formatGiftCardOrders(giftcardsRes?.data));
+
+      // First paint NOW — secondary sources stream in below without blocking.
+      // Previously ALL SIX queries (profile + NFC API + solar + udhari included)
+      // gated the single loading flag, so the slowest source delayed the page.
+      setLoading(false);
+      
+      const nfcPromise = fetch('/api/nfc/orders').then(r => r.json()).catch(() => ({ orders: [] }));
       const udhariPromise = supabase.from('udhari_requests').select(`id, coupon_id, status, due_date, amount_paise, duration_days, coupons:coupons!udhari_requests_coupon_id_fkey(id, brand, title, selling_price_paise, face_value_paise, status, valid_until, merchant_id, merchant:merchants(business_name))`).eq('customer_id', userId).eq('status', 'approved').order('created_at', { ascending: false });
       const solarPromise = supabase.from('solar_leads').select('*').eq('user_id', userId).order('created_at', { ascending: false });
 
-      const [shoppingRes, nfcRes, giftcardsRes, udhariRes, solarRes] = await Promise.all([shoppingPromise, nfcPromise, giftcardsPromise, udhariPromise, solarPromise]);
+      const [nfcRes, udhariRes, solarRes] = await Promise.all([safe(nfcPromise), safe(udhariPromise), safe(solarPromise)]);
 
-      setGroups(shoppingRes.data || []);
-      setNfcOrders(nfcRes.orders || []);
-      setSolarLeads(solarRes.data || []);
-      
-      const formattedGc = [];
-      (giftcardsRes.data || []).forEach(order => {
-          if (order.coupons) {
-              formattedGc.push({ type: 'giftcard', id: order.id, created_at: order.created_at, coupon: order.coupons, paidAmount: order.amount, uiStatus: order.coupons.status, paymentMethod: order.payment_method });
-          }
-      });
-      (udhariRes.data || []).forEach(u => {
+      setNfcOrders(nfcRes?.orders || []);
+      setSolarLeads(solarRes?.data || []);
+
+      const secondaryGc = [];
+      (udhariRes?.data || []).forEach(u => {
           if (u.coupons) {
-              formattedGc.push({ type: 'giftcard', id: u.id, created_at: u.created_at, coupon: u.coupons, paidAmount: u.amount_paise / 100, uiStatus: 'pending-payment', dueDate: u.due_date, paymentMethod: 'udhari' });
+              secondaryGc.push({ type: 'giftcard', id: u.id, created_at: u.created_at, coupon: u.coupons, paidAmount: u.amount_paise / 100, uiStatus: 'pending-payment', dueDate: u.due_date, paymentMethod: 'udhari' });
           }
       });
-      setGiftCards(formattedGc.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)));
+      if (secondaryGc.length > 0) {
+          setGiftCards(prev => [...prev, ...secondaryGc].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+      }
     } catch (err) {
       console.error("Error fetching customer orders:", err);
     } finally {
@@ -377,13 +444,14 @@ const OrdersClient = ({ userId }) => {
                               </div>
                               <CouponCodeReveal couponId={order.id} />
                               <button
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                       e.stopPropagation();
+                                      const prof = await getInvoiceProfile();
                                       generateOrderInvoice({
-                                          order: { id: order.id, created_at: order.created_at, customer_name: userProfile?.full_name || 'Customer', faceValue: (coupon.face_value_paise || 0) / 100, paidAmount: order.paidAmount, brand: coupon.brand, giftcard_name: `${coupon.brand} Gift Card` },
+                                          order: { id: order.id, created_at: order.created_at, customer_name: prof?.full_name || 'Customer', faceValue: (coupon.face_value_paise || 0) / 100, paidAmount: order.paidAmount, brand: coupon.brand, giftcard_name: `${coupon.brand} Gift Card` },
                                           items: [],
                                           seller: { name: 'Intrust Financial Services (India) Pvt. Ltd.', address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026', phone: '18002030052', gstin: '23AAFC14866A1ZV' },
-                                          customer: { name: userProfile?.full_name || 'Customer', phone: userProfile?.phone || '', address: '' },
+                                          customer: { name: prof?.full_name || 'Customer', phone: prof?.phone || '', address: '' },
                                           type: 'giftcard'
                                       });
                                   }}
@@ -453,6 +521,19 @@ const OrdersClient = ({ userId }) => {
             }
             return null;
           })}
+
+          {/* Server-side pagination: only 20 shopping orders load initially */}
+          {hasMoreShopping && (activeFilter === 'All' || activeFilter === 'Shopping') && (
+              <div className="flex justify-center pt-2 pb-8">
+                  <button
+                      onClick={loadMoreShopping}
+                      disabled={loadingMore}
+                      className={`px-8 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 border transition-all active:scale-95 disabled:opacity-60 ${isDark ? 'bg-white/5 text-slate-200 border-white/10 hover:bg-blue-500/10 hover:text-blue-400' : 'bg-white text-slate-700 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 shadow-sm'}`}
+                  >
+                      {loadingMore ? (<><Loader2 size={16} className="animate-spin" /> Loading more…</>) : 'Load More Orders'}
+                  </button>
+              </div>
+          )}
         </div>
       )}
 

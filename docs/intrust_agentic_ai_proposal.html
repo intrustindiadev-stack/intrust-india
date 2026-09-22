@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic AI for InTrust — From Conversation to Action</title>
+<meta name="author" content="InTrust India">
+<meta name="description" content="Proposal: Agentic AI for InTrust — an intelligent action layer over the existing InTrust ecosystem.">
+<style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:block;src:url('assets/fonts/Inter.woff2') format('woff2');}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:200 800;font-display:block;src:url('assets/fonts/PlusJakartaSans.woff2') format('woff2');}
+@font-face{font-family:'Caveat';font-style:normal;font-weight:400 700;font-display:block;src:url('assets/fonts/Caveat.woff2') format('woff2');}
+</style>
+</head>
+<body>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+:root{
+--navy-900:#04163F;--navy-800:#08225E;--navy-700:#0E2F7A;--navy-600:#123C9B;
+--blue-700:#1747C7;--blue-600:#1E56E0;--blue-500:#2E6BF0;--blue-400:#5B90FF;
+--blue-200:#C3D5FA;--blue-100:#E3ECFF;--blue-50:#F0F5FF;--blue-25:#F7FAFF;
+--ink:#0A1224;--ink-2:#1A2438;--grey-700:#3E4A61;--grey-600:#5B6780;--grey-500:#7C879C;--grey-400:#9BA5B8;
+--line:#E2E9F6;--line-2:#EFF3FB;--card-line:#E4EAF7;
+--green:#0F8F4F;--green-bg:#E6F7EE;--amber:#C87F00;--amber-bg:#FFF3DF;--red:#D0353B;--red-bg:#FDECEC;
+--f-d:'Plus Jakarta Sans','Inter',sans-serif;--f-b:'Inter',sans-serif;--f-s:'Caveat',cursive;}
+@page{size:A4 portrait;margin:0}
+html{background:#EEF1F8}
+body{font-family:var(--f-b);color:var(--ink);font-size:8pt;line-height:1.45;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+svg.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.page{position:relative;width:210mm;height:297mm;background:#fff;overflow:hidden;page-break-after:always;break-after:page;margin:0 auto}
+.page:last-of-type{page-break-after:auto;break-after:auto}
+.pglow{position:absolute;pointer-events:none;z-index:0}
+.pglow.a{width:190mm;height:130mm;right:-50mm;top:-40mm;background:radial-gradient(closest-side,rgba(46,107,240,.17),rgba(46,107,240,0) 72%)}
+.pglow.b{width:150mm;height:150mm;left:-70mm;bottom:-50mm;background:radial-gradient(closest-side,rgba(30,86,224,.13),rgba(30,86,224,0) 72%)}
+.pglow.c{width:130mm;height:120mm;left:45mm;top:25mm;background:radial-gradient(closest-side,rgba(91,144,255,.10),rgba(91,144,255,0) 72%)}
+.pglow.d{width:120mm;height:100mm;left:-40mm;top:-30mm;background:radial-gradient(closest-side,rgba(46,107,240,.13),rgba(46,107,240,0) 72%)}
+.p-in{position:relative;z-index:3;height:100%;padding:8.5mm 11mm 5.5mm;display:flex;flex-direction:column}
+/* ---------- header ---------- */
+.phead{display:flex;align-items:center;justify-content:space-between;padding-bottom:2.4mm;border-bottom:.3mm solid var(--line);flex:0 0 auto}
+.brand{display:flex;align-items:center;gap:1.9mm}
+.brand img{width:7.2mm;display:block}
+.brand .bt{font-family:var(--f-d);font-weight:800;font-size:13pt;letter-spacing:-.04em;color:var(--navy-800);line-height:1}
+.brand .bs{font-size:4.9pt;letter-spacing:.02em;color:var(--grey-500);line-height:1;margin-top:.5mm}
+.brand.tiny img{width:5.6mm}
+.brand.tiny .bt{font-size:10pt}
+.phead .cat{font-size:5.6pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--grey-400)}
+.pnum{font-family:var(--f-d);font-weight:800;font-size:11.5pt;color:var(--navy-800);letter-spacing:-.02em;line-height:1}
+.pnum i{font-style:normal;font-weight:600;font-size:7.6pt;color:#B7C2D8}
+/* ---------- typography ---------- */
+.eyebrow{font-size:5.7pt;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--blue-600)}
+.h1{font-family:var(--f-d);font-weight:800;font-size:26pt;line-height:1.04;letter-spacing:-.038em;color:var(--ink)}
+.h1 b{color:var(--blue-600);font-weight:800}
+.h1.sm{font-size:22pt}
+.h2{font-family:var(--f-d);font-weight:800;font-size:17pt;line-height:1.08;letter-spacing:-.032em;color:var(--ink)}
+.h2 b{color:var(--blue-600)}
+.h3{font-family:var(--f-d);font-weight:800;font-size:10.4pt;line-height:1.15;letter-spacing:-.022em;color:var(--ink)}
+.h4{font-family:var(--f-d);font-weight:700;font-size:7.4pt;line-height:1.2;color:var(--ink)}
+.lead{font-size:7.4pt;line-height:1.52;color:var(--grey-600)}
+.lead b{color:var(--ink-2);font-weight:600}
+.p{font-size:6.6pt;line-height:1.5;color:var(--grey-600)}
+.tiny{font-size:5.6pt;line-height:1.45;color:var(--grey-500)}
+.script{font-family:var(--f-s);font-size:14pt;line-height:1;color:var(--navy-700);letter-spacing:.01em;transform:rotate(-4deg)}
+.script.sm{font-size:11pt}
+.script.lg{font-size:17pt}
+.f-d{font-family:var(--f-d)}
+.blue{color:var(--blue-600)}
+.navy{color:var(--navy-800)}
+.grey{color:var(--grey-600)}
+.wht{color:#fff}
+.up{text-transform:uppercase;letter-spacing:.16em}
+.b{font-weight:700}
+.sb{font-weight:600}
+.center{text-align:center}
+.mono{font-family:ui-monospace,'Liberation Mono',monospace;font-size:5.4pt;letter-spacing:-.02em}
+
+/* ---------- layout utils ---------- */
+.row{display:flex;gap:4mm}
+.col{flex:1;min-width:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:4mm}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:3.4mm}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:2.6mm}
+.flex{display:flex}.bet{justify-content:space-between}.ac{align-items:center}.ab{align-items:baseline}.wrap{flex-wrap:wrap}.g2mm{gap:2mm}.g3mm{gap:3mm}
+.mt1{margin-top:1.4mm}.mt2{margin-top:2.6mm}.mt3{margin-top:3.6mm}.mt4{margin-top:4.6mm}.mt5{margin-top:5.6mm}.mt6{margin-top:6.6mm}
+.grow{flex:1;min-width:0}.nw{white-space:nowrap}
+.sec{display:flex;align-items:center;gap:2.8mm;margin-bottom:2.6mm}
+.sec .sn{font-family:var(--f-d);font-weight:800;font-size:6.4pt;color:#fff;background:var(--blue-600);width:4.6mm;height:4.6mm;border-radius:1.2mm;display:grid;place-items:center;letter-spacing:-.02em}
+.sec .st{font-size:5.8pt;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--navy-800)}
+.sec .line{flex:1;height:.28mm;background:linear-gradient(90deg,var(--line),rgba(226,233,246,0))}
+.sec.plain .sn{background:var(--blue-50);color:var(--blue-700)}
+/* ---------- cards ---------- */
+.card{background:#fff;border:.3mm solid var(--card-line);border-radius:2.6mm;padding:3.6mm;position:relative}
+.card.soft{background:linear-gradient(160deg,#F7FAFF,#EEF4FF);border-color:#DDE7FA}
+.card.wash{background:var(--blue-25);border-color:#E4EBFA}
+.card.dark{background:linear-gradient(150deg,#04163F,#0A2775 58%,#123C9B);border-color:transparent;color:#fff}
+.card.dark .p,.card.dark .tiny{color:#B9CBF2}
+.card.dark .h3,.card.dark .h4{color:#fff}
+.card.pad0{padding:0;overflow:hidden}
+.card.hi{border-color:var(--blue-200);box-shadow:0 2mm 5mm rgba(18,60,155,.08)}
+.tile{background:linear-gradient(165deg,#F7FAFF,#EDF3FF);border:.3mm solid #DFE8FA;border-radius:2.4mm;padding:3.2mm 3mm}
+.tile .ic{width:6.4mm;height:6.4mm;border-radius:1.7mm;background:#fff;border:.3mm solid #DCE5F8;color:var(--blue-600);display:grid;place-items:center;margin-bottom:2mm;box-shadow:0 .5mm 1.2mm rgba(24,60,150,.06)}
+.tile .ic svg{width:3.5mm;height:3.5mm}
+.tile h4{font-family:var(--f-d);font-weight:800;font-size:6.9pt;color:var(--ink);line-height:1.2;letter-spacing:-.01em}
+.tile p{font-size:5.9pt;line-height:1.42;color:var(--grey-600);margin-top:1.1mm}
+.tile.flat{background:#fff}
+.tile.dk{background:linear-gradient(160deg,#0B2559,#123C9B);border-color:transparent}
+.tile.dk h4{color:#fff}.tile.dk p{color:#B9CBF2}
+.tile.dk .ic{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);color:#fff}
+.tile.tone-g{background:linear-gradient(165deg,#F3FCF7,#E7F7EE);border-color:#CDEBDC}
+.tile.tone-a{background:linear-gradient(165deg,#FFFBF3,#FFF3DF);border-color:#F4E3C4}
+.tile.tone-r{background:linear-gradient(165deg,#FEF7F7,#FDECEC);border-color:#F6D8D8}
+/* icon chip variants */
+.ic{display:grid;place-items:center;color:var(--blue-600)}
+.ic svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.chip{width:5.4mm;height:5.4mm;border-radius:1.5mm;background:var(--blue-50);border:.3mm solid #DDE7FA;color:var(--blue-600)}
+.chip.svg{width:4.4mm;height:4.4mm}
+.chip.round{border-radius:50%}
+.chip.solid{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+.chip.dk{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff}
+.chip.g{background:var(--green-bg);border-color:#CDEBDC;color:var(--green)}
+.chip.a{background:var(--amber-bg);border-color:#F2E0BF;color:var(--amber)}
+.chip.r{background:var(--red-bg);border-color:#F6D8D8;color:var(--red)}
+.chip svg{width:3mm;height:3mm;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chip.lg{width:7mm;height:7mm}.chip.lg svg{width:4mm;height:4mm}
+/* ---------- pills & badges ---------- */
+.pill{display:inline-flex;align-items:center;gap:1.1mm;font-size:5.2pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.9mm 1.9mm;border-radius:999px;background:var(--blue-50);color:var(--blue-700);border:.28mm solid #DCE6FA}
+.pill.g{background:var(--green-bg);color:var(--green);border-color:#CDEBDC}
+.pill.a{background:var(--amber-bg);color:var(--amber);border-color:#F2E0BF}
+.pill.r{background:var(--red-bg);color:var(--red);border-color:#F6D8D8}
+.pill.n{background:var(--navy-800);color:#fff;border-color:var(--navy-800)}
+.pill.w{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.24)}
+.pill.xl{font-size:6pt;padding:1.3mm 2.6mm}
+.dot{width:1.3mm;height:1.3mm;border-radius:50%;background:currentColor;display:inline-block}
+/* ---------- flow strips ---------- */
+.flow{display:flex;align-items:flex-start;gap:0}
+.fstep{flex:1;text-align:center;min-width:0;padding:0 .5mm}
+.fstep .fn{width:5.6mm;height:5.6mm;border-radius:50%;background:var(--blue-600);color:#fff;font-family:var(--f-d);font-weight:800;font-size:6pt;display:grid;place-items:center;margin:0 auto;position:relative;z-index:2;box-shadow:0 0 0 1mm #fff}
+.fstep .fi{width:4.6mm;height:4.6mm;color:var(--blue-600);margin:1.6mm auto .8mm}
+.fstep .fi svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fstep .fl{font-family:var(--f-d);font-weight:700;font-size:6pt;color:var(--ink);line-height:1.2}
+.fstep .fs{font-size:5.2pt;color:var(--grey-500);line-height:1.35;margin-top:.5mm}
+.farrow{width:5mm;flex:0 0 5mm;display:grid;place-items:center;color:#C4D2EC;padding-top:1.4mm}
+.farrow svg{width:3mm;height:3mm;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rail{position:relative;height:.3mm;background:var(--line);margin:0 4mm;top:-4.9mm;z-index:1}
+/* ---------- tables ---------- */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:5pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-400);text-align:left;padding:0 1.6mm 1.4mm;border-bottom:.3mm solid var(--line)}
+.tbl td{font-size:5.6pt;color:var(--grey-700);padding:1.35mm 1.6mm;border-bottom:.25mm solid var(--line-2)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td.b{color:var(--ink);font-weight:600}
+.tbl .rt{text-align:right}
+/* ---------- footer ---------- */
+.pfoot{margin-top:auto;flex:0 0 auto;padding-top:4mm}
+.qbar{background:linear-gradient(96deg,#04163F 0%,#0A2775 48%,#1B4FD1 100%);border-radius:2.4mm;padding:3.2mm 4.4mm;display:flex;align-items:center;justify-content:space-between;gap:6mm;position:relative;overflow:hidden}
+.qbar:before{content:'';position:absolute;right:-20mm;top:-24mm;width:70mm;height:70mm;border-radius:50%;background:radial-gradient(closest-side,rgba(91,144,255,.4),rgba(91,144,255,0))}
+.qbar .q{font-size:7.1pt;font-weight:600;color:#E7EFFF;max-width:118mm;line-height:1.42;position:relative;z-index:2}
+.qbar .q b{color:#fff;font-weight:700}
+.qbar .mark{font-family:var(--f-s);font-size:15pt;color:rgba(255,255,255,.42);line-height:.6;margin-right:2mm}
+.qstats{display:flex;gap:5.6mm;position:relative;z-index:2}
+.qstat{text-align:center;min-width:15mm}
+.qstat .qi{width:5.2mm;height:5.2mm;border-radius:1.4mm;background:rgba(255,255,255,.15);border:.28mm solid rgba(255,255,255,.22);color:#fff;display:grid;place-items:center;margin:0 auto .9mm}
+.qstat .qi svg{width:3mm;height:3mm;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.qstat .qv{font-family:var(--f-d);font-weight:800;font-size:8.4pt;color:#fff;line-height:1}
+.qstat .vl{font-size:4.5pt;letter-spacing:.1em;text-transform:uppercase;color:#A6BDEC;margin-top:.7mm;line-height:1.2}
+.bstrip{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-top:.3mm solid var(--line);margin-top:3mm;padding-top:2.4mm}
+.bstrip .mid{font-size:5.1pt;font-weight:700;letter-spacing:.3em;color:var(--grey-400)}
+.bstrip .tag{font-family:var(--f-s);font-size:10.5pt;color:var(--navy-700);line-height:1.05;text-align:right;transform:rotate(-2deg)}
+
+/* ---------- device mockups ---------- */
+.mock{position:relative}
+.phone{width:48mm;border-radius:6.4mm;background:linear-gradient(150deg,#0E1424,#233047);padding:1.5mm;box-shadow:0 7mm 14mm rgba(10,30,90,.20),0 1mm 2mm rgba(10,30,90,.10);position:relative}
+.phone .screen{background:#fff;border-radius:5mm;overflow:hidden;position:relative}
+.phone.lg{width:56mm}.phone.sm{width:40mm}
+.pnotch{position:absolute;left:50%;top:2.9mm;transform:translateX(-50%);width:12mm;height:1.6mm;background:#0E1424;border-radius:999px;z-index:4;opacity:.85}
+.ptop{display:flex;align-items:center;justify-content:space-between;gap:1.4mm;padding:3.6mm 2.6mm 1.6mm;border-bottom:.25mm solid var(--line-2);background:linear-gradient(180deg,#F8FBFF,#fff)}
+.ptop .ttl{font-family:var(--f-d);font-weight:800;font-size:5.4pt;color:var(--navy-800);line-height:1.1}
+.ptop .sub{font-size:4.2pt;color:var(--grey-500)}
+.ptop .av{width:4.6mm;height:4.6mm;border-radius:50%;background:linear-gradient(140deg,#2E6BF0,#0A2775);display:grid;place-items:center;color:#fff;font-size:4pt;font-weight:800}
+.pbody{padding:2.2mm 2.4mm;display:flex;flex-direction:column;gap:1.8mm}
+.pbody.tight{gap:1.2mm}
+.bub{font-size:5.2pt;line-height:1.4;padding:1.5mm 2mm;border-radius:2.2mm;max-width:84%;position:relative}
+.bub .lb{font-size:4.1pt;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:.8mm;display:flex;align-items:center;gap:.9mm}
+.bub.u{background:linear-gradient(140deg,#2E6BF0,#1747C7);color:#fff;margin-left:auto;border-bottom-right-radius:.7mm}
+.bub.u .lb{color:#C6DAFF}
+.bub.a{background:#F2F6FE;color:var(--ink-2);border:.25mm solid #E2EAFB;border-bottom-left-radius:.7mm}
+.bub.a .lb{color:var(--blue-600)}
+.bub .sm{font-size:4.6pt;color:var(--grey-500);margin-top:.6mm}
+.bub.u .sm{color:#C6DAFF}
+.actin{display:flex;align-items:center;gap:1.2mm;margin-top:1.4mm;padding:1.3mm 1.6mm;border-radius:1.6mm;background:rgba(255,255,255,.16);border:.25mm solid rgba(255,255,255,.28)}
+.actin .ic{width:2.8mm;height:2.8mm;color:#fff}
+.actin span{font-size:4.5pt;font-weight:700;color:#fff;letter-spacing:.02em}
+.minibub{display:flex;gap:1mm;align-items:flex-end}
+.pin{display:flex;align-items:center;gap:1.3mm;padding:2mm 2.4mm 2.4mm;border-top:.25mm solid var(--line-2);background:#fff}
+.pin .field{flex:1;height:5.2mm;border-radius:999px;background:#F5F8FE;border:.25mm solid #E3EAF9;display:flex;align-items:center;gap:1.2mm;padding:0 2mm;font-size:4.7pt;color:var(--grey-400)}
+.pin .round{width:5.2mm;height:5.2mm;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+.pin .round.mic{background:linear-gradient(140deg,#2E6BF0,#1747C7);color:#fff}
+.pin .round.att{background:#F0F5FF;border:.25mm solid #DDE7FA;color:var(--blue-600)}
+.pin .round svg{width:3mm;height:3mm;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.wave{display:flex;align-items:center;gap:.5mm;height:4mm}
+.wave i{width:.55mm;background:var(--blue-400);border-radius:999px;display:block}
+/* product tiles inside mockups */
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm}
+.pg.g3c{grid-template-columns:1fr 1fr 1fr}
+.pc{border:.25mm solid var(--line);border-radius:1.6mm;overflow:hidden;background:#fff}
+.pc .ph{height:10mm;background:linear-gradient(150deg,#EEF4FF,#DCE7FB);display:grid;place-items:center;color:#7E9BD4;position:relative}
+.pc .ph svg{width:6.4mm;height:6.4mm;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.pc .ph .fav{position:absolute;top:1mm;right:1mm;width:3.2mm;height:3.2mm;border-radius:50%;background:#fff;color:var(--blue-600);display:grid;place-items:center}
+.pc .ph .fav svg{width:1.9mm;height:1.9mm}
+.pc .pb{padding:1.3mm 1.4mm 1.6mm}
+.pc .nm{font-size:4.7pt;font-weight:600;color:var(--ink-2);line-height:1.25;height:5.4mm;overflow:hidden}
+.pc .rw{display:flex;align-items:center;justify-content:space-between;margin-top:.7mm}
+.pc .pr{font-family:var(--f-d);font-weight:800;font-size:5.4pt;color:var(--navy-800)}
+.pc .st{font-size:4pt;color:var(--grey-500)}
+.pc .add{width:3.6mm;height:3.6mm;border-radius:.9mm;background:var(--blue-600);color:#fff;display:grid;place-items:center}
+.pc .add svg{width:2mm;height:2mm;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+/* laptop */
+.lap{position:relative}
+.lap .lid{background:linear-gradient(150deg,#111A2E,#26334C);border-radius:2.6mm 2.6mm .8mm .8mm;padding:2mm 2mm 6mm;position:relative}
+.lap .scr{background:#fff;border-radius:1.6mm;overflow:hidden}
+.lap .base{height:2.8mm;background:linear-gradient(180deg,#DDE4F1,#BFC9DE);border-radius:0 0 3.4mm 3.4mm;margin:0 -2.6mm;position:relative}
+.lap .base:after{content:'';position:absolute;left:50%;top:0;width:16mm;height:1.2mm;margin-left:-8mm;background:#AFBACF;border-radius:0 0 1.2mm 1.2mm}
+/* window / dashboard */
+.win{background:#fff;border:.3mm solid var(--line);border-radius:2.4mm;overflow:hidden;box-shadow:0 4mm 10mm rgba(12,40,110,.13)}
+.win .bar{display:flex;align-items:center;gap:2mm;padding:1.7mm 2.2mm;background:linear-gradient(90deg,#F7FAFF,#EFF4FE);border-bottom:.28mm solid var(--line)}
+.win .bar .dots{display:flex;gap:.9mm}
+.win .bar .dots i{width:1.4mm;height:1.4mm;border-radius:50%;background:#CFD9EC;display:block}
+.win .bar .addr{flex:1;height:3.4mm;border-radius:999px;background:#fff;border:.25mm solid var(--line);display:flex;align-items:center;gap:1.2mm;padding:0 2mm;font-size:4.4pt;color:var(--grey-400)}
+.win .bar .addr .ic{width:2.4mm;height:2.4mm;color:var(--green)}
+.win .wbody{display:flex;min-height:0}
+.win .side{width:25mm;background:linear-gradient(180deg,#08225E,#0A1F5C);padding:2.2mm 1.8mm;color:#fff;flex:0 0 auto}
+.win .side .lg{display:flex;align-items:center;gap:1.2mm;padding:0 .8mm 2mm}
+.win .side .lg img{width:4mm}
+.win .side .lg span{font-family:var(--f-d);font-weight:800;font-size:5.4pt;color:#fff;letter-spacing:-.02em}
+.win .side .li{display:flex;align-items:center;gap:1.4mm;font-size:4.7pt;color:#AFC5EE;padding:1.2mm 1.5mm;border-radius:1.2mm;margin-bottom:.4mm}
+.win .side .li .ic{width:2.6mm;height:2.6mm;color:currentColor}
+.win .side .li.on{background:rgba(255,255,255,.15);color:#fff;font-weight:700}
+.win .main{flex:1;min-width:0;padding:2.4mm;background:#FBFCFE}
+.win .ftop{display:flex;align-items:center;justify-content:space-between;margin-bottom:2mm}
+.win .ftop .h{font-family:var(--f-d);font-weight:800;font-size:6.4pt;color:var(--navy-800)}
+.win .ftop .s{font-size:4.4pt;color:var(--grey-500)}
+.mcard{background:#fff;border:.25mm solid var(--line);border-radius:1.8mm;padding:1.9mm 2.1mm}
+.mcard .k{font-size:4.2pt;letter-spacing:.11em;text-transform:uppercase;color:var(--grey-400);font-weight:800}
+.mcard .v{font-family:var(--f-d);font-weight:800;font-size:9.4pt;color:var(--navy-800);line-height:1.05;margin-top:.7mm;letter-spacing:-.02em}
+.mcard .d{font-size:4.3pt;font-weight:700;color:var(--green);margin-top:.5mm}
+.mcard .d.a{color:var(--amber)}
+.mcard .d.b{color:var(--blue-600)}
+.bars{display:flex;align-items:flex-end;gap:1.3mm;height:15mm}
+.bars i{flex:1;background:linear-gradient(180deg,#6C9CFF,#1E56E0);border-radius:.8mm .8mm 0 0;display:block;position:relative}
+.spark{width:100%;height:13mm;display:block}
+.spark polyline{fill:none;stroke:var(--blue-500);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spark .ar{fill:url(#gradA);stroke:none}
+.donut{width:13mm;height:13mm;border-radius:50%;background:conic-gradient(#1E56E0 0 42%,#5B90FF 42% 68%,#A8C4FA 68% 87%,#E3ECFF 87% 100%);position:relative}
+.donut:after{content:'';position:absolute;inset:3.4mm;background:#fff;border-radius:50%}
+/* ---------- diagrams ---------- */
+.acard{background:linear-gradient(165deg,#F9FBFF,#EDF3FF);border:.3mm solid #DDE7FA;border-radius:2.2mm;padding:2.8mm 2.4mm;text-align:center}
+.acard .ic{width:6mm;height:6mm;border-radius:1.6mm;background:#fff;border:.28mm solid #DBE4F8;color:var(--blue-600);margin:0 auto 1.6mm}
+.acard .ic svg{width:3.2mm;height:3.2mm}
+.acard h5{font-family:var(--f-d);font-weight:800;font-size:6.2pt;color:var(--ink);line-height:1.15}
+.acard p{font-size:5.1pt;color:var(--grey-500);line-height:1.35;margin-top:.8mm}
+.acard.dk{background:linear-gradient(160deg,#0B2559,#16409F);border-color:transparent}
+.acard.dk .ic{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2);color:#fff}
+.acard.dk h5{color:#fff}.acard.dk p{color:#B9CBF2}
+.rarrow{display:grid;place-items:center;color:#BCCCE8;flex:0 0 5mm}
+.rarrow svg{width:3.2mm;height:3.2mm;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.vs{display:flex;flex-direction:column;align-items:stretch}
+.vs .node{background:#fff;border:.3mm solid var(--line);border-radius:2mm;padding:2.2mm 2.6mm;display:flex;align-items:center;gap:2.4mm}
+.vs .node .ic{width:5.2mm;height:5.2mm;border-radius:1.4mm;background:var(--blue-50);border:.28mm solid #DBE4F8;color:var(--blue-600);flex:0 0 auto}
+.vs .node .ic svg{width:2.9mm;height:2.9mm}
+.vs .node .tx{flex:1;min-width:0}
+.vs .node .tx b{font-family:var(--f-d);font-weight:800;font-size:6.2pt;color:var(--ink);display:block;line-height:1.2}
+.vs .node .tx span{font-size:5.1pt;color:var(--grey-500);line-height:1.35;display:block;margin-top:.4mm}
+.vs .node .tag{flex:0 0 auto}
+.vs .conn{width:.5mm;height:3.2mm;background:linear-gradient(180deg,#C3D5FA,#2E6BF0);margin-left:5.4mm}
+.vs .node.dk{background:linear-gradient(120deg,#0A2775,#1747C7);border-color:transparent}
+.vs .node.dk .ic{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.22);color:#fff}
+.vs .node.dk .tx b{color:#fff}.vs .node.dk .tx span{color:#BCD0F7}
+.vs .node.g{border-color:#CDEBDC;background:linear-gradient(120deg,#F4FCF8,#EAF8F0)}
+.vs .node.g .ic{background:#fff;border-color:#CDEBDC;color:var(--green)}
+.vs .node.r{border-color:#F2D6D6;background:linear-gradient(120deg,#FEF8F8,#FDEFEE)}
+.vs .node.r .ic{background:#fff;border-color:#F2D6D6;color:var(--red)}
+.vs .node.a{border-color:#F2E0BF;background:linear-gradient(120deg,#FFFCF5,#FFF5E5)}
+.vs .node.a .ic{background:#fff;border-color:#F2E0BF;color:var(--amber)}
+/* compare */
+.cmp{display:flex;align-items:stretch;gap:0;border-radius:2.6mm;overflow:hidden;border:.3mm solid var(--line)}
+.cmp>*{flex:1;min-width:0;padding:3.4mm}
+.cmp .now{background:linear-gradient(160deg,#F8F9FC,#EFF1F7)}
+.cmp .next{background:linear-gradient(155deg,#061C50,#0E2F7A 55%,#1E56E0);color:#fff}
+.cmp .now .tt{font-family:var(--f-d);font-weight:800;font-size:7.4pt;color:#697389}
+.cmp .next .tt{font-family:var(--f-d);font-weight:800;font-size:7.4pt;color:#fff}
+.cmp .mid{flex:0 0 14mm;display:grid;place-items:center;background:#fff;border-left:.3mm solid var(--line);border-right:.3mm solid var(--line)}
+.cmp .mid .cir{width:7mm;height:7mm;border-radius:50%;background:linear-gradient(140deg,#2E6BF0,#123C9B);color:#fff;display:grid;place-items:center}
+.cmp .mid .cir svg{width:3.6mm;height:3.6mm;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.cmp ul{list-style:none;margin-top:2mm;display:flex;flex-direction:column;gap:1.3mm}
+.cmp ul li{display:flex;gap:1.6mm;font-size:6pt;line-height:1.35;color:var(--grey-600);align-items:flex-start}
+.cmp .next ul li{color:#D3E1FB}
+.cmp ul li svg{width:2.6mm;height:2.6mm;flex:0 0 auto;margin-top:.3mm;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.cmp .now ul li svg{color:#A9B1C4}
+.cmp .next ul li svg{color:#7FD6A5}
+/* pipeline chips */
+.pipe{display:flex;align-items:center;gap:0}
+.pchip{flex:1;min-width:0;background:#fff;border:.3mm solid var(--line);border-radius:2mm;padding:2.4mm 2mm;text-align:center}
+.pchip .pn{font-family:var(--f-d);font-weight:800;font-size:5.6pt;color:var(--blue-600);letter-spacing:.04em}
+.pchip h5{font-family:var(--f-d);font-weight:800;font-size:6.4pt;color:var(--ink);margin-top:.6mm;line-height:1.15}
+.pchip p{font-size:5pt;color:var(--grey-500);margin-top:.7mm;line-height:1.32}
+.pchip.dk{background:linear-gradient(140deg,#0A2775,#1747C7);border-color:transparent}
+.pchip.dk .pn{color:#9DBBFF}
+.pchip.dk h5{color:#fff}
+.pchip.dk p{color:#BCD0F7}
+.pconn{flex:0 0 4.6mm;display:grid;place-items:center;color:#C4D2EC}
+.pconn svg{width:3mm;height:3mm;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+/* risk rows */
+.rrow{display:flex;align-items:center;gap:2.6mm;background:#fff;border:.3mm solid var(--line);border-left:.9mm solid var(--blue-400);border-radius:1.8mm;padding:2.4mm 2.6mm}
+.rrow.g{border-left-color:#2FBE74;background:linear-gradient(100deg,#F6FDFA,#fff 55%)}
+.rrow.b{border-left-color:var(--blue-500);background:linear-gradient(100deg,#F5F9FF,#fff 55%)}
+.rrow.a{border-left-color:#E8A93A;background:linear-gradient(100deg,#FFFBF3,#fff 55%)}
+.rrow.r{border-left-color:#E05C5C;background:linear-gradient(100deg,#FEF6F6,#fff 55%)}
+.rrow .lvl{font-family:var(--f-d);font-weight:800;font-size:6.2pt;color:var(--navy-800);width:26mm;flex:0 0 auto;line-height:1.15}
+.rrow .lvl span{display:block;font-size:4.6pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey-400);margin-top:.5mm}
+.rrow .body{flex:1;min-width:0}
+.rrow .acts{display:flex;gap:1.1mm;flex-wrap:wrap;margin-top:1.1mm}
+.rrow .dec{flex:0 0 30mm;text-align:right}
+.rrow .dec .pill{font-size:4.7pt;padding:.8mm 1.6mm}
+/* roadmap */
+.rmap{display:grid;grid-template-columns:repeat(5,1fr);gap:2.6mm;position:relative}
+.rmap:before{content:'';position:absolute;left:0;right:0;top:6.4mm;height:.4mm;background:linear-gradient(90deg,#C9D8F5,#2E6BF0)}
+.rph{position:relative;z-index:2}
+.rph .knob{width:5.2mm;height:5.2mm;border-radius:50%;background:linear-gradient(140deg,#2E6BF0,#123C9B);color:#fff;font-family:var(--f-d);font-weight:800;font-size:5.4pt;display:grid;place-items:center;margin:3.6mm 0 2.4mm;box-shadow:0 0 0 1.4mm #fff}
+.rph .pc2{background:#fff;border:.3mm solid var(--line);border-radius:2.2mm;padding:2.8mm 2.4mm;height:100%}
+.rph .pc2 .ph{font-size:5pt;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--blue-600)}
+.rph .pc2 h5{font-family:var(--f-d);font-weight:800;font-size:7pt;color:var(--ink);margin-top:1mm;line-height:1.15}
+.rph .pc2 ul{list-style:none;margin-top:1.6mm;display:flex;flex-direction:column;gap:.9mm}
+.rph .pc2 ul li{font-size:5.3pt;color:var(--grey-600);line-height:1.32;padding-left:2.6mm;position:relative}
+.rph .pc2 ul li:before{content:'';position:absolute;left:0;top:1.5mm;width:1.2mm;height:1.2mm;border-radius:50%;background:var(--blue-200)}
+/* lists */
+.tick{display:flex;gap:1.7mm;align-items:flex-start;font-size:6pt;line-height:1.4;color:var(--grey-600)}
+.tick svg{width:2.8mm;height:2.8mm;flex:0 0 auto;margin-top:.2mm;fill:none;stroke:var(--green);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.tick.no svg{stroke:var(--red)}
+.tick b{color:var(--ink-2);font-weight:600}
+.lst{display:flex;flex-direction:column;gap:1.5mm}
+.kv{display:flex;align-items:baseline;justify-content:space-between;gap:2mm;padding:1.5mm 0;border-bottom:.25mm solid var(--line-2)}
+.kv:last-child{border-bottom:none}
+.kv .k{font-size:5.7pt;color:var(--grey-600)}
+.kv .v{font-family:var(--f-d);font-weight:800;font-size:6.6pt;color:var(--navy-800)}
+/* fixes: action chips + product card row */
+.bub.a .actin{background:#E8EFFC;border-color:#D6E2F9}
+.bub.a .actin span{color:var(--blue-700)}
+.bub.a .actin .ic{color:var(--blue-600)}
+.pc .rw{display:flex;align-items:center;gap:1.4mm}
+.pc .rw .st{margin-left:auto}
+.pc .add{flex:0 0 auto}
+
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M20.5 15.5L15 10 5 21"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0"/><path d="M12 17.5V21"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9.5" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.6l2.5 11.8h10.6L21 7H6.2"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.2C12 20.2 3.6 15.6 3.6 10.2A4.6 4.6 0 0112 7.6a4.6 4.6 0 018.4 2.6c0 5.4-8.4 10-8.4 10z"/></symbol>
+<symbol id="i-package" viewBox="0 0 24 24"><path d="M12 2.5l8.5 4.4v10.2L12 21.5 3.5 17.1V6.9z"/><path d="M3.5 6.9l8.5 4.4 8.5-4.4"/><path d="M12 11.3v10.2"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.2" r="4"/><path d="M4.4 21c0-4.3 3.4-6.9 7.6-6.9s7.6 2.6 7.6 6.9"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9.5" cy="8.4" r="3.4"/><path d="M3 20.4c0-3.7 2.9-6 6.5-6s6.5 2.3 6.5 6"/><path d="M17 5.6a3.4 3.4 0 010 6.4"/><path d="M18.4 14.8c1.7.7 2.8 2.2 2.8 4.3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.4l8 3.6v6.2c0 4.9-3.4 8.4-8 9.6-4.6-1.2-8-4.7-8-9.6V6z"/><path d="M9 12.2l2.2 2.2 4-4.2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.2" y="10" width="15.6" height="11" rx="2.4"/><path d="M8 10V7.4a4 4 0 018 0V10"/><circle cx="12" cy="15.5" r="1.2"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.8"/><path d="M10.4 13.2L19 4.6"/><path d="M16.4 7.2l2.2 2.2"/></symbol>
+<symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7.5" ry="3.2"/><path d="M4.5 6v12c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2V6"/><path d="M4.5 12c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+<symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2.5 12h4.2l2.4-6.4 4 13L15.8 12h5.7"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.6l5 5.2L19.6 6.6"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 5.6L19.4 12 13 18.4"/></symbol>
+<symbol id="i-arrow-sm" viewBox="0 0 24 24"><path d="M5 12h13"/><path d="M12.4 6.6L17.8 12l-5.4 5.4"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3.5 20.5h17"/><path d="M6.5 20.5V12"/><path d="M11.5 20.5V5.5"/><path d="M16.5 20.5V15"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24"><path d="M3.4 17.4l5-5.4 3.6 3 7-7.6"/><path d="M14.6 7.4h4.4v4.4"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M4.5 7.5h15v12h-15z"/><path d="M2.5 3.5h19v4h-19z"/><path d="M10 12h4"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.4l9 16.2H3z"/><path d="M12 9.4v5"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.6l1.9 5.1L19 9.6l-5.1 1.9L12 16.6l-1.9-5.1L5 9.6l5.1-1.9z"/><path d="M18.5 15.5l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9z"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h12"/><path d="M9 12h12"/><path d="M9 17.5h12"/><circle cx="4.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4.5" cy="17.5" r="1.2" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2.6l9 4.6-9 4.6-9-4.6z"/><path d="M3 12l9 4.6 9-4.6"/><path d="M3 16.8l9 4.6 9-4.6"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 2.8h12v18.4l-3-1.8-3 1.8-3-1.8-3 1.8z"/><path d="M9 8h6"/><path d="M9 12h6"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24"><path d="M3.5 9.5L5.4 4h13.2l1.9 5.5"/><path d="M4.6 9.5v10.5h14.8V9.5"/><path d="M3.5 9.5h17"/><path d="M10 20v-5h4v5"/></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><rect x="2.6" y="5" width="18.8" height="14" rx="2.4"/><path d="M2.6 10h18.8"/><path d="M6 15h4"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><path d="M20.5 11.6c0 4.2-3.6 7.4-8.2 7.4-1.1 0-2.2-.2-3.2-.5L4 20.4l1.4-4.1A7.2 7.2 0 013.5 11.6c0-4.2 3.7-7.4 8.3-7.4s8.7 3.2 8.7 7.4z"/></symbol>
+<symbol id="i-wand" viewBox="0 0 24 24"><path d="M4 20.2L13.4 10.8"/><path d="M15.5 3.2l1.1 2.8 2.8 1.1-2.8 1.1-1.1 2.8-1.1-2.8L11.6 7.1l2.8-1.1z"/><path d="M6.5 4l.6 1.5L8.6 6.1l-1.5.6L6.5 8.2l-.6-1.5L4.4 6.1l1.5-.6z"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.4 12S6 6.4 12 6.4 21.6 12 21.6 12 18 17.6 12 17.6 2.4 12 2.4 12z"/><circle cx="12" cy="12" r="2.7"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.6 2.2"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.4 9.4a5.6 5.6 0 1111.2 0c0 4.6 1.8 5.8 1.8 5.8H4.6s1.8-1.2 1.8-5.8z"/><path d="M10.4 18.6a1.9 1.9 0 003.2 0"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2.2"/><path d="M4 17h6"/><path d="M14 17h6"/><circle cx="12" cy="17" r="2.2"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20.4 12a8.4 8.4 0 11-2.6-6.1"/><path d="M20.6 3.6v5.2h-5.2"/></symbol>
+<symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6.4" y="6.4" width="11.2" height="11.2" rx="2.2"/><rect x="10" y="10" width="4" height="4" rx="1"/><path d="M9.6 3v3.4M14.4 3v3.4M9.6 17.6V21M14.4 17.6V21M3 9.6h3.4M3 14.4h3.4M17.6 9.6H21M17.6 14.4H21"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.4 12.6l-7.8 7.8-9-9V3.6h7.8z"/><circle cx="7.6" cy="7.6" r="1.4"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="5.6" width="18" height="13.4" rx="2.4"/><path d="M3 10h18"/><circle cx="16.4" cy="14.6" r="1.3"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.2 12h17.6"/><path d="M12 3c2.4 2.5 3.6 5.6 3.6 9S14.4 18.5 12 21c-2.4-2.5-3.6-5.6-3.6-9S9.6 5.5 12 3z"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13.4 2.6L4.6 13.8h6.2L10.6 21.4l8.8-11.2h-6.2z"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24"><path d="M3.4 5h17.2l-6.6 7.6v6.2l-4 2.2v-8.4z"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.4" y="5" width="17.2" height="15.6" rx="2.2"/><path d="M3.4 9.8h17.2"/><path d="M8 3v4M16 3v4"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24"><path d="M4.5 20.5V4.2h9v16.3"/><path d="M13.5 20.5V9.6h6v10.9"/><path d="M7.6 8h2.4M7.6 12h2.4M7.6 16h2.4M16 13h1.6M16 16.6h1.6"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="5.4" cy="5.4" r="2.4"/><circle cx="18.6" cy="18.6" r="2.4"/><path d="M7.8 5.4h6.4a4.4 4.4 0 010 8.8h-4.4a4.4 4.4 0 000 8.8h6.4"/></symbol>
+<symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3.4v17.2"/><path d="M5 7.4h14"/><path d="M2.6 15.4l2.4-8 2.4 8a2.4 2.4 0 01-4.8 0z"/><path d="M16.6 15.4l2.4-8 2.4 8a2.4 2.4 0 01-4.8 0z"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2.6H7.4A2.4 2.4 0 005 5v14a2.4 2.4 0 002.4 2.4h9.2A2.4 2.4 0 0019 19V7.6z"/><path d="M14 2.6V7.6h5"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.4v11.6"/><path d="M7.4 10.6L12 15.2l4.6-4.6"/><path d="M4.4 20.4h15.2"/></symbol>
+<symbol id="i-percent" viewBox="0 0 24 24"><path d="M6 6l12 12"/><circle cx="7.6" cy="7.6" r="2.4"/><circle cx="16.4" cy="16.4" r="2.4"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.4" y="3.4" width="7" height="7" rx="1.6"/><rect x="13.6" y="3.4" width="7" height="7" rx="1.6"/><rect x="3.4" y="13.6" width="7" height="7" rx="1.6"/><rect x="13.6" y="13.6" width="7" height="7" rx="1.6"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M21.4 2.6L10.8 13.2"/><path d="M21.4 2.6l-6.6 18.8-4-8.2-8.2-4z"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><path d="M3.6 12a8.4 8.4 0 108.4-8.4 8.6 8.6 0 00-6.4 2.9"/><path d="M3.4 3.6v5.2h5.2"/><path d="M12 8v4.4l3.4 2"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24"><path d="M3.4 8.4V5.8a2.4 2.4 0 012.4-2.4h2.6"/><path d="M15.6 3.4h2.6a2.4 2.4 0 012.4 2.4v2.6"/><path d="M20.6 15.6v2.6a2.4 2.4 0 01-2.4 2.4h-2.6"/><path d="M8.4 20.6H5.8a2.4 2.4 0 01-2.4-2.4v-2.6"/><path d="M3.4 12h17.2"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.4"/><path d="M7.6 8h8.8M7.6 12h8.8M7.6 16h5"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.4" y="2.4" width="11.2" height="19.2" rx="2.6"/><path d="M10.4 5.4h3.2"/><circle cx="12" cy="18.4" r=".9" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><rect x="2.6" y="6" width="13" height="12" rx="2.4"/><path d="M15.6 11l5.8-3.4v8.8L15.6 13z"/></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><path d="M20 11.6l-8.4 8.4a4.6 4.6 0 01-6.6-6.6l8.6-8.6a3.1 3.1 0 014.4 4.4l-8.4 8.4a1.6 1.6 0 01-2.2-2.2l7.8-7.8"/></symbol>
+<symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.4 14.4a4.4 4.4 0 007.2 0"/><circle cx="9.4" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="14.6" cy="10" r=".9" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.4v13.2M5.4 12h13.2"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5.4 12h13.2"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.4 7h15.2"/><path d="M9.4 7V4.8h5.2V7"/><path d="M6.4 7l1 13h9.2l1-13"/></symbol>
+<symbol id="i-location" viewBox="0 0 24 24"><path d="M12 21.4s7-6.2 7-11.2a7 7 0 10-14 0c0 5 7 11.2 7 11.2z"/><circle cx="12" cy="10" r="2.6"/></symbol>
+<symbol id="i-whatsapp" viewBox="0 0 24 24"><path d="M20.4 11.8A8.4 8.4 0 017.4 19l-3.8 1 1-3.7a8.4 8.4 0 1115.8-4.5z"/><path d="M8.6 9.2c0 3 2.4 5.4 5.4 5.4l.9-1.4-1.7-1-.9.7a4 4 0 01-1.5-1.5l.7-.9-1-1.7z"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.6" y="5" width="18.8" height="14" rx="2.4"/><path d="M3.4 6.4L12 12.6l8.6-6.2"/></symbol>
+</svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="p-shoe" viewBox="0 0 24 24"><path d="M3 17.5h17.4c.9 0 1.6-.7 1.6-1.6v-1.2c0-1.5-1.1-2.6-2.6-2.9l-4.1-.9-3.2-2.9a2 2 0 00-2.2-.4L7 8.6l-3.9 1.6A1.6 1.6 0 002 11.7v4.2c0 .9.7 1.6 1.6 1.6z"/><path d="M8.6 9.4l1.8 3.1"/></symbol>
+<symbol id="p-bag" viewBox="0 0 24 24"><path d="M4.6 8h14.8v11.4a1.6 1.6 0 01-1.6 1.6H6.2a1.6 1.6 0 01-1.6-1.6z"/><path d="M8.6 8V6.2a3.4 3.4 0 016.8 0V8"/></symbol>
+<symbol id="p-shirt" viewBox="0 0 24 24"><path d="M9 3.4L4.6 5.6 3 10.4l3 1.2v9h12v-9l3-1.2-1.6-4.8L15 3.4a3 3 0 01-6 0z"/></symbol>
+<symbol id="p-watch" viewBox="0 0 24 24"><rect x="7.6" y="7" width="8.8" height="10" rx="2.4"/><path d="M9.4 7V4.6h5.2V7M9.4 17v2.4h5.2V17"/><path d="M12 10.4V12l1.6 1"/></symbol>
+<symbol id="p-specs" viewBox="0 0 24 24"><circle cx="6.4" cy="14" r="3.4"/><circle cx="17.6" cy="14" r="3.4"/><path d="M9.8 13.4c.7-.8 1.5-1.2 2.2-1.2s1.5.4 2.2 1.2"/><path d="M3 13.2l1.8-4.4h3"/><path d="M21 13.2l-1.8-4.4h-3"/></symbol>
+<symbol id="p-headphone" viewBox="0 0 24 24"><path d="M4.6 15.4v-3.2a7.4 7.4 0 0114.8 0v3.2"/><rect x="2.6" y="13.6" width="4.2" height="6.4" rx="2.1"/><rect x="17.2" y="13.6" width="4.2" height="6.4" rx="2.1"/></symbol>
+<symbol id="p-bottle" viewBox="0 0 24 24"><path d="M10 3h4v2.2c0 .6.3 1.1.8 1.4a4 4 0 012 3.5v9.3a1.6 1.6 0 01-1.6 1.6H8.8a1.6 1.6 0 01-1.6-1.6V10.1a4 4 0 012-3.5c.5-.3.8-.8.8-1.4z"/><path d="M7.2 12.6h9.6"/></symbol>
+<symbol id="p-phone" viewBox="0 0 24 24"><rect x="6.4" y="2.6" width="11.2" height="18.8" rx="2.6"/><path d="M10.4 5.6h3.2"/></symbol>
+<symbol id="p-cube" viewBox="0 0 24 24"><path d="M12 2.6l8.6 4.7v9.4L12 21.4 3.4 16.7V7.3z"/><path d="M3.4 7.3L12 12l8.6-4.7"/><path d="M12 12v9.4"/></symbol>
+</svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-server" viewBox="0 0 24 24"><rect x="3.4" y="3.4" width="17.2" height="7" rx="2"/><rect x="3.4" y="13.6" width="17.2" height="7" rx="2"/><path d="M7 6.9h.01M7 17.1h.01"/><path d="M11 6.9h6M11 17.1h6"/></symbol>
+</svg>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">Agentic AI &nbsp;·&nbsp; Proposal &nbsp;·&nbsp; Customer + Merchant</div>
+    <div class="pnum">01 <i>/ 14</i></div>
+  </header>
+
+  <div class="row mt4" style="gap:7mm">
+    <div style="flex:0 0 103mm">
+      <div class="eyebrow">Proposal · Agentic AI Capability</div>
+      <h1 class="h1 mt2">From Conversation<br>to <b>Action.</b></h1>
+      <div class="script lg mt2">InTrust that understands, decides and completes.</div>
+      <p class="lead mt3" style="max-width:99mm">InTrust already speaks with customers and merchants. This proposal extends that conversation into an <b>agentic capability</b> — one that understands intent, retrieves only permitted context, selects an approved capability, and completes the request through the workflows InTrust already runs.</p>
+      <div class="flex wrap g2mm mt3" style="max-width:99mm">
+        <span class="pill"><span class="dot"></span>Scoped to the signed-in user</span>
+        <span class="pill"><span class="dot"></span>Approved capabilities only</span>
+        <span class="pill"><span class="dot"></span>Existing workflows stay authoritative</span>
+        <span class="pill"><span class="dot"></span>Payment stays outside the agent</span>
+      </div>
+      <div class="card wash mt4" style="max-width:99mm">
+        <div class="g2" style="gap:6mm">
+          <div>
+            <div class="kv"><span class="k">Prepared for</span><span class="v">InTrust India</span></div>
+            <div class="kv"><span class="k">Initiative</span><span class="v">Agentic AI</span></div>
+          </div>
+          <div>
+            <div class="kv"><span class="k">Experiences</span><span class="v">Customer · Merchant</span></div>
+            <div class="kv"><span class="k">Status</span><span class="v">Proposal</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card soft" style="padding:4.2mm;border-radius:3.4mm">
+        <div class="flex bet ac">
+          <span class="pill n">Proposed experience</span>
+          <span class="script sm">one ask. one action.</span>
+        </div>
+        <div class="phone" style="margin:3.2mm auto 0">
+          <div class="pnotch"></div>
+          <div class="screen">
+            <div class="ptop">
+              <div class="chip svg round ic" style="background:#08225E;border-color:#08225E;color:#fff"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></div>
+              <div style="flex:1;min-width:0"><div class="ttl">InTrust Assistant</div><div class="sub">Signed in · Customer</div></div>
+              <div class="av">RS</div>
+            </div>
+            <div class="pbody tight">
+              <div class="bub u">Add two of these to my cart.<div class="sm">10:24</div></div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg></span>Cart · 2 items added</div>
+                Running shoes — UK 9<br>₹2,499 × 2 = <b>₹4,998</b>
+                <div class="sm">Availability confirmed · Cart updated</div>
+              </div>
+              <div class="bub u">Where is my latest order?<div class="sm">10:25</div></div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-package"/></svg></span>Order lookup</div>
+                #IT-48213 · Out for delivery<div class="sm">Arriving today, before 7:00 PM</div>
+              </div>
+            </div>
+            <div class="pin">
+              <div class="field"><span class="ic" style="width:2.6mm;height:2.6mm"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></span>Ask InTrust anything…</div>
+              <div class="round att"><svg viewBox="0 0 24 24"><use href="#i-image"/></svg></div>
+              <div class="round mic"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="card hi mt3" style="padding:2.8mm 3.2mm;background:#fff">
+          <div class="flex ac g2mm">
+            <div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
+            <div class="grow"><h4 style="font-size:6.2pt">Action completed — cart updated</h4><div class="tiny">Executed by the existing InTrust cart workflow</div></div>
+            <span class="pill g">Done</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g4 mt3">
+    <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg></div><h4>Text, image, voice</h4><p>Multimodal requests understood as a single intent.</p></div>
+    <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-users"/></svg></div><h4>Two experiences</h4><p>Customer commerce and merchant operations.</p></div>
+    <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><h4>One intelligence layer</h4><p>Added on top of the platform already in use.</p></div>
+    <div class="tile tone-g"><div class="ic" style="color:var(--green)"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><h4>No payment access</h4><p>Financial execution stays inside secure checkout.</p></div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card" style="flex:1.35">
+      <div class="sec plain"><span class="sn"><svg viewBox="0 0 24 24" style="width:2.6mm;height:2.6mm;fill:none;stroke:currentColor;stroke-width:2"><use href="#i-list"/></svg></span><span class="st">Inside this proposal</span><span class="line"></span></div>
+      <div class="g2" style="gap:3mm 5mm">
+        <div class="lst">
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>The shift.</b> Why conversational replies become completed actions.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>The architecture.</b> How an agentic layer sits over existing systems.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>The experiences.</b> Customer journeys and the merchant assistant.</span></div>
+        </div>
+        <div class="lst">
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>The reasoning.</b> Context, decision flow and capability selection.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>The governance.</b> Permissions, guardrails and the action model.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>The rollout.</b> A phased path from foundation to automation.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col card dark" style="flex:1">
+      <div class="flex ac bet"><span class="pill w">Guardrails at a glance</span><span class="script sm" style="color:#9DBBFF">the model proposes</span></div>
+      <div class="lst mt2">
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span><b style="color:#fff">Server-side identity</b> — the agent never decides who you are.</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span><b style="color:#fff">Registered capabilities</b> — no arbitrary queries, no open API access.</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span><b style="color:#fff">Existing logic decides</b> — the platform remains the authority.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">5</span><span class="st">The agentic loop, in one line</span><span class="line" style="width:70mm"></span></div>
+      <span class="script sm">understand · decide · act</span>
+    </div>
+    <div class="flow">
+      <div class="fstep"><div class="fn">1</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><div class="fl">Understand</div><div class="fs">Intent extracted from text, image or voice.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">2</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><div class="fl">Retrieve</div><div class="fs">Only permitted context is assembled.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">3</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div><div class="fl">Decide</div><div class="fs">An approved capability is selected.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">4</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-zap"/></svg></div><div class="fl">Execute</div><div class="fs">Existing InTrust logic performs the action.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">5</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><div class="fl">Return</div><div class="fs">A confirmed result returns to the user.</div></div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>InTrust already has the workflows.</b> Agentic AI gives its users a faster, more natural way to reach them — without weakening a single control.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg></div><div class="qv">3</div><div class="vl">Input types</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-users"/></svg></div><div class="qv">2</div><div class="vl">Experiences</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><div class="qv">1</div><div class="vl">Platform layer</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><div class="qv">0</div><div class="vl">Payment access</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Talk to InTrust.<br>Get Things Done.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">02 · Executive Vision</div>
+    <div class="pnum">02 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt4">
+    <div style="flex:0 0 118mm">
+      <div class="eyebrow">Executive vision</div>
+      <h1 class="h1 sm mt2">From smarter replies<br>to <b>completed requests.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm">
+      <div class="script lg">the shift that matters</div>
+      <div class="tiny mt1" style="letter-spacing:.16em">INTRUST · AGENTIC AI</div>
+    </div>
+  </div>
+
+  <p class="lead mt3" style="max-width:186mm">InTrust already captures demand at the moment of intent — in chat, on the storefront, in the merchant's daily operations. Today that conversation ends with information. The opportunity is to let it end with a <b>result</b>: an item added, an order explained, a merchant question answered from their own data, a cart prepared for a secure checkout.</p>
+
+  <div class="cmp mt3">
+    <div class="now">
+      <div class="flex ac g2mm"><div class="chip ic"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><div class="tt">Today — the assistant answers</div></div>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><use href="#i-minus"/></svg><span>Answers a question and stops at information.</span></li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-minus"/></svg><span>Explains steps the user must then perform manually.</span></li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-minus"/></svg><span>Hands the user off to a sequence of screens.</span></li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-minus"/></svg><span>Every journey restarts from the beginning.</span></li>
+      </ul>
+    </div>
+    <div class="mid"><div class="cir"><svg viewBox="0 0 24 24"><use href="#i-arrow"/></svg></div></div>
+    <div class="next">
+      <div class="flex ac g2mm"><div class="chip dk ic"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></div><div class="tt">Proposed — the agent completes</div></div>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Understands intent from text, image, voice or a mix.</span></li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Assembles only the context the signed-in user is allowed to see.</span></li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Selects an approved capability from a fixed registry.</span></li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Completes the request through the workflows InTrust already runs.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="g3 mt3">
+    <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-route"/></svg></div><h4>Fewer steps to the same outcome</h4><p>Natural language replaces multi-screen navigation, so demand is acted on while it is still fresh.</p></div>
+    <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><h4>The trust model stays intact</h4><p>Authentication, permissions and business rules remain the authority. The agent operates inside them.</p></div>
+    <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><h4>One foundation, two audiences</h4><p>The same intelligence layer serves customers and merchants through different permissions.</p></div>
+  </div>
+
+  <div class="g4 mt3">
+    <div class="card wash" style="padding:2.8mm"><div class="tiny" style="letter-spacing:.14em;font-weight:800">DIRECTIONAL GOAL</div><div class="h4 mt1">Fewer taps per request</div><div class="tiny mt1">Baseline to be agreed in discovery.</div></div>
+    <div class="card wash" style="padding:2.8mm"><div class="tiny" style="letter-spacing:.14em;font-weight:800">DIRECTIONAL GOAL</div><div class="h4 mt1">Higher intent completion</div><div class="tiny mt1">Measured on existing funnel events.</div></div>
+    <div class="card wash" style="padding:2.8mm"><div class="tiny" style="letter-spacing:.14em;font-weight:800">DIRECTIONAL GOAL</div><div class="h4 mt1">Faster merchant answers</div><div class="tiny mt1">From panel navigation to one question.</div></div>
+    <div class="card wash" style="padding:2.8mm"><div class="tiny" style="letter-spacing:.14em;font-weight:800">DIRECTIONAL GOAL</div><div class="h4 mt1">Consistent policy</div><div class="tiny mt1">Every action passes the same checks.</div></div>
+  </div>
+
+  <div class="card dark mt3" style="padding:3mm 3.6mm">
+    <div class="flex ac g2mm"><span class="pill w">Scope note</span><span class="tiny" style="color:#C7D8F7">Nothing in this document should be read as delivered functionality. It describes a <b style="color:#fff">proposed</b> capability, and the design principles it would follow if built.</span></div>
+  </div>
+
+
+  <div class="g5 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></div><h4>User-scoped</h4><p>Every read and action is limited to the caller.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-sliders"/></svg></div><h4>Capability-bounded</h4><p>Only reviewed actions from a fixed registry.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-server"/></svg></div><h4>Server-authoritative</h4><p>The platform decides, not the model.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></div><h4>Observable</h4><p>Requests, selections and outcomes are traceable.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div><h4>Reversible</h4><p>Any capability can be switched off independently.</p></div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></div><h3 class="h3">Questions we would baseline with InTrust</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Which customer and merchant journeys matter most today?</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Which events already measure completion, and what are their current values?</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Which actions feel safe enough to execute without a confirmation step?</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>What support and merchant feedback themes should the agent absorb first?</span></div>
+      </div>
+    </div>
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><h3 class="h3">Commitments this proposal makes</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No new source of truth, and no duplicate commerce backend.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No change to how customers authenticate or check out.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No capability enabled until it has been reviewed and approved.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No silent state changes — every outcome is visible to the user.</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="card dark mt3" style="padding:3mm 3.6mm">
+    <div class="flex ac g2mm"><span class="pill w">Not in scope</span><span class="tiny" style="color:#C7D8F7">No new app to install, no data migration and no change to how InTrust customers pay — and <b style="color:#fff">no decision needed today</b> beyond agreeing the shape of the first phase.</span></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span>A reply informs the customer. <b>An agent changes the state of their account</b> — safely, verifiably, and only within what they are permitted to do.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-route"/></svg></div><div class="qv">Fewer</div><div class="vl">Steps to act</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="qv">Same</div><div class="vl">Trust model</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><div class="qv">Same</div><div class="vl">Platform</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">From answering<br>to completing.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">03 · Definition</div>
+    <div class="pnum">03 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt4">
+    <div style="flex:0 0 120mm">
+      <div class="eyebrow">What agentic AI means here</div>
+      <h1 class="h1 sm mt2">Chatbots answer. Agents <b>act.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">not a new app — a new way in</div></div>
+  </div>
+
+  <div class="g3 mt3">
+    <div class="card" style="background:#F8F9FC;border-color:#E7EAF3">
+      <div class="flex ac bet"><span class="pill n" style="background:#8A93A6;border-color:#8A93A6">Stage 01</span><span class="tiny" style="font-weight:800;letter-spacing:.14em">REPLY</span></div>
+      <h3 class="h3 mt2" style="color:#5B6478">Chatbot</h3>
+      <p class="p mt1">Matches keywords and returns an answer. The customer still has to find the screen, perform the action and re-enter what they just typed.</p>
+      <div class="mt2"><span class="pill r"><span class="dot"></span>Ends at information</span></div>
+    </div>
+    <div class="card soft">
+      <div class="flex ac bet"><span class="pill">Stage 02</span><span class="tiny" style="font-weight:800;letter-spacing:.14em">GUIDE</span></div>
+      <h3 class="h3 mt2">Assistant</h3>
+      <p class="p mt1">Understands intent and explains the path. It can point to the right place in the app, but the user still completes every step manually.</p>
+      <div class="mt2"><span class="pill a"><span class="dot"></span>Guided but manual</span></div>
+    </div>
+    <div class="card dark">
+      <div class="flex ac bet"><span class="pill w">Proposed</span><span class="tiny" style="font-weight:800;letter-spacing:.14em;color:#9DBBFF">COMPLETE</span></div>
+      <h3 class="h3 mt2" style="color:#fff">Agentic AI for InTrust</h3>
+      <p class="p mt1" style="color:#C3D4F6">Understands the request, decides with permitted context, selects an approved capability and completes the action inside the platform's existing workflows.</p>
+      <div class="mt2"><span class="pill" style="background:rgba(127,214,165,.16);color:#8FE0B0;border-color:rgba(127,214,165,.3)"><span class="dot"></span>Ends at a result</span></div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">6</span><span class="st">How a request is completed</span><span class="line" style="width:58mm"></span></div>
+      <span class="script sm">every step is checkable</span>
+    </div>
+    <div class="flow">
+      <div class="fstep"><div class="fn">1</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><div class="fl">Understand</div><div class="fs">Text, image or voice becomes one intent.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">2</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><div class="fl">Assemble</div><div class="fs">Only permitted context for this user.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">3</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-route"/></svg></div><div class="fl">Plan</div><div class="fs">The request is broken into permitted steps.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">4</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div><div class="fl">Select</div><div class="fs">One registered capability is chosen.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">5</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-zap"/></svg></div><div class="fl">Execute</div><div class="fs">Existing InTrust logic performs the action.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">6</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><div class="fl">Confirm</div><div class="fs">A verified result returns to the conversation.</div></div>
+    </div>
+  </div>
+
+  <div class="g2 mt3">
+    <div class="card" style="border-color:#CDEBDC;background:linear-gradient(170deg,#F7FDFA,#EDF9F2)">
+      <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><h3 class="h3">What this is</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>A <b>conversational action layer</b> over the existing InTrust platform.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Permission-aware by design — every action is scoped to the signed-in user or merchant.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Built on a <b>fixed registry</b> of approved capabilities, each mapped to existing logic.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Observable — requests, selections and outcomes can be traced and reviewed.</span></div>
+      </div>
+    </div>
+    <div class="card" style="border-color:#F2D6D6;background:linear-gradient(170deg,#FEFAF9,#FDEFEE)">
+      <div class="flex ac g2mm"><div class="chip r"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><h3 class="h3">What this is not</h3></div>
+      <div class="lst mt2">
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Not a rebuild of the platform, the catalogue or the order journey.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Not a second source of truth — no duplicate commerce backend.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Not unrestricted access to data, tables or internal APIs.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Not a payment or financial actor — checkout and payments remain untouched.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">→</span><span class="st">One request, traced end to end</span><span class="line" style="width:58mm"></span></div>
+      <span class="tiny" style="font-weight:700">“I liked the shoes I bought last month. Find me something similar under ₹3,000.”</span>
+    </div>
+    <div class="pipe">
+      <div class="pchip"><div class="pn">STEP 01</div><h5>Intent</h5><p>Similar-product discovery with a price ceiling.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">STEP 02</div><h5>Context</h5><p>Permitted purchase history for this customer only.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">STEP 03</div><h5>Capability</h5><p>Catalogue discovery, already available to the app.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip dk"><div class="pn">STEP 04</div><h5>Execution</h5><p>The platform's own search and filter logic runs.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">STEP 05</div><h5>Result</h5><p>Matching products returned in the conversation.</p></div>
+    </div>
+  </div>
+
+
+  <div class="card mt3" style="padding:3mm 3.6mm;background:linear-gradient(120deg,#F7FAFF,#EFF5FF);border-color:#DFE8FA">
+    <div class="flex ac" style="gap:5mm">
+      <span class="tiny" style="font-weight:800;letter-spacing:.18em;color:var(--navy-800)">INPUT MODALITIES</span>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></span><span class="tiny" style="color:var(--grey-700)"><b style="color:var(--ink)">Text</b> — explicit requests</span></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-image"/></svg></span><span class="tiny" style="color:var(--grey-700)"><b style="color:var(--ink)">Image</b> — visual discovery</span></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg></span><span class="tiny" style="color:var(--grey-700)"><b style="color:var(--ink)">Voice</b> — spoken intent</span></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-clip"/></svg></span><span class="tiny" style="color:var(--grey-700)"><b style="color:var(--ink)">Mixed</b> — image + constraint</span></div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg></div><h3 class="h3">Where it fits in InTrust today</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Alongside the existing customer app and storefront conversation.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Inside the merchant panel as an operational assistant.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>On the communication channels InTrust already uses with users.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Behind the same sign-in the user already trusts.</span></div>
+      </div>
+    </div>
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip a"><svg viewBox="0 0 24 24"><use href="#i-sliders"/></svg></div><h3 class="h3">Decisions this proposal asks for</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Approve the capability list for Phase 01 and Phase 02.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Confirm which low-risk actions execute without confirmation.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Agree the baseline metrics that define success.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Agree the review and audit rhythm for agent decisions.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>The agent does not do anything new.</b> It does what the platform already does — reached through a sentence instead of a sequence of screens.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div><div class="qv">6</div><div class="vl">Steps per request</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><div class="qv">1</div><div class="vl">Fixed registry</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="qv">0</div><div class="vl">Open data access</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Understand. Decide.<br>Complete.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">04 · Architecture</div>
+    <div class="pnum">04 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt4">
+    <div style="flex:0 0 116mm">
+      <div class="eyebrow">Agentic architecture</div>
+      <h1 class="h1 sm mt2">One intelligence layer.<br><b>Zero parallel systems.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">an action layer, not a rebuild</div></div>
+  </div>
+
+  <p class="lead mt3" style="max-width:186mm">The agent sits <b>between</b> the user's conversation and the services InTrust already operates. It interprets the request, assembles permitted context, chooses from a fixed set of registered capabilities, and hands execution to the platform. Every result travels back through the same path in reverse — so the conversation never becomes a second source of truth.</p>
+
+  <div class="row mt3" style="align-items:stretch;gap:0">
+    <div class="acard" style="flex:0 0 31mm">
+      <div class="ic"><svg viewBox="0 0 24 24"><use href="#i-phone"/></svg></div>
+      <h5>Interfaces</h5>
+      <p>Customer conversation, merchant assistant, voice &amp; image input.</p>
+    </div>
+    <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+    <div class="acard dk" style="flex:1">
+      <div class="ic"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div>
+      <h5>Agentic intelligence layer</h5>
+      <div class="g2 mt2" style="gap:1.4mm 2.4mm;text-align:left">
+        <div class="flex ac g2mm" style="font-size:5pt;color:#D6E2FB"><span class="chip dk" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></span>Intent understanding</div>
+        <div class="flex ac g2mm" style="font-size:5pt;color:#D6E2FB"><span class="chip dk" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#i-sliders"/></svg></span>Capability registry</div>
+        <div class="flex ac g2mm" style="font-size:5pt;color:#D6E2FB"><span class="chip dk" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></span>Context assembly</div>
+        <div class="flex ac g2mm" style="font-size:5pt;color:#D6E2FB"><span class="chip dk" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></span>Guardrails &amp; policy</div>
+        <div class="flex ac g2mm" style="font-size:5pt;color:#D6E2FB"><span class="chip dk" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#i-route"/></svg></span>Decision &amp; planning</div>
+        <div class="flex ac g2mm" style="font-size:5pt;color:#D6E2FB"><span class="chip dk" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></span>Response &amp; audit</div>
+      </div>
+    </div>
+    <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+    <div class="acard" style="flex:0 0 40mm">
+      <div class="ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <h5>Existing InTrust services</h5>
+      <p>Catalogue &amp; search · cart &amp; wishlist · orders &amp; delivery · account · merchant data · rewards.</p>
+    </div>
+    <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+    <div class="acard" style="flex:0 0 27mm">
+      <div class="ic"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
+      <h5>Result</h5>
+      <p>Confirmed outcome in the conversation, with an auditable record.</p>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">6</span><span class="st">The request path, every time</span><span class="line" style="width:58mm"></span></div>
+      <span class="script sm">same checks, same rules</span>
+    </div>
+    <div class="pipe">
+      <div class="pchip"><div class="pn">PATH 01</div><h5>Signed-in session</h5><p>Identity comes from the platform, never the model.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">PATH 02</div><h5>Intent + context</h5><p>Only what this user is permitted to see.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip dk"><div class="pn">PATH 03</div><h5>Capability selected</h5><p>One registered action from a fixed list.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">PATH 04</div><h5>Permission check</h5><p>The platform validates before anything runs.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">PATH 05</div><h5>Existing service</h5><p>The original business logic executes unchanged.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">PATH 06</div><h5>Verified result</h5><p>Returned to the user and recorded for audit.</p></div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card" style="border-color:#DDE7FA;background:linear-gradient(170deg,#F7FAFF,#EFF5FF)">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-plus"/></svg></div><h3 class="h3">What the layer adds</h3><span class="pill" style="margin-left:auto">New</span></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Intent understanding across text, image and voice.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Context assembly limited to the caller's permissions.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Capability selection from an explicit, reviewed registry.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Guardrails, rate limits and loop protection on every request.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Traceability: request, selection and outcome are all recorded.</span></div>
+      </div>
+    </div>
+    <div class="col card" style="border-color:#DCE9E2;background:linear-gradient(170deg,#F7FDFA,#EEF9F3)">
+      <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div><h3 class="h3">What stays exactly as it is</h3><span class="pill g" style="margin-left:auto">Reused</span></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Authentication</b> — existing sessions and sign-in flows.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Permissions</b> — the same ownership and access rules.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Business logic</b> — pricing, availability, eligibility, fulfilment.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Data</b> — one catalogue, one cart, one order record.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Audit</b> — the platform's own logs remain authoritative.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g3 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg></div><h4>No duplicate backend</h4><p>The agent calls services, it does not recreate them.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></div><h4>Observable by default</h4><p>Each hop can be inspected without changing the platform.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><h4>Reversible</h4><p>Capabilities can be enabled or withdrawn independently.</p></div>
+  </div>
+
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-server"/></svg></div><h3 class="h3">Integration surface — proposed</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>The agent calls <b>existing service endpoints</b>, not raw tables.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Identity and permissions are resolved <b>server-side</b> from the session.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Read-only context is enabled first; write actions follow capability by capability.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No schema change is required to add the layer.</span></div>
+      </div>
+    </div>
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip a"><svg viewBox="0 0 24 24"><use href="#i-alert"/></svg></div><h3 class="h3">Behaviour when something fails</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>The user is told what could not be completed, in plain language.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No partial state is hidden — the conversation reflects reality.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Retries are bounded; the agent never loops indefinitely.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Every failure is logged with the capability that was attempted.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card dark mt3" style="padding:3mm 3.6mm">
+    <div class="flex ac g2mm"><span class="pill w">Design rule</span><span class="tiny" style="color:#C7D8F7">If a request cannot be served by a <b style="color:#fff">registered capability</b>, the agent explains the limitation and routes the user to the normal journey. It never improvises a workaround.</span></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>Interfaces do not change.</b> The catalogue does not change. The order journey does not change. What changes is how quickly a user can reach them.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><div class="qv">1</div><div class="vl">Added layer</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><div class="qv">1</div><div class="vl">Source of truth</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div><div class="qv">6</div><div class="vl">Reused services</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">An action layer<br>over the platform.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">05 · Customer Experience</div>
+    <div class="pnum">05 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt4">
+    <div style="flex:0 0 118mm">
+      <div class="eyebrow">Customer experience</div>
+      <h1 class="h1 sm mt2">The customer stops navigating.<br><b>The assistant starts completing.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">ask once, done once</div></div>
+  </div>
+
+  <div class="row mt3" style="gap:6mm">
+    <div style="flex:0 0 80mm">
+      <div class="card soft" style="padding:3.6mm">
+        <div class="flex bet ac" style="margin-bottom:2.6mm"><span class="pill n">Customer conversation</span><span class="script sm">one thread, many actions</span></div>
+        <div class="phone lg" style="margin:0 auto">
+          <div class="pnotch"></div>
+          <div class="screen">
+            <div class="ptop">
+              <div class="chip svg round ic" style="background:#08225E;border-color:#08225E;color:#fff"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></div>
+              <div style="flex:1;min-width:0"><div class="ttl">InTrust Assistant</div><div class="sub">Signed in · Customer · Delhi</div></div>
+              <div class="av">RS</div>
+            </div>
+            <div class="pbody tight">
+              <div class="bub u">Show me running shoes like the ones I bought last month.<div class="sm">11:02</div></div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-search"/></svg></span>Discovery · similar items</div>
+                <div class="pg mt1">
+                  <div class="pc"><div class="ph"><svg viewBox="0 0 24 24"><use href="#p-shoe"/></svg><span class="fav"><svg viewBox="0 0 24 24"><use href="#i-heart"/></svg></span></div><div class="pb"><div class="nm">Street Runner</div><div class="rw"><span class="pr">₹2,499</span><span class="st">UK 9</span><span class="add"><svg viewBox="0 0 24 24"><use href="#i-plus"/></svg></span></div></div></div>
+                  <div class="pc"><div class="ph"><svg viewBox="0 0 24 24"><use href="#p-shoe"/></svg><span class="fav"><svg viewBox="0 0 24 24"><use href="#i-heart"/></svg></span></div><div class="pb"><div class="nm">Aero Glide</div><div class="rw"><span class="pr">₹2,899</span><span class="st">UK 9</span><span class="add"><svg viewBox="0 0 24 24"><use href="#i-plus"/></svg></span></div></div></div>
+                </div>
+                <div class="sm">6 matches · filtered by your size and past purchase</div>
+              </div>
+              <div class="bub u">Add two of the second one to my cart.<div class="sm">11:03</div></div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg></span>Cart · 2 items added</div>
+                Aero Glide — UK 9 · ₹2,899 × 2 = <b>₹5,798</b>
+                <div class="actin"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-zap"/></svg></span><span>cart.add_items · existing cart service</span></div>
+              </div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></span>Rewards · balance read</div>
+                You have <b>1,240 points</b> — about ₹124 at checkout.
+              </div>
+            </div>
+            <div class="pin">
+              <div class="field"><span class="ic" style="width:2.6mm;height:2.6mm"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></span>Anything else, Rohit?</div>
+              <div class="round att"><svg viewBox="0 0 24 24"><use href="#i-image"/></svg></div>
+              <div class="round mic"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="g2" style="gap:3mm">
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-search"/></svg></div><h4>Product discovery</h4><p>“Show me…”, “Find something like…”, “Under ₹3,000”.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-filter"/></svg></div><h4>Search &amp; filtering</h4><p>Category, price, size and availability in one sentence.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-image"/></svg></div><h4>Visual discovery</h4><p>An image becomes a search — style, colour or category.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-heart"/></svg></div><h4>Wishlist</h4><p>Add, review or remove saved items conversationally.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg></div><h4>Cart actions</h4><p>Add, update quantity and confirm contents and totals.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-package"/></svg></div><h4>Order lookup</h4><p>Status, delivery estimate and history for the signed-in user.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></div><h4>Rewards &amp; wallet</h4><p>Balance and tier read from existing systems.</p></div>
+        <div class="tile tone-g"><div class="ic" style="color:var(--green)"><svg viewBox="0 0 24 24"><use href="#i-card"/></svg></div><h4>Checkout preparation</h4><p>Cart prepared and confirmed — the secure flow still pays.</p></div>
+      </div>
+      <div class="card wash mt3" style="padding:3mm 3.4mm">
+        <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></div><div class="grow"><h4>Every request is scoped to the caller</h4><div class="tiny">The agent can only read and act on data belonging to the authenticated customer. There is no path from one account to another.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">3</span><span class="st">What changes for the customer</span><span class="line" style="width:58mm"></span></div>
+      <span class="tiny" style="font-weight:700">Concept mockup · proposed experience, not delivered functionality</span>
+    </div>
+    <div class="pipe">
+      <div class="pchip"><div class="pn">BEFORE</div><h5>Search, tap, scroll, repeat</h5><p>The customer interprets the catalogue and performs every step.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip dk"><div class="pn">PROPOSED</div><h5>One clear request</h5><p>The intent is expressed in the customer's own words.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">RESULT</div><h5>A confirmed outcome</h5><p>The cart, wishlist or order question is already resolved.</p></div>
+    </div>
+  </div>
+
+
+  <div class="g3 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-route"/></svg></div><h4>Fewer abandonment points</h4><p>Intent is captured and acted on inside the conversation, instead of being handed back to the customer.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></div><h4>Nothing is hidden</h4><p>Prices, quantities and availability are always read from the platform, shown before anything is final.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><h4>One confirmation standard</h4><p>The same rules apply whether the action starts in the app or in a sentence.</p></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>Conversation removes the navigation, not the customer's control.</b> They still see the outcome, the price and the confirmation before anything is final.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></div><div class="qv">8</div><div class="vl">Capability families</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></div><div class="qv">1</div><div class="vl">Account scope</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><div class="qv">0</div><div class="vl">Payment access</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Just ask InTrust.<br>Consider it done.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">06 · Multimodal Intelligence</div>
+    <div class="pnum">06 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 122mm">
+      <div class="eyebrow">Multimodal intelligence</div>
+      <h1 class="h1 sm mt2">A photo, a sentence, a spoken word —<br><b>the same intent.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">say it however you like</div></div>
+  </div>
+
+  <div class="row mt3" style="gap:6mm">
+    <div style="flex:0 0 82mm">
+      <div class="card soft" style="padding:3.4mm">
+        <div class="flex bet ac" style="margin-bottom:2.4mm"><span class="pill n">Image + text request</span><span class="script sm">one intent, two inputs</span></div>
+        <div class="phone lg" style="margin:0 auto">
+          <div class="pnotch"></div>
+          <div class="screen">
+            <div class="ptop">
+              <div class="chip svg round ic" style="background:#08225E;border-color:#08225E;color:#fff"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></div>
+              <div style="flex:1;min-width:0"><div class="ttl">InTrust Assistant</div><div class="sub">Signed in · Customer</div></div>
+              <div class="av">RS</div>
+            </div>
+            <div class="pbody tight">
+              <div class="bub u" style="max-width:92%">
+                <div class="flex ac g2mm" style="background:rgba(255,255,255,.16);border-radius:1.6mm;padding:1.4mm;margin-bottom:1.2mm">
+                  <div style="width:9mm;height:9mm;border-radius:1.4mm;background:linear-gradient(140deg,#DCE7FB,#BBD0F5);display:grid;place-items:center;color:#3C5EA8"><span class="ic" style="width:4.6mm;height:4.6mm"><svg viewBox="0 0 24 24"><use href="#p-bag"/></svg></span></div>
+                  <div style="font-size:4.4pt;line-height:1.3">bag.jpg<br><span style="opacity:.8">1.2 MB</span></div>
+                </div>
+                Something like this, under ₹3,000.
+                <div class="sm">11:07</div>
+              </div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg></span>Visual match · 4 results</div>
+                <div class="pg g3c mt1">
+                  <div class="pc"><div class="ph" style="height:8.4mm"><svg viewBox="0 0 24 24"><use href="#p-bag"/></svg></div><div class="pb"><div class="pr">₹2,699</div></div></div>
+                  <div class="pc"><div class="ph" style="height:8.4mm"><svg viewBox="0 0 24 24"><use href="#p-bag"/></svg></div><div class="pb"><div class="pr">₹2,299</div></div></div>
+                  <div class="pc"><div class="ph" style="height:8.4mm"><svg viewBox="0 0 24 24"><use href="#p-bag"/></svg></div><div class="pb"><div class="pr">₹1,899</div></div></div>
+                </div>
+                <div class="flex wrap g2mm mt1"><span class="pill">Under ₹3,000</span><span class="pill">In stock</span></div>
+                <div class="sm">Matched on shape, colour and category — then filtered by price.</div>
+              </div>
+              <div class="bub u">Add the cheapest one to my wishlist.<div class="sm">11:08</div></div>
+              <div class="bub a">
+                <div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-heart"/></svg></span>Wishlist · added</div>
+                Canvas Tote — ₹1,899 <div class="actin"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-zap"/></svg></span><span>wishlist.add · existing wishlist service</span></div>
+              </div>
+            </div>
+            <div class="pin">
+              <div class="field"><span class="ic" style="width:2.6mm;height:2.6mm"><svg viewBox="0 0 24 24"><use href="#i-clip"/></svg></span>Add a photo or a voice note…</div>
+              <div class="round att"><svg viewBox="0 0 24 24"><use href="#i-image"/></svg></div>
+              <div class="round mic"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card" style="padding:3.2mm 3.4mm">
+        <div class="flex bet ac"><span class="pill">Voice request</span><span class="tiny" style="font-weight:800;letter-spacing:.14em">TRANSCRIBED → UNDERSTOOD</span></div>
+        <div class="flex ac g3mm mt2">
+          <div class="wave"><i style="height:2mm"></i><i style="height:3.4mm"></i><i style="height:5mm"></i><i style="height:3.8mm"></i><i style="height:1.8mm"></i><i style="height:4.6mm"></i><i style="height:5.4mm"></i><i style="height:2.6mm"></i><i style="height:4.2mm"></i><i style="height:1.6mm"></i><i style="height:3.2mm"></i><i style="height:2.2mm"></i></div>
+          <div class="grow" style="font-size:6pt;color:var(--grey-700);line-height:1.4">“Show me what I ordered last week and where it is.”</div>
+          <span class="pill g">Intent: order lookup</span>
+        </div>
+        <div class="tiny mt2">The spoken request is converted to text and then treated exactly like a typed one — same intent handling, same permissions, same confirmation rules.</div>
+      </div>
+
+      <div class="g2 mt3" style="gap:3mm">
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><h4>Text</h4><p>Direct, explicit and always the fastest path. “Add two of these to my cart.”</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-image"/></svg></div><h4>Image</h4><p>The customer shows rather than describes — a photo becomes the query.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg></div><h4>Voice</h4><p>Hands-free and natural, transcribed before any decision is made.</p></div>
+        <div class="tile"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-clip"/></svg></div><h4>Mixed input</h4><p>An image plus a constraint, or a voice note plus a follow-up change.</p></div>
+      </div>
+
+      <div class="card dark mt3" style="padding:3mm 3.4mm">
+        <div class="flex ac g2mm"><span class="pill w">Same rules</span><span class="tiny" style="color:#C7D8F7">A request is a request, whatever the input. <b style="color:#fff">Every modality passes through the same permission and confirmation checks.</b></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt2">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">4</span><span class="st">How an image request is handled</span><span class="line" style="width:58mm"></span></div>
+      <span class="script sm">see it, find it</span>
+    </div>
+    <div class="pipe">
+      <div class="pchip"><div class="pn">01</div><h5>Capture</h5><p>The image, text or voice note arrives in the conversation.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">02</div><h5>Interpret</h5><p>Visual and textual signals combine into one intent.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip dk"><div class="pn">03</div><h5>Match</h5><p>Existing catalogue discovery returns candidates.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">04</div><h5>Refine &amp; return</h5><p>Constraints are applied and results returned in chat.</p></div>
+    </div>
+  </div>
+
+  <div class="row mt2" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-trend"/></svg></div><h3 class="h3">Why multimodal matters here</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Customers describe products far better with a picture than with words.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Voice removes typing friction on mobile, where most traffic lives.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>A single intent layer means no new journey to design per input type.</span></div>
+      </div>
+    </div>
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip r"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><h3 class="h3">Boundaries that do not move</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>An uploaded image is used only to interpret this request.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Voice notes follow the same data-handling rules as text.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No modality can bypass a permission check or a confirmation step.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>A picture is often a better request than a sentence.</b> Multimodal understanding lets InTrust accept whichever one the customer actually has.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-scan"/></svg></div><div class="qv">4</div><div class="vl">Input modes</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div><div class="qv">1</div><div class="vl">Intent layer</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><div class="qv">1</div><div class="vl">Permission gate</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Show it, say it,<br>get it done.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">07 · Commerce Journey</div>
+    <div class="pnum">07 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 124mm">
+      <div class="eyebrow">Agentic commerce journey</div>
+      <h1 class="h1 sm mt2">From “I want this”<br>to <b>a prepared checkout.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">buying, without the maze</div></div>
+  </div>
+
+  <p class="lead mt2" style="max-width:186mm">The commerce journey is where an agent earns its place — and where the boundaries matter most. The agent takes the customer to a <b>review-ready cart</b>; the platform keeps control of the money. Every step below maps to a capability InTrust already has today.</p>
+
+  <div class="card mt2" style="padding:3.2mm">
+    <div class="pipe">
+      <div class="pchip"><div class="pn">01 · ASK</div><h5>Intent expressed</h5><p>“I need running shoes under ₹3,000.”</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">02 · IDENTIFY</div><h5>Product matched</h5><p>Existing catalogue search and filters run.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">03 · VALIDATE</div><h5>Availability checked</h5><p>Price, stock and size come from the platform.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip dk"><div class="pn">04 · PREPARE</div><h5>Cart assembled</h5><p>The existing cart service adds the items.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">05 · REVIEW</div><h5>Customer confirms</h5><p>Contents and total shown before anything is final.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip" style="background:#F3F5F9;border-color:#E2E7F0"><div class="pn" style="color:#8A93A6">06 · PAY</div><h5 style="color:#4A5468">Secure checkout</h5><p>Outside the agent — the platform completes the payment.</p></div>
+    </div>
+    <div class="tiny mt2" style="text-align:center">The agent's journey ends at step 05. Step 06 belongs to the platform's existing, audited payment flow.</div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div style="flex:0 0 96mm">
+      <div class="card hi" style="padding:3.4mm">
+        <div class="flex bet ac"><span class="pill n">Cart prepared · review ready</span><span class="tiny">2 items</span></div>
+        <div class="mt2">
+          <div class="flex ac bet" style="padding:1.6mm 0;border-bottom:.25mm solid var(--line-2)">
+            <div class="flex ac g2mm"><div style="width:8mm;height:8mm;border-radius:1.4mm;background:linear-gradient(140deg,#EEF4FF,#DCE7FB);display:grid;place-items:center;color:#7E9BD4"><span class="ic" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#p-shoe"/></svg></span></div><div><div class="h4" style="font-size:6pt">Aero Glide — UK 9</div><div class="tiny">Qty 2 · In stock</div></div></div>
+            <div class="h4" style="font-size:6.4pt">₹5,798</div>
+          </div>
+          <div class="flex ac bet" style="padding:1.6mm 0;border-bottom:.25mm solid var(--line-2)">
+            <div class="flex ac g2mm"><div style="width:8mm;height:8mm;border-radius:1.4mm;background:linear-gradient(140deg,#EEF4FF,#DCE7FB);display:grid;place-items:center;color:#7E9BD4"><span class="ic" style="width:4mm;height:4mm"><svg viewBox="0 0 24 24"><use href="#p-bottle"/></svg></span></div><div><div class="h4" style="font-size:6pt">Sports bottle — 750 ml</div><div class="tiny">Qty 1 · In stock</div></div></div>
+            <div class="h4" style="font-size:6.4pt">₹599</div>
+          </div>
+        </div>
+        <div class="flex ac bet mt2"><span class="tiny">Cart total · rewards applicable at checkout</span><span class="h3 h3" style="font-size:9.4pt;color:var(--navy-800)">₹6,397</span></div>
+        <div class="mt2" style="background:linear-gradient(140deg,#2E6BF0,#123C9B);color:#fff;border-radius:2mm;padding:2.6mm;text-align:center;font-family:var(--f-d);font-weight:800;font-size:6.8pt">Proceed to secure checkout</div>
+        <div class="tiny center mt1">Payment, OTP and receipts are handled by InTrust's existing flow — never by the agent.</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="border-color:#DCE9E2;background:linear-gradient(170deg,#F7FDFA,#EEF9F3)">
+        <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><h3 class="h3">What the agent may do</h3></div>
+        <div class="lst mt2">
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Find and compare products from the live catalogue.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Check availability, size and price before suggesting anything.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Add, update or remove items in the customer's own cart.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Summarise the cart and hand over to checkout.</span></div>
+        </div>
+      </div>
+      <div class="card mt3" style="border-color:#F2D6D6;background:linear-gradient(170deg,#FEFAF9,#FDEFEE)">
+        <div class="flex ac g2mm"><div class="chip r"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><h3 class="h3">What stays outside it</h3></div>
+        <div class="lst mt2">
+          <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>No card, wallet or UPI detail is ever seen or stored by the agent.</span></div>
+          <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>No payment authorisation, OTP or 3-D Secure step is triggered by the agent.</span></div>
+          <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>No order can be placed without the customer's own confirmation in checkout.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:0;overflow:hidden">
+    <div style="padding:2.6mm 3.4mm 1.4mm"><div class="sec plain" style="margin:0"><span class="sn">→</span><span class="st">Who acts at each step</span></div></div>
+    <div style="padding:0 3.4mm 2.6mm">
+    <table class="tbl">
+      <thead><tr><th style="padding-left:3.4mm">Step</th><th>Agent's role</th><th>Platform's role</th><th>What the customer sees</th></tr></thead>
+      <tbody>
+        <tr><td class="b">Ask</td><td>Understand the request</td><td>Provide the signed-in session</td><td>Their own words, reflected back</td></tr>
+        <tr><td class="b">Identify</td><td>Choose the discovery capability</td><td>Run catalogue search and filters</td><td>Relevant products with prices</td></tr>
+        <tr><td class="b">Validate</td><td>Request confirmation of details</td><td>Return price, stock and eligibility</td><td>Accurate availability information</td></tr>
+        <tr><td class="b">Prepare</td><td>Call the cart capability</td><td>Perform the cart change</td><td>Updated cart contents and total</td></tr>
+        <tr><td class="b">Review</td><td>Summarise and hand over</td><td>Hold the authoritative cart</td><td>A cart ready for checkout</td></tr>
+        <tr><td class="b">Pay</td><td class="grey">Not involved</td><td>Authenticate and capture payment</td><td>The familiar secure payment flow</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+
+  <div class="g3 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-clock"/></svg></div><h4>Timing stays with the user</h4><p>The customer decides when to move to checkout. The agent never pushes a purchase.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></div><h4>Nothing final without confirmation</h4><p>Cart contents, quantities and totals are always shown before the customer acts.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><h4>Same cart, same rules</h4><p>Whether items arrive by tapping or by talking, one cart and one set of rules apply.</p></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>The agent prepares. The platform pays.</b> A conversational route to a ready cart, with money moving only through the flows InTrust already secures.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg></div><div class="qv">5</div><div class="vl">Agent steps</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><div class="qv">1</div><div class="vl">Payment gate</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-receipt"/></svg></div><div class="qv">0</div><div class="vl">Payment access</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">A cart that is<br>ready to go.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">08 · Merchant Assistant</div>
+    <div class="pnum">08 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 124mm">
+      <div class="eyebrow">Merchant AI assistant</div>
+      <h1 class="h1 sm mt2">The merchant's whole business,<br><b>one question away.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">your business, in your words</div></div>
+  </div>
+
+  <div class="row mt3" style="gap:5mm">
+    <div class="col" style="flex:1.5">
+      <div class="win">
+        <div class="bar">
+          <div class="dots"><i></i><i></i><i></i></div>
+          <div class="addr"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span>merchant.intrust.in/dashboard</div>
+          <span class="pill g">Live</span>
+        </div>
+        <div class="wbody">
+          <div class="side">
+            <div class="lg"><img src="assets/intrust-mark.png" alt=""><span>InTrust</span></div>
+            <div class="li on"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg></span>Overview</div>
+            <div class="li"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-package"/></svg></span>Orders</div>
+            <div class="li"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg></span>Inventory</div>
+            <div class="li"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-trend"/></svg></span>Earnings</div>
+            <div class="li"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-building"/></svg></span>Business</div>
+            <div class="li"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-sliders"/></svg></span>Settings</div>
+          </div>
+          <div class="main">
+            <div class="ftop"><div><div class="h">Today at a glance</div><div class="s">Updated 2 minutes ago</div></div><span class="pill">Merchant view</span></div>
+            <div class="g3" style="gap:2mm">
+              <div class="mcard"><div class="k">Orders</div><div class="v">18</div><div class="d">+4 vs yesterday</div></div>
+              <div class="mcard"><div class="k">Revenue</div><div class="v">₹41.2K</div><div class="d">+9% vs yesterday</div></div>
+              <div class="mcard"><div class="k">Low stock</div><div class="v">3</div><div class="d a">Needs attention</div></div>
+            </div>
+            <div class="g2 mt2" style="gap:2mm">
+              <div class="card wash" style="padding:2.2mm">
+                <div class="tiny" style="font-weight:800;letter-spacing:.12em">ORDERS · LAST 7 DAYS</div>
+                <div class="bars mt2"><i style="height:38%"></i><i style="height:56%"></i><i style="height:44%"></i><i style="height:72%"></i><i style="height:61%"></i><i style="height:88%"></i><i style="height:100%"></i></div>
+              </div>
+              <div class="card wash" style="padding:2.2mm">
+                <div class="tiny" style="font-weight:800;letter-spacing:.12em">BUSINESS SNAPSHOT</div>
+                <div class="kv" style="padding:1mm 0"><span class="k" style="font-size:5pt">Items live</span><span class="v" style="font-size:6pt">248</span></div>
+                <div class="kv" style="padding:1mm 0"><span class="k" style="font-size:5pt">Repeat customers</span><span class="v" style="font-size:6pt">62%</span></div>
+                <div class="kv" style="padding:1mm 0"><span class="k" style="font-size:5pt">Pending deliveries</span><span class="v" style="font-size:6pt">7</span></div>
+                <div class="kv" style="padding:1mm 0"><span class="k" style="font-size:5pt">Subscription</span><span class="v" style="font-size:6pt">Active</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:0 0 62mm">
+      <div class="phone" style="margin:0 auto">
+        <div class="pnotch"></div>
+        <div class="screen">
+          <div class="ptop">
+            <div class="chip svg round ic" style="background:#08225E;border-color:#08225E;color:#fff"><svg viewBox="0 0 24 24"><use href="#i-store"/></svg></div>
+            <div style="flex:1;min-width:0"><div class="ttl">InTrust Merchant</div><div class="sub">Signed in · Merchant owner</div></div>
+            <div class="av">SK</div>
+          </div>
+          <div class="pbody tight">
+            <div class="bub u">How many orders came in today?<div class="sm">09:12</div></div>
+            <div class="bub a"><div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-package"/></svg></span>Orders · today</div>18 orders · ₹41.2K in revenue<div class="sm">Read from your own order records</div></div>
+            <div class="bub u">Which products are running low?<div class="sm">09:13</div></div>
+            <div class="bub a"><div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg></span>Inventory · low stock</div>3 items below threshold<div class="sm">Cotton tee · Sports bottle · Canvas tote</div></div>
+            <div class="bub u">Am I on the growth plan?<div class="sm">09:14</div></div>
+            <div class="bub a"><div class="lb"><span class="ic" style="width:2.5mm;height:2.5mm"><svg viewBox="0 0 24 24"><use href="#i-building"/></svg></span>Business · subscription</div>Yes — Growth, renewing in 12 days.
+              <div class="actin"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></span><span>Read-only · no changes made</span></div>
+            </div>
+          </div>
+          <div class="pin">
+            <div class="field"><span class="ic" style="width:2.6mm;height:2.6mm"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></span>Ask about your business…</div>
+            <div class="round mic"><svg viewBox="0 0 24 24"><use href="#i-mic"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:3mm 3.4mm">
+    <div class="g3" style="gap:2.4mm 4mm">
+      <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-package"/></svg></span><div><div class="h4">Order operations</div><div class="tiny">Counts, status and delivery progress.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg></span><div><div class="h4">Inventory insight</div><div class="tiny">Low stock, out of stock, reorder prompts.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-trend"/></svg></span><div><div class="h4">Business metrics</div><div class="tiny">Revenue, order values, repeat customers.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-building"/></svg></span><div><div class="h4">Business &amp; subscription</div><div class="tiny">Plan, renewal and account status.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-location"/></svg></span><div><div class="h4">Serviceability</div><div class="tiny">Delivery coverage for the merchant's areas.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-doc"/></svg></span><div><div class="h4">Operational answers</div><div class="tiny">Explanations of processes and policies.</div></div></div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><h3 class="h3">Real questions the assistant answers</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>“What did I earn last week?”</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>“Show me the orders that need dispatch.”</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>“Which item sells best on weekends?”</span></div>
+      </div>
+    </div>
+    <div class="col card dark">
+      <div class="flex ac g2mm"><div class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><h3 class="h3" style="color:#fff">Access is scoped to one business</h3></div>
+      <div class="lst mt2">
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span><b style="color:#fff">Only the authenticated merchant's own data</b> — never another seller's.</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span><b style="color:#fff">Read-first by default</b> — write actions require separate approval.</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span><b style="color:#fff">Panel permissions still apply</b> — the assistant cannot exceed them.</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="g3 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><h4>Ask, then act</h4><p>The assistant answers from the merchant’s own records before it ever suggests a change.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg></div><h4>Panel parity</h4><p>Anything it can answer, the panel can still do — the assistant is a second door, not a replacement.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><h4>Merchant trust</h4><p>A seller’s data is never pooled, compared or exposed to another seller, under any phrasing.</p></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>Merchants should not have to learn a dashboard to understand their business.</b> They should be able to ask it a question — and get a straight answer.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-store"/></svg></div><div class="qv">1</div><div class="vl">Business scope</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></div><div class="qv">Read</div><div class="vl">First by default</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="qv">Same</div><div class="vl">Panel permissions</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Ask your business.<br>Get the answer.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">09 · Context &amp; Reasoning</div>
+    <div class="pnum">09 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 126mm">
+      <div class="eyebrow">Context &amp; reasoning</div>
+      <h1 class="h1 sm mt2">Reasoning is only as good<br>as <b>the context behind it.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">remember only what is yours</div></div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="cmp" style="flex:1.25">
+      <div class="now">
+        <div class="flex ac g2mm"><div class="chip ic"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><div class="tt">Context assembled per request</div></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg><span>Conversation so far — what the user actually said.</span></li>
+          <li><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg><span>Permitted profile context, already available in the account.</span></li>
+          <li><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg><span>Permitted order, cart and wishlist history for that account.</span></li>
+          <li><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg><span>Live catalogue, stock and price at the moment of asking.</span></li>
+        </ul>
+      </div>
+      <div class="mid"><div class="cir"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div></div>
+      <div class="next">
+        <div class="flex ac g2mm"><div class="chip dk ic"><svg viewBox="0 0 24 24"><use href="#i-route"/></svg></div><div class="tt">Decision reached — and explainable</div></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>One intent, one capability, chosen from the registry.</span></li>
+          <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>The reason for the selection can be described to the user.</span></li>
+          <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Every factual value comes from a platform response, not a guess.</span></li>
+          <li><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>If context is insufficient, the agent asks instead of assuming.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col card" style="flex:1;border-color:#F2D6D6;background:linear-gradient(170deg,#FEFAF9,#FDEFEE)">
+      <div class="flex ac g2mm"><div class="chip r"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><h3 class="h3">Context it never uses</h3></div>
+      <div class="lst mt2">
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Data belonging to another customer or merchant.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Anything the signed-in user is not permitted to see in the panel or app.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Raw database tables or internal endpoints outside the capability list.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Assumptions about price, stock or eligibility that no service confirmed.</span></div>
+        <div class="tick no"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg><span>Anything the model “remembers” outside the current session's approved context.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">6</span><span class="st">The reasoning loop</span><span class="line" style="width:58mm"></span></div>
+      <span class="script sm">ask, don't assume</span>
+    </div>
+    <div class="flow">
+      <div class="fstep"><div class="fn">1</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div><div class="fl">Listen</div><div class="fs">Take the request exactly as given.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">2</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-search"/></svg></div><div class="fl">Clarify</div><div class="fs">Ask one question if the intent is ambiguous.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">3</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><div class="fl">Gather</div><div class="fs">Fetch only the permitted context needed.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">4</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div><div class="fl">Choose</div><div class="fs">Select one capability from the registry.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">5</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="fl">Check</div><div class="fs">Confirm permission and confirmation requirements.</div></div>
+      <div class="farrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="fstep"><div class="fn">6</div><div class="fi"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><div class="fl">Act &amp; report</div><div class="fs">Execute, verify and describe the outcome.</div></div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">→</span><span class="st">Worked example — context in action</span><span class="line" style="width:52mm"></span></div>
+      <span class="tiny" style="font-weight:700">“Same weekly grocery order, but half the quantity.”</span>
+    </div>
+    <div class="pipe">
+      <div class="pchip"><div class="pn">READ 01</div><h5>Recognise the pattern</h5><p>Matches the customer's own permitted order history.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">READ 02</div><h5>Confirm the items</h5><p>Reads the previous order from the orders service.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip dk"><div class="pn">READ 03</div><h5>Apply the change</h5><p>Quantities halved and validated against stock.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">READ 04</div><h5>Show the new cart</h5><p>Fresh prices and totals, ready for confirmation.</p></div>
+      <div class="pconn"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="pchip"><div class="pn">READ 05</div><h5>Ask before saving</h5><p>Any assumption is surfaced as a question first.</p></div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-clock"/></svg></div><h3 class="h3">How long context is kept</h3></div>
+      <div class="mt2">
+        <div class="kv"><span class="k">Conversation in session</span><span class="v">For the session</span></div>
+        <div class="kv"><span class="k">Account context</span><span class="v">Fetched, not stored</span></div>
+        <div class="kv"><span class="k">Order and cart data</span><span class="v">Read on request</span></div>
+        <div class="kv"><span class="k">Action record</span><span class="v">Retained for audit</span></div>
+      </div>
+    </div>
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><h3 class="h3">Principles we hold to</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Context is <b>requested, scoped and perishable</b> — never a silent profile.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Facts come from services; the model contributes language, not data.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Ambiguity is resolved by asking, never by guessing on the user's behalf.</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="g3 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><h4>Context is fetched, not assumed</h4><p>Values are read from the platform at the moment of the request, never from memory.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></div><h4>The user can see why</h4><p>When the agent makes a choice, it can explain which request and which data led to it.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><h4>Refusal is a valid outcome</h4><p>If context or permission is missing, saying so is the correct answer — not a workaround.</p></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>Context is what makes an agent useful. Permission is what makes it safe.</b> InTrust's agent would hold both — and never confuse one for the other.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></div><div class="qv">4</div><div class="vl">Context sources</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></div><div class="qv">6</div><div class="vl">Reasoning steps</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><div class="qv">0</div><div class="vl">Guessed facts</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Right context.<br>Right action.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow d"></div><div class="pglow b"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">10 · Security &amp; Governance</div>
+    <div class="pnum">10 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 122mm">
+      <div class="eyebrow">Security, guardrails &amp; governance</div>
+      <h1 class="h1 sm mt2">The model proposes.<br><b>The platform decides.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">safe by architecture</div></div>
+  </div>
+
+  <div class="row mt3" style="gap:5mm">
+    <div style="flex:0 0 84mm">
+      <div class="vs">
+        <div class="node"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></span><div class="tx"><b>Signed-in user</b><span>Customer or merchant, already authenticated.</span></div></div>
+        <div class="conn"></div>
+        <div class="node"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span><div class="tx"><b>Platform identity</b><span>The session, not the model, establishes who is asking.</span></div><span class="tag pill g">Server-side</span></div>
+        <div class="conn"></div>
+        <div class="node dk"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-cpu"/></svg></span><div class="tx"><b>Agentic layer</b><span>Interprets intent and proposes one registered capability.</span></div></div>
+        <div class="conn"></div>
+        <div class="node g"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></span><div class="tx"><b>Permission &amp; policy check</b><span>Ownership, role and confirmation rules are evaluated.</span></div><span class="tag pill g">Every action</span></div>
+        <div class="conn"></div>
+        <div class="node"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-sliders"/></svg></span><div class="tx"><b>Registered capability</b><span>A reviewed action from a fixed list — nothing else.</span></div></div>
+        <div class="conn"></div>
+        <div class="node"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></span><div class="tx"><b>Existing InTrust workflow</b><span>The original business logic runs, unchanged.</span></div></div>
+        <div class="conn"></div>
+        <div class="node"><span class="ic"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><div class="tx"><b>Verified result + audit entry</b><span>Outcome confirmed to the user and recorded.</span></div></div>
+      </div>
+    </div>
+
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><h3 class="h3">Guardrails, in plain terms</h3><span class="pill" style="margin-left:auto">Proposed</span></div>
+      <div class="g2 mt2" style="gap:1.6mm 4mm">
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No arbitrary SQL</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No unrestricted DB access</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No service-role keys in the agent</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No arbitrary API execution</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No privilege escalation path</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No trust in model-supplied IDs</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Identity resolved server-side</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Explicit capability registry</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Permission check before every call</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Business logic stays authoritative</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">No financial execution capability</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Rate limiting &amp; loop protection</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Structured, validated tool results</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Prompt-injection defences</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Full audit trail per action</span></div>
+        <div class="flex ac g2mm"><span class="chip g" style="width:4.4mm;height:4.4mm"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span class="tiny" style="color:var(--grey-700)">Graceful, explicit failure handling</span></div>
+      </div>
+      <div class="card dark mt2" style="padding:2.6mm 3mm">
+        <div class="tiny" style="color:#C7D8F7">A capability that is not approved simply <b style="color:#fff">does not exist</b> as far as the agent is concerned.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt3">
+    <div class="sec plain"><span class="sn">4</span><span class="st">Risk &amp; action model</span><span class="line"></span><span class="script sm">clear rules per action type</span></div>
+    <div class="lst" style="gap:2mm">
+      <div class="rrow g"><div class="lvl">Read-only<span>Lowest risk</span></div><div class="body"><div class="h4">Reads permitted information and explains it</div><div class="acts"><span class="pill">Order status</span><span class="pill">Catalogue search</span><span class="pill">Rewards balance</span><span class="pill">Merchant metrics</span></div></div><div class="dec"><span class="pill g">No confirmation</span></div></div>
+      <div class="rrow b"><div class="lvl">Low-risk write<span>Reversible</span></div><div class="body"><div class="h4">Adds or removes saved items within the user's own account</div><div class="acts"><span class="pill">Wishlist add / remove</span><span class="pill">Cart add item</span><span class="pill">Quantity update</span></div></div><div class="dec"><span class="pill">Executes when intent is clear</span></div></div>
+      <div class="rrow a"><div class="lvl">Checkout prep<span>Prepare only</span></div><div class="body"><div class="h4">Assembles and summarises a cart for the customer to approve</div><div class="acts"><span class="pill">Prepare cart</span><span class="pill">Summarise total</span><span class="pill">Apply permitted filters</span></div></div><div class="dec"><span class="pill a">Customer confirms at checkout</span></div></div>
+      <div class="rrow r"><div class="lvl">Payment<span>Outside the agent</span></div><div class="body"><div class="h4">Handled entirely by the platform's existing secure payment flow</div><div class="acts"><span class="pill r">No card details</span><span class="pill r">No OTP or 3-D Secure</span><span class="pill r">No payment capture</span></div></div><div class="dec"><span class="pill r">Not an agent capability</span></div></div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card" style="background:linear-gradient(140deg,#F7FAFF,#EEF4FF);border-color:#DFE8FA">
+      <div class="h4">Governance rhythm we would propose</div>
+      <div class="tiny mt1">A capability register reviewed with InTrust before anything is enabled, plus a periodic review of agent activity and any user or merchant feedback that suggests a rule needs refining.</div>
+    </div>
+    <div class="col card" style="background:linear-gradient(140deg,#F7FDFA,#EEF9F3);border-color:#DCE9E2">
+      <div class="h4">Observability we would propose</div>
+      <div class="tiny mt1">Every request records the intent, the capability selected, the permission outcome and the result — so behaviour can be examined without changing the platform underneath.</div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>An agent is only as safe as the boundary it cannot cross.</b> Here, that boundary is the platform's own permission layer — unchanged, and still in charge.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="qv">16</div><div class="vl">Guardrails</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><div class="qv">4</div><div class="vl">Risk tiers</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><div class="qv">0</div><div class="vl">Financial access</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Propose. Verify.<br>Then act.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">11 · Two Experiences</div>
+    <div class="pnum">11 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 122mm">
+      <div class="eyebrow">One layer, two experiences</div>
+      <h1 class="h1 sm mt2">One agent.<br><b>Two very different users.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">same brain, different keys</div></div>
+  </div>
+
+  <p class="lead mt2" style="max-width:186mm">Customers and merchants need completely different answers from the same intelligence. What they share is the <b>foundation</b>: one identity model, one permission layer, one capability registry, one audit trail. Only the scope of what each is allowed to reach changes.</p>
+
+  <div class="g2 mt2" style="gap:4mm">
+    <div class="card soft">
+      <div class="flex bet ac"><span class="pill n">Customer experience</span><span class="script sm">shop in your own words</span></div>
+      <h3 class="h3 mt2">The customer agent</h3>
+      <div class="mt2">
+        <div class="kv"><span class="k">Authenticated as</span><span class="v">Customer account</span></div>
+        <div class="kv"><span class="k">Can reach</span><span class="v">Their own orders, cart, wishlist</span></div>
+        <div class="kv"><span class="k">Typical ask</span><span class="v">“Find this, add it, where is my order?”</span></div>
+        <div class="kv"><span class="k">Writes allowed</span><span class="v">Cart &amp; wishlist only</span></div>
+        <div class="kv"><span class="k">Payment</span><span class="v">Not accessible</span></div>
+      </div>
+      <div class="flex wrap g2mm mt2"><span class="pill">Discovery</span><span class="pill">Cart</span><span class="pill">Wishlist</span><span class="pill">Orders</span><span class="pill">Rewards</span></div>
+    </div>
+    <div class="card" style="background:linear-gradient(160deg,#F7FDFA,#EBF8F1);border-color:#DCE9E2">
+      <div class="flex bet ac"><span class="pill g">Merchant experience</span><span class="script sm">run your business by asking</span></div>
+      <h3 class="h3 mt2">The merchant assistant</h3>
+      <div class="mt2">
+        <div class="kv"><span class="k">Authenticated as</span><span class="v">Merchant account</span></div>
+        <div class="kv"><span class="k">Can reach</span><span class="v">Their own business data only</span></div>
+        <div class="kv"><span class="k">Typical ask</span><span class="v">“Orders today? Low stock? Earnings?”</span></div>
+        <div class="kv"><span class="k">Writes allowed</span><span class="v">Read-first by default</span></div>
+        <div class="kv"><span class="k">Panel permissions</span><span class="v">Still authoritative</span></div>
+      </div>
+      <div class="flex wrap g2mm mt2"><span class="pill g">Orders</span><span class="pill g">Inventory</span><span class="pill g">Metrics</span><span class="pill g">Subscription</span><span class="pill g">Serviceability</span></div>
+    </div>
+  </div>
+
+  <div class="flex ac" style="gap:0;margin-top:2.4mm">
+    <div style="flex:1;display:grid;place-items:center;color:#C4D2EC"><svg viewBox="0 0 24 24" style="width:3.6mm;height:3.6mm;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg)"><use href="#i-arrow-sm"/></svg></div>
+    <div style="flex:1;display:grid;place-items:center;color:#C4D2EC"><svg viewBox="0 0 24 24" style="width:3.6mm;height:3.6mm;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg)"><use href="#i-arrow-sm"/></svg></div>
+  </div>
+
+  <div class="card dark mt2">
+    <div class="flex bet ac"><span class="pill w">Shared foundation · built once</span><span class="script sm" style="color:#9DBBFF">same rules for both</span></div>
+    <div class="g4 mt2" style="gap:2mm 4mm">
+      <div class="flex ac g2mm"><span class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span><div><div class="h4" style="color:#fff">Authentication</div><div class="tiny" style="color:#B9CBF2">Existing sign-in and sessions.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></span><div><div class="h4" style="color:#fff">Permissions</div><div class="tiny" style="color:#B9CBF2">Ownership and role rules.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-database"/></svg></span><div><div class="h4" style="color:#fff">Context layer</div><div class="tiny" style="color:#B9CBF2">Scoped, per-request context.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-sliders"/></svg></span><div><div class="h4" style="color:#fff">Capability registry</div><div class="tiny" style="color:#B9CBF2">One reviewed action list.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></span><div><div class="h4" style="color:#fff">Guardrails</div><div class="tiny" style="color:#B9CBF2">The same limits apply to both.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-list"/></svg></span><div><div class="h4" style="color:#fff">Audit &amp; observability</div><div class="tiny" style="color:#B9CBF2">Every action is traceable.</div></div></div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:0;overflow:hidden">
+    <div style="padding:2.6mm 3.4mm 1.4mm"><div class="sec plain" style="margin:0"><span class="sn">→</span><span class="st">Side by side</span><span class="line" style="width:120mm"></span><span class="tiny" style="font-weight:700">One code path · two permission scopes</span></div></div>
+    <div style="padding:0 3.4mm 2.6mm">
+      <table class="tbl">
+        <thead><tr><th>Dimension</th><th>Customer agent</th><th>Merchant assistant</th><th>What is identical</th></tr></thead>
+        <tbody>
+          <tr><td class="b">Identity</td><td>Customer session</td><td>Merchant session</td><td>Resolved server-side, never by the model</td></tr>
+          <tr><td class="b">Data scope</td><td>Their own account</td><td>Their own business</td><td>Scoped by existing permissions</td></tr>
+          <tr><td class="b">Capabilities</td><td>Commerce actions</td><td>Operations &amp; insights</td><td>Same registry, different subset</td></tr>
+          <tr><td class="b">Write behaviour</td><td>Cart &amp; wishlist</td><td>Read-first</td><td>Approved before enabling</td></tr>
+          <tr><td class="b">Payment</td><td>Outside the agent</td><td>Outside the agent</td><td>Never a capability</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <div class="card mt3" style="padding:3mm 3.6mm">
+    <div class="sec plain" style="margin:0 0 2.2mm"><span class="sn">→</span><span class="st">Where the boundary sits</span><span class="line" style="width:96mm"></span><span class="tiny" style="font-weight:700">Identical rule for both audiences</span></div>
+    <div class="g3" style="gap:3.4mm">
+      <div class="flex ac g2mm"><span class="chip g"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></span><div><div class="h4">Read</div><div class="tiny">Answers and lookups over the user’s own data. Safe to enable first.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip "><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></span><div><div class="h4">Write</div><div class="tiny">Cart, wishlist and profile changes — reversible, and revertible.</div></div></div>
+      <div class="flex ac g2mm"><span class="chip a"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></span><div><div class="h4">Never</div><div class="tiny">Payment, credentials and anything final stay outside the agent.</div></div></div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>Two products do not need two intelligences.</b> They need one foundation with the discipline to know exactly how far each user's reach extends.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-users"/></svg></div><div class="qv">2</div><div class="vl">Experiences</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><div class="qv">1</div><div class="vl">Foundation</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="qv">1</div><div class="vl">Permission layer</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">One agent.<br>Every user.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">12 · Phased Roadmap</div>
+    <div class="pnum">12 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 126mm">
+      <div class="eyebrow">Phased roadmap</div>
+      <h1 class="h1 sm mt2">Phased by design.<br><b>Every phase stands alone.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">start small, prove it, expand</div></div>
+  </div>
+
+  <p class="lead mt2" style="max-width:186mm">Nothing here needs to be delivered at once. Each phase ends with something <b>usable and observable</b>, and each one is independently valuable to InTrust. If priorities change, the work to date remains in place.</p>
+
+  <div class="rmap mt3">
+    <div class="rph">
+      <div class="knob">01</div>
+      <div class="pc2">
+        <div class="ph">Foundation</div>
+        <h5>The intelligence layer exists</h5>
+        <ul>
+          <li>Agent framework and request path</li>
+          <li>Capability registry — read-only first</li>
+          <li>Permission checks wired to existing roles</li>
+          <li>Guardrails, rate limits, loop protection</li>
+          <li>Audit and observability from day one</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rph">
+      <div class="knob">02</div>
+      <div class="pc2">
+        <div class="ph">Customer agent</div>
+        <h5>Shopping in a sentence</h5>
+        <ul>
+          <li>Product discovery and search</li>
+          <li>Filters by price, size and availability</li>
+          <li>Product and availability questions</li>
+          <li>Wishlist add and remove</li>
+          <li>Cart add, update and order lookup</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rph">
+      <div class="knob">03</div>
+      <div class="pc2">
+        <div class="ph">Multimodal</div>
+        <h5>Show it, say it</h5>
+        <ul>
+          <li>Image-based product discovery</li>
+          <li>Voice input with transcription</li>
+          <li>Mixed requests — image plus constraint</li>
+          <li>Refinement and correction in thread</li>
+          <li>Consistent handling across modalities</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rph">
+      <div class="knob">04</div>
+      <div class="pc2">
+        <div class="ph">Merchant assistant</div>
+        <h5>The business answers back</h5>
+        <ul>
+          <li>Order counts, status and dispatch</li>
+          <li>Inventory and low-stock insight</li>
+          <li>Revenue and repeat-customer metrics</li>
+          <li>Business and subscription status</li>
+          <li>Serviceability and policy answers</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rph">
+      <div class="knob">05</div>
+      <div class="pc2">
+        <div class="ph">Automation</div>
+        <h5>Fewer steps, still governed</h5>
+        <ul>
+          <li>Multi-step requests handled in one turn</li>
+          <li>Proactive prompts based on permitted events</li>
+          <li>Policy-driven confirmation rules</li>
+          <li>Additional reviewed capabilities</li>
+          <li>Deeper personalisation within scope</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:3mm 3.6mm;background:linear-gradient(120deg,#F7FAFF,#EEF5FF);border-color:#DFE8FA">
+    <div class="flex ac" style="gap:0">
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-zap"/></svg></span><div><div class="h4">Start focused</div><div class="tiny">A small, safe capability set</div></div></div>
+      <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></span><div><div class="h4">Validate</div><div class="tiny">Watch behaviour in production</div></div></div>
+      <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></span><div><div class="h4">Expand</div><div class="tiny">Add capabilities, not risk</div></div></div>
+      <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></span><div><div class="h4">Automate</div><div class="tiny">Multi-step flows, still governed</div></div></div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><h3 class="h3">Sequencing principles</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Read before write.</b> Understanding the data comes first; state changes come later.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Reversible before irreversible.</b> Cart and wishlist precede anything final.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>One audience at a time.</b> Customer experience is proven before merchant operations.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Capability by capability.</b> Each addition is reviewed and can be withdrawn.</span></div>
+      </div>
+    </div>
+    <div class="col card" style="border-color:#DCE9E2;background:linear-gradient(170deg,#F7FDFA,#EEF9F3)">
+      <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><h3 class="h3">How we would know a phase worked</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Requests are being understood and completed without manual intervention.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Every action is traceable back to a capability and a permission outcome.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Users and merchants complete the intended task more directly than before.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Support questions about “how do I…” reduce for the journeys in scope.</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip "><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></div><h3 class="h3">What we would need from InTrust</h3></div>
+      <div class="lst mt2">
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>A named owner for capability approval — additions signed off by the business, not by the build.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Existing role definitions and permission outcomes, so the agent inherits them exactly.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Access to the catalogue, stock and order services the panel already uses.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>A contact for incident and rollback decisions once a phase is live.</span></div>
+      </div>
+    </div>
+    <div class="col card" style="border-color:#F1DCD8;background:linear-gradient(170deg,#FFFBF9,#FDF1EE)">
+      <div class="flex ac g2mm"><div class="chip a"><svg viewBox="0 0 24 24"><use href="#i-ban"/></svg></div><h3 class="h3">Held back on purpose</h3></div>
+      <div class="lst mt2">
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No payment, wallet, OTP or credential handling inside the agent.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No pricing, discount or eligibility logic invented by the model.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No direct database access — every read and write uses an existing service.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>No autonomous change to a merchant’s records without confirmation.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:3mm 3.6mm;background:linear-gradient(120deg,#F7FAFF,#EEF5FF);border-color:#DFE8FA">
+    <div class="flex ac" style="gap:0">
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-users"/></svg></span><div><div class="h4">A design-partner cohort</div><div class="tiny">A small group observed closely in each phase</div></div></div>
+      <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></span><div><div class="h4">A feedback loop</div><div class="tiny">Observations feed the next capability review</div></div></div>
+      <div class="rarrow"><svg viewBox="0 0 24 24"><use href="#i-arrow-sm"/></svg></div>
+      <div class="flex ac g2mm" style="flex:1"><span class="chip solid"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></span><div><div class="h4">A rollback path</div><div class="tiny">Any capability off, without touching the platform</div></div></div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>A phase that cannot be measured is a phase that cannot be trusted.</b> Each stage ends with evidence, a reference list of capabilities, and a clear decision to continue.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-calendar"/></svg></div><div class="qv">5</div><div class="vl">Phases</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div><div class="qv">1</div><div class="vl">Phase at a time</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><div class="qv">0</div><div class="vl">Big-bang releases</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Proof, phase<br>by phase.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">13 · Expected Experience</div>
+    <div class="pnum">13 <i>/ 14</i></div>
+  </header>
+
+  <div class="flex bet ab mt3">
+    <div style="flex:0 0 124mm">
+      <div class="eyebrow">Expected experience &amp; future vision</div>
+      <h1 class="h1 sm mt2">Where this leads —<br><b>an InTrust that participates.</b></h1>
+    </div>
+    <div style="text-align:right;padding-bottom:1mm"><div class="script lg">the long view</div></div>
+  </div>
+
+  <p class="lead mt2" style="max-width:186mm">If Phase 01 and Phase 02 land well, the same foundation supports progressively richer behaviour — without a single new permission model, and without the platform ever losing control of what it <b>is</b> and what it <b>is not</b> allowed to do.</p>
+
+  <div class="g4 mt3">
+    <div class="card" style="border-color:#E7EAF3;background:linear-gradient(170deg,#F8F9FC,#F1F3F8)">
+      <div class="flex bet ac"><span class="pill n" style="background:#8A93A6;border-color:#8A93A6">Now</span><span class="tiny" style="font-weight:800">TODAY</span></div>
+      <h3 class="h3 mt2" style="color:#5B6478">Assisted</h3>
+      <p class="p mt1">Answers questions and guides the user to the right place. Truthful and useful, but the work is still manual.</p>
+      <div class="mt2"><span class="pill r"><span class="dot"></span>Information only</span></div>
+    </div>
+    <div class="card soft">
+      <div class="flex bet ac"><span class="pill">Next</span><span class="tiny" style="font-weight:800;color:var(--blue-600)">PHASE 01–02</span></div>
+      <h3 class="h3 mt2">Agentic</h3>
+      <p class="p mt1">Completes scoped requests end to end: discovery, wishlist, cart, order lookup — all inside existing permissions.</p>
+      <div class="mt2"><span class="pill"><span class="dot"></span>Completes actions</span></div>
+    </div>
+    <div class="card dark">
+      <div class="flex bet ac"><span class="pill w">Later</span><span class="tiny" style="font-weight:800;color:#9DBBFF">PHASE 03–04</span></div>
+      <h3 class="h3 mt2" style="color:#fff">Proactive</h3>
+      <p class="p mt1" style="color:#C3D4F6">Surfaces what matters without being asked — a delayed order, a low-stock item, a renewal that is due.</p>
+      <div class="mt2"><span class="pill" style="background:rgba(127,214,165,.16);color:#8FE0B0;border-color:rgba(127,214,165,.3)"><span class="dot"></span>Anticipates needs</span></div>
+    </div>
+    <div class="card" style="border-color:#DDE7FA;background:linear-gradient(170deg,#F7FAFF,#EAF1FF)">
+      <div class="flex bet ac"><span class="pill">Horizon</span><span class="tiny" style="font-weight:800;color:var(--blue-600)">SUBJECT TO REVIEW</span></div>
+      <h3 class="h3 mt2">Autonomous — within limits</h3>
+      <p class="p mt1">Multi-step journeys handled in one request, with the platform still deciding every permission and every confirmation.</p>
+      <div class="mt2"><span class="pill"><span class="dot"></span>Governed autonomy</span></div>
+    </div>
+  </div>
+
+  <div class="card mt3">
+    <div class="flex bet ac" style="margin-bottom:2.4mm">
+      <div class="sec plain" style="margin:0"><span class="sn">3</span><span class="st">A moment in the future state</span><span class="line" style="width:64mm"></span></div>
+      <span class="script sm">three people, one layer</span>
+    </div>
+    <div class="g3" style="gap:3.4mm">
+      <div class="tile tone-g" style="background:linear-gradient(165deg,#F7FAFF,#EDF3FF);border-color:#DFE8FA">
+        <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-user"/></svg></span><div class="h4">A customer, on the move</div></div>
+        <p class="mt1" style="font-size:5.9pt;line-height:1.45;color:var(--grey-600)">Sends a photo of a bag and says “like this, under ₹3,000”. Gets four matches, adds one to the wishlist and has a reviewed cart waiting — never touching a payment screen in the conversation.</p>
+      </div>
+      <div class="tile tone-g" style="background:linear-gradient(165deg,#F7FDFA,#EBF8F1);border-color:#DCE9E2">
+        <div class="flex ac g2mm"><span class="chip g"><svg viewBox="0 0 24 24"><use href="#i-store"/></svg></span><div class="h4">A merchant, before opening the panel</div></div>
+        <p class="mt1" style="font-size:5.9pt;line-height:1.45;color:var(--grey-600)">Asks how yesterday went and which items need restocking. Gets both answers from their own records, in seconds, without learning a single new report.</p>
+      </div>
+      <div class="tile tone-g" style="background:linear-gradient(165deg,#FFFBF3,#FFF6E8);border-color:#F2E6CC">
+        <div class="flex ac g2mm"><span class="chip a"><svg viewBox="0 0 24 24"><use href="#i-building"/></svg></span><div class="h4">An operations team, quietly</div></div>
+        <p class="mt1" style="font-size:5.9pt;line-height:1.45;color:var(--grey-600)">Sees which capabilities are used, which questions recur and where the agent asks instead of acting — using the audit trail rather than guesswork.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card dark">
+      <div class="flex ac g2mm"><div class="chip dk"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><h3 class="h3" style="color:#fff">What does not change, at any horizon</h3></div>
+      <div class="g2 mt2" style="gap:1.6mm 4mm">
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span>Server-side identity</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span>Registered capabilities only</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span>Platform owns the truth</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span>Payment stays outside</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span>Every action auditable</span></div>
+        <div class="tick" style="color:#C7D8F7"><svg viewBox="0 0 24 24" style="stroke:#7FD6A5"><use href="#i-check"/></svg><span>Any capability can be withdrawn</span></div>
+      </div>
+    </div>
+    <div class="col card" style="background:linear-gradient(150deg,#FFFBF5,#FFF6E8);border-color:#F2E6CC">
+      <div class="flex ac g2mm"><div class="chip a"><svg viewBox="0 0 24 24"><use href="#i-eye"/></svg></div><h3 class="h3">How we would read the signals</h3></div>
+      <div class="lst mt2">
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Where requests are clarified too often, the capability or the copy is wrong.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Where users still leave the conversation, the hand-off needs designing better.</span></div>
+        <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Where the agent refuses, the registry may simply need one more approved action.</span></div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="row mt3" style="gap:4mm">
+    <div class="col card">
+      <div class="flex ac g2mm"><div class="chip "><svg viewBox="0 0 24 24"><use href="#i-trend"/></svg></div><h3 class="h3">What we would measure at each horizon</h3></div>
+      <div class="lst mt2">
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Where requests resolve in one turn, and where they need clarifying.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Whether users reach checkout or a decision without leaving the conversation.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>How often the agent refuses — and whether a missing capability caused it.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Whether every action maps back to an approved capability and permission.</span></div>
+      </div>
+    </div>
+    <div class="col card" style="border-color:#DCE9E2;background:linear-gradient(170deg,#F7FDFA,#EEF9F3)">
+      <div class="flex ac g2mm"><div class="chip g"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><h3 class="h3">What we would deliberately avoid</h3></div>
+      <div class="lst mt2">
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Adding autonomy before the data and permissions beneath it are trusted.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Letting the assistant become a second source of business rules.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Broadening scope for its own sake — capability only where it earns its place.</span></div>
+<div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span>Any horizon that cannot be switched off cleanly.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:2.6mm 3.6mm;background:linear-gradient(120deg,#F7FAFF,#EEF5FF);border-color:#DFE8FA">
+    <div class="flex ac g2mm"><span class="chip"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></span><div class="tiny" style="font-weight:600;color:var(--ink);line-height:1.5"><b>Directional vision.</b> Behaviour beyond the pilot phases is illustrative and would be designed, reviewed and approved with InTrust before any build. Nothing described here is committed until it is written into a phase.</div></div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>The destination is not a cleverer chatbot.</b> It is an InTrust that quietly completes what its users came to do — and can prove, every time, that it stayed in bounds.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-trend"/></svg></div><div class="qv">4</div><div class="vl">Horizons</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-scale"/></svg></div><div class="qv">6</div><div class="vl">Fixed rules</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><div class="qv">0</div><div class="vl">Payment access</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">An InTrust that<br>participates.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+<section class="page">
+<div class="pglow a"></div><div class="pglow b"></div><div class="pglow c"></div>
+<div class="p-in">
+  <header class="phead">
+    <div class="brand"><img src="assets/intrust-mark.png" alt="InTrust"><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+    <div class="cat">14 · Next Steps</div>
+    <div class="pnum">14 <i>/ 14</i></div>
+  </header>
+
+  <div class="row mt4" style="gap:6mm">
+    <div style="flex:0 0 112mm">
+      <div class="eyebrow">Closing</div>
+      <h1 class="h1 mt2">Talk to InTrust.<br><b>Get Things Done.</b></h1>
+      <div class="script lg mt2">let's build the layer that completes.</div>
+      <p class="lead mt3" style="max-width:104mm">InTrust already holds everything this needs: the users, the catalogue, the orders, the merchants, the permissions and the trust. This proposal adds the one thing a conversation still lacks — the ability to <b>finish what the user started</b>, inside every control that already exists.</p>
+    </div>
+    <div class="col">
+      <div class="card soft" style="padding:4mm">
+        <div class="flex bet ac"><span class="pill n">The proposal in one list</span><span class="script sm">nothing hidden</span></div>
+        <div class="lst mt2">
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>One intelligence layer</b> over the platform you already run.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Two experiences</b> — customer commerce and merchant operations.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>A fixed capability registry</b> — nothing else can be executed.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Existing permissions in charge</b> — the model never decides access.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Zero payment access</b> — checkout stays exactly where it is.</span></div>
+          <div class="tick"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg><span><b>Five phases</b>, each independently valuable and reversible.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt3" style="padding:0;overflow:hidden">
+    <div style="padding:2.8mm 3.6mm 0"><div class="sec plain" style="margin:0"><span class="sn">5</span><span class="st">Proposed next steps</span><span class="line" style="width:120mm"></span><span class="tiny" style="font-weight:700">Sequential · each one confirms the next</span></div></div>
+    <div style="padding:2.4mm 3.6mm 3.2mm">
+      <div class="lst" style="gap:2mm">
+        <div class="rrow b"><div class="lvl">Step 01<span>Discovery</span></div><div class="body"><div class="h4">Align on scope, journeys and baselines</div><div class="tiny" style="margin-top:.6mm">Agree the customer and merchant journeys in scope, the events that define completion today, and the numbers we will measure against.</div></div><div class="dec"><span class="pill">Working session</span></div></div>
+        <div class="rrow b"><div class="lvl">Step 02<span>Design</span></div><div class="body"><div class="h4">Design the architecture and the guardrails</div><div class="tiny" style="margin-top:.6mm">Define the capability registry for Phase 01, the permission mapping, the confirmation rules and the audit requirements.</div></div><div class="dec"><span class="pill">Design sign-off</span></div></div>
+        <div class="rrow a"><div class="lvl">Step 03<span>Build</span></div><div class="body"><div class="h4">Build the Phase 01 foundation</div><div class="tiny" style="margin-top:.6mm">The agentic layer, read-only capabilities, permission integration, guardrails and observability — with nothing yet exposed to users.</div></div><div class="dec"><span class="pill a">Internal validation</span></div></div>
+        <div class="rrow a"><div class="lvl">Step 04<span>Pilot</span></div><div class="body"><div class="h4">Pilot the customer agent on a contained capability set</div><div class="tiny" style="margin-top:.6mm">Enable discovery, wishlist, cart and order lookup for a controlled group, with the audit trail reviewed throughout.</div></div><div class="dec"><span class="pill a">Measured pilot</span></div></div>
+        <div class="rrow g"><div class="lvl">Step 05<span>Expand</span></div><div class="body"><div class="h4">Measure, refine and widen the registry</div><div class="tiny" style="margin-top:.6mm">Extend to multimodal input and the merchant assistant, adding capabilities only where the evidence supports them.</div></div><div class="dec"><span class="pill g">Evidence-led growth</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g4 mt3">
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></div><h4>One added layer</h4><p>No rebuild, no parallel backend.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-users"/></svg></div><h4>Two experiences</h4><p>Customers and merchants, one foundation.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-lock"/></svg></div><h4>Zero payment access</h4><p>Money moves only in secure checkout.</p></div>
+    <div class="tile flat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div><h4>Governed by default</h4><p>Permissions, guardrails and audit first.</p></div>
+  </div>
+
+  <div class="card dark mt3" style="padding:4mm">
+    <div class="flex ac bet">
+      <div style="flex:1">
+        <div class="tiny" style="color:#9DBBFF;font-weight:800;letter-spacing:.2em">THE IMMEDIATE NEXT STEP</div>
+        <div class="h2 mt1" style="color:#fff;font-size:14pt">A working session to agree the Phase 01 capability list.</div>
+        <div class="tiny mt1" style="color:#C7D8F7;max-width:120mm">One conversation is enough to convert this proposal into a scoped, buildable first phase — and to confirm exactly which actions InTrust is comfortable making conversational first.</div>
+      </div>
+      <div style="flex:0 0 44mm;text-align:right">
+        <div class="script lg" style="color:#9DBBFF">the InTrust agent</div>
+        <div class="flex ac g2mm" style="justify-content:flex-end;margin-top:3mm"><img src="assets/intrust-mark.png" alt="" style="width:8mm"><div style="text-align:left"><div class="bt" style="font-family:var(--f-d);font-weight:800;font-size:12pt;color:#fff;letter-spacing:-.03em;line-height:1">InTrust</div><div class="tiny" style="color:#9DBBFF">A smarter everyday</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <div class="qbar">
+      <div class="q"><span class="mark">“</span><b>Every journey in this document already exists.</b> The only thing being proposed is a faster, more human way for people to reach them — safely, and on InTrust's terms.</div>
+      <div class="qstats">
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></div><div class="qv">Agentic</div><div class="vl">Capability</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-users"/></svg></div><div class="qv">2</div><div class="vl">Experiences</div></div>
+        <div class="qstat"><div class="qi"><svg viewBox="0 0 24 24"><use href="#i-calendar"/></svg></div><div class="qv">5</div><div class="vl">Phases</div></div>
+      </div>
+    </div>
+    <div class="bstrip">
+      <div class="bmini brand tiny"><img src="assets/intrust-mark.png" alt=""><div><div class="bt">InTrust</div><div class="bs">A smarter everyday</div></div></div>
+      <div class="mid">DIGITAL SOLUTIONS FOR A STRONGER TOMORROW</div>
+      <div class="tag">Talk to InTrust.<br>Get Things Done.</div>
+    </div>
+  </footer>
+</div>
+</section>
+
+</body>
+</html>

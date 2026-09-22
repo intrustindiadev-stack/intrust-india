@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
+import { getMerchantFeatureVisibility } from '@/lib/merchant/featureVisibility';
 
 export async function POST(request, { params }) {
     try {
@@ -8,6 +9,12 @@ export async function POST(request, { params }) {
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Super-admin feature-visibility guard: AI Orders can be hidden per merchant
+        const visibility = await getMerchantFeatureVisibility(user.id);
+        if (!visibility.showAiOrders) {
+            return NextResponse.json({ error: 'Feature disabled by administrator' }, { status: 403 });
         }
 
         const body = await request.json();

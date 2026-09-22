@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { Warehouse, Package, ShoppingCart, Gift, Wallet, CreditCard, BarChart3, Zap, ArrowRight } from 'lucide-react';
 
-export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount, pendingAIOrdersCount = 0 }) {
-    const accessItems = [
+export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount, pendingAIOrdersCount = 0, showAiOrders = false }) {
+    const allAccessItems = [
         {
             icon: <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400" />,
             label: 'Wholesale',
@@ -63,6 +63,9 @@ export default function QuickAccessGrid({ pendingUdhariCount, pendingOrdersCount
             hoverGroup: 'hover:border-cyan-300 dark:hover:border-cyan-700 hover:shadow-[0_8px_30px_rgb(8,145,178,0.12)]',
         },
     ];
+
+    // Super-admin feature-visibility gate: hide AI Orders when disabled
+    const accessItems = allAccessItems.filter((i) => showAiOrders || i.label !== 'AI Orders');
 
     return (
         <section className="mb-8 relative z-10">

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { teardownTestAccount } from './teardown_helper.mjs';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -82,7 +83,7 @@ async function run() {
         pass(`API returned ${json56.orders.length} nfc orders`);
     } else fail('No nfc orders returned in API list after creation');
 
-    await cleanupData();
+    await teardownTestAccount(supabaseAdmin, { email: TEST_EMAIL });
     return { passed, failed };
 }
 

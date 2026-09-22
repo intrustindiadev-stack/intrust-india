@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, XCircle, ShieldOff, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { CheckCircle, XCircle, ShieldOff, ShieldCheck, ShoppingBag, AlertCircle, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-export default function MerchantActions({ merchantId, userId, status, hasBankData, bankVerified }) {
+export default function MerchantActions({ merchantId, userId, status, hasBankData, bankVerified, bankVerificationStatus }) {
     const [isApproving, setIsApproving] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
     const [isTogglingSuspend, setIsTogglingSuspend] = useState(false);
@@ -181,11 +181,15 @@ export default function MerchantActions({ merchantId, userId, status, hasBankDat
                             </>
                         )}
                     </button>
+                    {/* Approval is INDEPENDENT of bank verification: a merchant may
+                        be approved with no bank details on file and submit them
+                        later from the Merchant Panel. Payouts stay blocked until
+                        an admin/penny-drop verifies the account. */}
                     <button
                         onClick={handleApprove}
-                        disabled={isApproving || isRejecting || !bankVerified}
-                        title={!bankVerified ? "Bank must be verified first" : "Approve Merchant"}
-                        className={`w-full sm:w-auto px-8 py-3.5 text-sm font-black rounded-2xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 ${!bankVerified ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                        disabled={isApproving || isRejecting}
+                        title="Approve merchant and grant access to the Merchant Panel"
+                        className="w-full sm:w-auto px-8 py-3.5 text-sm font-black rounded-2xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700"
                     >
                         {isApproving ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -233,20 +237,51 @@ export default function MerchantActions({ merchantId, userId, status, hasBankDat
                 </div>
             )}
             
-            {(isApproved || isPending) && hasBankData && !bankVerified && (
-                <button
-                    onClick={handleVerifyBank}
-                    disabled={isVerifyingBank}
-                    className="flex-1 px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
-                >
-                    {isVerifyingBank ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                        <>
+            {/* Bank verification — only actionable once the merchant has actually
+                supplied details. Approval does NOT depend on this, so when the
+                bank row is missing we render the action as disabled + explain
+                why, instead of crashing / hiding the state. */}
+            {(isApproved || isPending) && !bankVerified && (
+                hasBankData ? (
+                    <button
+                        onClick={handleVerifyBank}
+                        disabled={isVerifyingBank}
+                        title="Confirm the bank account on record and mark it verified"
+                        className="flex-1 px-8 py-3.5 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                    >
+                        {isVerifyingBank ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <>
+                                <CheckCircle size={18} strokeWidth={2.5} /> Verify Bank Registry
+                            </>
+                        )}
+                    </button>
+                ) : (
+                    <>
+                        <button
+                            type="button"
+                            disabled
+                            aria-disabled="true"
+                            title="Cannot verify. Merchant has not provided bank details yet."
+                            className="flex-1 px-8 py-3.5 bg-slate-100 text-slate-400 border border-slate-200 text-sm font-black rounded-2xl flex items-center justify-center gap-2 cursor-not-allowed"
+                        >
                             <CheckCircle size={18} strokeWidth={2.5} /> Verify Bank Registry
-                        </>
-                    )}
-                </button>
+                        </button>
+                        <span className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                            <AlertCircle size={14} strokeWidth={2.5} className="shrink-0" />
+                            Bank Details Missing (Pending Merchant Submission)
+                        </span>
+                    </>
+                )
+            )}
+
+            {/* Details submitted, waiting on a human — distinct from "missing". */}
+            {(isApproved || isPending) && !bankVerified && hasBankData && bankVerificationStatus === 'pending' && (
+                <span className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    <Clock size={14} strokeWidth={2.5} className="shrink-0" />
+                    Submitted — Awaiting Verification
+                </span>
             )}
 
             {bankVerified && (

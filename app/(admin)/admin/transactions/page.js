@@ -1,438 +1,276 @@
-import { Download, Activity, TrendingUp, TrendingDown, IndianRupee, Search } from "lucide-react";
-import TransactionCard from "@/components/admin/transactions/TransactionCard";
+import { Activity, IndianRupee, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import { createAdminClient } from '@/lib/supabaseServer';
-import Link from 'next/link';
+import TransactionsLedger from "@/components/admin/transactions/TransactionsLedger";
 
 export const dynamic = 'force-dynamic';
+
+function formatCategory(udf1) {
+    if (!udf1) return 'Platform Payment';
+    const map = {
+        'CART_CHECKOUT': 'Cart Checkout',
+        'MERCHANT_SUBSCRIPTION': 'Merchant Subscription',
+        'MERCHANT_TOPUP': 'Merchant Top-up',
+        'WALLET_TOPUP': 'Wallet Top-up',
+        'AI_ORDER': 'AI Order',
+        'MERCHANT_AIGROW': 'AI Grow Top-up',
+        'GIFT_CARD': 'Gift Card Order',
+        'NFC_ORDER': 'NFC Order',
+        'WHOLESALE_PURCHASE': 'Wholesale Purchase',
+        'INVOICE_PAY': 'Invoice Payment',
+        'GOLD_SUBSCRIPTION': 'Gold Subscription',
+        'UDHARI_PAYMENT': 'Udhari Settlement',
+        'MERCHANT_LOCKIN': 'Merchant Lock-in'
+    };
+    return map[udf1] || udf1.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 
 export default async function TransactionsPage({ searchParams }) {
     const supabase = createAdminClient();
     const params = await searchParams;
 
-    // Pagination
-    const page = Number(params?.page) || 1;
-    const limit = 20;
+    // Pagination & Filter Parameters
+    const page = Math.max(1, Number(params?.page) || 1);
+    const limit = 25;
     const offset = (page - 1) * limit;
-    const search = params?.search || '';
-    const statusFilter = params?.status || '';
-    const sourceFilter = params?.source || '';
+    const search = (params?.search || '').trim();
+    const statusFilter = (params?.status || '').trim();
 
-    // ──────────────── FETCH ALL 3 TABLES IN PARALLEL ────────────────
-
-    // 1. Payment Gateway transactions (Sabpaisa top-ups, gold subscriptions)
+    // ──────────────── BUILD PRIMARY TRANSACTIONS QUERY ────────────────
     let txnQuery = supabase
         .from('transactions')
-        .select('id, user_id, client_txn_id, amount, status, payer_name, payer_email, payer_mobile, udf1, udf2, created_at', { count: 'exact' })
+        .select(`
+            id,
+            client_txn_id,
+            sabpaisa_txn_id,
+            amount,
+            paid_amount,
+            paid_amount_paise,
+            total_paid_paise,
+            currency,
+            status,
+            payment_mode,
+            bank_name,
+            bank_txn_id,
+            rrn,
+            payer_name,
+            payer_email,
+            payer_mobile,
+            udf1,
+            udf2,
+            created_at,
+            completed_at,
+            refund_status,
+            user:user_profiles(id, full_name, email, phone, role, avatar_url)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
-    // 2. Orders (gift card purchases)
-    let ordersQuery = supabase
-        .from('orders')
-        .select('id, user_id, amount, payment_status, created_at, giftcard_id', { count: 'exact' })
-        .order('created_at', { ascending: false });
+    // Status Filter (matching PostgreSQL enum transaction_status)
+    if (statusFilter === 'Success') {
+        txnQuery = txnQuery.in('status', ['gateway_success', 'completed']);
+    } else if (statusFilter === 'Failed') {
+        txnQuery = txnQuery.in('status', ['failed', 'aborted']);
+    } else if (statusFilter === 'Pending') {
+        txnQuery = txnQuery.in('status', ['initiated', 'pending']);
+    } else if (statusFilter === 'Refunded') {
+        txnQuery = txnQuery.eq('status', 'refunded');
+    } else if (statusFilter) {
+        txnQuery = txnQuery.eq('status', statusFilter.toLowerCase());
+    }
 
-    // 3. Customer wallet transactions (wallet credits/debits)
-    let walletQuery = supabase
-        .from('customer_wallet_transactions')
-        .select('id, user_id, amount_paise, type, description, reference_id, reference_type, created_at', { count: 'exact' })
-        .order('created_at', { ascending: false });
+    // Search Filter
+    if (search) {
+        // Query user_profiles to match by user name, email, or phone
+        const { data: matchedUsers } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`)
+            .limit(50);
 
-    // 4. Merchant transactions
-    let merchantTxnQuery = supabase
-        .from('merchant_transactions')
-        .select('id, merchant_id, transaction_type, amount_paise, description, created_at, metadata', { count: 'exact' })
-        .order('created_at', { ascending: false });
+        const matchedIds = (matchedUsers || []).map(u => u.id).filter(Boolean);
 
-    // 5. Wallet adjustments (admin-issued credits/debits)
-    let walletAdjQuery = supabase
-        .from('wallet_adjustment_logs')
-        .select('id, target_user_id, admin_user_id, operation, amount_paise, reason, wallet_type, status, created_at', { count: 'exact' })
-        .order('created_at', { ascending: false });
+        const orClauses = [
+            `client_txn_id.ilike.%${search}%`,
+            `sabpaisa_txn_id.ilike.%${search}%`,
+            `payer_name.ilike.%${search}%`,
+            `payer_email.ilike.%${search}%`,
+            `payer_mobile.ilike.%${search}%`,
+            `udf1.ilike.%${search}%`
+        ];
 
-    const [txnResult, ordersResult, walletResult, merchantTxnResult, walletAdjResult] = await Promise.all([
+        if (matchedIds.length > 0) {
+            orClauses.push(`user_id.in.(${matchedIds.join(',')})`);
+        }
+
+        txnQuery = txnQuery.or(orClauses.join(','));
+    }
+
+    // Apply database pagination
+    txnQuery = txnQuery.range(offset, offset + limit - 1);
+
+    // ──────────────── FETCH TRANSACTIONS & SUMMARY STATS ────────────────
+    const [txnResult, statsResult] = await Promise.all([
         txnQuery,
-        ordersQuery,
-        walletQuery,
-        merchantTxnQuery,
-        walletAdjQuery,
+        supabase
+            .from('transactions')
+            .select('amount, paid_amount, paid_amount_paise, total_paid_paise, status, created_at')
     ]);
 
     const rawTxns = txnResult.data || [];
-    const rawOrders = ordersResult.data || [];
-    const rawWallet = walletResult.data || [];
-    const rawMerchantTxns = merchantTxnResult.data || [];
-    const rawWalletAdj = walletAdjResult.data || [];
+    const totalCount = txnResult.count || 0;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
-    // ──────────────── FETCH USER PROFILES ────────────────
-    const allUserIds = [
-        ...new Set([
-            ...rawTxns.map(t => t.user_id),
-            ...rawOrders.map(o => o.user_id),
-            ...rawWallet.map(w => w.user_id),
-            ...rawWalletAdj.map(a => a.target_user_id),
-        ].filter(Boolean))
-    ];
-
-    let profileMap = {};
-    if (allUserIds.length > 0) {
-        // Supabase IN supports up to ~300 IDs; chunk if needed
-        const { data: profiles } = await supabase
-            .from('user_profiles')
-            .select('id, full_name, email, role')
-            .in('id', allUserIds.slice(0, 300));
-        profiles?.forEach(p => { profileMap[p.id] = p; });
-    }
-
-    // ──────────────── FETCH MERCHANT PROFILES ────────────────
-    const allMerchantIds = [
-        ...new Set(rawMerchantTxns.map(t => t.merchant_id).filter(Boolean))
-    ];
-
-    let merchantMap = {};
-    if (allMerchantIds.length > 0) {
-        const { data: merchants } = await supabase
-            .from('merchants')
-            .select('id, business_name')
-            .in('id', allMerchantIds.slice(0, 300));
-        merchants?.forEach(m => { merchantMap[m.id] = m; });
-    }
-
-    // ──────────────── BUILD TXN ID MAP (for wallet reference lookups) ────────────────
-    const txnIdMap = {};
-    rawTxns.forEach(t => {
-        txnIdMap[t.id] = t.client_txn_id || t.id;
-    });
-
-    // ──────────────── NORMALIZE INTO UNIFIED FORMAT ────────────────
-    const unified = [];
-
-    // Gateway transactions
-    rawTxns.forEach(t => {
-        const profile = profileMap[t.user_id] || {};
-        const status = (t.status || '').toUpperCase();
-        const isSuccess = status === 'SUCCESS' || status === 'COMPLETED' || status === 'GATEWAY_SUCCESS';
-        const isFail = status === 'FAILED' || status === 'FAILURE' || status === 'ABORTED';
-
-        unified.push({
-            id: t.client_txn_id || t.id,
-            rawId: t.id,
-            user: profile.full_name || t.payer_name || 'Unknown',
-            email: profile.email || t.payer_email || '',
-            role: profile.role || 'user',
-            amountRaw: t.amount || 0,
-            amount: `₹${(t.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            date: new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            dateRaw: t.created_at,
-            status: isSuccess ? 'Success' : isFail ? 'Failed' : 'Processing',
-            type: 'Credit',
-            source: 'Payment Gateway',
-            description: t.udf1 || 'Wallet Top-up',
-        });
-    });
-
-    // Orders
-    rawOrders.forEach(o => {
-        const profile = profileMap[o.user_id] || {};
-        const isSuccess = o.payment_status === 'paid';
-        const isFail = o.payment_status === 'failed';
-
-        unified.push({
-            id: o.id.slice(0, 12),
-            rawId: o.id,
-            user: profile.full_name || profile.email || 'Unknown',
-            email: profile.email || '',
-            role: profile.role || 'user',
-            amountRaw: (o.amount || 0) / 100,
-            amount: `₹${((o.amount || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            date: new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            dateRaw: o.created_at,
-            status: isSuccess ? 'Success' : isFail ? 'Failed' : 'Processing',
-            type: 'Credit',
-            source: 'Gift Card Order',
-            description: 'Gift Card Purchase',
-        });
-    });
-
-    // Wallet transactions
-    rawWallet.forEach(w => {
-        const profile = profileMap[w.user_id] || {};
-        const isCredit = w.type === 'credit';
-
-        // Only show ID if it resolves to a real Sabpaisa TXN ID
-        const mappedTxnId = w.reference_id ? txnIdMap[w.reference_id] : null;
-        const resolvedId = mappedTxnId || null;
-
-        unified.push({
-            id: resolvedId,
-            rawId: w.id,
-            user: profile.full_name || profile.email || 'Unknown',
-            email: profile.email || '',
-            role: profile.role || 'user',
-            amountRaw: (w.amount_paise || 0) / 100,
-            amount: `₹${((w.amount_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            date: new Date(w.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            dateRaw: w.created_at,
-            status: 'Success',
-            type: isCredit ? 'Credit' : 'Debit',
-            source: w.reference_type === 'UDHARI_PAYMENT' ? 'Udhari Settlement' : 'Wallet',
-            description: w.description || (isCredit ? 'Wallet Credit' : 'Wallet Debit'),
-        });
-    });
-
-    // Merchant transactions
-    rawMerchantTxns.forEach(t => {
-        const merchantInfo = merchantMap[t.merchant_id] || {};
-        const isCredit = ['wallet_topup', 'udhari_payment'].includes(t.transaction_type);
-
-        unified.push({
-            id: t.id.slice(0, 12),
-            rawId: t.id,
-            user: merchantInfo.business_name || 'Unknown Merchant',
-            email: '',
-            role: 'merchant',
-            amountRaw: (t.amount_paise || 0) / 100,
-            amount: `₹${((t.amount_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            date: new Date(t.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            dateRaw: t.created_at,
-            status: 'Success',
-            type: isCredit ? 'Credit' : 'Debit',
-            source: 'Merchant Wallet',
-            description: t.description || t.transaction_type || 'Merchant Transaction',
-        });
-    });
-
-    // Wallet adjustments (admin-issued)
-    rawWalletAdj.forEach(a => {
-        const profile = profileMap[a.target_user_id] || {};
-        const isCredit = a.operation === 'credit';
-        const adjStatus = a.status === 'completed' ? 'Success' : a.status === 'failed' ? 'Failed' : 'Processing';
-
-        unified.push({
-            id: a.id.slice(0, 12),
-            rawId: a.id,
-            user: profile.full_name || profile.email || 'Unknown',
-            email: profile.email || '',
-            role: profile.role || 'user',
-            amountRaw: (a.amount_paise || 0) / 100,
-            amount: `₹${((a.amount_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-            date: new Date(a.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            dateRaw: a.created_at,
-            status: adjStatus,
-            type: isCredit ? 'Credit' : 'Debit',
-            source: 'Wallet Adjustment',
-            description: a.reason || `Admin ${a.operation} (${a.wallet_type || 'customer'} wallet)`,
-        });
-    });
-
-    // Sort all by date (newest first)
-    unified.sort((a, b) => new Date(b.dateRaw) - new Date(a.dateRaw));
-
-    // ──────────────── FILTERING ────────────────
-    let filtered = unified;
-
-    if (search) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(t =>
-            t.user.toLowerCase().includes(s) ||
-            t.email.toLowerCase().includes(s) ||
-            (t.id && t.id.toLowerCase().includes(s)) ||
-            t.description.toLowerCase().includes(s)
-        );
-    }
-    if (statusFilter) {
-        filtered = filtered.filter(t => t.status === statusFilter);
-    }
-    if (sourceFilter) {
-        filtered = filtered.filter(t => t.source === sourceFilter);
-    }
-
-    // ──────────────── STATS (from full dataset before pagination) ────────────────
-    const totalCredits = filtered.filter(t => t.type === 'Credit' && t.status === 'Success').reduce((s, t) => s + t.amountRaw, 0);
-    const totalDebits = filtered.filter(t => t.type === 'Debit' && t.status === 'Success').reduce((s, t) => s + t.amountRaw, 0);
-
-    // Today's Revenue Calculation
+    // Calculate Summary KPIs
+    const allRows = statsResult.data || [];
     const todayStr = new Date().toISOString().split('T')[0];
-    const todaysRevenue = filtered.filter(t =>
-        t.type === 'Credit' &&
-        t.status === 'Success' &&
-        (t.dateRaw || '').startsWith(todayStr)
-    ).reduce((s, t) => s + t.amountRaw, 0);
+    let totalSuccessfulVolume = 0;
+    let successfulCount = 0;
+    let pendingCount = 0;
+    let todaysRevenue = 0;
 
-    const successCount = filtered.filter(t => t.status === 'Success').length;
-    const failedCount = filtered.filter(t => t.status === 'Failed').length;
+    allRows.forEach(r => {
+        const s = r.status;
+        const isSuccess = s === 'gateway_success' || s === 'completed';
+        const isPending = s === 'initiated' || s === 'pending';
+        const amt = Number(r.amount) || (r.paid_amount_paise ? Number(r.paid_amount_paise) / 100 : (r.total_paid_paise ? Number(r.total_paid_paise) / 100 : Number(r.paid_amount) || 0));
 
-    // ──────────────── PAGINATE ────────────────
-    const totalCount = filtered.length;
-    const totalPages = Math.ceil(totalCount / limit);
-    const paginated = filtered.slice(offset, offset + limit);
+        if (isSuccess) {
+            totalSuccessfulVolume += amt;
+            successfulCount++;
+            if ((r.created_at || '').startsWith(todayStr)) {
+                todaysRevenue += amt;
+            }
+        } else if (isPending) {
+            pendingCount++;
+        }
+    });
 
-    // ──────────────── BUILD SEARCH PARAMS ────────────────
-    const buildUrl = (overrides) => {
-        const p = new URLSearchParams();
-        const newPage = overrides.page ?? page;
-        const newSearch = overrides.search ?? search;
-        const newStatus = overrides.status ?? statusFilter;
-        const newSource = overrides.source ?? sourceFilter;
-        if (newPage > 1) p.set('page', newPage.toString());
-        if (newSearch) p.set('search', newSearch);
-        if (newStatus) p.set('status', newStatus);
-        if (newSource) p.set('source', newSource);
-        const qs = p.toString();
-        return `/admin/transactions${qs ? '?' + qs : ''}`;
-    };
+    // ──────────────── NORMALIZE TRANSACTIONS FOR LEDGER ────────────────
+    const transactions = rawTxns.map(t => {
+        const rawAmount = Number(t.amount) || (t.paid_amount_paise ? Number(t.paid_amount_paise) / 100 : (t.total_paid_paise ? Number(t.total_paid_paise) / 100 : Number(t.paid_amount) || 0));
+
+        const isSuccess = t.status === 'gateway_success' || t.status === 'completed';
+        const isFailed = t.status === 'failed' || t.status === 'aborted';
+        const isRefunded = t.status === 'refunded';
+
+        const statusNorm = isSuccess ? 'Success' : isFailed ? 'Failed' : isRefunded ? 'Refunded' : 'Pending';
+
+        const userName = t.user?.full_name?.trim() 
+            || t.payer_name?.trim() 
+            || (t.user?.email ? t.user.email.split('@')[0] : null) 
+            || (t.payer_email ? t.payer_email.split('@')[0] : null) 
+            || 'Unknown User';
+
+        const createdDate = new Date(t.created_at);
+        const dateFormatted = !isNaN(createdDate.getTime())
+            ? createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—';
+        const timeFormatted = !isNaN(createdDate.getTime())
+            ? createdDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+            : '';
+
+        return {
+            rawId: t.id,
+            clientTxnId: t.client_txn_id,
+            sabpaisaTxnId: t.sabpaisa_txn_id,
+            bankTxnId: t.bank_txn_id,
+            amount: rawAmount,
+            amountFormatted: `₹${rawAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            currency: t.currency || 'INR',
+            status: statusNorm,
+            rawStatus: t.status,
+            type: isRefunded ? 'Debit' : 'Credit',
+            paymentMode: t.payment_mode || '',
+            bankName: t.bank_name || '',
+            description: formatCategory(t.udf1),
+            dateRaw: t.created_at,
+            dateFormatted,
+            timeFormatted,
+            userName,
+            userEmail: t.user?.email || t.payer_email || '',
+            userPhone: t.user?.phone || t.payer_mobile || '',
+            userRole: t.user?.role || null,
+            userAvatar: t.user?.avatar_url || null,
+            payerName: t.payer_name || '',
+            payerEmail: t.payer_email || '',
+            payerMobile: t.payer_mobile || ''
+        };
+    });
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto font-[family-name:var(--font-outfit)] space-y-8">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto font-[family-name:var(--font-outfit)] space-y-6 sm:space-y-8">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="space-y-1">
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-                        <Activity className="text-blue-500 w-10 h-10" />
-                        Transactions
+                        <Activity className="text-blue-600 w-9 h-9" />
+                        Transactions Ledger
                     </h1>
                     <p className="text-slate-500 font-medium text-sm sm:text-base">
-                        Monitor all platform payments, orders, and wallet activity.
+                        Real-time audit log of payments, checkouts, and platform gateway volume.
                     </p>
                 </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                {/* Total Transactions */}
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-blue-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                     <div className="relative">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Transactions</p>
-                        <p className="text-3xl font-extrabold text-slate-900">{totalCount.toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Records</p>
+                        <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{allRows.length.toLocaleString('en-IN')}</p>
+                        <p className="text-xs font-semibold text-slate-400 mt-1">Platform-wide</p>
                     </div>
                 </div>
-                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+
+                {/* Total Revenue */}
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                     <div className="relative">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Credits</p>
-                        <p className="text-2xl font-extrabold text-emerald-600">₹{totalCredits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-xs font-bold text-emerald-500 mt-1">{successCount} successful</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Settled</p>
+                        <p className="text-xl sm:text-2xl font-extrabold text-emerald-600">
+                            ₹{totalSuccessfulVolume.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                            <CheckCircle2 size={12} /> {successfulCount} successful
+                        </p>
                     </div>
                 </div>
-                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+
+                {/* Today's Inflow */}
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-teal-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                     <div className="relative">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Today's Revenue</p>
-                        <p className="text-2xl font-extrabold text-teal-600">₹{todaysRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Today's Inflow</p>
+                        <p className="text-xl sm:text-2xl font-extrabold text-teal-600">
+                            ₹{todaysRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs font-semibold text-slate-400 mt-1">Today ({todayStr})</p>
                     </div>
                 </div>
-                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-indigo-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
+
+                {/* Pending */}
+                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-amber-50 rounded-full group-hover:scale-110 transition-transform duration-500" />
                     <div className="relative">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Net Flow</p>
-                        <p className={`text-2xl font-extrabold ${totalCredits - totalDebits >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            ₹{(totalCredits - totalDebits).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">In-Flight / Pending</p>
+                        <p className="text-xl sm:text-2xl font-extrabold text-amber-600">{pendingCount.toLocaleString('en-IN')}</p>
+                        <p className="text-xs font-semibold text-slate-400 mt-1 flex items-center gap-1">
+                            <Clock size={12} /> Awaiting gateway
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Search & Filters */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <form className="relative flex-1 w-full sm:max-w-sm" action="/admin/transactions" method="GET">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                        type="text"
-                        name="search"
-                        placeholder="Search by name, email, or ID..."
-                        defaultValue={search}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm"
-                    />
-                    {/* Preserve other filters */}
-                    {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
-                    {sourceFilter && <input type="hidden" name="source" value={sourceFilter} />}
-                </form>
-                <div className="w-full overflow-x-auto no-scrollbar pb-2">
-                    <div className="flex gap-2 min-w-max">
-                        {/* Status filter pills */}
-                        {['', 'Success', 'Failed', 'Processing'].map(s => (
-                            <Link
-                                key={`status-${s}`}
-                                href={buildUrl({ status: s, page: 1 })}
-                                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${statusFilter === s
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
-                                    }`}
-                            >
-                                {s || 'All Status'}
-                            </Link>
-                        ))}
-                        <span className="text-slate-200 self-center px-1">|</span>
-                        {/* Source filter pills */}
-                        {['', 'Payment Gateway', 'Gift Card Order', 'Wallet', 'Merchant Wallet', 'Wallet Adjustment'].map(s => (
-                            <Link
-                                key={`source-${s}`}
-                                href={buildUrl({ source: s, page: 1 })}
-                                className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider border transition-all whitespace-nowrap ${sourceFilter === s
-                                        ? (s === 'Wallet Adjustment' ? 'bg-violet-700 text-white border-violet-700 shadow-md' : 'bg-slate-900 text-white border-slate-900 shadow-md')
-                                        : (s === 'Wallet Adjustment' ? 'bg-violet-50 text-violet-700 border-violet-100 hover:border-violet-400' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800')
-                                    }`}
-                            >
-                                {s || 'All Sources'}
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Transactions Grid */}
-            {paginated.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm">
-                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Activity size={32} className="text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-1">No transactions found</h3>
-                    <p className="text-slate-500 font-medium">
-                        {search || statusFilter || sourceFilter
-                            ? 'Try adjusting your filters.'
-                            : 'Activities will appear here once users start transacting.'}
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {paginated.map((txn, idx) => (
-                        <TransactionCard key={`${txn.source}-${txn.rawId}-${idx}`} txn={txn} />
-                    ))}
-                </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 sm:px-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <div className="text-sm font-medium text-slate-500">
-                        Showing <span className="font-bold text-slate-900">{paginated.length}</span> of <span className="font-bold text-slate-900">{totalCount}</span> transactions
-                    </div>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <Link
-                            href={buildUrl({ page: Math.max(1, page - 1) })}
-                            className={`flex-1 sm:flex-none text-center px-4 py-2 rounded-xl text-sm font-bold transition-all ${page <= 1
-                                ? 'border border-slate-100 text-slate-400 pointer-events-none bg-slate-50'
-                                : 'border border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 bg-white shadow-sm'
-                                }`}
-                            aria-disabled={page <= 1}
-                        >
-                            Previous
-                        </Link>
-                        <span className="flex items-center px-3 text-sm font-bold text-slate-500">
-                            Page {page} of {totalPages}
-                        </span>
-                        <Link
-                            href={buildUrl({ page: Math.min(totalPages, page + 1) })}
-                            className={`flex-1 sm:flex-none text-center px-4 py-2 rounded-xl text-sm font-bold transition-all ${page >= totalPages
-                                ? 'border border-slate-100 text-slate-400 pointer-events-none bg-slate-50'
-                                : 'border border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 bg-white shadow-sm'
-                                }`}
-                            aria-disabled={page >= totalPages}
-                        >
-                            Next
-                        </Link>
-                    </div>
-                </div>
-            )}
+            {/* Main Ledger Component (Desktop Data Table + Mobile High-Density List) */}
+            <TransactionsLedger
+                transactions={transactions}
+                totalCount={totalCount}
+                page={page}
+                totalPages={totalPages}
+                search={search}
+                statusFilter={statusFilter}
+            />
         </div>
     );
 }

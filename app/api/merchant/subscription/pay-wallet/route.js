@@ -74,6 +74,31 @@ export async function POST(request) {
             ? idempotencyKey.trim()
             : `WALLET-MSUB-${Date.now()}-${user.id.slice(0, 8)}`;
 
+        // 4b. Pending gateway payment guard
+        // Prevent paying from wallet if a SabPaisa subscription transaction is already in flight (< 30 min)
+        const pendingCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+        const { data: pendingTxn } = await adminSupabase
+            .from('transactions')
+            .select('id, client_txn_id, created_at')
+            .eq('udf1', 'MERCHANT_SUBSCRIPTION')
+            .eq('udf2', merchant.id)
+            .eq('status', 'initiated')
+            .gt('created_at', pendingCutoff)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (pendingTxn) {
+            console.warn(`[API][pay-wallet] Blocked wallet payment for merchant ${merchant.id} — pending SabPaisa txn ${pendingTxn.client_txn_id} exists.`);
+            return NextResponse.json({
+                success: false,
+                error: 'PAYMENT_PENDING',
+                message: 'A payment for this subscription is already in progress via payment gateway. Please wait a few minutes or check its status before paying with wallet.',
+                pendingTxnId: pendingTxn.client_txn_id,
+                pendingSince: pendingTxn.created_at
+            }, { status: 409 });
+        }
+
         // 5. Execute atomic server-side payment RPC
         const { data: result, error: rpcError } = await adminSupabase.rpc('pay_merchant_subscription_with_wallet', {
             p_merchant_id: merchant.id,

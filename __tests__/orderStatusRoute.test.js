@@ -176,4 +176,27 @@ describe('Order Status Route (PATCH /api/orders/[orderId]/status)', () => {
         expect(json.success).toBe(false);
         expect(json.message).toBe('Unauthorized: Access denied');
     });
+
+    test('successfully notifies customer via WhatsApp when status is confirmed', async () => {
+        const { notifyCustomerOrderStatus } = require('@/lib/notifications/userWhatsapp');
+        const req = new Request('http://localhost:3000/api/orders/order-uuid-1/status', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                newStatus: 'confirmed',
+                isAdmin: true
+            })
+        });
+
+        const res = await PATCH(req, { params: Promise.resolve({ orderId: 'order-uuid-1' }) });
+        const json = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(json.success).toBe(true);
+        expect(notifyCustomerOrderStatus).toHaveBeenCalledWith({
+            userId: 'cust-123',
+            orderId: 'ORDER-UU',
+            newStatus: 'Confirmed'
+        });
+    });
 });

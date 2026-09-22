@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useMerchant } from '@/hooks/useMerchant';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { displayEmail } from '@/lib/auth';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
@@ -27,6 +28,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
 import InstaVerifiedBadge from '@/components/ui/InstaVerifiedBadge';
+import { pickDirtyFields } from '@/lib/utils';
 
 function AvatarUpload({ userId, avatarUrl, displayName, isVerified, onUpload }) {
     const [uploading, setUploading] = useState(false);
@@ -85,6 +87,7 @@ function AvatarUpload({ userId, avatarUrl, displayName, isVerified, onUpload }) 
 
 export default function ProfilePage() {
     const { merchant, loading: merchantLoading, error: merchantError } = useMerchant();
+    const { signOut } = useAuth();
     const { isSubscribed, requireSubscription } = useSubscription();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -184,27 +187,28 @@ export default function ProfilePage() {
             const isReservedName = formData.business_name.trim().toLowerCase() === 'intrust';
             const isNameChanged = formData.business_name !== merchant?.business_name;
             
-            const merchantUpdatePayload = {
+            // Update Merchants Table — only send fields that actually changed.
+            // Sending the whole form back can trip the merchants_sensitive_column_guard
+            // DB trigger for columns the user never touched.
+            const merchantUpdatePayload = pickDirtyFields({
                 gst_number: formData.gst_number,
                 owner_name: formData.owner_name,
                 business_phone: formData.business_phone,
                 business_email: formData.business_email,
                 business_address: formData.business_address,
                 department: formData.department || 'general',
-                shopping_banner_url: formData.shopping_banner_url
-            };
+                shopping_banner_url: formData.shopping_banner_url,
+                ...(!(isReservedName && isNameChanged) ? { business_name: formData.business_name } : {}),
+            }, merchant);
 
-            if (!(isReservedName && isNameChanged)) {
-                merchantUpdatePayload.business_name = formData.business_name;
+            if (Object.keys(merchantUpdatePayload).length > 0) {
+                const { error: merchantUpdateError } = await supabase
+                    .from('merchants')
+                    .update(merchantUpdatePayload)
+                    .eq('id', merchant.id);
+
+                if (merchantUpdateError) throw merchantUpdateError;
             }
-
-            // Update Merchants Table
-            const { error: merchantUpdateError } = await supabase
-                .from('merchants')
-                .update(merchantUpdatePayload)
-                .eq('id', merchant.id);
-
-            if (merchantUpdateError) throw merchantUpdateError;
 
             // Update user_profiles Table
             const profileUpdatePayload = {
@@ -236,8 +240,20 @@ export default function ProfilePage() {
     };
 
     const confirmLogout = async () => {
-        await supabase.auth.signOut();
-        window.location.href = "/login";
+        try {
+            // Use the AuthContext signOut — it clears the client session AND
+            // POSTs /auth/logout to purge the server-side HttpOnly cookie jar.
+            await signOut();
+            // Navigate, then purge the Next.js client-side Router Cache so cached
+            // Server Component payloads rendered under the old session are dropped
+            // instantly — no stale "logged in" UI, no manual browser refresh needed.
+            router.push('/login');
+            router.refresh();
+        } catch (err) {
+            console.error('Logout error:', err);
+            router.push('/login');
+            router.refresh();
+        }
     };
 
     if (merchantLoading) {

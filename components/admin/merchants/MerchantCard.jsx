@@ -176,18 +176,40 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                             </button>
                         )}
 
-                        {/* Bank Verification */}
-                        {(isApproved || isPending) && merchant.hasBankData && !merchant.bankVerified && onVerifyBank && (
-                            <button
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onVerifyBank(merchant.id); }}
-                                disabled={isVerifyingBank === merchant.id}
-                                className="flex items-center gap-2 px-4 py-2 text-xs font-black bg-blue-600 text-white rounded-2xl transition-all shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 disabled:opacity-50"
-                            >
-                                {isVerifyingBank === merchant.id
-                                    ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    : <CheckCircle size={14} strokeWidth={3} />}
-                                Verify Bank
-                            </button>
+                        {/* Bank Verification — approval is decoupled from bank data, so a
+                            missing bank row renders a DISABLED action + badge instead of
+                            silently hiding the state (which previously made it look like
+                            the button had simply disappeared). */}
+                        {(isApproved || isPending) && !merchant.bankVerified && onVerifyBank && (
+                            merchant.hasBankData ? (
+                                <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onVerifyBank(merchant.id); }}
+                                    disabled={isVerifyingBank === merchant.id}
+                                    title="Confirm the bank account on record and mark it verified"
+                                    className="flex items-center gap-2 px-4 py-2 text-xs font-black bg-blue-600 text-white rounded-2xl transition-all shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 disabled:opacity-50"
+                                >
+                                    {isVerifyingBank === merchant.id
+                                        ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        : <CheckCircle size={14} strokeWidth={3} />}
+                                    Verify Bank
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        disabled
+                                        aria-disabled="true"
+                                        title="Cannot verify. Merchant has not provided bank details yet."
+                                        className="flex items-center gap-2 px-4 py-2 text-xs font-black bg-slate-100 text-slate-400 border border-slate-200 rounded-2xl cursor-not-allowed"
+                                    >
+                                        <AlertCircle size={14} strokeWidth={3} /> Verify Bank
+                                    </button>
+                                    <div className="flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl text-center leading-tight">
+                                        <AlertCircle size={12} strokeWidth={3} className="shrink-0" />
+                                        Bank Details Missing (Pending Merchant Submission)
+                                    </div>
+                                </>
+                            )
                         )}
 
                         {merchant.bankVerified && (

@@ -193,7 +193,7 @@ export default function KYCForm({
             return next;
         });
         setTermsOpen(false);
-        toast.success('Terms accepted. Signed copy attached.');
+        toast.success('Terms accepted successfully. Your agreement has been securely recorded.');
     }, [termsDoc, formData]);
 
     /** @type {Object<string, string>} */
@@ -319,7 +319,8 @@ export default function KYCForm({
 
         if (!validation.valid) {
             setErrors(validation.errors);
-            toast.error('Please fix the errors before continuing');
+            const firstError = Object.values(validation.errors)[0];
+            toast.error(firstError || 'Please fix the errors before continuing');
             return;
         }
 
@@ -342,7 +343,8 @@ export default function KYCForm({
             const validation = validateStep3(formData);
             if (!validation.valid) {
                 setErrors(validation.errors);
-                toast.error('Please fix the errors before submitting');
+                const firstErr = Object.values(validation.errors)[0];
+                toast.error(firstErr || 'Some fields need your attention before submitting');
                 return;
             }
 
@@ -404,6 +406,19 @@ export default function KYCForm({
         [formData, onError, agreement]
     );
 
+    // ─── Step-aware Form Submit (prevents Enter key on Step 1/2 from triggering Step 3 validation) ───
+    const handleFormSubmit = useCallback(
+        (/** @type {React.FormEvent<HTMLFormElement>} */ e) => {
+            e.preventDefault();
+            if (currentStep < 3) {
+                handleNext();
+            } else {
+                handleSubmit(e);
+            }
+        },
+        [currentStep, handleNext, handleSubmit]
+    );
+
     // ─── Render ───
     return (
         <>
@@ -415,7 +430,7 @@ export default function KYCForm({
 
                 {/* Form card */}
                 <form
-                    onSubmit={handleSubmit}
+                    onSubmit={handleFormSubmit}
                     className="bg-white shadow-[0_2px_16px_rgba(0,0,0,0.08)] rounded-[16px] p-6 sm:p-8 relative"
                 >
                     {/* Skeleton overlay while submitting */}
@@ -545,6 +560,7 @@ export default function KYCForm({
                 loading={termsLoading}
                 onClose={() => setTermsOpen(false)}
                 onAccept={handleTermsAccepted}
+                alreadyAccepted={formData.termsAccepted === true}
             />
         </>
     );

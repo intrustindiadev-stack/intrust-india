@@ -53,6 +53,10 @@ export default function MerchantSubscriptionPayButton({
     const [walletBalancePaise, setWalletBalancePaise] = useState(null);
     const [walletLoading, setWalletLoading] = useState(true);
     const [walletPaymentSuccess, setWalletPaymentSuccess] = useState(null);
+    // Tracks an in-flight SabPaisa transaction that hasn't been confirmed yet.
+    // If set, we warn the merchant not to pay again.
+    const [pendingTxnWarning, setPendingTxnWarning] = useState(null);
+    const [checkingPendingStatus, setCheckingPendingStatus] = useState(false);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -97,6 +101,68 @@ export default function MerchantSubscriptionPayButton({
         return () => { isMounted = false; };
     }, []);
 
+    // Check for any in-flight SabPaisa subscription transaction (initiated, < 30 min old).
+    // If one exists, warn the merchant and block a fresh SabPaisa payment.
+    useEffect(() => {
+        if (!merchantId) return;
+        let isMounted = true;
+        async function checkPendingTxn() {
+            try {
+                const res = await fetch(`/api/merchant/subscription/pending-check?merchantId=${merchantId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (isMounted && data?.pending) {
+                        setPendingTxnWarning(data);
+                    }
+                }
+            } catch (err) {
+                console.error('[MerchantSub] Failed to check pending txn:', err);
+            }
+        }
+        checkPendingTxn();
+        return () => { isMounted = false; };
+    }, [merchantId]);
+
+    const handleCheckPendingStatus = async () => {
+        if (!merchantId) return;
+        setCheckingPendingStatus(true);
+        try {
+            const res = await fetch(`/api/merchant/subscription/pending-check?merchantId=${merchantId}&verify=true`);
+            const data = await res.json();
+
+            if (data?.resolved && data?.status === 'success') {
+                toast.success('Payment confirmed! Your subscription is active 🎉');
+                setPendingTxnWarning(null);
+                setTimeout(() => {
+                    router.refresh();
+                    if (onClose) onClose();
+                    else window.location.reload();
+                }, 1500);
+                return;
+            }
+
+            if (data?.resolved && (data?.status === 'failed' || data?.status === 'aborted')) {
+                toast.info('The previous payment attempt was not completed. You can now try paying again.');
+                setPendingTxnWarning(null);
+                setError(null);
+                return;
+            }
+
+            if (data?.pending) {
+                toast.info(data.message || 'Payment is still being processed by the gateway. Please wait a moment.');
+                setPendingTxnWarning(data);
+            } else {
+                setPendingTxnWarning(null);
+                toast.success('Status updated. You may now proceed.');
+            }
+        } catch (err) {
+            console.error('[MerchantSub] Status verification error:', err);
+            toast.error('Could not verify status. Please try again.');
+        } finally {
+            setCheckingPendingStatus(false);
+        }
+    };
+
     const currentExpiry = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : null;
     const isExpired = currentExpiry && currentExpiry < new Date();
     const expiryFormatted = currentExpiry
@@ -112,6 +178,11 @@ export default function MerchantSubscriptionPayButton({
 
     // ── Wallet Payment Handler ──
     const handleWalletPay = async () => {
+        if (pendingTxnWarning?.pending) {
+            setError('A payment is already being processed via gateway. Please verify its status before paying with wallet.');
+            return;
+        }
+
         if (!selectedPlan) {
             setError('Please select a subscription plan.');
             return;
@@ -145,6 +216,11 @@ export default function MerchantSubscriptionPayButton({
             const data = await res.json();
 
             if (!res.ok || !data.success) {
+                if (res.status === 409 && data.error === 'PAYMENT_PENDING') {
+                    setPendingTxnWarning({ pending: true, pendingTxnId: data.pendingTxnId, pendingSince: data.pendingSince });
+                    setError(data.message);
+                    return;
+                }
                 const message = data.message || data.error || 'Wallet payment could not be completed. No funds were deducted.';
                 throw new Error(message);
             }
@@ -223,6 +299,14 @@ export default function MerchantSubscriptionPayButton({
             const data = await res.json();
 
             if (!res.ok) {
+                // 409: A payment is already in-flight — don't allow another
+                if (res.status === 409 && data.error === 'PAYMENT_PENDING') {
+                    setPendingTxnWarning({ pending: true, pendingTxnId: data.pendingTxnId, pendingSince: data.pendingSince });
+                    setError(data.message);
+                    setLoading(false);
+                    return;
+                }
+
                 const field = data.error === 'INVALID_PAYER_CONTACT'
                     ? fieldFromServerField(data.field)
                     : null;
@@ -386,6 +470,59 @@ export default function MerchantSubscriptionPayButton({
 
                     <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-2 pr-8">{headingText}</h1>
                     <p className="text-slate-600 dark:text-white/70 text-sm mb-6 pb-6 border-b border-slate-200 dark:border-white/10">{subtitleText}</p>
+
+                    {/* ── Pending Payment Warning Banner ── */}
+                    {pendingTxnWarning?.pending && (
+                        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 p-4">
+                            <div className="flex items-start gap-3">
+                                <span className="material-icons-round text-amber-500 text-xl shrink-0 mt-0.5">schedule</span>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <p className="font-bold text-amber-800 dark:text-amber-200 text-sm">
+                                            Payment Already In Progress
+                                        </p>
+                                        {pendingTxnWarning.minutesAgo !== undefined && (
+                                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-200/70 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                                                {pendingTxnWarning.minutesAgo <= 1 ? 'Just now' : `${pendingTxnWarning.minutesAgo}m ago`}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                                        We received a payment attempt that is still being confirmed by the gateway.
+                                        Please <strong>do not pay again</strong> — payment options are temporarily paused to prevent double-charging.
+                                    </p>
+                                    <div className="mt-3 flex items-center gap-3 flex-wrap">
+                                        <button
+                                            type="button"
+                                            onClick={handleCheckPendingStatus}
+                                            disabled={checkingPendingStatus}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+                                        >
+                                            {checkingPendingStatus ? (
+                                                <>
+                                                    <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    <span>Verifying Status...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-icons-round text-sm">refresh</span>
+                                                    <span>Check Status Now</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        {pendingTxnWarning.pendingTxnId && (
+                                            <span className="text-[11px] text-amber-700/80 dark:text-amber-400 font-mono truncate max-w-[200px]">
+                                                Txn: {pendingTxnWarning.pendingTxnId}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Contact prompts injected by the modal (for SabPaisa) */}
                     {paymentMethod === 'SABPAISA' && (contactPrompt || phonePrompt)}
@@ -673,7 +810,7 @@ export default function MerchantSubscriptionPayButton({
                     {paymentMethod === 'WALLET' ? (
                         <button
                             onClick={handleWalletPay}
-                            disabled={payingWallet || !selectedPlan || disablePay || !isSufficient || walletLoading}
+                            disabled={payingWallet || !selectedPlan || disablePay || !isSufficient || walletLoading || !!pendingTxnWarning?.pending}
                             className="group relative w-full py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-amber-500 text-white sm:text-slate-900 font-extrabold text-lg shadow-[0_0_15px_rgba(212,175,55,0.4)] dark:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_20px_rgba(212,175,55,0.6)] dark:hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden cursor-pointer"
                         >
                             {/* Button hover gleam */}
@@ -702,7 +839,7 @@ export default function MerchantSubscriptionPayButton({
                     ) : (
                         <button
                             onClick={handleSabPaisaSubscribe}
-                            disabled={loading || !selectedPlan || disablePay || !clientValidation.ok}
+                            disabled={loading || !selectedPlan || disablePay || !clientValidation.ok || !!pendingTxnWarning?.pending}
                             className="group relative w-full py-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-amber-500 text-white sm:text-slate-900 font-extrabold text-lg shadow-[0_0_15px_rgba(212,175,55,0.4)] dark:shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_20px_rgba(212,175,55,0.6)] dark:hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 overflow-hidden cursor-pointer"
                         >
                             {/* Button hover gleam */}

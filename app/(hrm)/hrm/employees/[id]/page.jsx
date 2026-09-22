@@ -37,10 +37,29 @@ export default function EmployeeDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     
-    // Form state for inline editing
-    const [form, setForm] = useState({});
+    // Form state for inline editing (defaults keep inputs controlled pre-fetch).
+    // NOTE: employee_id (badge) is intentionally NOT in the form — it is
+    // system-generated and read-only. It renders from `employee` below.
+    const [form, setForm] = useState({
+        phone: '', city: '', department: '', role: 'employee',
+        joining_date: '', base_salary: '', employment_type: 'full_time',
+    });
     const [saving, setSaving] = useState(false);
     const [togglingStatus, setTogglingStatus] = useState(false);
+
+    // Build the edit form from a profile row. Covers exactly the fields
+    // this page renders as editable inputs AND the API whitelist accepts
+    // (verified against production user_profiles columns). `employee_id`
+    // is excluded — system-generated, read-only, rendered from `employee`.
+    const buildForm = (data) => ({
+        phone: data.phone || '',
+        city: data.city || '',
+        department: data.department || '',
+        role: data.role || 'employee',
+        joining_date: data.joining_date || '',
+        base_salary: data.base_salary ?? '',
+        employment_type: data.employment_type || 'full_time',
+    });
 
     const fetchEmployee = useCallback(async () => {
         if (!id) return;
@@ -53,19 +72,7 @@ export default function EmployeeDetailPage() {
 
             if (error) throw error;
             setEmployee(data);
-            setForm({
-                department: data.department || '',
-                designation: data.designation || '',
-                phone: data.phone || '',
-                date_of_birth: data.date_of_birth || '',
-                gender: data.gender || '',
-                address: data.address || '',
-                blood_group: data.blood_group || '',
-                emergency_contact_name: data.emergency_contact_name || '',
-                emergency_contact_phone: data.emergency_contact_phone || '',
-                // NOTE: role, is_active, is_suspended are NOT in this form.
-                // Those require admin-level operations via secure RPCs.
-            });
+            setForm(buildForm(data));
         } catch (err) {
             console.error(err);
         } finally {
@@ -82,6 +89,10 @@ export default function EmployeeDetailPage() {
         try {
             // Use secure server-side API route instead of direct supabase.update().
             // The API route verifies HR role and only allows whitelisted fields.
+            // Only send fields the API accepts (7 buildForm keys). employee_id is
+            // system-generated + read-only and is NEVER sent — the API 400s
+            // explicit attempts. Other sensitive columns (is_suspended,
+            // kyc_status, etc.) are never sent either.
             const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/hrm/employees/${employee.id}`, {
                 method: 'PATCH',
@@ -89,12 +100,25 @@ export default function EmployeeDetailPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`,
                 },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    phone: form.phone ?? '',
+                    city: form.city ?? '',
+                    department: form.department ?? '',
+                    role: form.role ?? '',
+                    joining_date: form.joining_date ?? '',
+                    base_salary: form.base_salary ?? '',
+                    employment_type: form.employment_type ?? '',
+                }),
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error || 'Update failed');
             toast.success('Employee profile updated');
-            setEmployee(prev => ({ ...prev, ...form }));
+            if (result.profile) {
+                setEmployee(result.profile);
+                setForm(buildForm(result.profile));
+            } else {
+                setEmployee(prev => ({ ...prev, ...form }));
+            }
             setIsEditing(false);
         } catch (err) { 
             toast.error(err.message); 
@@ -184,7 +208,7 @@ export default function EmployeeDetailPage() {
                         <button 
                             onClick={() => {
                                 setIsEditing(false);
-                                setForm({ ...employee });
+                                if (employee) setForm(buildForm(employee));
                             }}
                             className="flex items-center gap-2 text-slate-600 font-bold text-sm bg-white hover:bg-slate-50 border border-slate-200 px-5 py-2.5 rounded-xl shadow-sm transition-all"
                         >
@@ -305,15 +329,20 @@ export default function EmployeeDetailPage() {
                                 <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><Shield size={18} /></div>
                                 <div className="w-full">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee ID</p>
-                                    {isEditing ? (
-                                        <input 
-                                            type="text" 
-                                            value={form.employee_id} 
-                                            onChange={e => setForm(f => ({...f, employee_id: e.target.value}))}
-                                            className="w-full mt-1 px-3 py-2 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm font-medium"
-                                        />
-                                    ) : (
-                                        <p className="font-mono font-bold text-slate-900 mt-0.5">{employee.employee_id || 'N/A'}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="font-mono font-bold text-slate-900">{employee.employee_id || 'Not assigned yet'}</p>
+                                        {employee.employee_id && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { navigator.clipboard?.writeText(employee.employee_id); toast.success('Employee ID copied'); }}
+                                                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 border border-indigo-100 rounded-lg px-2 py-0.5"
+                                            >
+                                                Copy
+                                            </button>
+                                        )}
+                                    </div>
+                                    {isEditing && (
+                                        <p className="text-[11px] text-slate-400 mt-1">System-generated — cannot be edited.</p>
                                     )}
                                 </div>
                             </div>
@@ -404,7 +433,7 @@ export default function EmployeeDetailPage() {
                         {isEditing && (
                             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
                                 <button 
-                                    onClick={() => { setIsEditing(false); setForm({ ...employee }); }}
+                                    onClick={() => { setIsEditing(false); if (employee) setForm(buildForm(employee)); }}
                                     className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
                                 >
                                     Cancel

@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ArrowLeft, Save, Loader2, IndianRupee, Clock, ShieldCheck, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
-export default function AdminUdhariSettingsPage({ params }) {
-    const merchantId = params.id;
+export default function AdminUdhariSettingsPage() {
+    // Next.js 15+ passes `params` as a Promise to client component pages —
+    // use the useParams() hook instead, which returns the resolved values.
+    const { id: merchantId } = useParams();
     const [merchant, setMerchant] = useState(null);
     const [settings, setSettings] = useState({
         udhari_enabled: false,

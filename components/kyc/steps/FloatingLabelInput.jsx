@@ -37,7 +37,7 @@ export default function FloatingLabelInput({
     const hasValue = (value !== undefined && value !== '') || rest.type === 'date';
 
     const borderClass = error
-        ? 'border-red-500 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10'
+        ? 'border-red-500 bg-red-50/20 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-500/10'
         : success
             ? 'border-green-500 focus-within:ring-4 focus-within:ring-green-500/10'
             : 'border-[#E2E8F0] focus-within:border-[#1A56DB] focus-within:ring-4 focus-within:ring-[#1A56DB]/10';
@@ -63,6 +63,7 @@ export default function FloatingLabelInput({
                     placeholder={label}
                     value={value}
                     readOnly={locked}
+                    aria-invalid={!!error}
                     rows={isTextarea ? rows : undefined}
                     {...rest}
                 />
@@ -122,8 +123,8 @@ export default function FloatingLabelInput({
 
             {/* Error message */}
             {error && (
-                <p className="text-red-400 text-xs mt-1.5 ml-1 flex items-center gap-1">
-                    <AlertCircle size={10} /> {error}
+                <p className="text-red-600 text-xs sm:text-[13px] font-medium mt-1.5 ml-1 flex items-start gap-1.5 leading-snug">
+                    <AlertCircle size={14} className="shrink-0 text-red-500 mt-0.5" /> <span>{error}</span>
                 </p>
             )}
         </div>

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { teardownTestAccount } from './teardown_helper.mjs';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -146,7 +147,7 @@ async function run() {
         fail(`Wallet debit API failed with status ${res37.status}:`, errData.error);
     }
 
-    await cleanupData();
+    await teardownTestAccount(supabaseAdmin, { email: TEST_EMAIL });
     return { passed, failed };
 }
 

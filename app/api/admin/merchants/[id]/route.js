@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 // GET /api/admin/merchants/:id — returns a single merchant's profile data
 export async function GET(request, { params }) {
     try {
-        const merchantId = params.id;
+        const { id: merchantId } = await params;
         const { user, profile, admin } = await getAuthUser(request);
 
         if (!user) {

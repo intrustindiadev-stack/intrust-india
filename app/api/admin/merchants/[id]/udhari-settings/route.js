@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request, { params }) {
     try {
-        const merchantId = params.id;
+        const { id: merchantId } = await params;
         const { user, profile, admin } = await getAuthUser(request);
 
         if (!user) {
@@ -35,7 +35,7 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
     try {
-        const merchantId = params.id;
+        const { id: merchantId } = await params;
         const body = await request.json();
         const { user, profile, admin } = await getAuthUser(request);
 

@@ -40,7 +40,8 @@ export default function AdminLayout({ children, adminProfile }) {
                         <div className="flex items-center gap-4 flex-1">
                             <button
                                 onClick={() => setSidebarOpen(true)}
-                                className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                                aria-label="Open navigation menu"
+                                className="lg:hidden flex items-center justify-center min-h-[44px] min-w-[44px] rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
                             >
                                 <Menu size={24} className="text-gray-700" />
                             </button>

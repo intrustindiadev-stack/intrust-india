@@ -8,8 +8,9 @@ import {
     Package, Truck, ShoppingBag, Wallet, TrendingUp,
     BarChart3, Settings, Store, X, Zap, ArrowRight, LayoutGrid, Search
 } from 'lucide-react';
+import { useMerchant } from '@/hooks/useMerchant';
 
-const actions = [
+const allActions = [
     { icon: Package,     label: 'Inventory',  sub: 'Stock & listings',   href: '/merchant/inventory',          bg: 'bg-indigo-50 dark:bg-indigo-500/15',   iconColor: 'text-indigo-500',   highlight: true },
     { icon: Truck,       label: 'Orders',     sub: 'Track deliveries',   href: '/merchant/shopping/orders',    bg: 'bg-emerald-50 dark:bg-emerald-500/15', iconColor: 'text-emerald-500',  badge: 'orders' },
     { icon: ShoppingBag, label: 'Coupons',    sub: 'Manage coupons',     href: '/merchant/purchase',           bg: 'bg-amber-50 dark:bg-amber-500/15',     iconColor: 'text-amber-500' },
@@ -21,6 +22,13 @@ const actions = [
     { icon: Store,       label: 'Wholesale',  sub: 'B2B Wholesale Hub', href: '/merchant/shopping/wholesale', bg: 'bg-teal-50 dark:bg-teal-500/15',     iconColor: 'text-teal-500' },
     { icon: Settings,    label: 'Settings',   sub: 'Store & Account',    href: '/merchant/settings',           bg: 'bg-slate-50 dark:bg-slate-500/15',     iconColor: 'text-slate-500' },
 ];
+
+// Super-admin feature-visibility flags (columns on public.merchants) mapped to
+// palette actions. Actions not listed here are always visible.
+const featureFlagByLabel = {
+    'AI Grow': 'show_ai_grow',
+    'AI Orders': 'show_ai_orders',
+};
 
 // Container variants — stagger children
 const gridVariants = {
@@ -36,6 +44,18 @@ export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingO
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const router = useRouter();
+    const { merchant, isAdmin } = useMerchant();
+
+    // Super-admin feature-visibility gate: hide AI Grow / AI Orders actions
+    // unless enabled by a super admin (admins always see all).
+    const actions = useMemo(() => {
+        return allActions.filter((a) => {
+            const flagCol = featureFlagByLabel[a.label];
+            if (!flagCol) return true;
+            if (isAdmin) return true;
+            return Boolean(merchant?.[flagCol]);
+        });
+    }, [merchant, isAdmin]);
 
     const filteredActions = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
@@ -44,7 +64,7 @@ export default function MerchantControlCenter({ pendingUdhariCount = 0, pendingO
             a.label.toLowerCase().includes(q) || 
             a.sub.toLowerCase().includes(q)
         );
-    }, [searchQuery]);
+    }, [actions, searchQuery]);
 
     // Global ⌘K / Ctrl+K and Escape listeners
     useEffect(() => {

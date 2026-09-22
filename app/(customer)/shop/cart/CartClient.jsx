@@ -388,21 +388,24 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
         throw new Error(data.error || 'Failed to save delivery address');
       }
 
-      // 3. Update local state with confirmed profile
+      // 3. Update local state with confirmed profile. The API returns an
+      // order-scoped `deliveryPhone` which is authoritative for checkout —
+      // it may differ from `profile.phone` when the delivery number
+      // collides with another account (23505) and is kept order-only.
       const updated = data.profile || {};
-      const combinedAddress = updated.address || [addressForm.address, addressForm.city, addressForm.state, addressForm.pincode].filter(Boolean).join(', ');
-      const savedPhone = updated.phone || sanitizeAndNormalizePhone(addressForm.phone);
+      const combined = updated.address || [addressForm.address, addressForm.city, addressForm.state, addressForm.pincode].filter(Boolean).join(', ');
+      const orderPhone = data.deliveryPhone || updated.phone || sanitizeAndNormalizePhone(addressForm.phone);
 
       setProfile(prev => ({
         ...prev,
         full_name: addressForm.fullName.trim(),
-        address: combinedAddress,
+        address: combined,
         city: addressForm.city.trim(),
         state: addressForm.state.trim(),
-        phone: savedPhone
+        phone: orderPhone
       }));
 
-      toast.success('Delivery address saved successfully');
+      toast.success(data.message || 'Delivery address saved successfully');
       setIsAddressModalOpen(false);
     } catch (err) {
       console.error('Save address error:', err);

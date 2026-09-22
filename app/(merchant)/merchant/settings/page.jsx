@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useSubscription } from '@/components/merchant/SubscriptionContext';
 import { useMerchant } from '@/hooks/useMerchant';
 import { displayEmail } from '@/lib/auth';
+import { pickDirtyFields, toNullableText } from '@/lib/utils';
 
 // ─── Login & Security card (Account tab) ────────────────────────────────────
 // Mirrors the customer LoginMethodsSection (Ticket 2) but styled for merchant
@@ -210,7 +211,11 @@ function MerchantLoginSecurity({ authUser, userProfile, onLinked }) {
 }
 // ────────────────────────────────────────────────────────────────────────────
 
-const lockedTabIds = ['store', 'bank'];
+// 'store' stays gated behind an active subscription (it toggles live trading).
+// 'bank' is deliberately NOT gated: bank details are optional at application
+// time, so an approved-but-unpaid merchant must be able to complete this
+// catch-up step from the panel — payouts stay blocked by bank_verified anyway.
+const lockedTabIds = ['store'];
 
 
 const tabs = [
@@ -219,7 +224,7 @@ const tabs = [
     { id: 'notifications', label: 'Notifications', icon: 'notifications', locked: false },
     { id: 'whatsapp', label: 'WhatsApp', icon: 'chat', locked: false },
     { id: 'store', label: 'Store Status', icon: 'storefront', locked: true },
-    { id: 'bank', label: 'Bank Account', icon: 'account_balance', locked: true },
+    { id: 'bank', label: 'Bank Details', icon: 'account_balance', locked: false },
 ];
 
 export default function MerchantSettingsPage() {
@@ -418,24 +423,37 @@ export default function MerchantSettingsPage() {
 
             const isReservedName = formData.business_name.trim().toLowerCase() === 'intrust';
             const isNameChanged = formData.business_name !== merchantProfile?.business_name;
-            
-            const merchantUpdatePayload = {
-                gst_number: formData.gst_number,
-                pan_number: formData.pan_number,
-                business_phone: formData.business_phone,
-                business_email: formData.business_email,
+
+            // Build the candidate business fields, then send ONLY the ones the
+            // user actually changed.
+            // Sending the whole form back trips the DB guard
+            // (merchants_sensitive_column_guard) in two ways:
+            //   · an unrelated protected column rides along in the UPDATE, and
+            //   · a blank nullable input round-trips as '' which is DISTINCT
+            //     FROM NULL — e.g. empty PAN input vs NULL pan_number raised
+            //     "Column pan_number is protected and set during onboarding only."
+            //     even when the merchant only edited their phone number.
+            const businessCandidate = {
+                gst_number: toNullableText(formData.gst_number),
+                pan_number: toNullableText(formData.pan_number),
+                business_phone: toNullableText(formData.business_phone),
+                business_email: toNullableText(formData.business_email),
             };
 
             if (!(isReservedName && isNameChanged)) {
-                merchantUpdatePayload.business_name = formData.business_name;
+                businessCandidate.business_name = formData.business_name;
             }
 
-            const { error: updateError } = await supabase
-                .from('merchants')
-                .update(merchantUpdatePayload)
-                .eq('user_id', user.id);
+            const merchantUpdatePayload = pickDirtyFields(businessCandidate, merchantProfile);
 
-            if (updateError) throw updateError;
+            if (Object.keys(merchantUpdatePayload).length > 0) {
+                const { error: updateError } = await supabase
+                    .from('merchants')
+                    .update(merchantUpdatePayload)
+                    .eq('user_id', user.id);
+
+                if (updateError) throw updateError;
+            }
 
             const { error: profileUpdateError } = await supabase
                 .from('user_profiles')
@@ -476,6 +494,20 @@ export default function MerchantSettingsPage() {
             toast.error(msg);
             return;
         }
+        // Client-side mirror of the server-side validation in
+        // /api/merchant/bank-details — fail fast before spending a penny-drop call.
+        if (!/^[0-9]{6,20}$/.test(bankData.account_number.trim())) {
+            const msg = 'Invalid account number. Enter 6-20 digits with no spaces or dashes.';
+            setError(msg);
+            toast.error(msg);
+            return;
+        }
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankData.ifsc.trim().toUpperCase())) {
+            const msg = 'Invalid IFSC code. Expected format like SBIN0001234.';
+            setError(msg);
+            toast.error(msg);
+            return;
+        }
         setSavingBank(true);
         setError(null);
         setSuccess(null);
@@ -500,8 +532,15 @@ export default function MerchantSettingsPage() {
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'Failed to save bank details');
 
-            setSuccess('Bank details saved! Pending admin verification.');
-            toast.success('Bank details saved! Pending admin verification.');
+            // The route attempts an automated penny-drop on submission, so the
+            // account may already be verified — surface whichever happened.
+            const msg = result?.message
+                || (result?.bank_verified
+                    ? 'Bank details saved and verified automatically.'
+                    : 'Bank details saved! Pending admin verification.');
+
+            setSuccess(msg);
+            toast.success(msg);
             await fetchSettings();
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Failed to save bank details';
@@ -531,6 +570,22 @@ export default function MerchantSettingsPage() {
     const expiryFormatted = expiresAt
         ? new Date(expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
         : null;
+
+    // ── Bank-details catch-up state ─────────────────────────────────────────
+    // Bank details are OPTIONAL at application time, so an approved merchant may
+    // have none on file and must be able to add them from here. `bankVerified` is
+    // the payout gate; `hasBankDetails` mirrors exactly what
+    // /api/admin/verify-bank checks (account number + IFSC present).
+    const bankAccountNumber = merchantProfile?.bank_account_number
+        || merchantProfile?.bank_data?.account_number
+        || '';
+    const bankIfscCode = merchantProfile?.bank_ifsc_code
+        || merchantProfile?.bank_data?.ifsc
+        || merchantProfile?.bank_data?.ifsc_code
+        || '';
+    const bankVerified = Boolean(merchantProfile?.bank_verified);
+    const hasBankDetails = Boolean(bankAccountNumber && bankIfscCode);
+    const needsBankDetails = !bankVerified && !hasBankDetails;
 
     return (
         <div className="relative">
@@ -849,37 +904,55 @@ export default function MerchantSettingsPage() {
                     </div>
                 )}
 
-                {activeTab === 'bank' && isSubscribed && (
+                {/* Bank tab is intentionally NOT subscription-gated — this is the
+                    post-approval catch-up surface for merchants who skipped bank
+                    details during onboarding. */}
+                {activeTab === 'bank' && (
                     <div className="p-5 sm:p-8">
                         <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center border-b border-black/5 dark:border-white/5 pb-4">
                             <span className="material-icons-round text-[#D4AF37] mr-3">account_balance</span>
-                            Bank Account Details
+                            Bank Details &amp; Settlements
                         </h2>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-                            Enter your bank details to enable withdrawals. An admin will verify your account before payouts are allowed.
+                            Add your bank details to enable withdrawals and settlements. Your account is verified by our team (or an automated penny-drop check) before payouts are released.
                         </p>
 
-                        {/* Verification status banner */}
-                        <div className={`flex items-center gap-3 p-4 rounded-2xl mb-8 border ${merchantProfile?.bank_verified
-                            ? 'bg-emerald-500/10 border-emerald-500/20'
-                            : 'bg-amber-500/10 border-amber-500/20'
-                            }`}>
-                            <span className={`material-icons-round text-2xl ${merchantProfile?.bank_verified ? 'text-emerald-500' : 'text-amber-500'
-                                }`}>
-                                {merchantProfile?.bank_verified ? 'verified' : 'pending'}
-                            </span>
-                            <div>
-                                <p className={`font-bold text-sm ${merchantProfile?.bank_verified ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
-                                    }`}>
-                                    {merchantProfile?.bank_verified ? 'Bank Account Verified' : 'Pending Verification'}
-                                </p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    {merchantProfile?.bank_verified
-                                        ? 'Your bank account is verified. You can request withdrawals.'
-                                        : 'Save your bank details below. Our team will verify them within 24 hours.'}
-                                </p>
+                        {/* Verification / catch-up status — three distinct states */}
+                        {bankVerified ? (
+                            <div className="flex items-center gap-3 p-4 rounded-2xl mb-8 border bg-emerald-500/10 border-emerald-500/20">
+                                <span className="material-icons-round text-2xl text-emerald-500">verified</span>
+                                <div>
+                                    <p className="font-bold text-sm text-emerald-700 dark:text-emerald-400">Bank Account Verified</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Your bank account is verified. You can request withdrawals.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        ) : needsBankDetails ? (
+                            <div className="p-5 rounded-2xl mb-8 border-2 border-amber-400 bg-amber-400/10 shadow-lg shadow-amber-500/10">
+                                <div className="flex items-start gap-3">
+                                    <span className="material-icons-round text-3xl text-amber-500 shrink-0">error_outline</span>
+                                    <div>
+                                        <p className="font-black text-sm sm:text-base text-amber-800 dark:text-amber-300">
+                                            Action Required: Add your bank details to enable payouts.
+                                        </p>
+                                        <p className="text-xs sm:text-sm text-amber-700/90 dark:text-amber-400/80 mt-1">
+                                            Your account is approved and the merchant panel is fully available to you. Withdrawals and settlements stay blocked until your bank details are verified — add them below to get started.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-3 p-4 rounded-2xl mb-8 border bg-amber-500/10 border-amber-500/20">
+                                <span className="material-icons-round text-2xl text-amber-500">pending</span>
+                                <div>
+                                    <p className="font-bold text-sm text-amber-700 dark:text-amber-400">Pending Verification</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        We have your bank details. Verification usually completes within 24 hours — update them below if anything has changed.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-5 max-w-2xl">
                             <div className="group">

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { teardownTestAccount } from './teardown_helper.mjs';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -28,16 +29,7 @@ function fail(msg, detail) {
 }
 
 async function cleanupData() {
-    // Clean up test user
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const testUser = users?.users?.find(u => u.email === TEST_EMAIL);
-    if (testUser) {
-        // Clean up dependent CRM leads to prevent foreign key constraint violations
-        await supabaseAdmin.from('crm_leads').delete().eq('created_by', testUser.id);
-        await supabaseAdmin.from('crm_leads').delete().eq('assigned_to', testUser.id);
-        
-        await supabaseAdmin.auth.admin.deleteUser(testUser.id);
-    }
+    await teardownTestAccount(supabaseAdmin, { email: TEST_EMAIL });
     // Clean up OTPs
     await supabaseAdmin.from('otp_codes').delete().eq('phone', TEST_PHONE);
     await supabaseAdmin.from('auth_tokens').delete().eq('email', TEST_EMAIL);

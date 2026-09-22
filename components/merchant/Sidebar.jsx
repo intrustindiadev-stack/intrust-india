@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useMerchant } from "@/hooks/useMerchant";
-import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useState } from 'react';
 import KycStatusCard from "./KycStatusCard";
@@ -16,10 +17,27 @@ import SwitchPortalSection from "@/components/layout/shared/SwitchPortalSection"
 
 export default function Sidebar({ isOpen, setIsOpen }) {
     const pathname = usePathname();
-    const { merchant } = useMerchant();
+    const router = useRouter();
+    const { signOut } = useAuth();
+    const { merchant, isAdmin } = useMerchant();
     const { isSubscribed, requireSubscription } = useSubscription();
 
-    const groups = [
+    // Super-admin feature-visibility gate (columns on merchants).
+    // Admins always see everything. Features default to hidden (false) for merchants
+    // until explicitly enabled by a super admin.
+    const featureVisible = {
+        lockin: isAdmin || Boolean(merchant?.show_lockin),
+        aiGrow: isAdmin || Boolean(merchant?.show_ai_grow),
+        aiOrders: isAdmin || Boolean(merchant?.show_ai_orders),
+    };
+    const hiddenItemsByLabel = {
+        'Lockin Portfolio': !featureVisible.lockin,
+        'AI Grow': !featureVisible.aiGrow,
+        'AI Orders': !featureVisible.aiOrders,
+        'My Vault': !featureVisible.aiOrders, // Vault depends on AI Orders
+    };
+
+    const allGroups = [
         {
             title: "Home",
             items: [
@@ -73,6 +91,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         }
     ];
 
+    // Drop hidden feature items (and any group left empty by it)
+    const groups = allGroups
+        .map((g) => ({ ...g, items: g.items.filter((i) => !hiddenItemsByLabel[i.label]) }))
+        .filter((g) => g.items.length > 0);
+
     const activeGroupTitle = groups.find(g => g.items.some(item => pathname === item.href || pathname?.startsWith(item.href.split('?')[0] + '/')))?.title || "Home";
 
     const { isOpen: isGroupOpen, toggleGroup } = useCollapsibleNav({
@@ -92,11 +115,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         setShowLogoutModal(false);
         setIsLoggingOut(true);
         try {
-            await supabase.auth.signOut();
-            window.location.href = "/login";
+            // Use the AuthContext signOut — it clears the client session AND
+            // POSTs /auth/logout to purge the server-side HttpOnly cookie jar.
+            await signOut();
+            // Navigate, then purge the Next.js client-side Router Cache so cached
+            // Server Component payloads rendered under the old session are dropped
+            // instantly — no stale "logged in" UI, no manual browser refresh needed.
+            router.push('/login');
+            router.refresh();
         } catch (error) {
             console.error('Logout error:', error);
-            window.location.href = "/login";
+            router.push('/login');
+            router.refresh();
         } finally {
             setIsLoggingOut(false);
         }

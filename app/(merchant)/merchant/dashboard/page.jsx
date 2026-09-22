@@ -10,6 +10,7 @@ import DashboardHeader from '@/components/merchant/dashboard/DashboardHeader';
 import QuickAccessGrid from '@/components/merchant/dashboard/QuickAccessGrid';
 import TodayStatsCards from '@/components/merchant/dashboard/TodayStatsCards';
 import MerchantMarketingKpiSection from '@/components/merchant/dashboard/MerchantMarketingKpiSection';
+import BankDetailsActionBanner from '@/components/merchant/BankDetailsActionBanner';
 import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
 import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
 
@@ -38,7 +39,7 @@ export default async function MerchantDashboardPage() {
 
     const { data: merchantData } = await supabase
         .from('merchants')
-        .select('id, user_id, business_name, status, wallet_balance_paise, total_commission_paid_paise, subscription_status, subscription_expires_at, auto_mode, is_open, auto_mode_status, auto_mode_valid_until')
+        .select('id, user_id, business_name, status, wallet_balance_paise, total_commission_paid_paise, subscription_status, subscription_expires_at, auto_mode, is_open, auto_mode_status, auto_mode_valid_until, show_lockin, show_ai_grow, show_ai_orders, bank_verified, bank_account_number, bank_ifsc_code, bank_data')
         .eq('user_id', user.id)
         .single();
 
@@ -342,6 +343,13 @@ export default async function MerchantDashboardPage() {
                 pendingAIOrdersCount={pendingAIOrdersCount}
             />
             
+            {/* SECTION 1.25: Bank-details catch-up prompt (bank-optional onboarding) */}
+            <BankDetailsActionBanner
+                bankAccountNumber={merchant.bank_account_number || merchant.bank_data?.account_number}
+                bankIfscCode={merchant.bank_ifsc_code || merchant.bank_data?.ifsc || merchant.bank_data?.ifsc_code}
+                bankVerified={Boolean(merchant.bank_verified)}
+            />
+
             {/* SECTION 1.5: Today's Real-time Sales, Profit & Orders Performance */}
             <TodayStatsCards todayStats={todayStats} />
 
@@ -358,6 +366,7 @@ export default async function MerchantDashboardPage() {
                 pendingUdhariCount={pendingUdhariCount} 
                 pendingOrdersCount={pendingOrdersCount} 
                 pendingAIOrdersCount={pendingAIOrdersCount}
+                showAiOrders={Boolean(merchant.show_ai_orders)}
             />
 
             {/* Performance Metrics / Stats Cards with Direct Redirection & AI Orders */}
@@ -366,6 +375,7 @@ export default async function MerchantDashboardPage() {
                 aiStats={aiStats} 
                 ecommerceStats={ecommerceStats} 
                 referralStats={referralStats} 
+                showAiOrders={Boolean(merchant.show_ai_orders)}
             />
 
             {/* Recent Transactions */}

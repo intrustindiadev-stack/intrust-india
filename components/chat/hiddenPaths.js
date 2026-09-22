@@ -31,6 +31,7 @@ export const CHAT_HIDDEN_PATHS = [
   '/merchant',
   '/employee',
   '/marketing',
+  '/maintenance',
 ];
 
 export const MERCHANT_CHAT_HIDDEN_PATHS = [

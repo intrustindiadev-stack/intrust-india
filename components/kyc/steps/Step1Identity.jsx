@@ -1,5 +1,6 @@
 'use client';
 
+import { AlertCircle } from 'lucide-react';
 import FloatingLabelInput from './FloatingLabelInput';
 import PhoneInput from './PhoneInput';
 import DateOfBirthPicker from './DateOfBirthPicker';
@@ -85,7 +86,9 @@ export default function Step1Identity({ formData, onChange, errors, fieldLocked,
                     ))}
                 </div>
                 {errors.gender && (
-                    <p className="text-red-500 text-xs mt-1 ml-1">{errors.gender}</p>
+                    <p className="text-red-600 text-xs sm:text-[13px] font-medium mt-1.5 ml-1 flex items-start gap-1.5 leading-snug">
+                        <AlertCircle size={14} className="shrink-0 text-red-500 mt-0.5" /> <span>{errors.gender}</span>
+                    </p>
                 )}
             </div>
         </div>
@@ -101,29 +104,34 @@ export function validateStep1(formData) {
     /** @type {Object<string, string>} */
     const errs = {};
 
-    if (!validateFullName(formData.fullName)) {
-        errs.fullName = 'Please enter a valid full name (letters and spaces only, min 2 characters)';
+    const name = (formData.fullName || '').trim();
+    if (!name) {
+        errs.fullName = 'Enter your full legal name as it appears on your government ID';
+    } else if (!validateFullName(name)) {
+        errs.fullName = 'Name should contain only letters and spaces — no numbers or special characters';
     }
 
     // Phone validation
     const phone = formData.phoneNumber?.replace(/\D/g, '') || '';
-    if (!validatePhone(phone)) {
-        errs.phoneNumber = 'Please enter a valid 10-digit phone number starting with 6-9';
+    if (!phone) {
+        errs.phoneNumber = 'Enter your 10-digit Indian mobile number';
+    } else if (!validatePhone(phone)) {
+        errs.phoneNumber = 'Mobile number must be 10 digits and start with 6, 7, 8, or 9';
     }
 
     // DOB validation
     const dob = formData.dateOfBirth;
     if (!dob || dob.split('-').length !== 3) {
-        errs.dateOfBirth = 'All three must be selected before proceeding';
+        errs.dateOfBirth = 'Select your day, month, and year of birth';
     } else {
         const [y, m, d] = dob.split('-').map(Number);
         if (!y || !m || !d) {
-            errs.dateOfBirth = 'All three must be selected before proceeding';
+            errs.dateOfBirth = 'Select your day, month, and year of birth';
         } else {
             // Check real date
             const dateObj = new Date(y, m - 1, d);
             if (dateObj.getFullYear() !== y || dateObj.getMonth() !== (m - 1) || dateObj.getDate() !== d) {
-                errs.dateOfBirth = 'Please enter a valid date';
+                errs.dateOfBirth = 'This date doesn\'t exist — please check and select again';
             } else {
                 // Check age >= 18
                 const today = new Date();
@@ -133,14 +141,14 @@ export function validateStep1(formData) {
                     age--;
                 }
                 if (age < 18) {
-                    errs.dateOfBirth = 'You must be at least 18 years old';
+                    errs.dateOfBirth = 'You must be 18 or older to complete KYC verification';
                 }
             }
         }
     }
 
     if (!formData.gender) {
-        errs.gender = 'Please select your gender';
+        errs.gender = 'Select your gender to continue';
     }
 
     return { valid: Object.keys(errs).length === 0, errors: errs };

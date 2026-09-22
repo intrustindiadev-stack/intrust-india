@@ -1,0 +1,997 @@
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shadowfax 360 & Unified API: Integration Strategy & Commercial Report — Intrust India</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 13mm 12mm 14mm 12mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 9.3pt;
+      line-height: 1.4;
+      color: #0f172a;
+      background: #ffffff;
+    }
+
+    /* Page container with explicit page break */
+    .page-section {
+      page-break-after: always;
+      break-after: page;
+    }
+    .page-section:last-child {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    .avoid-break {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Cover Header Card */
+    .cover-card {
+      border: 2px solid #0f172a;
+      border-left: 8px solid #1e3a8a;
+      border-radius: 6px;
+      padding: 16px 18px;
+      background: #ffffff;
+      margin-bottom: 12px;
+    }
+    .cover-badge {
+      display: inline-block;
+      border: 1.5px solid #1e3a8a;
+      color: #1e3a8a;
+      background: #eff6ff;
+      font-size: 7.5pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2.5px 7px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .cover-title {
+      font-size: 16.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+    .cover-subtitle {
+      font-size: 8.8pt;
+      color: #334155;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 8px;
+    }
+    .meta-item label {
+      display: block;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 1px;
+    }
+    .meta-item span {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Section Headers */
+    .sec-tag {
+      font-size: 7.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1e3a8a;
+      margin-bottom: 2px;
+    }
+    h2 {
+      font-size: 11.8pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 3px;
+      margin-bottom: 6px;
+    }
+    h3 {
+      font-size: 9.8pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 6px;
+      margin-bottom: 4px;
+    }
+    p {
+      font-size: 9pt;
+      color: #334155;
+      margin-bottom: 6px;
+      text-align: justify;
+    }
+
+    /* KPI Callout Blocks */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .kpi-box {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      text-align: left;
+    }
+    .kpi-title {
+      font-size: 7.2pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .kpi-number {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      line-height: 1.15;
+    }
+    .kpi-desc {
+      font-size: 7.3pt;
+      color: #475569;
+      margin-top: 2px;
+    }
+
+    /* Callouts */
+    .callout {
+      border-radius: 4px;
+      padding: 6px 9px;
+      margin: 6px 0;
+      font-size: 8.5pt;
+      line-height: 1.35;
+    }
+    .callout.info {
+      background: #eff6ff;
+      border-left: 4px solid #1e3a8a;
+      color: #1e3a8a;
+    }
+    .callout.success {
+      background: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      color: #166534;
+    }
+    .callout.warning {
+      background: #fffbeb;
+      border-left: 4px solid #d97706;
+      color: #92400e;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0;
+      font-size: 8.3pt;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 4.5px 6.5px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 7.8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    tr.featured-row td {
+      background: #eff6ff !important;
+      font-weight: 600;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      font-size: 7pt;
+      font-weight: 700;
+      padding: 1.5px 5px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .b-green {
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #10b981;
+    }
+    .b-blue {
+      background: #eff6ff;
+      color: #1e40af;
+      border-color: #3b82f6;
+    }
+    .b-amber {
+      background: #fffbeb;
+      color: #92400e;
+      border-color: #d97706;
+    }
+    .b-gray {
+      background: #f1f5f9;
+      color: #334155;
+      border-color: #64748b;
+    }
+
+    /* Cards */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 6px 0;
+    }
+    .card {
+      border: 1.5px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 7px 9px;
+      background: #ffffff;
+    }
+    .card.top-choice {
+      border-color: #1e3a8a;
+      border-width: 2px;
+      background: #f8fafc;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .card-title {
+      font-size: 9.2pt;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .card-sub {
+      font-size: 7.8pt;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .card li {
+      font-size: 8.1pt;
+      color: #334155;
+      margin-bottom: 2px;
+      padding-left: 11px;
+      position: relative;
+    }
+    .card li::before {
+      content: "•";
+      position: absolute;
+      left: 1px;
+      color: #1e3a8a;
+      font-weight: bold;
+    }
+    .card li.pro::before {
+      content: "✓";
+      color: #059669;
+    }
+    .card li.con::before {
+      content: "✕";
+      color: #dc2626;
+    }
+
+    /* Steps */
+    .step-row {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #1e3a8a;
+      color: #ffffff;
+      font-size: 8pt;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-content {
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 5px 8px;
+      background: #ffffff;
+      flex: 1;
+    }
+    .step-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1.5px;
+    }
+    .step-desc {
+      font-size: 8pt;
+      color: #334155;
+      margin: 0;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7.4pt;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      padding: 0 3px;
+      border-radius: 3px;
+      color: #0f172a;
+    }
+
+    .code-block {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 7px 9px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      font-size: 7.2pt;
+      line-height: 1.35;
+      overflow-x: auto;
+      margin: 5px 0;
+    }
+    .code-block .kwd { color: #38bdf8; font-weight: bold; }
+    .code-block .str { color: #4ade80; }
+    .code-block .cmt { color: #94a3b8; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE 1: COVER & EXECUTIVE SUMMARY ==================== -->
+  <div class="page-section">
+    <!-- COVER CARD -->
+    <div class="cover-card">
+      <div class="cover-badge">Dedicated Client Advisory &amp; Technical Blueprint</div>
+      <h1 class="cover-title">Shadowfax 360 &amp; Unified API Suite<br>Commercial &amp; Architectural Integration Report</h1>
+      <p class="cover-subtitle">
+        A comprehensive evaluation of <strong>Shadowfax 360</strong>, the <strong>SFX Unified Forward API</strong>, and the <strong>SFX Reverse Pickup API</strong> as the single logistics backbone for Intrust India — assessing starting rates (from &#8377;39), the 0% COD advantage, Bhopal grocery SLAs, and automated Supabase webhook synchronization.
+      </p>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <label>Platform</label>
+          <span>Intrust India</span>
+        </div>
+        <div class="meta-item">
+          <label>Target Carrier</label>
+          <span>Shadowfax 360 / Unified API</span>
+        </div>
+        <div class="meta-item">
+          <label>Official Docs</label>
+          <span>sfxunifiedapi.docs.apiary.io</span>
+        </div>
+        <div class="meta-item">
+          <label>Version &amp; Date</label>
+          <span>v2.1 &bull; Sept 2026</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 01 EXECUTIVE SUMMARY -->
+    <div class="avoid-break">
+      <div class="sec-tag">Section 01</div>
+      <h2>Executive Summary: Why Shadowfax 360 Changes Everything</h2>
+      <p>
+        Intrust India operates a dual logistics model: <strong>Bhopal same-day / 2–4 hour grocery delivery</strong> from local merchants, and <strong>Pan-India express shipping</strong> for fashion, electronics, and lifestyle goods. Previously, e-commerce stores had to maintain two separate systems: an aggregator (Shiprocket) and an on-demand hyperlocal network.
+      </p>
+      <p>
+        <strong>Shadowfax 360 (SF360)</strong>, backed by the <strong>Shadowfax Unified API</strong>, combines both worlds into a single platform. It natively supports the <em>Marketplace Seller Model</em> (picking up from merchant shops across Bhopal) while providing national surface/air delivery with automated tracking and proof of delivery.
+      </p>
+
+      <div class="kpi-row">
+        <div class="kpi-box">
+          <div class="kpi-title">Starting Shipping Rate</div>
+          <div class="kpi-number">&#8377;39<span style="font-size:8pt; font-weight:normal; color:#475569;"> / 500g</span></div>
+          <div class="kpi-desc">Zone-based flat rate with zero weight penalty traps</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-title">COD Handling Fee</div>
+          <div class="kpi-number">&#8377;0<span style="font-size:8pt; font-weight:normal; color:#475569;"> / 0% Extra</span></div>
+          <div class="kpi-desc">Saves &#8377;40&ndash;50 per order vs. Shiprocket/Delhivery</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-title">COD Remittance Cycle</div>
+          <div class="kpi-number">D+2 Days</div>
+          <div class="kpi-desc">3x faster cash flow than industry average (D+7)</div>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <strong>The Single-Provider Advantage:</strong> Intrust India connects to a single unified API endpoint, maintains one prepaid wallet, and registers one webhook listener. This eliminates vendor fragmentation, cuts engineering time in half, and saves over <strong>&#8377;20,000 every month</strong> on logistics costs.
+      </div>
+    </div>
+
+    <!-- 02 WHY CONTACT WAS DIFFICULT & THE SELF-SERVE SOLUTION -->
+    <div class="avoid-break" style="margin-top: 6px;">
+      <div class="sec-tag">Section 02</div>
+      <h2>Why Corporate Sales Was Unreachable &amp; The Self-Serve Resolution</h2>
+      <p>
+        The client encountered difficulty getting in touch with Shadowfax through their public corporate portal. This is a common industry occurrence due to internal division separation:
+      </p>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Shadowfax Enterprise Sales</span>
+            <span class="badge b-amber">Legacy Corporate Desk</span>
+          </div>
+          <div class="card-sub">Targets Flipkart, Zepto, Swiggy, Nykaa</div>
+          <ul>
+            <li class="con">Mandates 10,000+ to 50,000+ monthly order commitments.</li>
+            <li class="con">Manual sales desk; low/medium volume web forms go unanswered.</li>
+            <li class="con">Requires corporate legal contracts, bank guarantees, and lengthy audits.</li>
+          </ul>
+        </div>
+        <div class="card top-choice">
+          <div class="card-head">
+            <span class="card-title">Shadowfax 360 Self-Serve Portal</span>
+            <span class="badge b-green">D2C &amp; SME Portal (shadowfax360.in)</span>
+          </div>
+          <div class="card-sub">Direct Digital Logistics OS for Online Stores</div>
+          <ul>
+            <li class="pro"><strong>Zero Minimum Volume:</strong> Start shipping from 1 order/day.</li>
+            <li class="pro"><strong>Instant Digital KYC:</strong> Upload GSTIN/PAN and activate within hours.</li>
+            <li class="pro"><strong>Instant API Keys:</strong> Developer token generated directly in dashboard.</li>
+            <li class="pro"><strong>Live Rate Calculator:</strong> Instant origin-to-destination price quotes.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout info" style="margin-top: 5px;">
+        <strong>Immediate Action:</strong> Bypass enterprise sales inquiries. Register immediately at <strong><code>https://shadowfax360.in</code></strong> for instant digital onboarding and token issuance.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2: COMMERCIAL & PRICING ANALYSIS ==================== -->
+  <div class="page-section">
+    <!-- 03 COMMERCIAL & PRICING STRUCTURE -->
+    <div class="avoid-break">
+      <div class="sec-tag">Section 03</div>
+      <h2>Commercial Model &amp; Rate Card Breakdown</h2>
+      <p>
+        Shadowfax 360 utilizes a <strong>Zone-Based Flat-Rate Model</strong> that eliminates billing surprises, hidden fuel surcharges, and punitive weight discrepancies.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Delivery Zone</th>
+            <th>Applicable Region / Route</th>
+            <th>Verified Flat Rate</th>
+            <th>Estimated SLA</th>
+            <th>Intrust Product Fit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="featured-row">
+            <td><strong>Zone A (Intracity)</strong></td>
+            <td>Within Bhopal Municipal Limits</td>
+            <td><strong>&#8377;39 Flat</strong></td>
+            <td>2 &ndash; 4 Hours / Same-Day</td>
+            <td>Fresh Groceries, Fruits, Dairy, Urgent Essentials</td>
+          </tr>
+          <tr>
+            <td><strong>Zone B (Within Zone)</strong></td>
+            <td>Central India / Madhya Pradesh (Indore, Jabalpur, Gwalior)</td>
+            <td><strong>&#8377;49 Flat</strong></td>
+            <td>24 &ndash; 48 Hours</td>
+            <td>Regional Merchant Goods, Packaged FMCG, Apparel</td>
+          </tr>
+          <tr>
+            <td><strong>Zone C &amp; D (Metro &amp; ROI)</strong></td>
+            <td>Major Metros &amp; Rest of India (Pan-India)</td>
+            <td><strong>&#8377;59 Flat</strong></td>
+            <td>2 &ndash; 4 Days</td>
+            <td>Standard E-Commerce Goods &amp; Brand Merchandise</td>
+          </tr>
+          <tr>
+            <td><strong>Zone E (Special Zone)</strong></td>
+            <td>Northeast, Jammu &amp; Kashmir, Islands</td>
+            <td><strong>&#8377;69 Flat</strong></td>
+            <td>5 &ndash; 7 Days</td>
+            <td>Extended Remote National Coverage</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>The Deciding Factor: Cash-On-Delivery (COD) Economics</h3>
+      <p>
+        COD orders represent 60% to 75% of customer volume in India. Standard aggregators (Shiprocket) charge hefty fees for collecting and handling cash:
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Commercial Parameter</th>
+            <th>Shiprocket / Traditional Couriers</th>
+            <th>Shadowfax 360 (SF360)</th>
+            <th>Direct Benefit to Intrust India</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>COD Handling Fee</strong></td>
+            <td>&#8377;40 &ndash; &#8377;50 flat OR 1.5%&ndash;2.0% of order value</td>
+            <td><strong>&#8377;0 (Zero Extra Charge)</strong></td>
+            <td><span class="badge b-green">Saves &#8377;40&ndash;50 on every COD order</span></td>
+          </tr>
+          <tr>
+            <td><strong>COD Remittance Window</strong></td>
+            <td>D+4 to D+7 business days</td>
+            <td><strong>D+2 business days</strong></td>
+            <td><span class="badge b-green">Rapid cash flow &amp; merchant payout</span></td>
+          </tr>
+          <tr>
+            <td><strong>RTO Reverse Shipping Charge</strong></td>
+            <td>Full forward charge billed again</td>
+            <td><strong>Capped / discounted reverse rate</strong></td>
+            <td><span class="badge b-green">Significantly lower return losses</span></td>
+          </tr>
+          <tr>
+            <td><strong>Pre-Shipment RTO AI Predictor</strong></td>
+            <td>Paid add-on (Shiprocket Sense)</td>
+            <td><strong>Built-in core feature</strong></td>
+            <td><span class="badge b-green">Flags high-risk orders before packing</span></td>
+          </tr>
+          <tr>
+            <td><strong>Monthly Platform Subscription</strong></td>
+            <td>&#8377;499/mo (Advanced) or &#8377;799/mo (Pro)</td>
+            <td><strong>&#8377;0 Monthly SaaS Subscription</strong></td>
+            <td><span class="badge b-green">Saves &#8377;6,000&ndash;10,000 annually</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <strong>Cash-Flow Impact:</strong> On 325 COD orders per month, standard aggregators cost Intrust India <strong>&#8377;13,000/month just in cash collection fees</strong>. Shadowfax 360 waives this completely, directly preserving merchant and platform margins.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 3: FINANCIAL PROJECTIONS & SAVINGS ==================== -->
+  <div class="page-section">
+    <!-- 04 FINANCIAL MODELING -->
+    <div class="avoid-break">
+      <div class="sec-tag">Section 04</div>
+      <h2>Financial Modeling: Direct Cost &amp; Profitability Comparison</h2>
+      <p>
+        The table below evaluates actual monthly expenses under a traditional <strong>Shiprocket Hybrid Stack</strong> (Shiprocket + Hyperlocal carrier) versus a <strong>Unified Shadowfax 360 Stack</strong> on a baseline of <strong>500 orders per month</strong> (65% COD, 25% Bhopal grocery, 75% pan-India shipping):
+      </p>
+
+      <h3>Baseline Model: 500 Orders / Month</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Expense Line Item</th>
+            <th>Shiprocket Hybrid Stack</th>
+            <th>Shadowfax 360 Unified Stack</th>
+            <th>Monthly Variance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Forward Shipping Charges</strong> (500 orders @ blended avg)</td>
+            <td>&#8377;34,500 (Avg &#8377;69 / order)</td>
+            <td>&#8377;27,500 (Avg &#8377;55 / order)</td>
+            <td><span class="badge b-green">+&#8377;7,000 saved</span></td>
+          </tr>
+          <tr>
+            <td><strong>COD Collection Fees</strong> (325 COD orders @ 65%)</td>
+            <td>&#8377;13,000 (&#8377;40 / order)</td>
+            <td><strong>&#8377;0 (Waived)</strong></td>
+            <td><span class="badge b-green">+&#8377;13,000 saved</span></td>
+          </tr>
+          <tr>
+            <td><strong>Platform Subscription SaaS Fee</strong></td>
+            <td>&#8377;799 / month (Pro)</td>
+            <td><strong>&#8377;0 (Zero fee)</strong></td>
+            <td><span class="badge b-green">+&#8377;799 saved</span></td>
+          </tr>
+          <tr class="featured-row">
+            <td><strong>Total Monthly Logistics Expense</strong></td>
+            <td><strong>&#8377;48,299 / month</strong></td>
+            <td><strong>&#8377;27,500 / month</strong></td>
+            <td><strong style="color: #166534;">&#8377;20,799 / month (43% Cheaper)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Scaled Financial Projections Across Milestones</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Monthly Volume</th>
+            <th>Shiprocket Total Cost</th>
+            <th>Shadowfax 360 Total Cost</th>
+            <th>Net Monthly Savings</th>
+            <th>Annualized Bottom-Line Benefit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>250 Orders / mo</strong></td>
+            <td>&#8377;24,549</td>
+            <td>&#8377;13,750</td>
+            <td><span class="badge b-green">&#8377;10,799 / mo</span></td>
+            <td><strong>&#8377;1,29,588 / year</strong></td>
+          </tr>
+          <tr class="featured-row">
+            <td><strong>500 Orders / mo</strong></td>
+            <td>&#8377;48,299</td>
+            <td>&#8377;27,500</td>
+            <td><span class="badge b-green">&#8377;20,799 / mo</span></td>
+            <td><strong>&#8377;2,49,588 / year</strong></td>
+          </tr>
+          <tr>
+            <td><strong>1,000 Orders / mo</strong></td>
+            <td>&#8377;95,799</td>
+            <td>&#8377;55,000</td>
+            <td><span class="badge b-green">&#8377;40,799 / mo</span></td>
+            <td><strong>&#8377;4,89,588 / year</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <strong>Customer Delivery Fee Recovery Strategy:</strong> If Intrust charges customers a standard delivery fee of &#8377;49 on orders below &#8377;499 (~70% of grocery and retail orders), Intrust collects <strong>&#8377;17,150</strong> on 500 orders. Under Shadowfax 360, the net platform delivery subsidy needed is only <strong>&#8377;10,350/month</strong> (vs. a deep deficit of &#8377;31,149/month under Shiprocket).
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 4: TECHNICAL ARCHITECTURE & SFX APIS ==================== -->
+  <div class="page-section">
+    <!-- 05 ARCHITECTURE INTEGRATION & API MAPPING -->
+    <div class="avoid-break">
+      <div class="sec-tag">Section 05</div>
+      <h2>Technical Blueprint: Shadowfax Unified API &amp; Push Webhook Sync</h2>
+      <p>
+        According to the official <strong>Shadowfax Unified Forward API Documentation</strong> (<code>sfxunifiedapi.docs.apiary.io</code>), the integration communicates via standard REST endpoints authenticated with an <code>Authorization: Token &lt;token_id&gt;</code> header.
+      </p>
+
+      <h3>Primary Unified API Endpoints</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Operation</th>
+            <th>Endpoint (Staging / Production Base: <code>dale.shadowfax.in/api/</code>)</th>
+            <th>Role in Intrust Architecture</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pincode Serviceability</strong></td>
+            <td><code>GET /v1/clients/serviceability/?service=customer_delivery&amp;pincodes=...</code></td>
+            <td>Verifies delivery &amp; seller pickup coverage before order placement.</td>
+          </tr>
+          <tr class="featured-row">
+            <td><strong>Marketplace Order Creation</strong></td>
+            <td><code>POST /v3/clients/orders/</code> (Seller Pickup Model)</td>
+            <td>Dispatches pickup from merchant outlet in Bhopal to customer.</td>
+          </tr>
+          <tr>
+            <td><strong>Order Tracking (v4)</strong></td>
+            <td><code>GET /v4/clients/orders/{awb_number}</code></td>
+            <td>Polls live shipment milestones (manifested, in-transit, OFD, delivered).</td>
+          </tr>
+          <tr>
+            <td><strong>Order Cancellation</strong></td>
+            <td><code>POST /v2/clients/orders/cancel/</code></td>
+            <td>Cancels delivery request before rider pickup if customer cancels order.</td>
+          </tr>
+          <tr>
+            <td><strong>Push Callback (Webhook)</strong></td>
+            <td>Intrust Endpoint: <code>POST /api/webhooks/shadowfax</code></td>
+            <td>Receives real-time push events from Shadowfax servers automatically.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Push Callback (Webhook) Payload &amp; Supabase Synchronization</h3>
+      <p>
+        Shadowfax sends real-time HTTP POST notifications whenever an order changes status. The webhook payload maps directly into Intrust's existing database architecture:
+      </p>
+
+      <div class="code-block">
+<span class="cmt">// Incoming Shadowfax Push Callback Payload</span>
+{
+  <span class="kwd">"order_id"</span>: <span class="str">"ord_987654"</span>,           <span class="cmt">// Intrust internal order ID</span>
+  <span class="kwd">"awb_number"</span>: <span class="str">"SFX1029384756"</span>,      <span class="cmt">// Shadowfax Tracking AWB</span>
+  <span class="kwd">"status"</span>: <span class="str">"Out For Delivery"</span>,       <span class="cmt">// Display status</span>
+  <span class="kwd">"event"</span>: <span class="str">"ofd"</span>,                     <span class="cmt">// Status enum: 'assigned_for_delivery', 'ofd', 'delivered'</span>
+  <span class="kwd">"rider_name"</span>: <span class="str">"Rahul Verma"</span>,        <span class="cmt">// Delivery rider name (available on OFD)</span>
+  <span class="kwd">"rider_contact"</span>: <span class="str">"+919876543210"</span>,  <span class="cmt">// Delivery rider phone</span>
+  <span class="kwd">"otp_verifed"</span>: <span class="str">"Y"</span>,                 <span class="cmt">// OTP proof of delivery validation</span>
+  <span class="kwd">"comments"</span>: <span class="str">"Out for delivery in MP Nagar"</span>
+}
+      </div>
+
+      <div class="callout info">
+        <strong>Zero Database Overhaul:</strong> When <code>/api/webhooks/shadowfax</code> receives this payload, it calls Intrust's existing Postgres function:
+        <br><code>SELECT update_order_delivery_v3(p_order_id := 'ord_987654', p_delivery_status := 'out_for_delivery', p_tracking_number := 'SFX1029384756', p_notes := 'Rider: Rahul Verma (+919876543210)');</code>
+        <br>This updates the customer timeline and fires the automated WhatsApp notification with rider details immediately!
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 5: REVERSE PICKUP, ENGINEERING & ONBOARDING ==================== -->
+  <div class="page-section">
+    <!-- 06 REVERSE PICKUP API -->
+    <div class="avoid-break">
+      <div class="sec-tag">Section 06</div>
+      <h2>Reverse Logistics (Returns &amp; Doorstep Quality Check)</h2>
+      <p>
+        According to the <strong>Shadowfax Reverse Pickup API</strong> (<code>sfxreversepickup.docs.apiary.io</code>), Shadowfax offers full return lifecycle management, essential for apparel and footwear returns on Intrust India:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Reverse Feature</th>
+            <th>API Capability</th>
+            <th>Benefit to Intrust India</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Doorstep QC Inspection</strong></td>
+            <td>Rider inspects tags, brand labels, and physical condition before accepting return</td>
+            <td>Eliminates fraudulent customer returns (e.g. used/damaged clothing).</td>
+          </tr>
+          <tr>
+            <td><strong>Reverse AWB Generation</strong></td>
+            <td><code>POST /api/v2/clients/reverse_orders/</code> generates dedicated return waybill</td>
+            <td>Customer and merchant track the return packet in real time.</td>
+          </tr>
+          <tr>
+            <td><strong>Return to Merchant / RTS</strong></td>
+            <td>Picked items routed directly back to the original Bhopal shop or warehouse</td>
+            <td>Merchants receive returned stock quickly to restock inventory.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 07 IMPLEMENTATION SCOPE & BUDGET -->
+    <div class="avoid-break" style="margin-top: 6px;">
+      <div class="sec-tag">Section 07</div>
+      <h2>Implementation Investment, Scope &amp; Timeline</h2>
+      <p>
+        Because Shadowfax Unified API provides both forward shipping and reverse returns under one specification, implementation takes only <strong>8–10 working days</strong>:
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Milestone</th>
+            <th>Scope of Work</th>
+            <th>Effort</th>
+            <th>Investment Estimate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. SFX REST Client</strong></td>
+            <td>Token auth, serviceability check, marketplace order dispatch, AWB generation</td>
+            <td>2 Days</td>
+            <td>&#8377;10,000 &ndash; &#8377;14,000</td>
+          </tr>
+          <tr>
+            <td><strong>2. Webhook &amp; DB Sync</strong></td>
+            <td><code>/api/webhooks/shadowfax</code> route, <code>update_order_delivery_v3()</code> RPC sync</td>
+            <td>2 Days</td>
+            <td>&#8377;8,000 &ndash; &#8377;12,000</td>
+          </tr>
+          <tr>
+            <td><strong>3. Merchant Dispatch UI</strong></td>
+            <td>1-Click "Dispatch with Shadowfax" button in merchant admin, label download</td>
+            <td>2 Days</td>
+            <td>&#8377;8,000 &ndash; &#8377;12,000</td>
+          </tr>
+          <tr>
+            <td><strong>4. Customer Tracking &amp; WhatsApp</strong></td>
+            <td>Milestone tracking widget with rider name/phone &amp; OTP display; WhatsApp alerts</td>
+            <td>1.5 Days</td>
+            <td>&#8377;6,000 &ndash; &#8377;9,000</td>
+          </tr>
+          <tr>
+            <td><strong>5. QA &amp; Reverse Return Flow</strong></td>
+            <td>End-to-end sandbox testing, reverse pickup test, idempotency verification</td>
+            <td>1.5 Days</td>
+            <td>&#8377;6,000 &ndash; &#8377;9,000</td>
+          </tr>
+          <tr class="featured-row">
+            <td><strong>Total Scope</strong></td>
+            <td><strong>Complete Production-Ready Logistics &amp; Returns Engine</strong></td>
+            <td><strong>8&ndash;10 Days</strong></td>
+            <td><strong>&#8377;38,000 &ndash; &#8377;56,000</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 6: ONBOARDING, RISKS & FINAL RECOMMENDATION ==================== -->
+  <div class="page-section">
+    <!-- 08 ONBOARDING GUIDE -->
+    <div class="avoid-break">
+      <div class="sec-tag">Section 08</div>
+      <h2>Client Onboarding Guide: Immediate Self-Serve Activation</h2>
+      <p>
+        Follow these exact steps to activate the account and generate API keys without waiting for sales:
+      </p>
+
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Register on Shadowfax 360</div>
+          <div class="step-desc">Go to <strong><code>https://shadowfax360.in</code></strong> and click <strong>Sign Up</strong>. Enter business contact number, company name (Intrust India), and corporate email.</div>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Digital KYC Verification</div>
+          <div class="step-desc">Upload company GSTIN, PAN Card, and cancelled cheque for bank account verification (required for automated D+2 COD payouts). Approval is automated within 2&ndash;6 hours.</div>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Wallet Top-Up &amp; Live Rates</div>
+          <div class="step-desc">Top up shipping wallet with a nominal test balance (&#8377;1,500 &ndash; 2,000). Use the dashboard "Rate Calculator" to view live Bhopal intra-city and national tariff quotes.</div>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Generate API Credentials</div>
+          <div class="step-desc">Navigate to <strong>Settings &gt; Developer / API Integrations</strong>. Copy the <code>API Token</code> and <code>Client ID</code>, and share them with the development team to begin sandbox integration.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 09 STRATEGIC VERDICT -->
+    <div class="avoid-break" style="margin-top: 6px;">
+      <div class="sec-tag">Section 09</div>
+      <h2>Strategic Summary &amp; Final Recommendation</h2>
+      <div class="card top-choice">
+        <div class="card-head">
+          <span class="card-title">Executive Verdict: Adopt Shadowfax 360 as Primary Logistics Partner</span>
+          <span class="badge b-green">Unanimous Recommendation</span>
+        </div>
+        <p style="font-size: 8.5pt; color: #334155; margin: 3px 0 5px 0;">
+          The official Shadowfax Unified API and Shadowfax 360 platform address all operational and commercial requirements of Intrust India:
+        </p>
+        <ul>
+          <li class="pro"><strong>Massive Cost Savings:</strong> Waived COD fees and flat &#8377;39 base rates save <strong>&#8377;20,799 / month</strong> on 500 orders (&#8377;2.5 Lakhs annually).</li>
+          <li class="pro"><strong>Unified Architecture:</strong> One API client handles Bhopal grocery 2–4 hr deliveries, Pan-India parcel shipments, and reverse customer returns.</li>
+          <li class="pro"><strong>Seamless Codebase Alignment:</strong> Integrates directly with Intrust's Next.js 14 backend and Supabase <code>update_order_delivery_v3()</code> RPC.</li>
+          <li class="pro"><strong>Rapid Go-Live:</strong> Complete production rollout achieved in <strong>8–10 working days</strong> for a total dev fee of &#8377;38,000 – 56,000 (recouped in 2 months).</li>
+        </ul>
+      </div>
+
+      <div class="callout success" style="margin-top: 6px;">
+        <strong>Immediate Action Items:</strong>
+        <ol style="margin-left: 14px; margin-top: 2px; font-size: 8.3pt;">
+          <li><strong>Client Step:</strong> Sign up at <code>https://shadowfax360.in</code> and complete digital KYC (1 day).</li>
+          <li><strong>Client Step:</strong> Share developer API Token from dashboard settings with engineering.</li>
+          <li><strong>Engineering Step:</strong> Kick off sprint to connect Next.js and Supabase to Shadowfax Unified API.</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between; font-size: 7.5pt; color: #64748b;">
+        <span>Intrust India &bull; Engineering &amp; Operations Advisory</span>
+        <span>Document Status: Approved for Client Review</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+`;
+
+// Target directories and files
+const projectDir = '/home/i4yush/Desktop/intrust-india';
+const docsDir = path.join(projectDir, 'docs');
+const htmlPath = path.join(docsDir, 'shadowfax_360_proposal.html');
+const pdfPathPrimary = path.join(docsDir, 'SHADOWFAX_360_INTEGRATION_REPORT.pdf');
+const pdfPathSecondary = path.join(docsDir, 'shadowfax_360_proposal.pdf');
+
+// Ensure docs directory exists
+if (!fs.existsSync(docsDir)) {
+  fs.mkdirSync(docsDir, { recursive: true });
+}
+
+// 1. Write HTML file
+fs.writeFileSync(htmlPath, html, 'utf8');
+console.log('Successfully wrote HTML to:', htmlPath);
+
+// 2. Launch Chromium and generate A4 PDF with native header/footer
+(async () => {
+  console.log('Launching browser to generate A4 PDF...');
+  const browser = await chromium.launch({
+    executablePath: '/usr/bin/google-chrome-stable',
+    headless: true,
+    args: ['--no-sandbox', '--disable-gpu']
+  });
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.setContent(html, { waitUntil: 'networkidle' });
+
+  // Generate PDF
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    displayHeaderFooter: true,
+    headerTemplate: `
+      <div style="font-size: 7pt; width: 100%; display: flex; justify-content: space-between; padding: 0 12mm; color: #475569; font-family: -apple-system, sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+        <span>Intrust India &bull; Shadowfax 360 &amp; Unified API Commercial Assessment</span>
+        <span>Confidential</span>
+      </div>
+    `,
+    footerTemplate: `
+      <div style="font-size: 7pt; width: 100%; display: flex; justify-content: space-between; padding: 0 12mm; color: #64748b; font-family: -apple-system, sans-serif; border-top: 1px solid #cbd5e1; padding-top: 3px;">
+        <span>For Client Review Only &bull; September 2026</span>
+        <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+      </div>
+    `,
+    margin: {
+      top: '12mm',
+      bottom: '13mm',
+      left: '12mm',
+      right: '12mm'
+    },
+    printBackground: true,
+    preferCSSPageSize: true
+  });
+
+  fs.writeFileSync(pdfPathPrimary, pdfBuffer);
+  fs.writeFileSync(pdfPathSecondary, pdfBuffer);
+  console.log('Successfully generated PDF at:', pdfPathPrimary);
+  console.log('Successfully generated PDF at:', pdfPathSecondary);
+
+  await browser.close();
+  console.log('Shadowfax 360 PDF generation finished successfully!');
+})();
