@@ -460,6 +460,91 @@ html {
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
 }
 
+/* ── Production motion layer (marketing + customer panels) ───────────── */
+
+/* Missing class used by GuideInfoModal + admin/marketing modals */
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Panel page mount transition (shared <main> in both panels) */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel-page-enter {
+  animation: pageEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stat count-in */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-countUp {
+  animation: countUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered card entrance: apply .stagger to a grid/stack container */
+.stagger > * {
+  animation: pageEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.1s; }
+.stagger > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger > *:nth-child(n+7) { animation-delay: 0.26s; }
+
+/* Accessibility: honor reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn,
+  .animate-slideUp,
+  .animate-slideDown,
+  .animate-scaleIn,
+  .animate-scaleUp,
+  .panel-page-enter,
+  .animate-countUp,
+  .stagger > * {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 .gold-border {
   border: 1px solid rgba(212, 175, 55, 0.3);
 }

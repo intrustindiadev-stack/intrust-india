@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -89,7 +89,7 @@ export default function MarketingOverviewClient({
                                 <span>InTrust Marketing Workspace</span>
                             </div>
                             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-950 dark:text-white tracking-tight leading-tight">
-                                Good Morning, {firstName}!
+                                {greeting}, {firstName}!
                             </h1>
                             <p className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 mt-0.5 sm:mt-1">
                                 Share. Inspire. Grow together.
@@ -169,7 +169,7 @@ export default function MarketingOverviewClient({
             </div>
 
             {/* 2. TOP 5 KPI SUMMARY CARDS */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3.5 stagger">
                 {/* Total Shares */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-blue-500/40 hover:shadow-xs transition-all group">
                     <div>

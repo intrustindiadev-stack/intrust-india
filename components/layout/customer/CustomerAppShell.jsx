@@ -692,7 +692,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                 </header>
 
                 {/* ── PAGE VIEWPORT CONTENT ── */}
-                <main className={`flex-1 w-full pt-3 sm:pt-4 lg:pt-24 ${
+                <main key={pathname} className={`panel-page-enter flex-1 w-full pt-3 sm:pt-4 lg:pt-24 ${
                     fullWidth 
                         ? 'p-0 max-w-none' 
                         : `px-4 lg:px-8 ${hideBottomNav ? 'pb-6 lg:pb-16' : 'pb-[calc(76px+env(safe-area-inset-bottom,0px))] lg:pb-16'} max-w-7xl mx-auto`

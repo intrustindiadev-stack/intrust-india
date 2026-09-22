@@ -411,7 +411,7 @@ export default function MarketingLayout({
                 </header>
 
                 {/* Page Content Body */}
-                <main className="flex-1 max-w-7xl w-full mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-7 min-w-0 pb-24 lg:pb-8">
+                <main key={pathname} className="panel-page-enter flex-1 max-w-7xl w-full mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-7 min-w-0 pb-24 lg:pb-8">
                     {accessGate ? (
                         <MarketingAccessGate 
                             type={accessGate.type} 
