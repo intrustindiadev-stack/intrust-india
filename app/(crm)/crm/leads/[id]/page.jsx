@@ -40,13 +40,13 @@ const STATUS_CONFIG = {
 import { isValidUUID } from '@/lib/utils';
 
 
-export default function LeadDetailPage({ params, backHref }) {
+export default function LeadDetailPage({ params, searchParams }) {
     const router = useRouter();
     const unwrappedParams = use(params);
     const rawId = unwrappedParams.id;
     const idMatch = rawId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
     const id = idMatch ? idMatch[0] : rawId;
-    const handleBack = () => { if (backHref) router.push(backHref); else router.back(); };
+    const handleBack = () => { router.back(); };
 
     const { user, profile } = useAuth();
     

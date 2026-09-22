@@ -16,7 +16,7 @@ import MerchantApplyShowcase from '@/components/merchant/MerchantApplyShowcase';
 import { MERCHANT_DEPARTMENTS } from '@/lib/constants/departments';
 import { useForm } from 'react-hook-form';
 
-export const DRAFT_STORAGE_KEY = 'intrust_merchant_apply_draft';
+const DRAFT_STORAGE_KEY = 'intrust_merchant_apply_draft';
 
 const DEFAULT_FORM_VALUES = {
     businessName: '',

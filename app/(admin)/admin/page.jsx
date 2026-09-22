@@ -5,8 +5,29 @@ import Link from 'next/link';
 import AdminClock from './AdminClock';
 import AdminStatsCards from '@/components/admin/AdminStatsCards';
 import PageGuideWrapper from '@/components/admin/PageGuideWrapper';
+import { QuickActionsDesktop, QuickActionsMobile } from '@/components/admin/QuickActions';
 import { getTodayISTBoundaries } from '@/lib/utils/dateIst';
 import { isPendingActionOrder } from '@/lib/merchant/orderMetrics';
+import AdminRecentTransactions from '@/components/admin/AdminRecentTransactions';
+
+// Helper to format category & display metadata
+function getTransactionCategory(udf1) {
+    const map = {
+        'CART_CHECKOUT': { label: 'Cart Checkout', icon: '🛍️', source: 'Shop Order' },
+        'MERCHANT_SUBSCRIPTION': { label: 'Merchant Subscription', icon: '🏪', source: 'Subscription' },
+        'MERCHANT_TOPUP': { label: 'Merchant Top-up', icon: '💼', source: 'Merchant Wallet' },
+        'WALLET_TOPUP': { label: 'Wallet Top-up', icon: '💳', source: 'Customer Wallet' },
+        'GIFT_CARD': { label: 'Gift Card', icon: '🎁', source: 'Gift Card sale' },
+        'WHOLESALE_PURCHASE': { label: 'Wholesale Purchase', icon: '📦', source: 'Wholesale Order' },
+        'AI_ORDER': { label: 'AI Order', icon: '🤖', source: 'AI Platform' },
+        'INVOICE_PAY': { label: 'Invoice Payment', icon: '📄', source: 'Invoice' },
+        'GOLD_SUBSCRIPTION': { label: 'Gold Subscription', icon: '🏆', source: 'Gold Member' },
+        'UDHARI_PAYMENT': { label: 'Udhari Settlement', icon: '🤝', source: 'Udhari' },
+        'MERCHANT_LOCKIN': { label: 'Merchant Lock-in', icon: '🔒', source: 'Lock-in' }
+    };
+    if (udf1 && map[udf1]) return map[udf1];
+    return { label: udf1 ? udf1.replace(/_/g, ' ') : 'Platform Payment', icon: '⚡', source: 'Platform Payment' };
+}
 
 // Helper to format price
 function formatPrice(paise) {
@@ -101,67 +122,73 @@ export default async function AdminDashboard() {
             return { count, revenue: txnRev + groupRev };
         }),
 
-        // 5. Recent Transactions - Merged from transactions and shopping_order_groups
+        // 5. Recent Transactions - Merged from transactions and non-gateway shopping orders
         Promise.all([
-            // Gift Card Transactions
+            // Gateway & Platform Transactions
             supabase.from('transactions')
-                .select('id, user_id, coupon_id, total_paid_paise, amount, created_at, status')
-                .in('status', COMPLETED_STATUSES)
+                .select('id, user_id, udf1, udf2, total_paid_paise, amount, paid_amount, paid_amount_paise, payment_mode, created_at, status, user:user_profiles(id, full_name, email, avatar_url, role)')
+                .in('status', ['gateway_success', 'completed'])
                 .order('created_at', { ascending: false })
                 .limit(10),
-            // Shop Orders
+            // Standalone Wallet & Store-Credit Shop Orders (distinct from gateway transactions)
             supabase.from('shopping_order_groups')
-                .select('id, customer_id, total_amount_paise, created_at, status')
+                .select('id, customer_id, total_amount_paise, payment_method, created_at, status')
                 .eq('status', 'completed')
+                .neq('payment_method', 'gateway')
                 .order('created_at', { ascending: false })
                 .limit(10)
         ]).then(async ([txnRes, shopRes]) => {
             const txns = txnRes.data || [];
             const shops = shopRes.data || [];
 
-            // Standardize format
-            const formattedTxns = txns.map(t => ({
-                id: t.id,
-                user_id: t.user_id,
-                amount: getAmountPaise(t),
-                created_at: t.created_at,
-                type: 'GIFT_CARD',
-                coupon_id: t.coupon_id
-            }));
+            // Fetch profiles for shop orders
+            const shopCustomerIds = [...new Set(shops.map(s => s.customer_id).filter(Boolean))];
+            let customerMap = {};
+            if (shopCustomerIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('user_profiles')
+                    .select('id, full_name, email, avatar_url')
+                    .in('id', shopCustomerIds);
+                (profiles || []).forEach(p => { customerMap[p.id] = p; });
+            }
 
-            const formattedShops = shops.map(s => ({
-                id: s.id,
-                user_id: s.customer_id,
-                amount: s.total_amount_paise,
-                created_at: s.created_at,
-                type: 'SHOP_ORDER'
-            }));
+            const formattedTxns = txns.map(t => {
+                const cat = getTransactionCategory(t.udf1);
+                return {
+                    id: t.id,
+                    user_id: t.user_id,
+                    amount: getAmountPaise(t),
+                    created_at: t.created_at,
+                    buyer_name: t.user?.full_name?.trim() || t.user?.email || 'User',
+                    avatar_url: t.user?.avatar_url || null,
+                    brand: cat.label,
+                    icon: cat.icon,
+                    merchant_name: t.payment_mode || 'Direct Gateway',
+                    source: cat.source,
+                    type: t.udf1 || 'TRANSACTION'
+                };
+            });
 
-            const merged = [...formattedTxns, ...formattedShops]
+            const formattedShops = shops.map(s => {
+                const profile = customerMap[s.customer_id];
+                return {
+                    id: s.id,
+                    user_id: s.customer_id,
+                    amount: Number(s.total_amount_paise) || 0,
+                    created_at: s.created_at,
+                    buyer_name: profile?.full_name?.trim() || profile?.email || 'Customer',
+                    avatar_url: profile?.avatar_url || null,
+                    brand: 'Shop Order',
+                    icon: '🛍️',
+                    merchant_name: s.payment_method === 'wallet' ? 'Wallet Payment' : 'Store Credit',
+                    source: 'Customer Shop Order',
+                    type: 'SHOP_ORDER'
+                };
+            });
+
+            return [...formattedTxns, ...formattedShops]
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                 .slice(0, 10);
-
-            if (merged.length === 0) return [];
-
-            // Fetch profiles and coupons for display names
-            const userIds = [...new Set(merged.map(m => m.user_id).filter(Boolean))];
-            const couponIds = [...new Set(merged.map(m => m.coupon_id).filter(Boolean))];
-
-            const [pRes, cRes] = await Promise.all([
-                supabase.from('user_profiles').select('id, full_name, email').in('id', userIds),
-                couponIds.length > 0 ? supabase.from('coupons').select('id, brand, merchants(business_name)').in('id', couponIds) : { data: [] }
-            ]);
-
-            const profiles = (pRes.data || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
-            const coupons = (cRes.data || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {});
-
-            return merged.map(m => ({
-                ...m,
-                buyer_name: profiles[m.user_id]?.full_name || profiles[m.user_id]?.email || 'User',
-                brand: m.type === 'GIFT_CARD' ? (coupons[m.coupon_id]?.brand || 'Gift Card') : 'Shop Order',
-                merchant_name: m.type === 'GIFT_CARD' ? (coupons[m.coupon_id]?.merchants?.business_name || 'Platform') : 'Standard Store',
-                source: m.type === 'GIFT_CARD' ? 'Gift Card sale' : 'Customer Shop Order'
-            }));
         }),
 
         // 6. Pending Approvals
@@ -349,165 +376,20 @@ export default async function AdminDashboard() {
                                     View All
                                 </Link>
                             </div>
-                            {/* Mobile: stacked transaction cards (md:hidden) */}
-                            <div className="flex flex-col gap-3 md:hidden p-4">
-                                {recentTransactions.length > 0 ? (
-                                    recentTransactions.map((tx) => (
-                                        <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className="w-10 h-10 shrink-0 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
-                                                    {tx.buyer_name?.charAt(0)}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-900 truncate">{tx.buyer_name}</p>
-                                                    <p className="text-xs text-slate-500 truncate">
-                                                        {tx.type === 'GIFT_CARD' ? '🎁' : '🛍️'} {tx.brand} · {tx.source}
-                                                    </p>
-                                                    <p className="text-[11px] text-slate-400 mt-0.5">
-                                                        {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <p className="shrink-0 text-sm font-bold text-slate-900">
-                                                {formatPrice(tx.amount)}
-                                            </p>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="p-8 text-center text-gray-500">
-                                        <p>No recent transactions</p>
-                                    </div>
-                                )}
-                            </div>
-                            {/* Desktop: table (hidden below md, horizontal scroll fallback) */}
-                            <div className="hidden md:block w-full overflow-x-auto whitespace-nowrap rounded-lg border border-gray-200 border-t-0">
-                                <table className="hidden md:table w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 text-xs uppercase tracking-wider text-slate-500 font-semibold border-b border-gray-100">
-                                            <th className="p-4 pl-6">Buyer</th>
-                                            <th className="p-4">Gift Card</th>
-                                            <th className="p-4">Sold By</th>
-                                            <th className="p-4">Date</th>
-                                            <th className="p-4 pr-6 text-right">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {recentTransactions.length > 0 ? (
-                                            recentTransactions.map((tx) => (
-                                                <tr key={tx.id} className="hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent dark:hover:from-white/[0.02] dark:hover:to-transparent transition-all group">
-                                                    <td className="p-4 pl-6 font-medium text-slate-900 flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
-                                                            {tx.buyer_name?.charAt(0)}
-                                                        </div>
-                                                        {tx.buyer_name}
-                                                    </td>
-                                                    <td className="p-4 text-slate-600">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-[10px]">
-                                                                {tx.type === 'GIFT_CARD' ? '🎁' : '🛍️'}
-                                                            </div>
-                                                            {tx.brand}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-4 text-sm font-medium text-slate-600">
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <span>{tx.merchant_name}</span>
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                                                                {tx.source}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-4 text-sm text-slate-500">
-                                                        {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    </td>
-                                                    <td className="p-4 pr-6 text-right font-bold text-slate-900">
-                                                        {formatPrice(tx.amount)}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="5" className="p-12 text-center text-gray-500">
-                                                    <div className="flex flex-col items-center justify-center space-y-3">
-                                                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                        </div>
-                                                        <p>No recent transactions</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                            {/* Recent Transactions List & Table */}
+                            <AdminRecentTransactions transactions={recentTransactions} />
                         </div>
                     </div>
 
-                    {/* Right Column: Quick Links Map */}
-                    <div className="xl:col-span-1">
-                        <div className="bg-white rounded-3xl border border-gray-100 p-4 md:p-6 shadow-sm lg:sticky lg:top-28">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Quick Actions</h2>
-                            <div className="space-y-4">
-                                <Link href="/admin/giftcards" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-blue-100 transition-all">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl shadow-lg shadow-blue-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                                        🎁
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Gift Cards Platform</h3>
-                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Manage global inventory and brand catalogs</p>
-                                    </div>
-                                </Link>
-
-                                <Link href="/admin/users" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-emerald-100 transition-all">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xl shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
-                                        👥
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">User Management</h3>
-                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Handle role assignments and view KYC</p>
-                                    </div>
-                                </Link>
-
-
-
-                                <Link href="/admin/merchants" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-sky-100 transition-all">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center text-white text-xl shadow-lg shadow-sky-500/20 group-hover:scale-110 transition-transform">
-                                        🏪
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-900 group-hover:text-sky-600 transition-colors">Merchant Directory</h3>
-                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Review applications and control access</p>
-                                    </div>
-                                </Link>
-
-                                <Link href="/admin/shopping/orders" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-violet-100 transition-all">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-lg shadow-violet-500/20 group-hover:scale-110 transition-transform relative">
-                                        📦
-                                        {shoppingStats.pendingOrders > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{shoppingStats.pendingOrders}</span>
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-900 group-hover:text-violet-600 transition-colors">Shopping Orders</h3>
-                                        <p className="text-sm text-slate-500 mt-1 leading-snug">
-                                            {shoppingStats.sales} total · {shoppingStats.pendingOrders} pending dispatch
-                                        </p>
-                                    </div>
-                                </Link>
-
-                                <Link href="/admin/careers" className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-violet-100 transition-all">
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white text-xl shadow-lg shadow-violet-500/20 group-hover:scale-110 transition-transform">
-                                        💼
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-slate-900 group-hover:text-violet-600 transition-colors">Career Applications</h3>
-                                        <p className="text-sm text-slate-500 mt-1 leading-snug">Review freelancer, agent & DSA applications</p>
-                                    </div>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Right Column: Desktop Quick Actions Grid (Hidden on Mobile) */}
+                    <QuickActionsDesktop
+                        shoppingStats={shoppingStats}
+                        className="xl:col-span-1"
+                    />
                 </div>
+
+                {/* Mobile Floating Action Button (FAB) & Bottom Sheet Drawer */}
+                <QuickActionsMobile shoppingStats={shoppingStats} />
             </div>
         </div>
     );
