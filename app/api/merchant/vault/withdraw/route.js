@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/apiAuth';
 import { getMerchantFeatureVisibility } from '@/lib/merchant/featureVisibility';
+import { getVaultForMerchant } from '@/lib/ai-orders/vaultLookup';
 import { sendEmail } from '@/lib/email';
 import { fireAndForgetEmail } from '@/lib/email/dispatch';
 import { aiOrderWithdrawalNotificationTemplate } from '@/lib/email/templates/aiOrderWithdrawalNotification';
@@ -28,14 +29,11 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Missing or invalid amount' }, { status: 400 });
         }
 
-        // 1. Check current vault balance for this merchant user
-        const { data: vault, error: vaultError } = await supabaseAdmin
-            .from('ai_orders_vault')
-            .select('*')
-            .eq('merchant_id', user.id)
-            .single();
+        // 1. Resolve the merchant's vault via the canonical lookup (vault rows
+        //    are keyed by auth user id; the helper bridges merchants.id too).
+        const { vault } = await getVaultForMerchant(supabaseAdmin, { userId: user.id });
 
-        if (vaultError || !vault) {
+        if (!vault) {
             return NextResponse.json({ error: 'Vault not found for merchant' }, { status: 404 });
         }
 
@@ -43,31 +41,61 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Insufficient vault balance' }, { status: 400 });
         }
 
-        // 2. Deduct amount from vault immediately
+        // 2. Atomically debit the vault under a row lock via the
+        //    withdraw_from_ai_vault RPC. This replaces the old racy
+        //    read-check-update sequence and creates the PROCESSING ledger row.
+        const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
+            'withdraw_from_ai_vault',
+            {
+                p_merchant_id: user.id,
+                p_amount_paise: parsedAmountPaise,
+                p_payout_details: {},
+            }
+        );
+
+        if (rpcError) {
+            const msg = rpcError.message || '';
+            if (rpcError.code === 'P0001' && msg.includes('Insufficient balance')) {
+                return NextResponse.json({ error: 'Insufficient vault balance' }, { status: 400 });
+            }
+            if (rpcError.code === 'P0001' && msg.includes('Vault not found')) {
+                return NextResponse.json({ error: 'Vault not found for merchant' }, { status: 404 });
+            }
+            throw rpcError;
+        }
+
+        // The RPC wrote the WITHDRAWAL row with status PROCESSING. Flip it to
+        // PENDING (awaiting admin approval) and capture the remaining balance
+        // it returned for downstream notifications.
+        const remainingBalance = Number(rpcData?.remaining_balance_paise ?? (vault.balance_paise - parsedAmountPaise));
         const newBalance = vault.balance_paise - parsedAmountPaise;
-        const { error: updateError } = await supabaseAdmin
-            .from('ai_orders_vault')
-            .update({ balance_paise: newBalance, updated_at: new Date().toISOString() })
-            .eq('id', vault.id);
 
-        if (updateError) throw updateError;
-
-        // 3. Create a PENDING withdrawal transaction with required balance ledger columns
-        const { data: txData, error: txError } = await supabaseAdmin
+        // Locate the ledger row the RPC just wrote (most recent WITHDRAWAL for
+        // this vault) and mark it PENDING so it shows up in the admin queue.
+        const { data: txRows, error: txFetchError } = await supabaseAdmin
             .from('ai_orders_vault_transactions')
-            .insert([{
-                vault_id: vault.id,
-                type: 'WITHDRAWAL',
-                amount_paise: parsedAmountPaise,
-                balance_before_paise: vault.balance_paise,
-                balance_after_paise: newBalance,
-                status: 'PENDING',
-                created_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
+            .select('*')
+            .eq('vault_id', vault.id)
+            .eq('type', 'WITHDRAWAL')
+            .eq('amount_paise', parsedAmountPaise)
+            .eq('balance_after_paise', remainingBalance)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-        if (txError) throw txError;
+        if (txFetchError) throw txFetchError;
+        const txData = txRows?.[0];
+        if (!txData) {
+            throw new Error('Withdrawal ledger row not found after RPC');
+        }
+
+        const { error: flipError } = await supabaseAdmin
+            .from('ai_orders_vault_transactions')
+            .update({ status: 'PENDING' })
+            .eq('id', txData.id)
+            .eq('status', 'PROCESSING');
+
+        if (flipError) throw flipError;
+        txData.status = 'PENDING';
 
         // 4. Notify Admins about the new withdrawal request
         const amountRupees = parsedAmountPaise / 100;
