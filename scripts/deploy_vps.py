@@ -93,7 +93,26 @@ def pack_build():
                 return tarinfo
 
             print(f"  Adding: {path}")
-            tar.add(full, arcname=path, filter=exclude_filter)
+            if os.path.isfile(full):
+                try:
+                    tar.add(full, arcname=path)
+                except (FileNotFoundError, OSError):
+                    pass
+            else:
+                for root, dirs, files in os.walk(full):
+                    rel_root = os.path.relpath(root, PROJECT_DIR)
+                    if any(rel_root == excl or rel_root.startswith(excl + os.sep) for excl in EXCLUDE_DIRS):
+                        continue
+                    for f in files:
+                        file_full = os.path.join(root, f)
+                        file_arc = os.path.relpath(file_full, PROJECT_DIR)
+                        if any(file_arc == excl or file_arc.startswith(excl + os.sep) for excl in EXCLUDE_DIRS):
+                            continue
+                        try:
+                            if os.path.exists(file_full):
+                                tar.add(file_full, arcname=file_arc)
+                        except (FileNotFoundError, OSError):
+                            pass
 
     size_mb = os.path.getsize(LOCAL_TAR) / (1024 * 1024)
     print(f"\n[OK] Created {TAR_NAME} ({size_mb:.1f} MB)")

@@ -30,20 +30,25 @@ function LiveDot({ flashing }) {
 
 function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, label, value, subtext, subtextFlash, delay, flashKey, icon: Icon, children }) {
     const [flashing, setFlashing] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState(null);
+    const [justUpdated, setJustUpdated] = useState(false);
     const prevValue = useRef(value);
 
     useEffect(() => {
         if (prevValue.current !== value && prevValue.current !== undefined) {
-            setFlashing(true);
-            setLastUpdated(Date.now());
-            const t = setTimeout(() => setFlashing(false), 1800);
-            return () => clearTimeout(t);
+            const tStart = setTimeout(() => {
+                setFlashing(true);
+                setJustUpdated(true);
+            }, 0);
+            const tFlash = setTimeout(() => setFlashing(false), 1800);
+            const tUpdated = setTimeout(() => setJustUpdated(false), 8000);
+            return () => {
+                clearTimeout(tStart);
+                clearTimeout(tFlash);
+                clearTimeout(tUpdated);
+            };
         }
         prevValue.current = value;
     }, [value, flashKey]);
-
-    const secondsAgo = lastUpdated ? Math.floor((Date.now() - lastUpdated) / 1000) : null;
 
     return (
         <Link
@@ -86,7 +91,7 @@ function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, labe
                 </p>
             )}
 
-            {lastUpdated && secondsAgo !== null && secondsAgo < 10 && (
+            {justUpdated && (
                 <p className="text-[9px] font-bold text-emerald-500 mt-1.5 uppercase tracking-widest">
                     Live update just now
                 </p>
