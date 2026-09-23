@@ -505,7 +505,7 @@ export default function CustomerAppShell({ children, fullWidth = false }) {
                                     if (pathname.startsWith('/shop')) return 'InTrust Shop';
                                     const found = ALL_NAV_ITEMS.find(n => n.href === pathname);
                                     if (found) return found.label;
-                                    return isGuest ? 'InTrust India' : 'Customer Panel';
+                                    return isGuest ? 'InTrust India' : 'Customer Profile';
                                 })()}
                             </h2>
                             <p className="text-[11px] text-slate-400 dark:text-brand-steel font-bold mt-0.5">

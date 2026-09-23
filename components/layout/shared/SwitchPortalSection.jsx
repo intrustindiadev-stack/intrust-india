@@ -67,8 +67,8 @@ export default function SwitchPortalSection({
         } else {
             portals.push({
                 id: 'customer',
-                name: 'Customer Panel',
-                shortName: 'Customer',
+                name: 'Customer Profile',
+                shortName: 'Profile',
                 subtitle: 'Dashboard & Wallet',
                 href: '/dashboard',
                 icon: ShoppingBag,
