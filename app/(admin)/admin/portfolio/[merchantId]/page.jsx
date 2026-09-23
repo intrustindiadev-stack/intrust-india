@@ -212,7 +212,7 @@ export default function MerchantPortfolioPage({ params }) {
     const { merchant, investments, lockins } = data;
 
     const pieData = [
-        { name: 'AI Grow', value: merchant.total_ai_grow_paise / 100, color: '#4f46e5' }, // indigo-600
+        { name: 'AI Grow', value: merchant.ai_grow_wallet_balance / 100, color: '#4f46e5' }, // indigo-600 — authoritative vault ledger (matches settle page)
         { name: 'Lockin', value: merchant.total_lockin_paise / 100, color: '#10b981' }    // emerald-500
     ].filter(d => d.value > 0);
 
@@ -254,7 +254,7 @@ export default function MerchantPortfolioPage({ params }) {
                             <div className="absolute right-4 top-4 opacity-10"><Briefcase size={64} /></div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Deployed Capital</p>
                             <p className="text-3xl font-black tracking-tight flex items-baseline">
-                                <span>₹{(merchant.total_ai_grow_paise / 100).toLocaleString('en-IN')}</span>
+                                <span>₹{((merchant.active_investment_principal_paise ?? merchant.total_ai_grow_paise) / 100).toLocaleString('en-IN')}</span>
                                 {lockins.filter(l => l.status === 'active').length > 0 && (
                                     <>
                                         <span className="mx-2 text-slate-500 font-medium text-lg">+</span>
@@ -282,7 +282,9 @@ export default function MerchantPortfolioPage({ params }) {
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI Grow Funds / Vault</p>
                             </div>
                             <p className="text-2xl font-black text-slate-900 tracking-tight">
-                                ₹{(merchant.total_ai_grow_paise / 100).toLocaleString('en-IN')}
+                                {/* Authoritative ai_grow_wallets.balance — identical to the
+                                    figure shown/validated on the settle-vault page. */}
+                                ₹{(merchant.ai_grow_wallet_balance / 100).toLocaleString('en-IN')}
                             </p>
                         </div>
                         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">

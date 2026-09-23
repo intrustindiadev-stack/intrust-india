@@ -94,7 +94,15 @@ export default function SettleVaultPage({ params }) {
             const m = json.data.merchant;
             setMerchant(m);
 
-            const vBalance = Number(m.ai_grow_vault_balance_rupees || (m.total_ai_grow_paise ? m.total_ai_grow_paise / 100 : 0));
+            // Vault balance from the authoritative ledger field. Use an explicit
+            // null/undefined check — a genuine ₹0 vault must NOT fall through to
+            // the active-principal fallback (that was the old `||` bug).
+            const hasVaultField = m.ai_grow_vault_balance_rupees !== undefined && m.ai_grow_vault_balance_rupees !== null;
+            const vBalance = Number(
+                hasVaultField
+                    ? m.ai_grow_vault_balance_rupees
+                    : (m.active_investment_principal_paise ?? (m.total_ai_grow_paise ?? 0)) / 100
+            );
             setVaultBalance(vBalance);
             setWalletBalancePaise(Number(m.wallet_balance_paise || 0));
 

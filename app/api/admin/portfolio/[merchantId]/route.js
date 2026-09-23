@@ -47,20 +47,28 @@ export async function GET(request, { params }) {
 
         if (lError) throw lError;
 
-        // 5. Fetch AI Grow Wallet
+        // 5. Fetch AI Grow Wallet — the authoritative vault ledger.
+        //    (`.single()` errors when the row is missing — treat as legacy/no-wallet.)
         const { data: aiGrowWallet } = await supabase
             .from('ai_grow_wallets')
             .select('balance')
             .eq('merchant_id', merchantId)
             .single();
 
+        const walletRowExists = Boolean(aiGrowWallet);
         const aiWalletBalance = Math.round((aiGrowWallet?.balance || 0) * 100);
 
         // Calculate totals
         const activeAiGrowAmount = aiGrow.filter(i => i.status === 'active').reduce((sum, i) => sum + i.amount_paise, 0);
         const activeLockinAmount = lockin.filter(l => l.status === 'active').reduce((sum, l) => sum + l.amount_paise, 0);
-        
-        const finalAiGrowAmount = Math.max(aiWalletBalance, activeAiGrowAmount);
+
+        // VAULT figure must be the authoritative ledger (ai_grow_wallets.balance) —
+        // the same value the settle-vault flow validates against. Previously this
+        // was Math.max(wallet, active principal), which inflated the card whenever
+        // active investment rows drifted above the ledger (e.g. after a partial
+        // vault settlement that debited the ledger but left rows active).
+        // Fallback to active principal only for legacy merchants with no wallet row.
+        const finalAiGrowAmount = walletRowExists ? aiWalletBalance : activeAiGrowAmount;
 
         return NextResponse.json({
             data: {
@@ -71,6 +79,10 @@ export async function GET(request, { params }) {
                     total_lockin_paise: activeLockinAmount,
                     ai_grow_wallet_balance: aiWalletBalance,
                     ai_grow_vault_balance_rupees: Number(aiGrowWallet?.balance || 0),
+                    // Distinct metric: principal currently in active plan rows
+                    // (may legitimately differ from the vault ledger).
+                    active_investment_principal_paise: activeAiGrowAmount,
+                    ai_grow_wallet_row_exists: walletRowExists,
                 },
                 investments: aiGrow || [],
                 lockins: lockin || [],

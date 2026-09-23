@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabaseServer';
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+import { creditAiGrowVaultForDeposit } from '@/lib/investments/aiGrowLedger';
 
 // Get all investments (Admin)
 export async function GET(request) {
@@ -149,6 +150,31 @@ export async function POST(request) {
             .single();
 
         if (error) throw error;
+
+        // Keep the authoritative vault ledger in sync: principal created here
+        // must be credited to ai_grow_wallets (the RPC auto-creates the row).
+        // On ledger failure, delete the just-created row so no principal exists
+        // outside the ledger, then fail the request.
+        const ledger = await creditAiGrowVaultForDeposit({
+            merchantId,
+            amountRupees: amountPaise / 100,
+            gatewayTxnId: data.id, // reference this investment row in ledger metadata
+            source: 'admin_investment_create',
+        });
+
+        if (!ledger.ok) {
+            const { error: rollbackErr } = await supabase
+                .from('merchant_investments')
+                .delete()
+                .eq('id', data.id);
+            if (rollbackErr) {
+                console.error('[admin/investments] Rollback delete failed after ledger error:', rollbackErr);
+            }
+            return NextResponse.json(
+                { error: `Vault ledger credit failed, investment not created: ${ledger.error}` },
+                { status: 500 }
+            );
+        }
 
         // Notify Merchant
         try {
