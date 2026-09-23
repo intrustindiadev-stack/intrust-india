@@ -48,8 +48,7 @@ export default async function AnalyticsPage() {
         const { data: events } = await supabase
             .from('marketing_tracking_events')
             .select('id, link_id, event_type, referer, metadata, created_at')
-            .in('link_id', linkIds)
-            // eslint-disable-next-line react-hooks/purity -- server component: per-request 90-day fetch window
+                        .in('link_id', linkIds)
             .gte('created_at', getNinetyDaysAgoIso())
             .order('created_at', { ascending: true });
         trackingEvents = events || [];

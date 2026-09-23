@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+// NOTE: the lazy sponsorship analytics chart lives in the sponsor history detail page.
+
+const SPONSOR_EVENT_ENDPOINT = '/api/marketing/sponsor/analytics';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -44,17 +49,19 @@ import {
     Receipt
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
-import dynamic from 'next/dynamic';
 import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 const CashbackAnimationModal = dynamic(() => import('@/components/marketing/animations/CashbackAnimationModal'), { ssr: false });
 const GiftBoxAnimationModal = dynamic(() => import('@/components/marketing/animations/GiftBoxAnimationModal'), { ssr: false });
 const SabpaisaPaymentModal = dynamic(() => import('@/components/payment/SabpaisaPaymentModal'), { ssr: false });
 const SponsorshipCelebrationModal = dynamic(() => import('@/components/marketing/animations/SponsorshipCelebrationModal'), { ssr: false });
+const SponsorshipAnalyticsChart = lazy(() => import('@/components/marketing/sponsor/SponsorshipAnalyticsChart'));
 import StreakRibbon from '@/components/marketing/challenge/StreakRibbon';
 import StreakMilestoneModal from '@/components/marketing/challenge/StreakMilestoneModal';
 import TrophyChampionVector from '@/components/marketing/graphics/TrophyChampionVector';
 import { supabase } from '@/lib/supabaseClient';
+import { trackSponsorImpressionOnce, trackSponsorEvent } from '@/lib/sponsorshipTracking';
+import { lazy, Suspense } from 'react';
 
 // Zero-dependency Web Audio Sound Synthesizer for rich arcade tactile feedback
 function playSound(type, soundEnabled = true) {
@@ -1158,7 +1165,10 @@ export default function DailyChallengeClient({
                         playedToday={streakData.playedToday}
                     />
 
-                    {/* Clean, Minimal & Premium VIP Sponsor Spotlight */}
+                                        {/* Clean, Minimal & Premium VIP Sponsor Spotlight */}
+                    {/* Fire one impression beacon per sponsor per session for reach analytics */}
+                    {todaySponsor?.id && (typeof window !== 'undefined') && trackSponsorImpressionOnce(todaySponsor.id)}
+
                     <div className="rounded-3xl p-5 sm:p-6 bg-white border border-slate-200/90 shadow-sm space-y-4 relative overflow-hidden transition-all">
                         {/* Subtle top gradient accent */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-500" />
@@ -1251,6 +1261,13 @@ export default function DailyChallengeClient({
                                                 href={targetHref}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    trackSponsorEvent(todaySponsor.id, 'PRODUCT_CLICK', { 
+                                                        productId: p.id || p.product_id 
+                                                    });
+                                                    window.open(targetHref, '_blank', 'noopener,noreferrer');
+                                                }}
                                                 className="group bg-slate-50/70 hover:bg-white p-3 rounded-2xl border border-slate-200/80 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3 relative"
                                             >
                                                 <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-white border border-slate-200/60 shrink-0 flex items-center justify-center p-1">
@@ -1808,9 +1825,10 @@ export default function DailyChallengeClient({
                                                         <span>You cannot buy from other merchants (Merchant Account)</span>
                                                     </div>
                                                 ) : (
-                                                    <Link
+                                                                                                        <Link
                                                         href={currentProd.slug ? `/shop/product/${currentProd.slug}` : `/shop/product/${currentProd.id}`}
                                                         target="_blank"
+                                                        onClick={() => trackSponsorEvent(todaySponsor?.id, 'PRODUCT_CLICK', { productId: currentProd.id || currentProd.product_id })}
                                                         className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-[0.99] transition-all cursor-pointer"
                                                     >
                                                         <ShoppingBag size={18} />
@@ -2010,6 +2028,7 @@ export default function DailyChallengeClient({
                                                 </div>
                                                 <a
                                                     href={p.slug ? `/shop/product/${p.slug}` : '/shop'}
+                                                    onClick={() => trackSponsorEvent(todaySponsor?.id, 'PRODUCT_CLICK', { productId: p.id || p.product_id })}
                                                     className="mt-2 w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black text-center transition-all block active:scale-95 shadow-xs"
                                                 >
                                                     Shop Now

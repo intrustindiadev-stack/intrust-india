@@ -6,22 +6,20 @@ import { usePathname } from 'next/navigation';
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-    const [theme, setTheme] = useState('light');
-    const [isLoading, setIsLoading] = useState(true);
-    const pathname = usePathname();
-
-    // Load theme preference from localStorage on mount
-    useEffect(() => {
+        const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('intrust-theme');
-            
-            if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-                setTheme(savedTheme);
-            } else {
-                setTheme('light');
-            }
-            setIsLoading(false);
+            if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
         }
+        return 'light';
+    });
+    const [isLoading, setIsLoading] = useState(() => typeof window === 'undefined');
+    const pathname = usePathname();
+
+    // Sync loading flag to client mount
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsLoading(false);
     }, []);
 
     // Apply theme class to document based on theme state AND route

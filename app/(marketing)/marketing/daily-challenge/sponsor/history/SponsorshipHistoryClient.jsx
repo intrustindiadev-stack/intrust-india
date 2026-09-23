@@ -3,6 +3,9 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+// NOTE: the lazy sponsorship analytics chart lives in the sponsor history detail page.
 import { 
     Calendar as CalendarIcon, 
     Sparkles, 
@@ -18,11 +21,11 @@ import {
     ShoppingBag,
     Filter,
     Layers,
-    Tag,
-    ExternalLink
+        Tag,
+    ExternalLink,
+    BarChart3
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
-import dynamic from 'next/dynamic';
 import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 const SponsorshipGstInvoiceModal = dynamic(() => import('@/components/marketing/sponsor/SponsorshipGstInvoiceModal'), { ssr: false });
@@ -322,7 +325,7 @@ export default function SponsorshipHistoryClient({
 
                                     {/* Action Buttons */}
                                     <div className="flex items-center gap-2 self-start sm:self-auto">
-                                        <button
+                                                                                <button
                                             type="button"
                                             onClick={() => setSelectedInvoice(booking.invoice)}
                                             className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -330,6 +333,13 @@ export default function SponsorshipHistoryClient({
                                             <Receipt size={13} className="text-blue-600" />
                                             <span>Tax Invoice</span>
                                         </button>
+                                        <Link
+                                            href={`/marketing/daily-challenge/sponsor/history/${booking.id}`}
+                                            className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        >
+                                            <BarChart3 size={13} />
+                                            <span>View Analytics</span>
+                                        </Link>
                                         <span className="text-xs font-black text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800">
                                             ₹{booking.totalRupees.toFixed(2)}
                                         </span>

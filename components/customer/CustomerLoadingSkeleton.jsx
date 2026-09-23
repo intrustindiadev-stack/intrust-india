@@ -5,9 +5,10 @@ export function CustomerLoadingSkeleton({ label = 'Loading...' }) {
                 <div className="h-12 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
                 <div className="h-44 rounded-3xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    {[0, 1, 2, 3].map((i) => (
-                        <div key={i} className="h-28 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
-                    ))}
+                    <div className="h-28 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
+                    <div className="h-28 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
+                    <div className="h-28 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
+                    <div className="h-28 rounded-2xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
                 </div>
                 <div className="h-36 rounded-3xl bg-slate-200/70 dark:bg-white/10 animate-pulse" />
             </div>
