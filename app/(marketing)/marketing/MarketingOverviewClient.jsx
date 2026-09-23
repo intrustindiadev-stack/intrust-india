@@ -47,6 +47,14 @@ export default function MarketingOverviewClient({
     showcasePrizes = []
 }) {
     const [selectedShareProduct, setSelectedShareProduct] = useState(null);
+    const [greeting, setGreeting] = useState('Welcome');
+
+    useEffect(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) setGreeting('Good morning');
+        else if (hour < 17) setGreeting('Good afternoon');
+        else setGreeting('Good evening');
+    }, []);
 
     const firstName = profile?.full_name?.split(' ')[0] || merchant?.business_name?.split(' ')[0] || 'Partner';
     const stats = initialStats || { total_shares: 0, link_clicks: 0, new_customers: 0, orders: 0, cashback_earned_paise: 0 };
