@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, isValidElement } from 'react';
 import Link from 'next/link';
 import { 
     IndianRupee, 
@@ -61,12 +61,10 @@ function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, labe
 
             <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 rounded-2xl ${iconBg} flex items-center justify-center ${iconText} shadow-xs border border-current/10 transition-transform duration-300 group-hover:scale-105`}>
-                    {Icon ? (
-                        typeof Icon === 'function' ? (
-                            <Icon className="w-5 h-5" strokeWidth={2.2} />
-                        ) : (
-                            Icon
-                        )
+                    {isValidElement(Icon) ? (
+                        Icon
+                    ) : Icon ? (
+                        <Icon className="w-5 h-5" strokeWidth={2.2} />
                     ) : (
                         children || null
                     )}
