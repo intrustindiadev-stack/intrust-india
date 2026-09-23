@@ -58,15 +58,68 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Merchant not found.' }, { status: 404 });
         }
 
-        // 4. Fetch AI Grow Wallet
-        const { data: aiWallet, error: walletError } = await supabase
-            .from('ai_grow_wallets')
-            .select('id, balance, status')
-            .eq('merchant_id', merchantId)
-            .single();
+        // 4. Fetch AI Grow Wallet. If the row is missing (legacy deposits that
+        //    only wrote merchant_investments rows), create it on the fly from
+        //    the outstanding active principal so the settlement can proceed —
+        //    this restores the invariant wallet.balance == active principal.
+        let aiWallet = null;
+        {
+            const { data: existing, error: walletError } = await supabase
+                .from('ai_grow_wallets')
+                .select('id, balance, status')
+                .eq('merchant_id', merchantId)
+                .maybeSingle();
 
-        if (walletError || !aiWallet) {
-            return NextResponse.json({ error: 'AI Grow Vault not found for this merchant.' }, { status: 404 });
+            if (walletError) throw walletError;
+
+            if (existing) {
+                aiWallet = existing;
+            } else {
+                const { data: activeRows, error: activeErr } = await supabase
+                    .from('merchant_investments')
+                    .select('amount_paise')
+                    .eq('merchant_id', merchantId)
+                    .eq('status', 'active');
+
+                if (activeErr) throw activeErr;
+
+                const outstandingPaise = (activeRows || []).reduce(
+                    (sum, r) => sum + Number(r.amount_paise || 0), 0
+                );
+
+                if (outstandingPaise <= 0) {
+                    return NextResponse.json(
+                        { error: 'No active AI Grow capital found for this merchant — nothing to settle.' },
+                        { status: 404 }
+                    );
+                }
+
+                // Credit the missing wallet via the authoritative RPC (it
+                // auto-creates the row under lock) with full audit metadata.
+                const { data: rpcData, error: rpcError } = await supabase.rpc(
+                    'adjust_merchant_investment_wallet',
+                    {
+                        p_merchant_id: merchantId,
+                        p_adjustment_type: 'credit',
+                        p_amount: Number((outstandingPaise / 100).toFixed(2)),
+                        p_admin_id: user.id,
+                        p_reason: `Auto-provisioned AI Grow vault ledger from outstanding active deposits ahead of super-admin settlement of ₹${amount.toLocaleString('en-IN')}.`,
+                        p_metadata: {
+                            source: 'settle_vault_autoprovision',
+                            settlement_amount_inr: amount,
+                            settled_by: user.id,
+                        },
+                    }
+                );
+
+                if (rpcError) throw rpcError;
+
+                aiWallet = {
+                    id: rpcData?.wallet_id,
+                    balance: rpcData?.new_balance ?? outstandingPaise / 100,
+                    status: 'active',
+                };
+            }
         }
 
         if (aiWallet.status !== 'active') {

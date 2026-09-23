@@ -1,5 +1,51 @@
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabaseServer';
+
+/**
+ * Server-only helper: debits the authoritative AI Grow vault ledger when an
+ * investment principal leaves the AI Grow system (release to wallet / cash
+ * settlement). Replaces the old direct UPDATE on a non-existent
+ * `balance_paise` column (real column is `balance`, mutated only via RPC).
+ *
+ * Exported from the release route so the sibling settle-cash route can share
+ * the exact same logic.
+ *
+ * @param {object} opts
+ * @param {object} opts.supabase - service-role client
+ * @param {string} opts.merchantId
+ * @param {number} opts.amountPaise - principal to remove from the ledger
+ * @param {string} opts.investmentId
+ * @param {string} opts.adminUserId
+ * @returns {Promise<void>} - never throws for "wallet missing" (legacy rows
+ *   that predate the ledger), throws for every other RPC failure
+ */
+export async function debitAiGrowVaultForInvestmentExit({ supabase, merchantId, amountPaise, investmentId, adminUserId }) {
+    if (!(amountPaise > 0)) return;
+
+    const { error } = await supabase.rpc('adjust_merchant_investment_wallet', {
+        p_merchant_id: merchantId,
+        p_adjustment_type: 'debit',
+        p_amount: Number((amountPaise / 100).toFixed(2)),
+        p_admin_id: adminUserId || null,
+        p_reason: `AI Grow investment principal exited the vault (release/settlement of investment ${investmentId}).`,
+        p_metadata: {
+            source: 'investment_release',
+            investment_id: investmentId,
+            exited_at: new Date().toISOString(),
+        },
+    });
+
+    if (error) {
+        // Legacy rows that never had a ledger wallet: nothing to debit.
+        if (error.code === 'P0002' || error.message?.includes('does not exist')) {
+            console.warn(`[aiGrowLedger] Skipping vault debit for legacy investment ${investmentId}: no wallet row.`);
+            return;
+        }
+        console.error('[aiGrowLedger] vault debit RPC failed:', error);
+        throw new Error(error.message || 'AI Grow vault ledger debit failed.');
+    }
+}
 
 export async function POST(request, { params }) {
     try {
@@ -76,21 +122,16 @@ export async function POST(request, { params }) {
 
         if (updateInvError) throw updateInvError;
 
-        // 3.5 Decrement AI Grow Wallet Ledger
-        // Since the principal is leaving the AI Grow system, we must reduce the master ledger
-        const { data: aiWallet } = await supabase
-            .from('ai_grow_wallets')
-            .select('balance_paise')
-            .eq('merchant_id', investment.merchant_id)
-            .single();
-
-        if (aiWallet) {
-            const newAiBalance = Math.max(0, aiWallet.balance_paise - investment.amount_paise);
-            await supabase
-                .from('ai_grow_wallets')
-                .update({ balance_paise: newAiBalance })
-                .eq('merchant_id', investment.merchant_id);
-        }
+        // 3.5 Decrement AI Grow Wallet Ledger via the authoritative RPC.
+        // The principal is leaving the AI Grow system, so the master ledger
+        // must be debited (the real column is `balance`; mutated only via RPC).
+        await debitAiGrowVaultForInvestmentExit({
+            supabase,
+            merchantId: investment.merchant_id,
+            amountPaise: investment.amount_paise,
+            investmentId: id,
+            adminUserId: user.id,
+        });
 
         // 4. Send notification
         try {

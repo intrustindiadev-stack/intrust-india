@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
+// NOTE: the debit helper lives in ../release/route (sibling route module)
+import { debitAiGrowVaultForInvestmentExit } from '../release/route';
 
 export async function POST(request, { params }) {
     try {
@@ -53,21 +55,16 @@ export async function POST(request, { params }) {
 
         if (updateInvError) throw updateInvError;
 
-        // 2. Decrement AI Grow Wallet Ledger
-        // Since the principal is leaving the AI Grow system, we must reduce the master ledger
-        const { data: aiWallet } = await supabase
-            .from('ai_grow_wallets')
-            .select('balance_paise')
-            .eq('merchant_id', investment.merchant_id)
-            .single();
-
-        if (aiWallet) {
-            const newAiBalance = Math.max(0, aiWallet.balance_paise - investment.amount_paise);
-            await supabase
-                .from('ai_grow_wallets')
-                .update({ balance_paise: newAiBalance })
-                .eq('merchant_id', investment.merchant_id);
-        }
+        // 2. Decrement AI Grow Wallet Ledger via the authoritative RPC.
+        // The principal is leaving the AI Grow system, so the master ledger
+        // must be debited (the real column is `balance`; mutated only via RPC).
+        await debitAiGrowVaultForInvestmentExit({
+            supabase,
+            merchantId: investment.merchant_id,
+            amountPaise: investment.amount_paise,
+            investmentId: id,
+            adminUserId: user.id,
+        });
 
         // 3. Send notification
         if (merchant?.user_id) {

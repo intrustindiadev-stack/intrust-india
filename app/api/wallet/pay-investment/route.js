@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { WalletService } from '@/lib/wallet/walletService';
 import { MERCHANT_INVESTMENT_TERMS } from '@/lib/constants';
+import { creditAiGrowVaultForDeposit } from '@/lib/investments/aiGrowLedger';
 
 export async function POST(request) {
     const authHeader = request.headers.get('authorization');
@@ -115,7 +116,7 @@ export async function POST(request) {
             }
 
         } else if (type === 'merchant_aigrow') {
-            const { error: aiGrowErr } = await supabaseAdmin
+            const { data: inserted, error: aiGrowErr } = await supabaseAdmin
                 .from('merchant_investments')
                 .insert({
                     merchant_id: merchantCheck.id,
@@ -126,7 +127,9 @@ export async function POST(request) {
                     interest_rate_percent: MERCHANT_INVESTMENT_TERMS.AIGROW.INTEREST_RATE_PERCENT,
                     duration_days: MERCHANT_INVESTMENT_TERMS.AIGROW.DURATION_DAYS,
                     gateway_txn_id: referenceId
-                });
+                })
+                .select('id')
+                .single();
             
             if (aiGrowErr) {
                 // Rollback debit
@@ -136,6 +139,23 @@ export async function POST(request) {
                     console.warn(`[WalletInvestment] Unique constraint hit for txn ${referenceId} - concurrent duplicate suppressed and rolled back.`);
                 } else {
                     throw new Error(`AI Grow creation failed: ${aiGrowErr.message}`);
+                }
+            } else {
+                // Keep the authoritative ai_grow_wallets ledger in sync: credit
+                // the vault for this confirmed deposit. On ledger failure, roll
+                // back BOTH the investment row and the wallet debit so the
+                // merchant is never charged without vault credit.
+                const ledger = await creditAiGrowVaultForDeposit({
+                    merchantId: merchantCheck.id,
+                    amountRupees: amountPaise / 100,
+                    gatewayTxnId: referenceId,
+                    source: 'wallet_pay',
+                });
+
+                if (!ledger.ok) {
+                    await supabaseAdmin.from('merchant_investments').delete().eq('id', inserted.id);
+                    await WalletService.creditWallet(user.id, amount, `${referenceId}_ROLLBACK`, 'REFUND', `Rollback for failed AI Grow vault credit`);
+                    throw new Error(`AI Grow vault ledger credit failed: ${ledger.error}`);
                 }
             }
         }
