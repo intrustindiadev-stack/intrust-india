@@ -144,9 +144,9 @@ export default function MerchantCard({ merchant, udhariEnabled, onApprove, onRej
                                 </button>
                                 <button
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApprove(merchant.id, merchant.userId); }}
-                                    disabled={isApproving === merchant.id || isRejecting === merchant.id || !merchant.bankVerified}
-                                    title={!merchant.bankVerified ? "Bank must be verified first" : "Approve Merchant"}
-                                    className={`p-2 rounded-xl transition-all shadow-sm active:scale-90 ${!merchant.bankVerified ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : isApproving === merchant.id ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-emerald-500 hover:text-emerald-700 border border-emerald-100 hover:border-emerald-200'}`}
+                                    disabled={isApproving === merchant.id || isRejecting === merchant.id}
+                                    title="Approve Merchant"
+                                    className={`p-2 rounded-xl transition-all shadow-sm active:scale-90 ${isApproving === merchant.id ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-emerald-500 hover:text-emerald-700 border border-emerald-100 hover:border-emerald-200'}`}
                                 >
                                     {isApproving === merchant.id ? (
                                         <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>

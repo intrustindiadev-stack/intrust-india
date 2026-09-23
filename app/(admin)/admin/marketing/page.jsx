@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import AdminMarketingClient from './AdminMarketingClient';
 
@@ -10,15 +10,17 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function AdminMarketingPage() {
-    const supabase = await createServerSupabaseClient();
+    const authSupabase = await createServerSupabaseClient();
 
     const {
         data: { user },
-    } = await supabase.auth.getUser();
+    } = await authSupabase.auth.getUser();
 
     if (!user) redirect('/login');
 
-    const { data: profile } = await supabase
+    const adminSupabase = createAdminClient();
+
+    const { data: profile } = await adminSupabase
         .from('user_profiles')
         .select('role')
         .eq('id', user.id)
@@ -27,6 +29,8 @@ export default async function AdminMarketingPage() {
     if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
         redirect('/');
     }
+
+    const supabase = adminSupabase;
 
     // 1. Fetch Dynamic Settings
     const { data: settingsRow } = await supabase

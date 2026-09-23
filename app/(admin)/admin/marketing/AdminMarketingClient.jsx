@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { 
     LayoutDashboard,
@@ -35,6 +35,7 @@ import {
     Share2,
     Users,
     ArrowUpRight,
+    ArrowRight,
     BarChart3,
     Filter,
     Clock,

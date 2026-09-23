@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { 
+    IndianRupee, 
+    TrendingUp, 
+    Store, 
+    Ticket, 
+    ShoppingCart, 
+    ShoppingBag, 
+    Target, 
+    Users 
+} from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 
 function formatPrice(paise) {
@@ -18,7 +28,7 @@ function LiveDot({ flashing }) {
     );
 }
 
-function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, label, value, subtext, subtextFlash, delay, flashKey }) {
+function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, label, value, subtext, subtextFlash, delay, flashKey, icon: Icon, children }) {
     const [flashing, setFlashing] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
     const prevValue = useRef(value);
@@ -42,11 +52,19 @@ function StatCard({ href, color, bgDecor, iconBg, iconText, badge, badgeBg, labe
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards relative group overflow-hidden bg-white backdrop-blur-xl rounded-3xl border border-[#EAEFF4] p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all active:scale-[0.98]"
         >
             {/* Decor blob */}
-            <div className={`absolute top-0 right-0 w-32 h-32 ${bgDecor} rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500`} />
+            <div className={`absolute top-0 right-0 w-32 h-32 ${bgDecor} rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none`} />
 
             <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-2xl ${iconBg} flex items-center justify-center ${iconText}`}>
-                    {/* Icon passed as SVG child via props — not included here; parent renders */}
+                <div className={`w-12 h-12 rounded-2xl ${iconBg} flex items-center justify-center ${iconText} shadow-xs border border-current/10 transition-transform duration-300 group-hover:scale-105`}>
+                    {Icon ? (
+                        typeof Icon === 'function' ? (
+                            <Icon className="w-5 h-5" strokeWidth={2.2} />
+                        ) : (
+                            Icon
+                        )
+                    ) : (
+                        children || null
+                    )}
                 </div>
                 <div className="flex items-center gap-1.5">
                     <LiveDot flashing={flashing} />
@@ -148,11 +166,7 @@ export default function AdminStatsCards({ initialData }) {
             value: formatPrice(todayRevenue),
             delay: 0,
             flashKey: todayRevenue,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            )
+            icon: IndianRupee
         },
         {
             id: 'gross_revenue',
@@ -167,11 +181,7 @@ export default function AdminStatsCards({ initialData }) {
             value: formatPrice(grossRevenue),
             delay: 80,
             flashKey: grossRevenue,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            )
+            icon: TrendingUp
         },
         {
             id: 'active_merchants',
@@ -186,11 +196,7 @@ export default function AdminStatsCards({ initialData }) {
             value: activeMerchantsCount,
             delay: 160,
             flashKey: activeMerchantsCount,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            )
+            icon: Store
         },
         {
             id: 'total_coupons',
@@ -205,11 +211,7 @@ export default function AdminStatsCards({ initialData }) {
             value: totalCouponsCount,
             delay: 240,
             flashKey: totalCouponsCount,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
-            )
+            icon: Ticket
         },
         {
             id: 'orders_today',
@@ -224,11 +226,7 @@ export default function AdminStatsCards({ initialData }) {
             value: todayOrders,
             delay: 320,
             flashKey: todayOrders,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-            )
+            icon: ShoppingCart
         },
         {
             id: 'shopping_revenue',
@@ -245,11 +243,7 @@ export default function AdminStatsCards({ initialData }) {
             subtextFlash: (shoppingStats.pendingOrders || 0) > 0,
             delay: 400,
             flashKey: shoppingStats.revenue || 0,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-            )
+            icon: ShoppingBag
         },
         {
             id: 'crm_leads',
@@ -264,11 +258,7 @@ export default function AdminStatsCards({ initialData }) {
             value: totalLeadsCount,
             delay: 480,
             flashKey: totalLeadsCount,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            )
+            icon: Target
         },
         {
             id: 'employees',
@@ -283,11 +273,7 @@ export default function AdminStatsCards({ initialData }) {
             value: totalEmployeesCount,
             delay: 560,
             flashKey: totalEmployeesCount,
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-            )
+            icon: Users
         }
     ];
 
@@ -297,9 +283,7 @@ export default function AdminStatsCards({ initialData }) {
                 <StatCard 
                     key={card.id}
                     {...card}
-                >
-                    {card.icon}
-                </StatCard>
+                />
             ))}
         </div>
     );
