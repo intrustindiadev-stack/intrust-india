@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, X, Gift, Sparkles, ArrowRight, Award, Trophy } from 'lucide-react';
 import Confetti from 'react-confetti';
@@ -258,7 +259,7 @@ export default function GiftBoxAnimationModal({
 
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <div 
             onClick={onClose}
             className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md cursor-pointer animate-fadeIn"
@@ -431,4 +432,6 @@ export default function GiftBoxAnimationModal({
             </motion.div>
         </div>
     );
+
+    return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }

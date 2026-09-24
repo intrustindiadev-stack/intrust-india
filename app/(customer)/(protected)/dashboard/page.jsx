@@ -30,7 +30,7 @@ import ActiveOrdersSnapshot from '@/components/customer/dashboard/ActiveOrdersSn
 import FintechWalletCard from '@/components/customer/dashboard/FintechWalletCard';
 import FintechGrowthSection from '@/components/customer/dashboard/FintechGrowthSection';
 import PromoBanners from '@/components/customer/dashboard/PromoBanners';
-import CustomerMarketingKpiSection from '@/components/customer/dashboard/CustomerMarketingKpiSection';
+import MarketingHubBanner from '@/components/customer/dashboard/MarketingHubBanner';
 import KYCPopup from '@/components/kyc/KYCPopup';
 import { useKYCPopup } from '@/hooks/useKYCPopup';
 import MerchantApplyPopup from '@/components/merchant/MerchantApplyPopup';
@@ -89,17 +89,6 @@ export default function CustomerDashboardPage() {
 
     const [topMerchants, setTopMerchants] = useState(() => dashboardMemoryCache?.topMerchants || []);
     const [recentActivity, setRecentActivity] = useState(() => dashboardMemoryCache?.recentActivity || []);
-    const [quizStats, setQuizStats] = useState(() => dashboardMemoryCache?.quizStats || {
-        streak: 0,
-        highestStreak: 0,
-        playedToday: false,
-        freezesLeft: 1,
-        potentialRewardPaise: 2500,
-        unlockedMysteryGifts: 0,
-        totalShares: 0,
-        linkClicks: 0,
-        cashbackEarnedPaise: 0
-    });
     const [showPackages, setShowPackages] = useState(false);
     const [walletConfirmPkg, setWalletConfirmPkg] = useState(null);
 
@@ -201,11 +190,6 @@ export default function CustomerDashboardPage() {
                     .or(`subscription_expires_at.is.null,subscription_expires_at.gt.${new Date().toISOString()}`)
                     .order('business_name', { ascending: true })
                     .limit(6),
-                supabase.rpc('get_user_quiz_streak'),
-                supabase.from('marketing_settings').select('value').eq('key', 'rewards_config').maybeSingle(),
-                supabase.from('marketing_target_claims').select('id, status, gift_title').eq('user_id', user.id),
-                supabase.from('marketing_share_links').select('shares_count, clicks_count, orders_count').eq('user_id', user.id),
-                supabase.from('customer_wallet_transactions').select('amount_paise').eq('user_id', user.id).eq('type', 'CREDIT').or('reference_type.in.(DAILY_CHALLENGE,MARKETING_REFERRAL),description.ilike.%Challenge%,description.ilike.%Referral%,description.ilike.%Marketing%'),
             ]);
 
             const results = await Promise.race([mainFetch, timeoutTx]);
@@ -219,36 +203,6 @@ export default function CustomerDashboardPage() {
             const rewardsResult = results[6];
             const sub1mResult = results[7];
             const topMerchantsResult = results[8];
-            const streakResult = results[9];
-            const rewardsConfigResult = results[10];
-            const targetClaimsResult = results[11];
-            const shareLinksResult = results[12];
-            const marketingTxResult = results[13];
-
-            // 100% Real Live Marketing & Streak Stats
-            const streakData = streakResult?.status === 'fulfilled' ? streakResult.value?.data : null;
-            const rewardPaise = (rewardsConfigResult?.status === 'fulfilled' && rewardsConfigResult.value?.data?.value?.daily_challenge_reward_paise) || 2500;
-            const targetClaims = (targetClaimsResult?.status === 'fulfilled' && targetClaimsResult.value?.data) || [];
-            const completedClaimsCount = targetClaims.filter(c => c.status === 'delivered' || c.status === 'completed' || c.status === 'earned' || c.is_completed).length;
-            const shareLinks = (shareLinksResult?.status === 'fulfilled' && shareLinksResult.value?.data) || [];
-            const totalShares = shareLinks.reduce((sum, l) => sum + (l.shares_count || 0), 0);
-            const linkClicks = shareLinks.reduce((sum, l) => sum + (l.clicks_count || 0), 0);
-            const marketingTxs = (marketingTxResult?.status === 'fulfilled' && marketingTxResult.value?.data) || [];
-            const cashbackEarnedPaise = marketingTxs.reduce((sum, tx) => sum + (tx.amount_paise || 0), 0);
-
-            const nextQuizStats = {
-                streak: streakData?.current_streak || 0,
-                highestStreak: streakData?.highest_streak || 0,
-                playedToday: !!streakData?.played_today,
-                freezesLeft: streakData?.freezes_left ?? 1,
-                potentialRewardPaise: rewardPaise,
-                unlockedMysteryGifts: completedClaimsCount,
-                totalShares,
-                linkClicks,
-                cashbackEarnedPaise
-            };
-
-            setQuizStats(nextQuizStats);
 
             let profileData = null;
             if (profileResult.status === 'fulfilled' && profileResult.value.data) {
@@ -335,7 +289,6 @@ export default function CustomerDashboardPage() {
                 userData: finalUserData,
                 topMerchants: (topMerchantsResult && topMerchantsResult.status === 'fulfilled' && topMerchantsResult.value.data) ? topMerchantsResult.value.data : topMerchants,
                 recentActivity: activityFeed || [],
-                quizStats: nextQuizStats
             };
 
         } catch (error) {
@@ -549,11 +502,11 @@ export default function CustomerDashboardPage() {
                         </div>
                     </div>
 
-                    {/* ── 1.5. InTrust Play & Earn Marketing Hub KPIs ── */}
-                    <CustomerMarketingKpiSection quizStats={quizStats} />
-
                     {/* ── 2. Category Quick Action Pills & Top 4 Categories ── */}
                     <CategoryQuickPills />
+
+                    {/* Section 2.5: Marketing Hub redirect banner (no KPIs) */}
+                    <MarketingHubBanner />
 
                     {/* ── 3. Trending Flash Deals ── */}
                     <TrendingProductsGrid />

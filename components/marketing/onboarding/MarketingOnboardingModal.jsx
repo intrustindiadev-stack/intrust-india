@@ -1,29 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import { 
-    X, 
     ChevronRight, 
     ChevronLeft, 
     ShoppingBag, 
     Trophy, 
     ShieldCheck, 
     Gift, 
-    Megaphone, 
-    FileText, 
     Sparkles, 
-    Flame, 
-    CheckCircle2, 
-    HelpCircle,
-    ArrowRight
+    CheckCircle2,
+    Megaphone
 } from 'lucide-react';
 
 const SLIDES = [
     {
         id: 'earn',
         tag: 'Step 1 • Product Marketing',
-        tagColor: 'bg-blue-50 text-blue-700 border-blue-200',
+        tagColor: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
         title: 'Promote Products & Earn Direct Cashback',
+        illustration: '/images/onboarding/product_marketing_earn.jpg',
+        illustrationAlt: 'Promote Products & Earn Instant Cashback',
         description: 'Share exclusive merchant deals, electronics, groceries, and daily essentials with your network. Every time someone buys through your recommendation, instant promotional cashback credits to your InTrust wallet.',
         accentGradient: 'from-blue-600 to-indigo-600',
         icon: ShoppingBag,
@@ -37,8 +36,10 @@ const SLIDES = [
     {
         id: 'challenge_freeze',
         tag: 'Step 2 • Daily Trivia & Streak Freeze',
-        tagColor: 'bg-amber-50 text-amber-700 border-amber-200',
+        tagColor: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
         title: 'Daily Challenge & Automatic Streak Shield',
+        illustration: '/images/onboarding/daily_trivia_streak.jpg',
+        illustrationAlt: 'Daily Trivia Challenge & Streak Shield',
         description: 'Play a quick 10-question trivia quiz every morning. Answer correctly to pocket cash bonuses and grow your daily streak multiplier.',
         accentGradient: 'from-amber-500 to-orange-600',
         icon: Trophy,
@@ -52,14 +53,16 @@ const SLIDES = [
     {
         id: 'mystery_boxes',
         tag: 'Step 3 • Milestone Mystery Crates',
-        tagColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        tagColor: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
         title: 'Dynamic Milestone Mystery Crates',
-        description: 'Hit performance milestones and level up your marketing score to reveal mystery prize crates. Surprise drops include executive gadgets, premium accessories, and special milestone cash drops.',
+        illustration: '/images/onboarding/mystery_targets_prizes.jpg',
+        illustrationAlt: 'Win Bulk Electronics, Appliances & Groceries',
+        description: 'Hit performance milestones and level up your marketing score to reveal mystery prize crates. Win real 4K TVs, latest smartphones, gaming consoles, smart appliances, and luxury grocery hampers!',
         accentGradient: 'from-emerald-500 to-teal-600',
         icon: Gift,
         iconBg: 'bg-emerald-500/10 text-emerald-600',
         bulletPoints: [
-            'Mystery drops unlock as you achieve referral and sales volume targets',
+            'Win real bulk electronics, gadgets, appliances & luxury grocery hampers',
             'Prizes are revealed directly upon claiming without confusing tiers',
             'Delivered seamlessly straight to your registered delivery address'
         ]
@@ -67,8 +70,10 @@ const SLIDES = [
     {
         id: 'sponsor_gst',
         tag: 'Step 4 • Merchant VIP Sponsorship',
-        tagColor: 'bg-purple-50 text-purple-700 border-purple-200',
+        tagColor: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
         title: 'Sponsor Daily Challenge with 18% GST Billing',
+        illustration: '/images/onboarding/merchant_sponsorship_billboard.jpg',
+        illustrationAlt: 'Merchant VIP Sponsorship Spotlight',
         description: 'Merchants can sponsor the Daily Challenge to place their store and hero products in front of thousands of active shoppers across India.',
         accentGradient: 'from-purple-600 to-pink-600',
         icon: Megaphone,
@@ -84,11 +89,16 @@ const SLIDES = [
 const STORAGE_KEY = 'intrust_marketing_tour_seen_v1';
 
 export default function MarketingOnboardingModal({ isOpen: controlledIsOpen, onClose: controlledOnClose }) {
+    const [mounted, setMounted] = useState(false);
     const [internalOpen, setInternalOpen] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
 
     const isControlled = controlledIsOpen !== undefined;
     const open = isControlled ? controlledIsOpen : internalOpen;
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Check localStorage on mount if unmanaged
     useEffect(() => {
@@ -131,7 +141,7 @@ export default function MarketingOnboardingModal({ isOpen: controlledIsOpen, onC
     }, [open]);
 
     const handleClose = () => {
-        localStorage.setItem(STORAGE_KEY, 'true');
+        try { localStorage.setItem(STORAGE_KEY, 'true'); } catch (_) {}
         if (isControlled) {
             controlledOnClose?.();
         } else {
@@ -153,39 +163,34 @@ export default function MarketingOnboardingModal({ isOpen: controlledIsOpen, onC
         }
     };
 
-    if (!open) return null;
+    if (!open || !mounted || typeof document === 'undefined') return null;
 
     const slide = SLIDES[currentSlide];
     const SlideIcon = slide.icon;
     const isLastSlide = currentSlide === SLIDES.length - 1;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-            {/* Backdrop */}
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-0 sm:p-4">
+            {/* Backdrop — non-dismissible per onboarding completion requirement */}
             <div 
-                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-                onClick={handleClose}
+                className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity"
             />
 
             {/* Modal Container: Fullscreen 100dvh on mobile, clean modal card on desktop */}
-            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-white sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 flex flex-col z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                {/* Header with Step indicator and Skip/Close */}
-                <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
+            <div className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-xl bg-white dark:bg-slate-900 sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-slate-800 flex flex-col z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                {/* Header with Step indicator — NO X/CLOSE BUTTON */}
+                <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 shrink-0">
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+                        <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">
                             InTrust Guide • Slide {currentSlide + 1} of {SLIDES.length}
                         </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleClose}
-                            className="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
-                            aria-label="Close Guide"
-                        >
-                            <X size={16} />
-                        </button>
+                        <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-black">
+                            Step {currentSlide + 1}/{SLIDES.length}
+                        </span>
                     </div>
                 </div>
 
@@ -198,34 +203,55 @@ export default function MarketingOnboardingModal({ isOpen: controlledIsOpen, onC
                             <span>{slide.tag}</span>
                         </div>
 
+                        {/* Slide Illustration Showcase Card */}
+                        {slide.illustration && (
+                            <div className="relative w-full h-44 sm:h-52 rounded-2xl overflow-hidden shadow-md border border-slate-200/80 dark:border-slate-800 mb-5 bg-slate-100 dark:bg-slate-800 group">
+                                <Image
+                                    src={slide.illustration}
+                                    alt={slide.illustrationAlt || slide.title}
+                                    fill
+                                    sizes="(max-width: 640px) 100vw, 550px"
+                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                    priority={currentSlide === 0}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
+                                <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px] font-bold drop-shadow">
+                                    <span className="flex items-center gap-1 bg-black/45 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+                                        <Sparkles size={11} className="text-amber-300" />
+                                        {slide.tag}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Slide Icon Presentation */}
-                        <div className="flex items-center gap-4 mb-5">
-                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 border border-slate-200/80 shadow-xs ${slide.iconBg}`}>
-                                <SlideIcon size={28} className="sm:w-8 sm:h-8" />
+                        <div className="flex items-center gap-3.5 mb-4">
+                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-slate-700 shadow-xs ${slide.iconBg}`}>
+                                <SlideIcon size={24} className="sm:w-7 sm:h-7" />
                             </div>
                             <div>
-                                <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
+                                <h2 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-white leading-snug">
                                     {slide.title}
                                 </h2>
                             </div>
                         </div>
 
                         {/* Description */}
-                        <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed mb-6">
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed mb-5">
                             {slide.description}
                         </p>
 
                         {/* Key Benefits / Highlights Box */}
-                        <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 space-y-3">
-                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 rounded-2xl p-4 space-y-2.5">
+                            <div className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">
                                 How it works
                             </div>
                             {slide.bulletPoints.map((point, idx) => (
                                 <div key={idx} className="flex items-start gap-2.5">
-                                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                                         <CheckCircle2 size={13} strokeWidth={3} />
                                     </div>
-                                    <span className="text-xs font-semibold text-slate-700 leading-snug">
+                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-snug">
                                         {point}
                                     </span>
                                 </div>
@@ -278,9 +304,9 @@ export default function MarketingOnboardingModal({ isOpen: controlledIsOpen, onC
 
                         <button
                             onClick={handleNext}
-                            className="px-5 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xs font-black shadow-md shadow-blue-500/25 transition-all flex items-center gap-1.5"
+                            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xs font-black shadow-md shadow-blue-500/25 transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                            <span>{isLastSlide ? 'Get Started' : 'Next'}</span>
+                            <span>{isLastSlide ? 'Finish & Get Started' : 'Next'}</span>
                             {isLastSlide ? <CheckCircle2 size={15} /> : <ChevronRight size={16} />}
                         </button>
                     </div>
@@ -288,4 +314,6 @@ export default function MarketingOnboardingModal({ isOpen: controlledIsOpen, onC
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

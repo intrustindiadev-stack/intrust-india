@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import Link from 'next/link';
 import { 
     Target, 
@@ -19,11 +21,9 @@ import {
     Phone,
     User as UserIcon,
     X,
-    Flame,
     Share2,
     ShoppingBag,
     Award,
-    Trophy,
     Copy,
     Check,
     ShieldCheck
@@ -38,9 +38,65 @@ const ExclusivePrizesShowcase = dynamic(() => import('@/components/marketing/rew
     ssr: false,
     loading: () => <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-7 bg-white dark:bg-slate-900 animate-pulse h-44" />,
 });
-import TreasureChestVector from '@/components/marketing/graphics/TreasureChestVector';
-import TrophyChampionVector from '@/components/marketing/graphics/TrophyChampionVector';
-import RocketGrowthVector from '@/components/marketing/graphics/RocketGrowthVector';
+
+const DEFAULT_FALLBACK_TARGETS = [
+    {
+        id: 'target-fallback-1',
+        title: 'Share 25 Verified Deals',
+        description: 'Promote 25 store products to friends and local community groups across WhatsApp or social channels.',
+        metric_type: 'share_links',
+        target_value: 25,
+        target_audience: 'all',
+        reward_type: 'physical_gift',
+        gift_name: 'Wireless ANC Earbuds',
+        gift_image_url: '/marketing/prizes/anc_earbuds.jpg',
+        reward_value_paise: 299900,
+        is_active: true,
+        sort_order: 1
+    },
+    {
+        id: 'target-fallback-2',
+        title: 'Drive 50 Store Product Visits',
+        description: 'Achieve 50 verified product page clicks from your shared referral links.',
+        metric_type: 'link_clicks',
+        target_value: 50,
+        target_audience: 'all',
+        reward_type: 'physical_gift',
+        gift_name: 'Smart Fitness Watch',
+        gift_image_url: '/marketing/prizes/smartwatch.jpg',
+        reward_value_paise: 349900,
+        is_active: true,
+        sort_order: 2
+    },
+    {
+        id: 'target-fallback-3',
+        title: 'Drive 5 Verified Customer Orders',
+        description: 'Facilitate 5 completed purchases through your shared merchant catalog links.',
+        metric_type: 'store_sales',
+        target_value: 5,
+        target_audience: 'all',
+        reward_type: 'physical_gift',
+        gift_name: 'Executive Travel Organizer Kit',
+        gift_image_url: '/marketing/prizes/executive_kit.jpg',
+        reward_value_paise: 199900,
+        is_active: true,
+        sort_order: 3
+    },
+    {
+        id: 'target-fallback-4',
+        title: 'Master Advocate (100 Shares)',
+        description: 'Demonstrate top-tier advocacy with 100 verified shares to unlock our elite collector edition award.',
+        metric_type: 'share_links',
+        target_value: 100,
+        target_audience: 'all',
+        reward_type: 'physical_gift',
+        gift_name: '24K Gold Coin (1g Certified)',
+        gift_image_url: '/marketing/prizes/gold_coin.jpg',
+        reward_value_paise: 899900,
+        is_active: true,
+        sort_order: 4
+    }
+];
 
 export default function TargetsClient({
     user,
@@ -50,7 +106,7 @@ export default function TargetsClient({
     initialClaims = [],
     userProgress = {}
 }) {
-    const [targets, setTargets] = useState(initialTargets);
+    const [targets, setTargets] = useState(() => (initialTargets && initialTargets.length > 0 ? initialTargets : DEFAULT_FALLBACK_TARGETS));
     const [claims, setClaims] = useState(initialClaims);
     const [claimingTargetId, setClaimingTargetId] = useState(null);
     const [shippingModalTarget, setShippingModalTarget] = useState(null);
@@ -61,14 +117,19 @@ export default function TargetsClient({
         shippingAddress: ''
     });
     const [claimError, setClaimError] = useState(null);
+    const [mounted, setMounted] = useState(false);
 
     // Mystery Box Animation States
     const [showGiftModal, setShowGiftModal] = useState(false);
     const [selectedGiftReward, setSelectedGiftReward] = useState({
-        title: '₹500 Cashback',
+        title: 'Milestone Reward',
         desc: "Congrats! You've unlocked a milestone reward.",
         value: 500
     });
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Close open modal on Escape key
     useEffect(() => {
@@ -82,12 +143,10 @@ export default function TargetsClient({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Helper to extract current progress metric for a target
+    // Helper to calculate live progress for any admin-configured target
     const getTargetMetricValue = (target) => {
         if (!target) return 0;
         switch (target.metric_type) {
-            case 'quiz_streak':
-                return Math.max(Number(userProgress.current_streak || 0), Number(userProgress.highest_streak || 0));
             case 'share_links':
                 return Number(userProgress.total_shares || 0);
             case 'link_clicks':
@@ -95,9 +154,7 @@ export default function TargetsClient({
             case 'store_sales':
                 return Number(userProgress.orders || 0);
             case 'user_registration':
-                return 1; // User is registered and logged in
-            case 'daily_login':
-                return Math.max(Number(userProgress.current_streak || 0), 1);
+                return 1;
             case 'first_order':
                 return Number(userProgress.orders || 0) >= 1 ? 1 : 0;
             default:
@@ -107,12 +164,10 @@ export default function TargetsClient({
 
     const getMetricUnit = (target) => {
         switch (target.metric_type) {
-            case 'quiz_streak': return 'Days';
             case 'share_links': return 'Shares';
-            case 'link_clicks': return 'Clicks';
+            case 'link_clicks': return 'Visits';
             case 'store_sales': return 'Orders';
             case 'user_registration': return 'Account';
-            case 'daily_login': return 'Days';
             case 'first_order': return 'Order';
             default: return 'Actions';
         }
@@ -120,8 +175,6 @@ export default function TargetsClient({
 
     const getTargetIcon = (target) => {
         switch (target.metric_type) {
-            case 'quiz_streak':
-                return <Flame size={16} className="text-amber-500" />;
             case 'share_links':
                 return <Share2 size={16} className="text-blue-500" />;
             case 'link_clicks':
@@ -135,12 +188,11 @@ export default function TargetsClient({
 
     const getTargetActionUrl = (target) => {
         switch (target.metric_type) {
-            case 'quiz_streak':
-                return '/marketing/daily-challenge';
             case 'share_links':
+                return '/marketing/products';
             case 'link_clicks':
             case 'store_sales':
-                return '/marketing';
+                return '/marketing/products';
             default:
                 return '/marketing';
         }
@@ -148,10 +200,8 @@ export default function TargetsClient({
 
     const getTargetActionLabel = (target) => {
         switch (target.metric_type) {
-            case 'quiz_streak':
-                return 'Play Daily Quiz →';
             case 'share_links':
-                return 'Share Store Links →';
+                return 'Share Products →';
             case 'link_clicks':
                 return 'Promote Links →';
             case 'store_sales':
@@ -161,7 +211,7 @@ export default function TargetsClient({
         }
     };
 
-    // Filter relevant targets for this user type
+    // Filter relevant targets for this user type (all, customer, merchant)
     const relevantTargets = targets.filter(t => {
         if (!t.is_active) return false;
         if (t.target_audience === 'all') return true;
@@ -170,41 +220,41 @@ export default function TargetsClient({
         return false;
     });
 
-    // Determine primary target: nearest-to-complete unclaimed target first
-    // (production rule: target complete → gift). Falls back to first row.
     const claimedTargetIds = new Set(claims.map(c => c.target_id));
+
     const progressOf = (t) => {
         const cur = getTargetMetricValue(t);
         const goal = Number(t.target_value || 1);
-        return { cur, goal, pct: Math.min(100, Math.round((cur / goal) * 100)), left: Math.max(0, goal - cur) };
+        return { 
+            cur, 
+            goal, 
+            pct: Math.min(100, Math.round((cur / goal) * 100)), 
+            left: Math.max(0, goal - cur),
+            isCompleted: cur >= goal,
+            isClaimed: claimedTargetIds.has(t.id)
+        };
     };
-    const unclaimed = relevantTargets.filter(t => !claimedTargetIds.has(t.id));
-    const ranked = [...unclaimed].sort((a, b) => {
-        const pa = progressOf(a); const pb = progressOf(b);
-        // Eligible (100%) first, then highest %, then smallest "left"
-        if ((pb.pct >= 100) !== (pa.pct >= 100)) return (pb.pct >= 100 ? 1 : 0) - (pa.pct >= 100 ? 1 : 0);
-        if (pb.pct !== pa.pct) return pb.pct - pa.pct;
-        return pa.left - pb.left;
-    });
-    const activePrimaryTarget = ranked[0] || relevantTargets.find(t => !claimedTargetIds.has(t.id)) || relevantTargets[0];
-    const secondaryTargets = relevantTargets.filter(t => t.id !== activePrimaryTarget?.id);
 
-    // Primary target calculations
-    const primaryCurrent = activePrimaryTarget ? getTargetMetricValue(activePrimaryTarget) : 0;
-    const primaryGoal = activePrimaryTarget?.target_value || 1;
-    const primaryPercent = Math.min(100, Math.round((primaryCurrent / primaryGoal) * 100));
-    const primaryIsClaimed = activePrimaryTarget ? claimedTargetIds.has(activePrimaryTarget.id) : false;
-    const primaryIsEligible = primaryCurrent >= primaryGoal && !primaryIsClaimed;
+    // Sort: Completed & Unclaimed first, then nearest to completion, then already claimed
+    const rankedTargets = [...relevantTargets].sort((a, b) => {
+        const pa = progressOf(a);
+        const pb = progressOf(b);
+        if (pa.isClaimed !== pb.isClaimed) return pa.isClaimed ? 1 : -1;
+        if (pa.isCompleted !== pb.isCompleted) return pa.isCompleted ? -1 : 1;
+        if (pb.pct !== pa.pct) return pb.pct - pa.pct;
+        return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+
+    const activePrimaryTarget = rankedTargets[0];
+    const secondaryTargets = rankedTargets.slice(1);
 
     // Summary counts for quick stats
     const totalClaimedCount = claims.length;
     const eligibleUnclaimedCount = relevantTargets.filter(t => {
-        const val = getTargetMetricValue(t);
-        const goal = t.target_value || 1;
-        return val >= goal && !claimedTargetIds.has(t.id);
+        const p = progressOf(t);
+        return p.isCompleted && !p.isClaimed;
     }).length;
 
-    // Current Month Formatting
     const currentMonthStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
     const daysRemaining = Math.max(1, daysInMonth - new Date().getDate());
@@ -216,15 +266,16 @@ export default function TargetsClient({
         setTimeout(() => setCopiedAwb(null), 2000);
     };
 
-    // Execute claim API request (optimistic, idempotent per target)
+    // Execute claim API request
     const executeClaim = async (target, shippingDetails = null) => {
         if (!target || claimingTargetId) return;
-        // Physical gifts require valid recipient details (PIN + 10-digit phone)
-        if (target.reward_type === 'physical_gift' || target.reward_type === 'mystery_box') {
+
+        // Physical gifts require valid recipient details
+        if (target.reward_type === 'physical_gift') {
             const phone = String(shippingDetails?.recipientPhone || '').replace(/\D/g, '').slice(-10);
             const pin = String(shippingDetails?.shippingAddress || '').match(/\b\d{6}\b/);
             if (!shippingDetails?.recipientName?.trim() || phone.length !== 10 || !shippingDetails?.shippingAddress?.trim() || !pin) {
-                setClaimError('Add full name, 10-digit phone and address with 6-digit PIN to dispatch your gift.');
+                setClaimError('Please provide full name, 10-digit mobile number, and delivery address with 6-digit PIN code.');
                 return;
             }
         }
@@ -249,21 +300,18 @@ export default function TargetsClient({
                 return;
             }
 
-            // Successfully claimed — optimistic prepend (dedupe by id)
+            // Successfully claimed — prepend to claims
             setClaims(prev => (prev.some(c => c.id === data.claim.id) ? prev : [data.claim, ...prev]));
             setShippingModalTarget(null);
 
-            // Trigger celebratory animation (real gift value, merchant vs user copy)
             const isCash = target.reward_type === 'cashback';
             const cashVal = Math.round(Number(target.reward_value_paise || 0) / 100);
             setSelectedGiftReward({
                 title: isCash
-                    ? `₹${cashVal.toLocaleString('en-IN')} Wallet Credit`
-                    : (target.gift_name || data.claim?.gift_title || 'Milestone Mystery Surprise Box'),
-                desc: data.message || (isMerchant
-                    ? 'Reward milestone conquered! Credit applied to your merchant wallet.'
-                    : 'Reward milestone conquered! Credit applied to your InTrust wallet.'),
-                value: isCash ? cashVal : cashVal || 0
+                    ? `₹${cashVal.toLocaleString('en-IN')} Wallet Cashback`
+                    : (target.gift_name || data.claim?.gift_title || 'Milestone Gift Box'),
+                desc: data.message || 'Milestone conquered! Your reward has been confirmed.',
+                value: isCash ? cashVal : 0
             });
             setShowGiftModal(true);
         } catch (err) {
@@ -274,9 +322,8 @@ export default function TargetsClient({
         }
     };
 
-    // Handler when user clicks "Claim" on a target
     const handleClaimClick = (target) => {
-        if (target.reward_type === 'physical_gift' || target.reward_type === 'mystery_box') {
+        if (target.reward_type === 'physical_gift') {
             setShippingModalTarget(target);
         } else {
             executeClaim(target);
@@ -285,27 +332,26 @@ export default function TargetsClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn w-full max-w-full overflow-hidden">
-            {/* Header with Breadcrumbs, guide & Live Stats Row */}
+            {/* Header with Breadcrumbs, guide & Live Status */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
                 <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
                     <MarketingBreadcrumbs
-                        customTitle="Targets & Mystery Rewards"
-                        customSubtitle="Achieve real activity milestones to unlock guaranteed wallet cashbacks and certified mystery goodie crates."
+                        customTitle="Performance Targets & Gifts"
+                        customSubtitle="Achieve real action milestones to unlock guaranteed wallet cashbacks and doorstep physical gifts decided by InTrust."
                         className="flex-1 min-w-0"
                     />
                     <GuideInfoButton pageKey="/marketing/targets" scope="marketing" className="mt-1 shrink-0" />
                 </div>
 
-                {/* Status Chips */}
                 <div className="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-auto">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
                         <Calendar size={13} className="text-blue-600" />
                         <span>{currentMonthStr}</span>
                     </div>
                     {eligibleUnclaimedCount > 0 && (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-[11px] sm:text-xs font-black shadow-2xs animate-pulse">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-[11px] sm:text-xs font-black shadow-2xs animate-pulse">
                             <Sparkles size={13} />
-                            <span>{eligibleUnclaimedCount} Ready to Claim</span>
+                            <span>{eligibleUnclaimedCount} Ready to Claim!</span>
                         </div>
                     )}
                 </div>
@@ -327,183 +373,225 @@ export default function TargetsClient({
             {/* 1. EXCLUSIVE PHYSICAL PRIZES & WHAT YOU CAN WIN SHOWCASE */}
             <ExclusivePrizesShowcase isMerchant={isMerchant} targets={targets} />
 
-            {/* 2. TOP ACTIVE TARGET HERO (ILLUSTRATION-BASED) */}
-            {activePrimaryTarget ? (
-                <div className="bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 border border-slate-200/90 dark:border-slate-800 shadow-sm relative overflow-hidden">
-                    {/* Ambient Radial Accent */}
-                    <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+            {/* 2. FEATURED / HIGHEST-PRIORITY TARGET HERO */}
+            {activePrimaryTarget && (() => {
+                const p = progressOf(activePrimaryTarget);
+                const isPhysical = activePrimaryTarget.reward_type === 'physical_gift';
+                const giftImg = activePrimaryTarget.gift_image_url;
+                const giftTitle = activePrimaryTarget.gift_name || (activePrimaryTarget.reward_type === 'cashback' ? `₹${(Number(activePrimaryTarget.reward_value_paise || 0) / 100).toFixed(0)} Wallet Cashback` : 'Milestone Gift');
 
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
-                        {/* Left: Info & Progress Bar */}
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-2.5">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-2xs">
-                                    <Target size={12} className="text-blue-600" />
-                                    <span>Active Milestone Target</span>
-                                </span>
-                                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-extrabold">
-                                    Ends {currentMonthStr} ({daysRemaining}d left)
-                                </span>
-                            </div>
+                return (
+                    <div className="bg-gradient-to-br from-white via-slate-50/50 to-blue-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 border border-slate-200/90 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
-                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-950 dark:text-white tracking-tight leading-snug">
-                                {activePrimaryTarget.title}
-                            </h2>
-
-                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-xl font-medium leading-relaxed">
-                                {activePrimaryTarget.description || 'Achieve this milestone to unlock guaranteed rewards and wallet credit.'}
-                            </p>
-
-                            {/* Live Progress Bar Section */}
-                            <div className="mt-5 space-y-2">
-                                <div className="flex items-center justify-between gap-2 text-xs">
-                                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                                        Progress: <strong className="text-blue-600 dark:text-blue-400 font-black">{primaryCurrent} / {primaryGoal} {getMetricUnit(activePrimaryTarget)}</strong>
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-2.5">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-2xs">
+                                        <Target size={12} className="text-blue-600" />
+                                        <span>Featured Milestone Target</span>
                                     </span>
-                                    <span className="text-[11px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                                        {primaryPercent}% Completed
+                                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-extrabold">
+                                        Ends {currentMonthStr} ({daysRemaining}d left)
                                     </span>
-                                </div>
-
-                                <div className="w-full h-3 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden relative shadow-inner">
-                                    <motion.div 
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${primaryPercent}%` }}
-                                        transition={{ duration: 0.8, ease: "easeOut" }}
-                                        className="h-full rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 relative"
-                                    >
-                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                                    </motion.div>
-                                </div>
-                            </div>
-
-                            {/* Reward & Action Row */}
-                            <div className="mt-5 pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="flex items-center gap-2 text-xs">
-                                    <span className="text-slate-500 font-semibold">Reward:</span>
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-black">
-                                        <Gift size={13} className="text-emerald-600" />
-                                        {activePrimaryTarget.reward_type === 'cashback' 
-                                            ? `₹${(Number(activePrimaryTarget.reward_value_paise || 0) / 100).toFixed(2)} Wallet Credit` 
-                                            : 'Milestone Mystery Gift Box'}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    {primaryIsClaimed ? (
-                                        <span className="px-4 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-black flex items-center gap-1.5 shadow-2xs">
-                                            <CheckCircle2 size={14} />
-                                            <span>Milestone Earned & Claimed</span>
+                                    {p.isCompleted && !p.isClaimed && (
+                                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black animate-pulse">
+                                            Milestone Completed!
                                         </span>
-                                    ) : primaryIsEligible ? (
-                                        <button
-                                            onClick={() => handleClaimClick(activePrimaryTarget)}
-                                            disabled={claimingTargetId === activePrimaryTarget.id}
-                                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-                                        >
-                                            {claimingTargetId === activePrimaryTarget.id ? (
-                                                <Loader2 size={14} className="animate-spin" />
-                                            ) : (
-                                                <Sparkles size={14} />
-                                            )}
-                                            <span>Claim Reward Now</span>
-                                        </button>
-                                    ) : (
-                                        <Link
-                                            href={getTargetActionUrl(activePrimaryTarget)}
-                                            className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-black transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                                        >
-                                            <span>{getTargetActionLabel(activePrimaryTarget)}</span>
-                                        </Link>
                                     )}
                                 </div>
+
+                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-950 dark:text-white tracking-tight leading-snug">
+                                    {activePrimaryTarget.title}
+                                </h2>
+
+                                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-xl font-medium leading-relaxed">
+                                    {activePrimaryTarget.description || 'Achieve this milestone to unlock guaranteed rewards from InTrust.'}
+                                </p>
+
+                                {/* Live Progress Bar Section */}
+                                <div className="mt-5 space-y-2">
+                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                                            Progress: <strong className="text-blue-600 dark:text-blue-400 font-black">{p.cur} / {p.goal} {getMetricUnit(activePrimaryTarget)}</strong>
+                                        </span>
+                                        <span className="text-[11px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                                            {p.pct}% Completed
+                                        </span>
+                                    </div>
+
+                                    <div className="w-full h-3 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden relative shadow-inner">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${p.pct}%` }}
+                                            transition={{ duration: 0.8, ease: "easeOut" }}
+                                            className={`h-full rounded-full relative ${
+                                                p.isClaimed ? 'bg-emerald-500' : p.isCompleted ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+                                            }`}
+                                        >
+                                            <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                        </motion.div>
+                                    </div>
+                                </div>
+
+                                {/* Reward & Action Row */}
+                                <div className="mt-5 pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="text-slate-500 font-semibold">Award:</span>
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-black text-xs">
+                                            <Gift size={14} className="text-emerald-600" />
+                                            <span>{giftTitle}</span>
+                                        </span>
+                                        {isPhysical && (
+                                            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-slate-500 font-semibold">
+                                                <Truck size={12} className="text-slate-400" />
+                                                <span>Free Doorstep Delivery</span>
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {p.isClaimed ? (
+                                            <span className="px-4 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-black flex items-center gap-1.5 shadow-2xs">
+                                                <CheckCircle2 size={14} />
+                                                <span>Milestone Earned & Claimed</span>
+                                            </span>
+                                        ) : p.isCompleted ? (
+                                            <button
+                                                onClick={() => handleClaimClick(activePrimaryTarget)}
+                                                disabled={claimingTargetId === activePrimaryTarget.id}
+                                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                                            >
+                                                {claimingTargetId === activePrimaryTarget.id ? (
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                ) : (
+                                                    <Sparkles size={14} />
+                                                )}
+                                                <span>Claim Gift Now</span>
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href={getTargetActionUrl(activePrimaryTarget)}
+                                                className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-black transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                                            >
+                                                <span>{getTargetActionLabel(activePrimaryTarget)}</span>
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right: Actual Gift Photo or Reward Display */}
+                            <div className="shrink-0 flex items-center justify-center">
+                                {giftImg ? (
+                                    <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-3xl overflow-hidden border-2 border-slate-200/90 dark:border-slate-700 shadow-md bg-white dark:bg-slate-800 flex items-center justify-center group">
+                                        <Image
+                                            src={giftImg}
+                                            alt={giftTitle}
+                                            fill
+                                            sizes="192px"
+                                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 via-black/30 to-transparent text-white text-center">
+                                            <span className="text-[10px] font-black uppercase tracking-wider block truncate">
+                                                {activePrimaryTarget.gift_name || 'Gift Prize'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="relative flex flex-col items-center justify-center p-6 rounded-3xl bg-white/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-md w-40 h-40 sm:w-48 sm:h-48 text-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-2">
+                                            <Gift size={32} />
+                                        </div>
+                                        <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[140px]">
+                                            {giftTitle}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-emerald-600 mt-0.5">
+                                            Guaranteed Reward
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
-
-                        {/* Right: 3D Illustration Showcase (Mystery Box / Milestone Vector) */}
-                        <div className="shrink-0 flex items-center justify-center">
-                            {activePrimaryTarget.reward_type === 'physical_gift' || activePrimaryTarget.reward_type === 'mystery_box' ? (
-                                <div className="relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-3xl bg-white/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-md">
-                                    <TreasureChestVector animated={true} className="w-36 h-36 sm:w-44 sm:h-44" />
-                                    <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider mt-1">
-                                        Surprise Goodie Box
-                                    </span>
-                                </div>
-                            ) : (
-                                <div className="relative flex items-center justify-center">
-                                    <TrophyChampionVector animated={true} className="w-40 h-40 sm:w-52 sm:h-52" />
-                                </div>
-                            )}
-                        </div>
                     </div>
-                </div>
-            ) : (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-8 sm:p-10 border border-slate-200/80 dark:border-slate-800 shadow-sm text-center">
-                    <TrophyChampionVector animated={true} className="w-36 h-36 mx-auto mb-3" />
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                        All Milestone Targets Conquered!
-                    </h3>
-                    <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                        Outstanding work! Check back next month for a fresh set of campaigns, mystery crates, and verified wallet rewards.
-                    </p>
-                </div>
-            )}
+                );
+            })()}
 
-            {/* 3. SECONDARY MILESTONE TARGETS (ILLUSTRATION-BASED 2-COL GRID) */}
+            {/* 3. ALL CONFIGURED MILESTONE TARGETS & LIVE PROGRESS */}
             {secondaryTargets.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                             <Award size={16} className="text-blue-600" />
-                            <span>Additional Campaign Milestones</span>
+                            <span>All Campaign Milestones & Rewards</span>
                         </h3>
                         <span className="text-[11px] font-bold text-slate-400">
-                            {secondaryTargets.length} Campaigns Available
+                            {secondaryTargets.length} Additional Targets
                         </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-                        {secondaryTargets.map((target, idx) => {
-                            const currentVal = getTargetMetricValue(target);
-                            const goalVal = target.target_value || 1;
-                            const pct = Math.min(100, Math.round((currentVal / goalVal) * 100));
-                            const isClaimed = claimedTargetIds.has(target.id);
-                            const isEligible = currentVal >= goalVal && !isClaimed;
+                        {secondaryTargets.map((target) => {
+                            const p = progressOf(target);
+                            const isPhysical = target.reward_type === 'physical_gift';
+                            const giftImg = target.gift_image_url;
+                            const giftTitle = target.gift_name || (target.reward_type === 'cashback' ? `₹${(Number(target.reward_value_paise || 0) / 100).toFixed(0)} Cashback` : 'Gift Reward');
 
                             return (
                                 <div 
                                     key={target.id} 
-                                    className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-blue-300 transition-colors"
+                                    className={`bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border shadow-2xs flex flex-col justify-between transition-all ${
+                                        p.isCompleted && !p.isClaimed 
+                                            ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/20 shadow-md'
+                                            : p.isClaimed
+                                            ? 'border-slate-200/80 dark:border-slate-800 opacity-90'
+                                            : 'border-slate-200/90 dark:border-slate-800 hover:border-blue-300'
+                                    }`}
                                 >
                                     <div>
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="flex items-center gap-3 min-w-0">
-                                                <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 flex items-center justify-center shrink-0 shadow-2xs">
-                                                    {target.reward_type === 'physical_gift' || target.reward_type === 'mystery_box' ? (
+                                                {/* Gift image thumbnail or action icon */}
+                                                <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
+                                                    {giftImg ? (
+                                                        <Image
+                                                            src={giftImg}
+                                                            alt={giftTitle}
+                                                            fill
+                                                            sizes="48px"
+                                                            className="object-cover"
+                                                        />
+                                                    ) : isPhysical ? (
                                                         <Gift size={20} className="text-amber-600 dark:text-amber-400" />
                                                     ) : (
                                                         getTargetIcon(target)
                                                     )}
                                                 </div>
+
                                                 <div className="min-w-0">
-                                                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">
-                                                        Milestone 0{idx + 2}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                                            Target Milestone
+                                                        </span>
+                                                        {target.target_audience === 'merchant' && (
+                                                            <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                                Merchant
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                                                         {target.title}
                                                     </h4>
-                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
-                                                        {target.reward_type === 'cashback' 
-                                                            ? `Reward: ₹${(Number(target.reward_value_paise || 0) / 100).toFixed(2)} Wallet Credit` 
-                                                            : 'Reward: Sealed Milestone Mystery Box'}
+                                                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold truncate mt-0.5">
+                                                        {isPhysical ? `🎁 ${giftTitle}` : `₹${(Number(target.reward_value_paise || 0) / 100).toFixed(0)} Wallet Cashback`}
                                                     </p>
                                                 </div>
                                             </div>
 
                                             <div className="text-right shrink-0">
                                                 <span className="text-xs sm:text-sm font-black text-blue-600 dark:text-blue-400">
-                                                    {currentVal} / {goalVal}
+                                                    {p.cur} / {p.goal}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 block">
                                                     {getMetricUnit(target)}
@@ -515,9 +603,13 @@ export default function TargetsClient({
                                         <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden mb-2">
                                             <div 
                                                 className={`h-full rounded-full transition-all duration-500 ${
-                                                    isClaimed ? 'bg-emerald-500' : isEligible ? 'bg-gradient-to-r from-amber-500 to-emerald-500' : 'bg-blue-600'
+                                                    p.isClaimed 
+                                                        ? 'bg-emerald-500' 
+                                                        : p.isCompleted 
+                                                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500' 
+                                                        : 'bg-blue-600'
                                                 }`}
-                                                style={{ width: `${pct}%` }} 
+                                                style={{ width: `${p.pct}%` }} 
                                             />
                                         </div>
                                     </div>
@@ -525,29 +617,29 @@ export default function TargetsClient({
                                     {/* Action footer */}
                                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                                         <span className="text-[11px] font-bold text-slate-500">
-                                            {isClaimed ? '✅ Earned & Claimed' : `${pct}% Completed`}
+                                            {p.isClaimed ? '✅ Earned & Claimed' : `${p.pct}% Completed`}
                                         </span>
 
-                                        {isClaimed ? (
+                                        {p.isClaimed ? (
                                             <span className="text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1 text-[11px]">
                                                 <CheckCircle2 size={13} />
                                                 <span>Claimed</span>
                                             </span>
-                                        ) : isEligible ? (
+                                        ) : p.isCompleted ? (
                                             <button
                                                 onClick={() => handleClaimClick(target)}
                                                 disabled={claimingTargetId === target.id}
-                                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                                                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
                                             >
                                                 {claimingTargetId === target.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                                <span>Claim Now</span>
+                                                <span>Claim Gift</span>
                                             </button>
                                         ) : (
                                             <Link
                                                 href={getTargetActionUrl(target)}
                                                 className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 text-[11px]"
                                             >
-                                                <span>{Math.max(0, goalVal - currentVal)} more needed</span>
+                                                <span>{p.left} more needed</span>
                                                 <ArrowRight size={11} />
                                             </Link>
                                         )}
@@ -559,98 +651,7 @@ export default function TargetsClient({
                 </div>
             )}
 
-            {/* 4. YOUR REWARD JOURNEY TIMELINE (ILLUSTRATED PROGRESSION ROADMAP) */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
-                <div className="mb-5">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase tracking-wider mb-1.5">
-                        <RocketGrowthVector animated={false} className="w-3.5 h-3.5" />
-                        <span>Milestone Roadmap</span>
-                    </div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                        Your Reward Journey Ladder
-                    </h3>
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        Progress through campaign levels to unlock instant wallet cashbacks and certified mystery boxes.
-                    </p>
-                </div>
-
-                <div className="space-y-3 sm:space-y-3.5">
-                    {relevantTargets.map((target, idx) => {
-                        const currentVal = getTargetMetricValue(target);
-                        const goalVal = target.target_value || 1;
-                        const isClaimed = claimedTargetIds.has(target.id);
-                        const isEligible = currentVal >= goalVal && !isClaimed;
-                        const isUnlocked = isClaimed || isEligible;
-
-                        return (
-                            <div
-                                key={target.id}
-                                className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                                    isClaimed
-                                        ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
-                                        : isEligible
-                                        ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 shadow-sm'
-                                        : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3.5 min-w-0">
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                                        isClaimed
-                                            ? 'bg-emerald-500 text-white shadow-2xs shadow-emerald-500/25'
-                                            : isEligible
-                                            ? 'bg-amber-500 text-slate-950 shadow-2xs shadow-amber-500/30 animate-pulse'
-                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                                    }`}>
-                                        {isClaimed ? <CheckCircle2 size={16} /> : isEligible ? <Sparkles size={15} /> : <Lock size={14} />}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className="text-[10px] font-extrabold text-slate-400 uppercase">
-                                                Level {idx + 1}
-                                            </span>
-                                            <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
-                                                {target.title}
-                                            </h4>
-                                        </div>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                                            Goal: {goalVal} {getMetricUnit(target).toLowerCase()} • Your Progress: <strong className="text-slate-800 dark:text-slate-200 font-bold">{currentVal}/{goalVal}</strong>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                                    {isClaimed ? (
-                                        <span className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-[11px] font-black shadow-2xs flex items-center gap-1">
-                                            <CheckCircle2 size={12} />
-                                            <span>Earned & Claimed</span>
-                                        </span>
-                                    ) : isEligible ? (
-                                        <button
-                                            onClick={() => handleClaimClick(target)}
-                                            disabled={claimingTargetId === target.id}
-                                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white text-xs font-black shadow-md shadow-amber-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-                                        >
-                                            {claimingTargetId === target.id ? (
-                                                <Loader2 size={13} className="animate-spin" />
-                                            ) : (
-                                                <Sparkles size={13} />
-                                            )}
-                                            <span>Claim Reward</span>
-                                        </button>
-                                    ) : (
-                                        <span className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 text-[11px] font-bold flex items-center gap-1">
-                                            <Lock size={11} />
-                                            <span>Locked ({Math.max(0, goalVal - currentVal)} left)</span>
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* 5. PHYSICAL GIFT FULFILLMENT & DOORSTEP DISPATCH TRACKER */}
+            {/* 4. PHYSICAL GIFT FULFILLMENT & DOORSTEP DISPATCH TRACKER */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-4">
                     <div className="flex items-center gap-2">
@@ -670,13 +671,24 @@ export default function TargetsClient({
                             const isDelivered = claim.status === 'delivered';
                             const isShipped = claim.status === 'shipped' || isDelivered;
                             const isProcessing = claim.status === 'processing' || isShipped;
+                            const giftImage = claim.marketing_targets?.gift_image_url;
 
                             return (
                                 <div key={claim.id} className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                         <div className="flex items-center gap-3.5 min-w-0">
-                                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0 shadow-2xs">
-                                                <Package size={22} />
+                                            <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-amber-500/10 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0 shadow-2xs">
+                                                {giftImage ? (
+                                                    <Image
+                                                        src={giftImage}
+                                                        alt={claim.gift_title || 'Gift'}
+                                                        fill
+                                                        sizes="48px"
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <Package size={22} />
+                                                )}
                                             </div>
                                             <div className="min-w-0">
                                                 <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
@@ -686,10 +698,10 @@ export default function TargetsClient({
                                                         ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                                         : 'bg-amber-100 text-amber-800 border border-amber-200'
                                                 }`}>
-                                                    {claim.status.toUpperCase()}
+                                                    {claim.status?.toUpperCase() || 'EARNED'}
                                                 </span>
                                                 <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white mt-1 truncate">
-                                                    {claim.gift_title || claim.marketing_targets?.gift_name || 'InTrust Milestone Mystery Box'}
+                                                    {claim.gift_title || claim.marketing_targets?.gift_name || 'Milestone Gift'}
                                                 </h4>
                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                                     {claim.courier_name 
@@ -735,15 +747,15 @@ export default function TargetsClient({
                                     <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-[9px] sm:text-[10px] font-extrabold pt-1">
                                         <div className="text-emerald-600">
                                             <div className="w-full h-1.5 rounded-full bg-emerald-500 mb-1.5" />
-                                            Target Earned
+                                            Milestone Earned
                                         </div>
                                         <div className={isProcessing ? "text-emerald-600" : "text-slate-400"}>
                                             <div className={`w-full h-1.5 rounded-full mb-1.5 ${isProcessing ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
-                                            Sealed & Packed
+                                            Packed & Verified
                                         </div>
                                         <div className={isShipped ? "text-blue-600" : "text-slate-400"}>
                                             <div className={`w-full h-1.5 rounded-full mb-1.5 ${isShipped ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`} />
-                                            Shipped
+                                            Dispatched
                                         </div>
                                         <div className={isDelivered ? "text-emerald-600" : "text-slate-400"}>
                                             <div className={`w-full h-1.5 rounded-full mb-1.5 ${isDelivered ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
@@ -756,30 +768,32 @@ export default function TargetsClient({
                     </div>
                 ) : (
                     <div className="p-6 sm:p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-center flex flex-col items-center justify-center">
-                        <TreasureChestVector animated={false} className="w-24 h-24 mb-2 opacity-80" />
+                        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
+                            <Gift size={28} />
+                        </div>
                         <h4 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">
                             No active physical gift shipments yet.
                         </h4>
                         <p className="text-[11px] text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
-                            Achieve target milestones or conquer daily challenges. Once earned, sealed mystery boxes and physical rewards are dispatched directly to your doorstep with 100% free courier tracking!
+                            Complete target milestones above to earn verified physical gifts and gadgets. Once earned, prizes are dispatched directly to your doorstep with 100% free courier tracking!
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* Modal: Shipping Address for Physical Gifts */}
+            {/* Modal: Shipping Address for Physical Gifts (Portaled to document.body for 100vh viewport centering) */}
             <AnimatePresence>
-                {shippingModalTarget && (
+                {shippingModalTarget && mounted && typeof document !== 'undefined' && createPortal(
                     <div 
                         onClick={() => setShippingModalTarget(null)}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs cursor-pointer"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm cursor-pointer animate-fadeIn"
                     >
                         <motion.div
                             onClick={(e) => e.stopPropagation()}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 cursor-default"
+                            className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 cursor-default max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
@@ -788,16 +802,16 @@ export default function TargetsClient({
                                     </div>
                                     <div className="min-w-0">
                                         <h3 className="text-base font-black text-slate-900 dark:text-white">
-                                            Claim Milestone Mystery Gift
+                                            Claim Milestone Gift
                                         </h3>
                                         <p className="text-xs text-slate-400 truncate">
-                                            {shippingModalTarget.title} • Free Doorstep Delivery
+                                            {shippingModalTarget.gift_name || shippingModalTarget.title} • Free Doorstep Delivery
                                         </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setShippingModalTarget(null)}
-                                    className="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                                    className="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                                 >
                                     <X size={18} />
                                 </button>
@@ -838,7 +852,7 @@ export default function TargetsClient({
 
                                 <div>
                                     <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                                        Delivery Address (with PIN Code)
+                                        Delivery Address (with 6-Digit PIN Code)
                                     </label>
                                     <div className="relative">
                                         <MapPin size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -846,7 +860,7 @@ export default function TargetsClient({
                                             rows={3}
                                             value={shippingForm.shippingAddress}
                                             onChange={(e) => setShippingForm(prev => ({ ...prev, shippingAddress: e.target.value }))}
-                                            placeholder="House / Shop No, Street, City, State, PIN Code"
+                                            placeholder="House / Flat No, Street, Landmark, City, State, PIN Code"
                                             className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
@@ -856,7 +870,7 @@ export default function TargetsClient({
                             <div className="flex items-center justify-end gap-2 pt-2">
                                 <button
                                     onClick={() => setShippingModalTarget(null)}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 cursor-pointer"
+                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                                 >
                                     Cancel
                                 </button>
@@ -870,7 +884,8 @@ export default function TargetsClient({
                                 </button>
                             </div>
                         </motion.div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </AnimatePresence>
 

@@ -20,13 +20,14 @@ import {
  *
  * @param {{ data: Array<{hour:number, label:string, plays:number, clicks:number, impressions:number}> }} props
  */
-export default function SponsorshipAnalyticsChart({ data = [] }) {
-    const total = data.reduce(
+export default function SponsorshipAnalyticsChart({ data, hourlyData }) {
+    const chartData = data || hourlyData || [];
+    const total = chartData.reduce(
         (acc, d) => acc + (d.plays || 0) + (d.clicks || 0),
         0
     );
 
-    if (!data.length || total === 0) {
+    if (!chartData.length || total === 0) {
         return (
             <div className="h-[260px] flex flex-col items-center justify-center text-center gap-2">
                 <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
@@ -48,7 +49,7 @@ export default function SponsorshipAnalyticsChart({ data = [] }) {
     return (
         <div className="w-full h-[260px] -ml-2">
             <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                     <defs>
                         <linearGradient id="playsGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />

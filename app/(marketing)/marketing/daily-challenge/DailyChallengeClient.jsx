@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -46,7 +46,11 @@ import {
     Store,
     Lock,
     Lightbulb,
-    Receipt
+    Receipt,
+    Heart,
+    Zap,
+    BarChart3,
+    CheckCheck
 } from 'lucide-react';
 import MarketingBreadcrumbs from '@/components/marketing/layout/MarketingBreadcrumbs';
 import GuideInfoButton from '@/components/common/GuideInfoButton';
@@ -58,6 +62,10 @@ const SponsorshipCelebrationModal = dynamic(() => import('@/components/marketing
 const SponsorshipAnalyticsChart = lazy(() => import('@/components/marketing/sponsor/SponsorshipAnalyticsChart'));
 import StreakRibbon from '@/components/marketing/challenge/StreakRibbon';
 import StreakMilestoneModal from '@/components/marketing/challenge/StreakMilestoneModal';
+import QuizArena from '@/components/marketing/challenge/QuizArena';
+import QuizResultsView from '@/components/marketing/challenge/QuizResultsView';
+import QuizSponsorShowcase from '@/components/marketing/challenge/QuizSponsorShowcase';
+import StreakShareCard from '@/components/marketing/challenge/StreakShareCard';
 import TrophyChampionVector from '@/components/marketing/graphics/TrophyChampionVector';
 import { supabase } from '@/lib/supabaseClient';
 import { trackSponsorImpressionOnce, trackSponsorEvent } from '@/lib/sponsorshipTracking';
@@ -118,6 +126,18 @@ function playSound(type, soundEnabled = true) {
                 osc.start(ctx.currentTime + i * 0.12);
                 osc.stop(ctx.currentTime + i * 0.12 + 0.28);
             });
+        } else if (type === 'tap') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.05);
         }
     } catch (e) {
         // AudioContext not allowed before user gesture, safe to ignore
@@ -139,13 +159,30 @@ export default function DailyChallengeClient({
     secondsUntilMidnightIST = 0,
     existingSponsorships = [],
     merchantInventory = [],
-    rewardsConfig = {}
+    rewardsConfig = {},
+    customerWalletBalancePaise = 0
 }) {
+    // Live wallet balance reactive to both merchant & customer wallets + live events
+    const [liveWalletPaise, setLiveWalletPaise] = useState(
+        Math.max(merchant?.wallet_balance_paise || 0, customerWalletBalancePaise || 0)
+    );
+
+    useEffect(() => {
+        const handleWalletUpdated = (e) => {
+            if (e.detail?.balance_paise !== undefined) {
+                setLiveWalletPaise(Number(e.detail.balance_paise));
+            }
+        };
+        window.addEventListener('walletBalanceUpdated', handleWalletUpdated);
+        return () => window.removeEventListener('walletBalanceUpdated', handleWalletUpdated);
+    }, []);
+
     // Mode: 'play' or 'sponsor' (only merchants can switch to 'sponsor')
     const [activeTab, setActiveTab] = useState('play');
 
     // Quiz Flow States
-    const [quizStage, setQuizStage] = useState(todayPlay ? 'already_completed' : 'select_category'); // 'select_category', 'intro', 'questions', 'completed', 'already_completed'
+    const hasPlayedTodayInitial = !!todayPlay || !!initialStreak?.played_today;
+    const [quizStage, setQuizStage] = useState(hasPlayedTodayInitial ? 'already_completed' : 'select_category'); // 'select_category', 'sponsor_showcase', 'questions', 'completed', 'already_completed'
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState(null);
@@ -163,13 +200,29 @@ export default function DailyChallengeClient({
 
     // Dynamic Streak States initialized from live DB RPC
     const [streakData, setStreakData] = useState({
-        streak: Number(initialStreak?.current_streak || 0),
-        highestStreak: Number(initialStreak?.highest_streak || 0),
-        playedToday: !!initialStreak?.played_today || !!todayPlay,
+        streak: Number(initialStreak?.current_streak || (hasPlayedTodayInitial ? 1 : 0)),
+        highestStreak: Number(initialStreak?.highest_streak || (hasPlayedTodayInitial ? 1 : 0)),
+        playedToday: hasPlayedTodayInitial,
         freezesLeft: initialStreak?.freezes_left ?? 1
     });
     const [showStreakModal, setShowStreakModal] = useState(false);
     const [completionResult, setCompletionResult] = useState(null);
+
+    // Client-side local storage backup check on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined' && user?.id) {
+            const todayIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const localPlayed = localStorage.getItem(`intrust_daily_challenge_played_${user.id}_${todayIST}`);
+            if (localPlayed === 'true') {
+                setStreakData(prev => ({
+                    ...prev,
+                    playedToday: true,
+                    streak: Math.max(1, prev.streak)
+                }));
+                setQuizStage('already_completed');
+            }
+        }
+    }, [user?.id]);
 
     // Answer feedback overlay state for front-of-screen right/wrong popups
     const [answerFeedback, setAnswerFeedback] = useState(null);
@@ -177,6 +230,11 @@ export default function DailyChallengeClient({
     // Post-game one-by-one sponsored products showcase index & hover pause state
     const [activeShowcaseIndex, setActiveShowcaseIndex] = useState(0);
     const [isShowcasePaused, setIsShowcasePaused] = useState(false);
+
+    // Social Sharing, Clipboard & Exit States
+    const [shareCopied, setShareCopied] = useState(false);
+    const [copiedProductId, setCopiedProductId] = useState(null);
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     // Sponsorship Booking States (Merchant Only)
     const [selectedDate, setSelectedDate] = useState(null);
@@ -225,6 +283,101 @@ export default function DailyChallengeClient({
         const s = secondsToMidnight % 60;
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }, [secondsToMidnight]);
+
+    const formattedTodayDate = useMemo(() => {
+        try {
+            const d = new Date();
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (e) {
+            return 'Today';
+        }
+    }, []);
+
+    // Speech Synthesis reader for questions & options
+    const speakText = (text, e) => {
+        if (e) e.stopPropagation();
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                utterance.lang = 'en-IN';
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.warn('Speech synthesis error:', err);
+            }
+        }
+    };
+
+    // Share results handler
+    const handleShareResults = async () => {
+        const totalQ = activeQuestions?.length || 10;
+        const accuracy = Math.round((score / totalQ) * 100);
+        const rewardText = completionResult?.reward_paise 
+            ? (completionResult.reward_paise / 100).toFixed(2) 
+            : (todayPlay?.cashback_awarded_paise ? (todayPlay.cashback_awarded_paise / 100).toFixed(2) : dynamicReward.toFixed(2));
+        
+        const shareMessage = `ðŸŽ¯ I'm in the top 0.1% of InTrust Daily Quiz Learners!\n\n` +
+            `ðŸ“Š Score: ${score}/${totalQ} (${accuracy}% Accuracy)\n` +
+            `ðŸ”¥ Current Streak: ${streakData.streak} Days\n` +
+            `âš¡ Instant Cashback Won: â‚¹${rewardText}\n\n` +
+            `Test your knowledge, play daily trivia, and earn real wallet cash on InTrust:\n` +
+            `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}/marketing/daily-challenge`;
+
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            try {
+                await navigator.share({
+                    title: "InTrust Daily Challenge Results",
+                    text: shareMessage,
+                    url: `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}/marketing/daily-challenge`
+                });
+                return;
+            } catch (e) {
+                // fallback
+            }
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(shareMessage);
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2500);
+                return;
+            } catch (e) {
+                // fallback
+            }
+        }
+
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    // Share product deal handler
+    const handleShareProductDeal = async (product, e) => {
+        if (e) e.stopPropagation();
+        const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}${product.slug ? `/shop/product/${product.slug}` : '/shop'}`;
+        const dealText = `ðŸ”¥ Special Deal from ${todaySponsor?.merchants?.business_name || 'InTrust'}!\n\nðŸ›ï¸ ${product.product_name} at only â‚¹${product.price}!\nGet authentic quality and instant cashback.\n\nShop here: ${shareUrl}`;
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(dealText);
+                setCopiedProductId(product.id || product.product_id);
+                setTimeout(() => setCopiedProductId(null), 2500);
+            } catch (e) {
+                // fallback
+            }
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.share) {
+            try {
+                await navigator.share({
+                    title: product.product_name,
+                    text: dealText,
+                    url: shareUrl
+                });
+            } catch (e) {}
+        }
+    };
 
     // Auto-advance post-quiz showcase every 4 seconds (pauses when hovered)
     useEffect(() => {
@@ -390,7 +543,7 @@ export default function DailyChallengeClient({
                 question: 'Which Indian tech giant was co-founded by N.R. Narayana Murthy and six engineers in 1981?',
                 options: ['Wipro', 'TCS', 'Infosys', 'HCL Technologies'],
                 correct: 2,
-                explanation: 'Infosys was founded in 1981 with an initial capital of ₹10,000.'
+                explanation: 'Infosys was founded in 1981 with an initial capital of â‚¹10,000.'
             },
             {
                 question: 'Which historic biscuit brand, known for its yellow packaging, is one of the world\'s bestsellers?',
@@ -426,7 +579,7 @@ export default function DailyChallengeClient({
                 question: 'What was the first iconic instant noodles brand launched in India in 1983?',
                 options: ['Top Ramen', 'Maggi', 'Yippee', 'Wai Wai'],
                 correct: 1,
-                explanation: 'Nestlé launched Maggi 2-Minute Noodles in India in 1983.'
+                explanation: 'NestlÃ© launched Maggi 2-Minute Noodles in India in 1983.'
             }
         ],
         'technology': [
@@ -709,7 +862,7 @@ export default function DailyChallengeClient({
                 explanation: '\'Make in India\' was launched to facilitate investment and foster innovation.'
             },
             {
-                question: 'What digital document is generated under GST for transport of goods valued above ₹50,000?',
+                question: 'What digital document is generated under GST for transport of goods valued above â‚¹50,000?',
                 options: ['FastTrack Bill', 'e-Way Bill', 'GST Transit Pass', 'Vahan Pass'],
                 correct: 1,
                 explanation: 'An e-Way Bill is an electronic slip required under GST for transport of consignments.'
@@ -807,12 +960,16 @@ export default function DailyChallengeClient({
     useEffect(() => {
         supabase.rpc('get_user_quiz_streak').then(({ data, error }) => {
             if (data && data.success) {
-                setStreakData({
-                    streak: data.current_streak,
-                    highestStreak: data.highest_streak,
-                    playedToday: data.played_today,
-                    freezesLeft: data.freezes_left
-                });
+                const isPlayed = !!data.played_today || !!todayPlay;
+                setStreakData(prev => ({
+                    streak: Number(data.current_streak || prev.streak || (isPlayed ? 1 : 0)),
+                    highestStreak: Number(data.highest_streak || prev.highestStreak || (isPlayed ? 1 : 0)),
+                    playedToday: isPlayed || prev.playedToday,
+                    freezesLeft: data.freezes_left ?? prev.freezesLeft
+                }));
+                if (isPlayed) {
+                    setQuizStage('already_completed');
+                }
             }
         }).catch((err) => console.error('Failed to load streak:', err));
     }, [todayPlay]);
@@ -892,30 +1049,29 @@ export default function DailyChallengeClient({
         }, 2200);
     };
 
-    // Handle Option Selection in Quiz with front-of-screen popup
+    // Handle Option Selection in Quiz
     const handleSelectOption = (index) => {
         if (isAnswerSubmitted) return;
+        if (selectedOption === index) {
+            // Tapping the already selected option confirms and submits
+            handleConfirmSubmit(index);
+            return;
+        }
         setSelectedOption(index);
+        playSound('tap', soundEnabled);
+    };
+
+    // Explicit confirmation submission (via SUBMIT ANSWER button or second tap)
+    const handleConfirmSubmit = (indexToSubmit = selectedOption) => {
+        if (isAnswerSubmitted) return;
+        const finalIndex = indexToSubmit !== null ? indexToSubmit : 0;
+        if (selectedOption === null) {
+            setSelectedOption(finalIndex);
+        }
         setIsAnswerSubmitted(true);
 
         const currentQ = activeQuestions[currentQuestionIndex];
-        const isCorrect = index === currentQ?.correct;
-        const correctText = currentQ?.options?.[currentQ?.correct] || '';
-        const selectedText = currentQ?.options?.[index] || '';
-        const explanation = currentQ?.explanation || '';
-
-        const pointsEarned = isCorrect ? 10 : 0;
-        const nextTotalScore = score + (isCorrect ? 1 : 0);
-
-        setAnswerFeedback({
-            isCorrect,
-            isTimeOut: false,
-            correctText,
-            selectedText,
-            explanation,
-            pointsEarned,
-            totalPoints: nextTotalScore * 10
-        });
+        const isCorrect = finalIndex === currentQ?.correct;
 
         if (isCorrect) {
             setScore(prev => prev + 1);
@@ -926,7 +1082,7 @@ export default function DailyChallengeClient({
             playSound('incorrect', soundEnabled);
         }
 
-        // Wait 2.2s so user clearly sees correct answer & trivia hint before sliding to next question
+        // Crisp 900ms delay so user sees immediate button feedback, then smoothly advances
         setTimeout(() => {
             setAnswerFeedback(null);
             if (currentQuestionIndex < activeQuestions.length - 1) {
@@ -936,65 +1092,102 @@ export default function DailyChallengeClient({
             } else {
                 finishQuiz();
             }
-        }, 2200);
+        }, 900);
     };
 
     // Finish Quiz & Submit to RPC with Real Data
     const finishQuiz = async () => {
         setSubmittingQuiz(true);
         playSound('victory', soundEnabled);
-        try {
-            const finalScore = score + (selectedOption === activeQuestions[currentQuestionIndex]?.correct ? 1 : 0);
-            const { data } = await supabase.rpc('submit_daily_challenge', {
-                p_category_id: selectedCategory?.id || 'c0000000-0000-0000-0000-000000000001',
-                p_score: finalScore
-            });
 
-            if (data && data.success) {
-                setCompletionResult(data);
-                setStreakData(prev => ({
-                    ...prev,
-                    streak: data.current_streak,
-                    highestStreak: data.highest_streak,
-                    playedToday: true,
-                    freezesLeft: data.freeze_used ? Math.max(0, prev.freezesLeft - 1) : prev.freezesLeft
-                }));
+        const finalScore = score + (selectedOption === activeQuestions[currentQuestionIndex]?.correct ? 1 : 0);
+        const todayIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 
-                // Dispatch walletBalanceUpdated event so top navbar wallet updates live
-                if (typeof window !== 'undefined' && data.new_balance_paise !== undefined) {
-                    window.dispatchEvent(new CustomEvent('walletBalanceUpdated', {
-                        detail: { balance_paise: data.new_balance_paise }
-                    }));
-                }
+        // Validate Category ID (never pass dummy non-existent UUID)
+        const validCatId = (selectedCategory?.id && selectedCategory.id.length === 36 && selectedCategory.id !== 'c0000000-0000-0000-0000-000000000001')
+            ? selectedCategory.id
+            : (categories?.[0]?.id || null);
 
-                // Dispatch marketingStreakUpdated so sidebar StreakRibbon and parent pages update live
-                if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('marketingStreakUpdated', {
-                        detail: {
-                            current_streak: data.current_streak,
-                            highest_streak: data.highest_streak,
-                            played_today: true,
-                            freezes_left: data.freeze_used ? Math.max(0, streakData.freezesLeft - 1) : streakData.freezesLeft
-                        }
-                    }));
-                }
-            } else if (data && !data.success) {
-                // RPC returned a business logic failure (e.g. already played, KYC required)
-                alert(data.message || 'Could not submit quiz. Please try again.');
-            }
-        } catch (e) {
-            console.error('Error recording quiz play:', e);
-        } finally {
-            setSubmittingQuiz(false);
-            // Show sponsored showcase first if sponsor products exist
-            if (todaySponsor?.products && todaySponsor.products.length > 0) {
-                setQuizStage('sponsored_showcase');
-                setActiveShowcaseIndex(0);
-            } else {
-                setQuizStage('completed');
-                setShowCashbackModal(true);
+        // Immediate Client-side persistence safeguard
+        if (typeof window !== 'undefined' && user?.id) {
+            try {
+                localStorage.setItem(`intrust_daily_challenge_played_${user.id}_${todayIST}`, 'true');
+            } catch (err) {
+                console.error('LocalStorage write error:', err);
             }
         }
+
+        try {
+            const response = await fetch('/api/daily-challenge/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ categoryId: validCatId, score: finalScore }),
+            });
+
+            const payload = await response.json().catch(() => null);
+
+            if (!response.ok || !payload?.success) {
+                const reason = payload?.error || 'Could not record your challenge. Please try again.';
+                console.error('[DailyChallenge][complete] request failed', {
+                    status: response.status,
+                    reason,
+                });
+                setBookingError(reason);
+                setQuizStage('questions');
+                setIsAnswerSubmitted(false);
+                return;
+            }
+
+            const data = payload.data || payload;
+            setCompletionResult(data);
+            const updatedStreak = Number(data.current_streak || 1);
+            const updatedHighest = Number(data.highest_streak || updatedStreak);
+            const remainingFreezes = data.freeze_used
+                ? Math.max(0, (streakData.freezesLeft || 0) - 1)
+                : (data.freezes_left ?? streakData.freezesLeft);
+
+            setStreakData(prev => ({
+                ...prev,
+                streak: updatedStreak,
+                highestStreak: updatedHighest,
+                playedToday: true,
+                freezesLeft: remainingFreezes,
+            }));
+
+            // Keep the breadcrumb wallet pill live (MarketingWalletProvider listens)
+            const newBalance = data.new_balance_paise;
+            if (typeof window !== 'undefined' && newBalance !== undefined && newBalance !== null) {
+                const parsedBalance = Number(newBalance);
+                if (Number.isFinite(parsedBalance)) {
+                    setLiveWalletPaise(parsedBalance);
+                    window.dispatchEvent(new CustomEvent('walletBalanceUpdated', {
+                        detail: { balance_paise: parsedBalance }
+                    }));
+                }
+            }
+
+            // Dispatch marketingStreakUpdated so sidebar StreakRibbon and parent pages update live
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('marketingStreakUpdated', {
+                    detail: {
+                        current_streak: updatedStreak,
+                        highest_streak: updatedHighest,
+                        played_today: true,
+                        freezes_left: remainingFreezes,
+                    }
+                }));
+            }
+        } catch (e) {
+            console.error('[DailyChallenge][complete] network error:', e);
+            setBookingError('Network error while recording your challenge. Please check your connection and retry.');
+            setQuizStage('questions');
+            setIsAnswerSubmitted(false);
+            return;
+        } finally {
+            setSubmittingQuiz(false);
+        }
+
+        setQuizStage('sponsor_showcase');
     };
 
 
@@ -1036,10 +1229,10 @@ export default function DailyChallengeClient({
             return;
         }
 
-        // Wallet payment flow
-        const merchantBal = merchant?.wallet_balance_paise || 0;
-        if (merchantBal < dynamicSponsorFee * 100) {
-            setBookingError(`Insufficient InTrust wallet balance (₹${(merchantBal/100).toFixed(2)}). Please switch to SabPaisa Gateway or top up your wallet.`);
+        // Wallet payment flow with 18% GST calculation (9% CGST + 9% SGST)
+        const totalWithGstPaise = Math.round(dynamicSponsorFee * 100 * 1.18);
+        if (liveWalletPaise < totalWithGstPaise) {
+            setBookingError(`Insufficient InTrust wallet balance (â‚¹${(liveWalletPaise / 100).toFixed(2)}). Total payable with 18% GST is â‚¹${(totalWithGstPaise / 100).toFixed(2)}. Please switch to SabPaisa Gateway or top up your wallet.`);
             return;
         }
 
@@ -1116,36 +1309,41 @@ export default function DailyChallengeClient({
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
-            {/* Header with Breadcrumbs, guide & Role Tabs for Merchants */}
+            {/* Header with Breadcrumbs, Live Wallet Pill & Role Tabs for Merchants */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-3 sm:pb-4">
                 <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
                     <MarketingBreadcrumbs
-                        customTitle="Daily Challenge & Quiz"
+                        customTitle="Daily Challenge"
                         customSubtitle="Test your knowledge, earn instant cashbacks, and discover featured local merchants."
                         className="flex-1 min-w-0"
                     />
-                    <GuideInfoButton pageKey="/marketing/daily-challenge" scope="marketing" className="mt-1 shrink-0" />
+                    <div className="flex items-center gap-2 mt-1 shrink-0">
+                        {/* Wallet pill is rendered by MarketingBreadcrumbs (kept in sync via
+                            MarketingWalletProvider). liveWalletPaise still drives the
+                            wallet-payment sufficiency check below. */}
+                        <GuideInfoButton pageKey="/marketing/daily-challenge" scope="marketing" className="shrink-0" />
+                    </div>
                 </div>
 
                 {/* Tabs for Merchants (Customers never see this switcher) - Clean Parity with Sponsor Portal */}
                 {isMerchant && (
                     <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl shrink-0 self-start sm:self-auto">
                         <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-black transition-all bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs flex items-center gap-1.5">
-                            <span>🎮 Play Challenge</span>
+                            <span>ðŸŽ® Play Challenge</span>
                         </span>
                         <Link
                             href="/marketing/daily-challenge/sponsor"
                             className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer"
                         >
                             <Store size={13} className="text-amber-600" />
-                            <span>⭐ Book Slot</span>
+                            <span>â­ Book Slot</span>
                         </Link>
                         <Link
                             href="/marketing/daily-challenge/sponsor/history"
                             className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer"
                         >
                             <Receipt size={13} className="text-blue-600" />
-                            <span>📜 My History</span>
+                            <span>ðŸ“œ My History</span>
                         </Link>
                     </div>
                 )}
@@ -1163,6 +1361,7 @@ export default function DailyChallengeClient({
                         highestStreak={streakData.highestStreak}
                         freezesLeft={streakData.freezesLeft}
                         playedToday={streakData.playedToday}
+                        milestones={streakConfig?.milestones}
                     />
 
                                         {/* Clean, Minimal & Premium VIP Sponsor Spotlight */}
@@ -1194,7 +1393,7 @@ export default function DailyChallengeClient({
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                                            ⭐ Today&apos;s Official Sponsor
+                                            â­ Today&apos;s Official Sponsor
                                         </span>
                                         <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 shadow-2xs">
                                             <svg className="w-3 h-3 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -1246,11 +1445,11 @@ export default function DailyChallengeClient({
                                                 badgeClass = 'text-indigo-700 bg-indigo-50 border-indigo-200';
                                             } else if (isPlatform) {
                                                 targetHref = `/merchant/shopping/wholesale?q=${encodeURIComponent(p.product_name)}`;
-                                                badgeText = '⚡ Wholesale Available';
+                                                badgeText = 'âš¡ Wholesale Available';
                                                 badgeClass = 'text-emerald-700 bg-emerald-50 border-emerald-200';
                                             } else {
                                                 targetHref = p.slug ? `/shop/product/${p.slug}` : '/shop';
-                                                badgeText = '🏪 Partner Store (Retail)';
+                                                badgeText = 'ðŸª Partner Store (Retail)';
                                                 badgeClass = 'text-amber-700 bg-amber-50 border-amber-200';
                                             }
                                         }
@@ -1284,7 +1483,7 @@ export default function DailyChallengeClient({
                                                         {p.product_name}
                                                     </h5>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-xs font-black text-slate-950">₹{p.price}</span>
+                                                        <span className="text-xs font-black text-slate-950">â‚¹{p.price}</span>
                                                         <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded border ${badgeClass}`}>
                                                             {badgeText}
                                                         </span>
@@ -1308,20 +1507,42 @@ export default function DailyChallengeClient({
                                 </div>
                                 <div>
                                     <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        ✓ Today&apos;s Challenge Completed
+                                        âœ“ Today&apos;s Daily Challenge Completed
                                     </span>
                                     <h3 className="text-xl sm:text-2xl font-black text-slate-950 mt-2">
                                         Streak Secured for Today!
                                     </h3>
                                     <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1 max-w-md mx-auto">
-                                        You&apos;ve already claimed today&apos;s cashback and secured your {streakData.streak}-day streak. The next daily challenge unlocks at 12:00 AM IST midnight!
+                                        You&apos;ve completed today&apos;s challenge and locked in your {streakData.streak}-day streak. Next daily challenge unlocks at 12:00 AM IST midnight!
                                     </p>
                                 </div>
 
                                 {/* Live Midnight Countdown Pill */}
                                 <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 text-white font-mono text-xs font-bold shadow-sm">
                                     <Clock size={14} className="text-amber-400" />
-                                    <span>Next Challenge Unlocks in: {formattedTimeUntilMidnight} (12:00 AM IST)</span>
+                                    <span>Next Challenge In: {formattedTimeUntilMidnight} (12:00 AM IST)</span>
+                                </div>
+
+                                <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuizStage('already_completed')}
+                                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
+                                    >
+                                        Review Today&apos;s Answers
+                                    </button>
+                                    <Link
+                                        href="/marketing/targets"
+                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all active:scale-95"
+                                    >
+                                        Explore Target Prizes â†’
+                                    </Link>
+                                    <Link
+                                        href="/marketing"
+                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all active:scale-95"
+                                    >
+                                        Marketing Hub
+                                    </Link>
                                 </div>
                             </div>
                         ) : (
@@ -1383,659 +1604,117 @@ export default function DailyChallengeClient({
                         </div>
                     ))}
 
-                    {/* State B: Active 10 Questions Loop - Crisp Light Mode Arena */}
+                    {/* State B: Active 10 Questions Loop - Modular Arcade Sky Arena */}
                     {quizStage === 'questions' && (
-                        <div className="fixed inset-0 z-50 h-[100dvh] min-h-screen bg-slate-50/95 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] text-slate-900 flex flex-col justify-between overflow-y-auto">
-                            {/* Quiz Control Top HUD */}
-                            <div className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-30 shadow-2xs">
-                                <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 text-xs font-black">
-                                    {/* Left: Back / Exit Button */}
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => {
-                                                // If already played today, go to already_completed instead of select_category
-                                                if (streakData.playedToday) {
-                                                    setQuizStage('already_completed');
-                                                } else {
-                                                    setQuizStage('select_category');
-                                                }
-                                            }}
-                                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-                                            title="Exit Quiz"
-                                        >
-                                            <ArrowLeft size={14} />
-                                            <span>Exit</span>
-                                        </button>
-                                        <span className="text-slate-600 text-[11px] font-bold hidden sm:inline truncate max-w-[140px]">
-                                            {selectedCategory?.title || 'Daily Quiz'}
-                                        </span>
-                                    </div>
-
-                                    {/* Center: Minimal Clean Sponsor Pill */}
-                                    <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 rounded-full bg-slate-100/90 border border-slate-200/90 text-[11px] font-bold shadow-2xs">
-                                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
-                                        <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider hidden xs:inline">Sponsored by</span>
-                                        <span className="font-extrabold text-slate-900 max-w-[110px] xs:max-w-[140px] sm:max-w-[200px] truncate">
-                                            {todaySponsor?.merchants?.business_name || "InTrust Partner"}
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200/80 shrink-0">
-                                            <svg className="w-2.5 h-2.5 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                            <span>Verified</span>
-                                        </span>
-                                    </div>
-
-                                    {/* Right: Streak, Score, Timer, Sound Mute */}
-                                    <div className="flex items-center gap-1.5 sm:gap-2.5">
-                                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 text-[9px] sm:text-[10px] font-black border border-orange-200">
-                                            <Flame size={11} className="text-orange-500 animate-bounce" />
-                                            <span>{streakData.streak}d</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1 text-emerald-600 font-black text-[11px] sm:text-xs">
-                                            <Star size={12} className="fill-emerald-500" />
-                                            <span>{score * 10} pts</span>
-                                        </div>
-
-                                        {/* Dynamic Countdown Timer */}
-                                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black border transition-all ${
-                                            timeLeft <= 5 
-                                                ? 'bg-rose-500 text-white border-rose-600 animate-pulse' 
-                                                : timeLeft <= 10 
-                                                ? 'bg-amber-100 text-amber-800 border-amber-300' 
-                                                : 'bg-slate-100 text-slate-800 border-slate-200'
-                                        }`}>
-                                            <Clock size={10} />
-                                            <span>{timeLeft}s</span>
-                                        </div>
-
-                                        {/* Sound Toggle */}
-                                        <button
-                                            type="button"
-                                            onClick={() => setSoundEnabled(prev => !prev)}
-                                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                                            title={soundEnabled ? 'Mute Sound Effects' : 'Enable Sound Effects'}
-                                        >
-                                            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Animated Progress Bar */}
-                                <div className="max-w-4xl mx-auto w-full h-1 mt-2.5 rounded-full bg-slate-100 overflow-hidden">
-                                    <div 
-                                        className="h-full rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 transition-all duration-300"
-                                        style={{ width: `${((currentQuestionIndex + 1) / activeQuestions.length) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Centered Question Arena Card */}
-                            <div className="flex-1 flex flex-col justify-center max-w-xl sm:max-w-2xl mx-auto w-full px-4 py-4 sm:py-6">
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={currentQuestionIndex}
-                                        initial={{ opacity: 0, x: 40, scale: 0.98 }}
-                                        animate={{ opacity: 1, x: 0, scale: 1 }}
-                                        exit={{ opacity: 0, x: -40, scale: 0.98 }}
-                                        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                                        className="relative bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xl overflow-hidden"
-                                    >
-                                        {/* Floating +10 Points Animation */}
-                                        <AnimatePresence>
-                                            {showFloatingPoints && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                                                    animate={{ opacity: 1, y: -24, scale: 1.15 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="absolute top-4 right-5 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-500/25 flex items-center gap-1 z-20 pointer-events-none"
-                                                >
-                                                    <Sparkles size={12} />
-                                                    <span>+10 PTS</span>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* Question Meta Header with Category & Progress Stepper */}
-                                        <div className="flex items-center justify-between gap-2 mb-3">
-                                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                                {selectedCategory?.title || 'Daily Quiz'}
-                                            </span>
-
-                                            {/* Stepper Dots & Question Number */}
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center gap-1">
-                                                    {activeQuestions.map((_, i) => (
-                                                        <span
-                                                            key={i}
-                                                            className={`h-1.5 rounded-full transition-all duration-300 ${
-                                                                i === currentQuestionIndex 
-                                                                    ? 'w-5 bg-blue-600' 
-                                                                    : i < currentQuestionIndex 
-                                                                    ? 'w-1.5 bg-emerald-500' 
-                                                                    : 'w-1.5 bg-slate-200'
-                                                            }`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <span className="text-xs font-black text-slate-500 ml-1">
-                                                    Q{currentQuestionIndex + 1}/{activeQuestions.length}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Question Prompt */}
-                                        <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950 mb-5 leading-snug tracking-tight">
-                                            {activeQuestions[currentQuestionIndex]?.question}
-                                        </h3>
-
-                                        {/* Options with A, B, C, D badges */}
-                                        <div className="space-y-2.5">
-                                            {activeQuestions[currentQuestionIndex]?.options?.map((opt, idx) => {
-                                                const isSelected = selectedOption === idx;
-                                                const isCorrect = activeQuestions[currentQuestionIndex]?.correct === idx;
-                                                const optionLetters = ['A', 'B', 'C', 'D'];
-                                                let btnStyle = "border-slate-200 bg-slate-50/80 text-slate-800 hover:bg-blue-50/70 hover:border-blue-400 hover:text-blue-950";
-
-                                                if (isAnswerSubmitted) {
-                                                    if (isCorrect) {
-                                                        btnStyle = "border-emerald-500 bg-emerald-50 text-emerald-950 font-black scale-[1.01]";
-                                                    } else if (isSelected && !isCorrect) {
-                                                        btnStyle = "border-rose-500 bg-rose-50 text-rose-950 animate-shake font-black";
-                                                    }
-                                                }
-
-                                                return (
-                                                    <motion.button
-                                                        key={idx}
-                                                        initial={{ opacity: 0, y: 8 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ duration: 0.18, delay: idx * 0.04 }}
-                                                        disabled={isAnswerSubmitted}
-                                                        onClick={() => handleSelectOption(idx)}
-                                                        className={`w-full p-3 sm:p-3.5 rounded-2xl border text-left text-xs sm:text-sm font-bold transition-all flex items-center justify-between gap-3 cursor-pointer shadow-2xs ${btnStyle}`}
-                                                    >
-                                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                            <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-                                                                isAnswerSubmitted && isCorrect 
-                                                                    ? 'bg-emerald-500 text-white' 
-                                                                    : isAnswerSubmitted && isSelected && !isCorrect 
-                                                                    ? 'bg-rose-500 text-white' 
-                                                                    : 'bg-white border border-slate-200 text-slate-700'
-                                                            }`}>
-                                                                {optionLetters[idx]}
-                                                            </span>
-                                                            <span className="break-words whitespace-normal text-left font-semibold">{opt}</span>
-                                                        </div>
-                                                        {isAnswerSubmitted && isCorrect && (
-                                                            <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-                                                        )}
-                                                        {isAnswerSubmitted && isSelected && !isCorrect && (
-                                                            <XCircle size={18} className="text-rose-600 shrink-0" />
-                                                        )}
-                                                    </motion.button>
-                                                );
-                                            })}
-                                        </div>
-                                    </motion.div>
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Minimal Footer */}
-                            <div className="w-full py-3 text-center border-t border-slate-200 text-[10px] text-slate-500 font-semibold bg-white/80 backdrop-blur-md">
-                                InTrust Arena • Verified daily trivia challenges with instant wallet cashbacks
-                            </div>
-
-                            {/* Front-of-Screen Answer & Hint Modal Overlay */}
-                            <AnimatePresence>
-                                {answerFeedback && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs pointer-events-none"
-                                    >
-                                        <motion.div
-                                            initial={{ scale: 0.7, y: 20, opacity: 0 }}
-                                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                                            exit={{ scale: 0.8, y: -10, opacity: 0 }}
-                                            transition={{ type: "spring", stiffness: 420, damping: 26 }}
-                                            className={`max-w-xs sm:max-w-md w-full p-5 sm:p-6 rounded-3xl border-2 text-center shadow-2xl flex flex-col items-center gap-3.5 bg-white ${
-                                                answerFeedback.isCorrect 
-                                                    ? 'border-emerald-500 shadow-emerald-500/25 ring-4 ring-emerald-500/10' 
-                                                    : 'border-rose-500 shadow-rose-500/25 ring-4 ring-rose-500/10'
-                                            }`}
-                                        >
-                                            {/* Status Badge & Icon */}
-                                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg ${
-                                                answerFeedback.isCorrect 
-                                                    ? 'bg-emerald-500 text-white shadow-emerald-500/30 animate-bounce' 
-                                                    : 'bg-rose-500 text-white shadow-rose-500/30'
-                                            }`}>
-                                                {answerFeedback.isCorrect ? (
-                                                    <CheckCircle2 size={36} className="stroke-[2.5]" />
-                                                ) : (
-                                                    <XCircle size={36} className="stroke-[2.5]" />
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-0.5">
-                                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${
-                                                    answerFeedback.isCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                                                }`}>
-                                                    {answerFeedback.isCorrect ? 'Awesome!' : (answerFeedback.isTimeOut ? "Time's Up!" : "Incorrect!")}
-                                                </span>
-                                                <h4 className={`text-lg sm:text-xl font-black tracking-tight ${
-                                                    answerFeedback.isCorrect ? 'text-emerald-600' : 'text-rose-600'
-                                                }`}>
-                                                    {answerFeedback.isCorrect ? 'CORRECT! 🎉' : 'INCORRECT! ❌'}
-                                                </h4>
-                                            </div>
-
-                                            {/* Dynamic Points Pill / Score Badge */}
-                                            <div className="flex items-center justify-center gap-2 w-full">
-                                                <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-black shadow-xs ${
-                                                    answerFeedback.isCorrect
-                                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700 animate-pulse'
-                                                        : 'bg-slate-100 border-slate-200 text-slate-500'
-                                                }`}>
-                                                    <Star size={14} className={answerFeedback.isCorrect ? 'fill-emerald-500 text-emerald-600' : 'text-slate-400'} />
-                                                    <span>{answerFeedback.isCorrect ? '+10 PTS EARNED' : '+0 PTS'}</span>
-                                                </div>
-
-                                                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold">
-                                                    <span className="text-[10px] uppercase text-slate-400 font-extrabold">Total:</span>
-                                                    <span className="font-black text-slate-900">{answerFeedback.totalPoints ?? (score * 10)} pts</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Correct Answer Display */}
-                                            <div className="w-full bg-slate-50 border border-slate-200/90 rounded-2xl p-3 text-left">
-                                                <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider mb-0.5">
-                                                    {answerFeedback.isCorrect ? 'Your Answer' : 'Correct Answer'}
-                                                </span>
-                                                <span className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
-                                                    <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                                                    <span>{answerFeedback.correctText}</span>
-                                                </span>
-                                            </div>
-
-                                            {/* Hint / Trivia Fact Display */}
-                                            {answerFeedback.explanation && (
-                                                <div className="w-full bg-blue-50/80 border border-blue-200/80 rounded-2xl p-3 text-left">
-                                                    <span className="text-[10px] font-extrabold uppercase text-blue-700 flex items-center gap-1 mb-1">
-                                                        <Lightbulb size={12} className="text-amber-500 shrink-0" />
-                                                        <span>Trivia Hint & Fact</span>
-                                                    </span>
-                                                    <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                                                        {answerFeedback.explanation}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </motion.div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                        <div className="fixed inset-0 z-50 h-[100dvh] min-h-screen bg-gradient-to-b from-[#38bdf8] via-[#60a5fa] to-[#3b82f6] text-slate-900 flex flex-col justify-between overflow-y-auto select-none">
+                            <QuizArena
+                                activeQuestions={activeQuestions}
+                                currentQuestionIndex={currentQuestionIndex}
+                                selectedOption={selectedOption}
+                                isAnswerSubmitted={isAnswerSubmitted}
+                                score={score}
+                                timeLeft={timeLeft}
+                                showFloatingPoints={showFloatingPoints}
+                                soundEnabled={soundEnabled}
+                                streakData={streakData}
+                                todaySponsor={todaySponsor}
+                                selectedCategory={selectedCategory}
+                                showExitConfirm={showExitConfirm}
+                                setShowExitConfirm={setShowExitConfirm}
+                                setSoundEnabled={setSoundEnabled}
+                                handleSelectOption={handleSelectOption}
+                                handleConfirmSubmit={handleConfirmSubmit}
+                                speakText={speakText}
+                                onExitQuiz={() => {
+                                    if (streakData.playedToday) {
+                                        setQuizStage('already_completed');
+                                    } else {
+                                        setQuizStage('select_category');
+                                    }
+                                }}
+                            />
                         </div>
                     )}
 
-                    {/* State B.5: Post-Quiz Full-Screen Sponsored Products Showcase */}
-                    {quizStage === 'sponsored_showcase' && (
-                        <div className="fixed inset-0 z-50 h-[100dvh] min-h-screen bg-slate-50/95 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] text-slate-900 flex flex-col justify-between overflow-y-auto">
-                            {/* Top Sponsor Spotlight Header */}
-                            <div className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3 sticky top-0 z-30 shadow-2xs">
-                                <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs">
-                                            {todaySponsor?.avatar_url ? (
-                                                <Image
-                                                    src={todaySponsor.avatar_url}
-                                                    alt={todaySponsor?.merchants?.business_name || "Sponsor"}
-                                                    fill
-                                                    sizes="40px"
-                                                    className="object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs">
-                                                    {(todaySponsor?.merchants?.business_name || 'InTrust').slice(0, 2).toUpperCase()}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Today&apos;s Official Sponsor</span>
-                                                <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200/80">
-                                                    <svg className="w-2.5 h-2.5 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                                    <span>Verified Partner</span>
-                                                </span>
-                                            </div>
-                                            <h3 className="text-sm sm:text-base font-black text-slate-950 truncate">
-                                                {todaySponsor?.merchants?.business_name || "InTrust Partner Marketplace"}
-                                            </h3>
-                                        </div>
-                                    </div>
-
-                                    {todaySponsor?.products?.length > 1 && (
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-xs font-black text-slate-500 hidden sm:inline">
-                                                Product {activeShowcaseIndex + 1} of {todaySponsor.products.length}
-                                            </span>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={() => setActiveShowcaseIndex(prev => (prev - 1 + todaySponsor.products.length) % todaySponsor.products.length)}
-                                                    className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 transition cursor-pointer"
-                                                    title="Previous Product"
-                                                >
-                                                    <ChevronLeft size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setActiveShowcaseIndex(prev => (prev + 1) % todaySponsor.products.length)}
-                                                    className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 transition cursor-pointer"
-                                                    title="Next Product"
-                                                >
-                                                    <ChevronRight size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Centered Product Showcase Card */}
-                            <div className="flex-1 flex flex-col justify-center max-w-lg sm:max-w-xl mx-auto w-full px-4 py-6 sm:py-8">
-                                {(() => {
-                                    const currentProd = todaySponsor?.products?.[activeShowcaseIndex] || todaySponsor?.products?.[0];
-                                    if (!currentProd) return null;
-
-                                    return (
-                                        <motion.div
-                                            key={activeShowcaseIndex}
-                                            initial={{ opacity: 0, scale: 0.96 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.96 }}
-                                            transition={{ duration: 0.25 }}
-                                            onMouseEnter={() => setIsShowcasePaused(true)}
-                                            onMouseLeave={() => setIsShowcasePaused(false)}
-                                            className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-2xl relative overflow-hidden"
-                                        >
-                                            {/* Top Tag & Discount Badge */}
-                                            <div className="flex items-center justify-between mb-4">
-                                                <span className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-black flex items-center gap-1.5">
-                                                    <Sparkles size={12} className="text-blue-600" />
-                                                    Daily Quiz Featured Special
-                                                </span>
-                                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black">
-                                                    Special Offer
-                                                </span>
-                                            </div>
-
-                                            {/* Product Image Frame */}
-                                            <div className="relative w-full h-56 sm:h-72 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 mb-5 group">
-                                                <Image
-                                                    src={currentProd.image_url || '/icons/intrustLogo.png'}
-                                                    alt={currentProd.product_name || 'Sponsored Product'}
-                                                    fill
-                                                    sizes="(max-width: 640px) 100vw, 550px"
-                                                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-                                                    priority
-                                                />
-                                            </div>
-
-                                            {/* Product Title & Sponsor Store */}
-                                            <div className="space-y-1.5 mb-4">
-                                                <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                                                    Sold by {todaySponsor?.merchants?.business_name || 'Verified Merchant'}
-                                                </div>
-                                                <h2 className="text-lg sm:text-xl font-black text-slate-950 leading-snug">
-                                                    {currentProd.product_name || 'Premium InTrust Product'}
-                                                </h2>
-                                                <div className="flex items-baseline gap-2 pt-1">
-                                                    <span className="text-2xl sm:text-3xl font-black text-slate-950">
-                                                        ₹{Number(currentProd.price || 499).toLocaleString('en-IN')}
-                                                    </span>
-                                                    <span className="text-xs font-bold text-slate-400 line-through">
-                                                        ₹{(Number(currentProd.price || 499) * 1.25).toFixed(0)}
-                                                    </span>
-                                                    <span className="text-xs font-black text-emerald-600">
-                                                        (20% OFF)
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Dot Indicators for multi-product */}
-                                            {todaySponsor?.products?.length > 1 && (
-                                                <div className="flex items-center justify-center gap-1.5 py-2 mb-4">
-                                                    {todaySponsor.products.map((_, idx) => (
-                                                        <button
-                                                            key={idx}
-                                                            onClick={() => setActiveShowcaseIndex(idx)}
-                                                            className={`h-2 rounded-full transition-all cursor-pointer ${
-                                                                idx === activeShowcaseIndex ? 'w-6 bg-blue-600' : 'w-2 bg-slate-200 hover:bg-slate-300'
-                                                            }`}
-                                                            aria-label={`Showcase product ${idx + 1}`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Action Button: Merchant Role Check */}
-                                            <div className="pt-2">
-                                                {isMerchant ? (
-                                                    <div className="w-full p-3.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs font-bold flex items-center justify-center gap-2 text-center shadow-2xs">
-                                                        <Lock size={15} className="text-amber-600 shrink-0" />
-                                                        <span>You cannot buy from other merchants (Merchant Account)</span>
-                                                    </div>
-                                                ) : (
-                                                                                                        <Link
-                                                        href={currentProd.slug ? `/shop/product/${currentProd.slug}` : `/shop/product/${currentProd.id}`}
-                                                        target="_blank"
-                                                        onClick={() => trackSponsorEvent(todaySponsor?.id, 'PRODUCT_CLICK', { productId: currentProd.id || currentProd.product_id })}
-                                                        className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-[0.99] transition-all cursor-pointer"
-                                                    >
-                                                        <ShoppingBag size={18} />
-                                                        <span>Buy Now on Store →</span>
-                                                    </Link>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })()}
-                            </div>
-
-                            {/* Sticky Bottom Bar to Proceed to Cashback & Streak Celebration */}
-                            <div className="w-full bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 sm:px-8 py-3.5 sticky bottom-0 z-30 shadow-lg">
-                                <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-                                    <div className="text-center sm:text-left">
-                                        <span className="text-[11px] font-bold text-slate-500 block">Quiz Complete</span>
-                                        <span className="text-sm font-black text-emerald-600 flex items-center gap-1 justify-center sm:justify-start">
-                                            <Sparkles size={14} />
-                                            ₹{completionResult?.reward_paise ? (completionResult.reward_paise / 100).toFixed(2) : dynamicReward.toFixed(2)} Ready to Claim
-                                        </span>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            setQuizStage('completed');
-                                            setShowCashbackModal(true);
-                                        }}
-                                        className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-slate-950/20 active:scale-95 transition-all cursor-pointer"
-                                    >
-                                        <span>Claim Cashback & Streak Bonus</span>
-                                        <ArrowRight size={16} />
-                                    </button>
-                                </div>
-                            </div>
+                    {/* State: Dedicated Sponsor Product Showcase immediately after Question 10 */}
+                    {quizStage === 'sponsor_showcase' && (
+                        <div className="max-w-xl mx-auto space-y-5 px-3 sm:px-0">
+                            <QuizSponsorShowcase
+                                todaySponsor={todaySponsor}
+                                copiedProductId={copiedProductId}
+                                handleShareProductDeal={handleShareProductDeal}
+                                onClaimCashback={() => {
+                                    setShowCashbackModal(true);
+                                    setQuizStage('completed');
+                                }}
+                                rewardAmountRupees={dynamicReward}
+                                claimRewardPaise={completionResult?.reward_paise || (dynamicReward * 100)}
+                                pointsEarned={score * 10}
+                                score={score}
+                                totalQuestions={activeQuestions?.length || 10}
+                                isMerchant={isMerchant}
+                            />
                         </div>
                     )}
 
-                    {/* State C: Already Completed / Completion Screen */}
+                    {/* State C: Already Completed / Completion Screen - Gamified Results Card & Sponsor Promotion */}
                     {(quizStage === 'completed' || quizStage === 'already_completed') && (
-                        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
-                            <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-slate-200/80 dark:border-slate-800 shadow-xl text-center space-y-4 sm:space-y-5">
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: 'spring', damping: 12 }}
-                                    className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20"
+                        <div className="max-w-xl mx-auto space-y-5 px-3 sm:px-0">
+                            <QuizResultsView
+                                quizStage={quizStage}
+                                score={score}
+                                totalQuestions={activeQuestions?.length || 10}
+                                streakData={streakData}
+                                completionResult={completionResult}
+                                todayPlay={todayPlay}
+                                dynamicReward={dynamicReward}
+                                formattedTodayDate={formattedTodayDate}
+                                shareCopied={shareCopied}
+                                handleShareResults={handleShareResults}
+                                questions={activeQuestions}
+                            />
+
+                            {/* Shareable streak card — surfaces the live streak
+                                (from get_user_quiz_streak) after a completed quiz. */}
+                            <StreakShareCard
+                                streak={Number(streakData?.streak || 0)}
+                                score={score}
+                                totalQuestions={activeQuestions?.length || 10}
+                                userName={profile?.full_name || user?.user_metadata?.full_name || 'I'}
+                            />
+
+                            <QuizSponsorShowcase
+                                todaySponsor={todaySponsor}
+                                copiedProductId={copiedProductId}
+                                handleShareProductDeal={handleShareProductDeal}
+                                isMerchantViewer={isMerchant}
+                            />
+
+                            <div className="flex items-center justify-center gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setQuizStage('select_category')}
+                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all active:scale-95 cursor-pointer"
                                 >
-                                    <Trophy size={32} className="sm:w-10 sm:h-10 animate-bounce" />
-                                </motion.div>
-
-                                <div className="space-y-1.5">
-                                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                                        {quizStage === 'already_completed' ? "You're All Caught Up Today!" : "Challenge Completed!"}
-                                    </h2>
-                                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
-                                        {quizStage === 'already_completed'
-                                            ? "You have solved today's quiz. Come back tomorrow after midnight IST for fresh challenges!"
-                                            : `You scored ${score} out of ${activeQuestions.length}! Your streak is actively locked in.`}
-                                    </p>
-                                </div>
-
-                                {/* Streak Counter Block */}
-                                <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-around">
-                                    <div className="text-center">
-                                        <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Current Streak</div>
-                                        <div className="text-xl sm:text-2xl font-black text-orange-500 flex items-center justify-center gap-1 mt-0.5">
-                                            <Flame size={18} className="animate-pulse" />
-                                            {streakData.streak} Days
-                                        </div>
-                                    </div>
-                                    <div className="w-px h-8 sm:h-10 bg-slate-200 dark:bg-slate-700" />
-                                    <div className="text-center">
-                                        <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Cashback Won</div>
-                                        <div className="text-xl sm:text-2xl font-black text-emerald-500 flex items-center justify-center gap-1 mt-0.5">
-                                            <Award size={18} />
-                                            ₹{completionResult?.reward_paise ? (completionResult.reward_paise / 100).toFixed(2) : (todayPlay?.cashback_awarded_paise ? (todayPlay.cashback_awarded_paise / 100).toFixed(2) : dynamicReward.toFixed(2))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Reward Status Banner */}
-                                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
-                                    <div className="text-left">
-                                        <span className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-400">
-                                            Reward Credited
-                                        </span>
-                                        <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">
-                                            + ₹{completionResult?.reward_paise ? (completionResult.reward_paise / 100).toFixed(2) : (todayPlay?.cashback_awarded_paise ? (todayPlay.cashback_awarded_paise / 100).toFixed(2) : dynamicReward.toFixed(2))} Cashback
-                                        </div>
-                                        {completionResult?.milestone_bonus_paise > 0 && (
-                                            <span className="text-[10px] font-bold text-amber-600 block">
-                                                (Includes ₹{(completionResult.milestone_bonus_paise / 100).toFixed(0)} streak milestone bonus!)
-                                            </span>
-                                        )}
-                                    </div>
-                                    <span className="text-xs font-bold text-emerald-600">
-                                        InTrust Wallet
-                                    </span>
-                                </div>
-
-                                {/* Actionable Next-Step Redirects */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                                    <Link
-                                        href="/marketing/transactions"
-                                        className="py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                    >
-                                        <Wallet size={14} />
-                                        <span>View in Passbook</span>
-                                    </Link>
-                                    <Link
-                                        href="/marketing/targets"
-                                        className="py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                    >
-                                        <Gift size={14} />
-                                        <span>Mystery Targets</span>
-                                    </Link>
-                                    <Link
-                                        href="/marketing"
-                                        className="py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                    >
-                                        <ChevronRight size={14} />
-                                        <span>Marketing Hub</span>
-                                    </Link>
-                                </div>
-
-                                {isMerchant && (
-                                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <Link
-                                            href="/marketing/daily-challenge/sponsor"
-                                            className="w-full py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-100/80 transition-colors"
-                                        >
-                                            <Store size={14} />
-                                            <span>Sponsor Tomorrow&apos;s Challenge & Lock Slot →</span>
-                                        </Link>
-                                    </div>
-                                )}
+                                    â† Back to Challenge Lobby
+                                </button>
+                                <Link
+                                    href="/marketing"
+                                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all active:scale-95"
+                                >
+                                    Go to Marketing Hub â†’
+                                </Link>
                             </div>
 
-                            {/* Sponsor Featured Products Showcase (Products displayed LATER on completion screen) */}
-                            {todaySponsor?.products && todaySponsor.products.length > 0 && (
-                                <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-amber-500/5 via-amber-500/10 to-orange-500/5 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-orange-950/20 border border-amber-200/80 dark:border-amber-800/60 text-left space-y-3 shadow-sm">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                                                    Featured Products from Today&apos;s Sponsor
-                                                </span>
-                                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/60">
-                                                    ✓ Verified
-                                                </span>
-                                            </div>
-                                            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
-                                                {todaySponsor?.merchants?.business_name || "Partner Store"}
-                                            </h3>
-                                        </div>
-                                        <Link
-                                            href="/shop"
-                                            className="text-xs font-black text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 shrink-0"
-                                        >
-                                            <span>Explore Shop</span>
-                                            <ArrowRight size={12} />
-                                        </Link>
-                                    </div>
-
-                                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 line-clamp-2">
-                                        {todaySponsor?.campaign_message || "Special rewards unlocked! Redeem your quiz cashback on these authentic verified products."}
-                                    </p>
-
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                                        {todaySponsor.products.slice(0, 4).map((p) => (
-                                            <div 
-                                                key={p.id}
-                                                className="group bg-white dark:bg-slate-900 rounded-2xl p-2.5 border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-amber-400 transition-all flex flex-col justify-between"
-                                            >
-                                                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 mb-2">
-                                                    <Image
-                                                        src={p.image_url || '/icons/intrustLogo.png'}
-                                                        alt={p.product_name}
-                                                        fill
-                                                        sizes="(max-width: 640px) 50vw, 25vw"
-                                                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <h4 className="text-[11px] font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                                                        {p.product_name}
-                                                    </h4>
-                                                    <div className="flex items-baseline justify-between gap-1">
-                                                        <span className="text-xs font-black text-slate-900 dark:text-white">
-                                                            ₹{p.price}
-                                                        </span>
-                                                        <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400">
-                                                            Cashback
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <a
-                                                    href={p.slug ? `/shop/product/${p.slug}` : '/shop'}
-                                                    onClick={() => trackSponsorEvent(todaySponsor?.id, 'PRODUCT_CLICK', { productId: p.id || p.product_id })}
-                                                    className="mt-2 w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black text-center transition-all block active:scale-95 shadow-xs"
-                                                >
-                                                    Shop Now
-                                                </a>
-                                            </div>
-                                        ))}
-                                    </div>
+                            {isMerchant && (
+                                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <Link
+                                        href="/marketing/daily-challenge/sponsor"
+                                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-100/80 transition-colors"
+                                    >
+                                        <Store size={14} />
+                                        <span>Sponsor Tomorrow&apos;s Challenge & Lock Slot â†’</span>
+                                    </Link>
                                 </div>
                             )}
                         </div>
@@ -2180,7 +1859,7 @@ export default function DailyChallengeClient({
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
-                                                            <span className="text-xs font-black text-slate-900 dark:text-white">₹{item.price}</span>
+                                                            <span className="text-xs font-black text-slate-900 dark:text-white">â‚¹{item.price}</span>
                                                             <div className={`w-4 h-4 rounded-md flex items-center justify-center text-xs ${
                                                                 isPicked ? 'bg-blue-600 text-white' : 'border border-slate-300'
                                                             }`}>
@@ -2276,7 +1955,7 @@ export default function DailyChallengeClient({
                                                 </div>
                                                 <span className="text-xs font-black text-slate-900 dark:text-white">InTrust Wallet</span>
                                                 <span className="text-[10px] text-slate-500 font-bold mt-0.5 truncate">
-                                                    ₹{((merchant?.wallet_balance_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                    â‚¹{((merchant?.wallet_balance_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                 </span>
                                             </button>
 
@@ -2304,7 +1983,7 @@ export default function DailyChallengeClient({
                                             Sponsorship Fee
                                         </span>
                                         <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                                            ₹{dynamicSponsorFee}
+                                            â‚¹{dynamicSponsorFee}
                                         </span>
                                     </div>
 
@@ -2320,7 +1999,7 @@ export default function DailyChallengeClient({
                                         onClick={handleBookSponsorship}
                                         className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md shadow-blue-500/25 active:scale-95 transition-all disabled:opacity-50"
                                     >
-                                        {bookingLoading ? 'Processing...' : paymentMethod === 'wallet' ? 'Pay via Wallet & Lock Date →' : 'Pay via SabPaisa Gateway →'}
+                                        {bookingLoading ? 'Processing...' : paymentMethod === 'wallet' ? 'Pay via Wallet & Lock Date â†’' : 'Pay via SabPaisa Gateway â†’'}
                                     </button>
 
                                     <p className="text-[10px] text-slate-400 text-center mt-3">
@@ -2352,7 +2031,7 @@ export default function DailyChallengeClient({
             <GiftBoxAnimationModal
                 isOpen={showGiftBoxModal}
                 onClose={() => setShowGiftBoxModal(false)}
-                rewardTitle={`₹${dynamicReward} InTrust Cashback`}
+                rewardTitle={`â‚¹${dynamicReward} InTrust Cashback`}
                 rewardDesc="Congratulations! You solved today's questions and unlocked your daily cashback milestone."
                 rewardValue={dynamicReward}
             />
@@ -2380,7 +2059,7 @@ export default function DailyChallengeClient({
             <StreakMilestoneModal
                 isOpen={showStreakModal}
                 onClose={() => setShowStreakModal(false)}
-                streak={completionResult?.current_streak || streakData.streak}
+                streak={Math.max(1, Number(completionResult?.current_streak ?? streakData.streak ?? 1))}
                 baseRewardPaise={completionResult?.base_reward_paise || (dynamicReward * 100)}
                 milestoneBonusPaise={completionResult?.milestone_bonus_paise || 0}
                 badge={completionResult?.badge || completionResult?.milestone_badge || ''}

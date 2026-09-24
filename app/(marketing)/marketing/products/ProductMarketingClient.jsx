@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -50,6 +51,11 @@ export default function ProductMarketingClient({
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [inspectingProduct, setInspectingProduct] = useState(null);
     const [liveMetricsOverrides, setLiveMetricsOverrides] = useState({});
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Close open inspection modal on Escape key
     useEffect(() => {
@@ -333,15 +339,15 @@ export default function ProductMarketingClient({
             </div>
             )}
 
-            {/* Product Insight & Performance Detail Modal */}
-            {inspectingProduct && (
+            {/* Product Insight & Performance Detail Modal (Portaled to document.body for 100vh viewport centering) */}
+            {inspectingProduct && mounted && typeof document !== 'undefined' && createPortal(
                 <div 
                     onClick={() => setInspectingProduct(null)}
-                    className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn cursor-pointer"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn cursor-pointer"
                 >
                     <div 
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 max-w-md sm:max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 sm:space-y-5 cursor-default"
+                        className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 max-w-md sm:max-w-lg w-full max-h-[85vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 sm:space-y-5 cursor-default"
                     >
                         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                             <div className="flex items-center gap-2">
@@ -372,7 +378,7 @@ export default function ProductMarketingClient({
                                     <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
                                         ₹{inspectingProduct.price}
                                     </span>
-                                    {inspectingProduct.discount_percent && (
+                                    {inspectingProduct?.discount_percent > 0 && (
                                         <span className="text-xs font-bold text-rose-600">
                                             {inspectingProduct.discount_percent}% Discount
                                         </span>
@@ -436,7 +442,8 @@ export default function ProductMarketingClient({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Share Modal */}

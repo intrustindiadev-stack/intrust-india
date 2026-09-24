@@ -205,7 +205,7 @@ export default function MobileNav({
                                 >
                                     <div className="flex items-center gap-3">
                                         <Sparkles size={17} className={pathname.startsWith('/marketing') ? 'text-white' : 'text-blue-600'} />
-                                        <span>✦ Marketing Workspace</span>
+                                        <span>✦ Marketing Hub</span>
                                     </div>
                                     <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-600 text-white">NEW</span>
                                 </Link>

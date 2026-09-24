@@ -181,6 +181,32 @@ export default async function DailyChallengePage() {
             image_url: (Array.isArray(p.product_images) && p.product_images[0]) || '/icons/intrustLogo.png',
             slug: p.slug
         }));
+
+        if (sponsorProducts.length === 0) {
+            sponsorProducts = [
+                {
+                    id: 'default-prod-1',
+                    product_name: 'Wireless Bluetooth ANC Earbuds',
+                    price: 1499,
+                    image_url: '/marketing/prizes/anc_earbuds.jpg',
+                    slug: 'official'
+                },
+                {
+                    id: 'default-prod-2',
+                    product_name: 'Smart AMOLED Fitness Tracker',
+                    price: 1899,
+                    image_url: '/marketing/prizes/smartwatch.jpg',
+                    slug: 'official'
+                },
+                {
+                    id: 'default-prod-3',
+                    product_name: 'Executive Metal Roller Pen & Journal Kit',
+                    price: 799,
+                    image_url: '/marketing/prizes/executive_kit.jpg',
+                    slug: 'official'
+                }
+            ];
+        }
     }
 
     const todaySponsor = rawSponsor ? {
@@ -213,7 +239,13 @@ export default async function DailyChallengePage() {
     try {
         const { data: sData } = await supabase.rpc('get_user_quiz_streak');
         if (sData) {
-            userStreak = sData;
+            userStreak = {
+                ...sData,
+                played_today: !!todayPlay || !!sData.played_today,
+                current_streak: (!!todayPlay || !!sData.played_today)
+                    ? Math.max(1, Number(sData.current_streak || 1))
+                    : Number(sData.current_streak || 0)
+            };
         }
     } catch (e) {
         console.error('Error fetching quiz streak:', e);
@@ -233,15 +265,23 @@ export default async function DailyChallengePage() {
         supabase.from('daily_challenge_sponsorships').select('id, sponsor_date, status').gte('sponsor_date', todayDateStr).in('status', ['live', 'booked'])
     ]);
 
-    const streakConfig = streakRes.status === 'fulfilled' ? streakRes.value.data?.value : {};
-    const rewardsConfig = rewardsRes.status === 'fulfilled' ? rewardsRes.value.data?.value : {};
-    const allSponsorships = sponsorshipsRes.status === 'fulfilled' ? sponsorshipsRes.value.data : [];
+    const streakConfig = streakRes.status === 'fulfilled' && streakRes.value.data?.value ? streakRes.value.data.value : {};
+    const rewardsConfig = rewardsRes.status === 'fulfilled' && rewardsRes.value.data?.value ? rewardsRes.value.data.value : {};
+    const allSponsorships = sponsorshipsRes.status === 'fulfilled' && sponsorshipsRes.value.data ? sponsorshipsRes.value.data : [];
+
+    // Fetch customer wallet balance
+    const { data: custWallet } = await supabase
+        .from('customer_wallets')
+        .select('balance_paise')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
     return (
         <DailyChallengeClient
             user={user}
             profile={profile}
             merchant={merchant}
+            customerWalletBalancePaise={custWallet?.balance_paise || 0}
             isMerchant={isMerchant}
             categories={categories || []}
             initialQuestions={dbQuestions || []}

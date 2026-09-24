@@ -13,7 +13,13 @@ import { motion } from 'framer-motion';
 import TreasureChestVector from '@/components/marketing/graphics/TreasureChestVector';
 
 export default function ExclusivePrizesShowcase({ isMerchant = false, targets = [], className = '' }) {
-    const prizes = (Array.isArray(targets) ? targets : [])
+    const verifiedDefaultPrizes = [
+        { id: 'prize-1', gift_name: 'Wireless ANC Earbuds', gift_image_url: '/marketing/prizes/anc_earbuds.jpg', reward_type: 'physical_gift' },
+        { id: 'prize-2', gift_name: 'Smart Fitness Watch', gift_image_url: '/marketing/prizes/smartwatch.jpg', reward_type: 'physical_gift' },
+        { id: 'prize-3', gift_name: '24K Gold Coin (1g)', gift_image_url: '/marketing/prizes/gold_coin.jpg', reward_type: 'physical_gift' }
+    ];
+
+    const prizes = (Array.isArray(targets) && targets.length > 0 ? targets : verifiedDefaultPrizes)
         .filter(t => t.is_active !== false)
         .slice(0, 3);
     const fmtCash = (paise) => `₹${(Number(paise || 0) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -28,15 +34,15 @@ export default function ExclusivePrizesShowcase({ isMerchant = false, targets = 
                 <div className="max-w-xl">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider mb-3 shadow-2xs">
                         <Sparkles size={13} className="text-emerald-600" />
-                        <span>Milestone Mystery Crates</span>
+                        <span>Milestone Target Rewards</span>
                     </div>
 
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-slate-950 leading-tight">
-                        Surprise Milestone Mystery Box
+                        Achieve Targets & Win Exclusive Gifts
                     </h2>
 
                     <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed font-medium">
-                        Complete daily quiz streaks, promote community products, and conquer milestone targets to unlock certified mystery gift boxes delivered straight to your doorstep.
+                        Promote verified products, drive customer visits, and achieve milestone targets to unlock premium electronics, luxury accessories, and wallet cashbacks with 100% free doorstep delivery.
                     </p>
 
                     {/* Value Proposition Pills */}

@@ -1,5 +1,6 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,7 +17,12 @@ export default function FloatingCart({
     merchant = null,
 }) {
     const router = useRouter();
+    const [mounted, setMounted] = useState(false);
     const isVisible = Boolean(count && count > 0);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Broadcast cart visibility so Chatbot and layout can coordinate animations dynamically
     useEffect(() => {
@@ -41,8 +47,8 @@ export default function FloatingCart({
         };
     }, [isVisible, count, total]);
 
-    // Only render when there are items
-    if (!isVisible) return null;
+    // Only render when mounted and there are items
+    if (!isVisible || !mounted || typeof document === 'undefined') return null;
 
     // Fallback if total wasn't calculated upstream or passed as 0
     const computedTotal = (total && total > 0)
@@ -67,7 +73,7 @@ export default function FloatingCart({
         router.push('/shop/cart');
     };
 
-    return (
+    const cartContent = (
         <AnimatePresence>
             <motion.div
                 key="floating-cart-bar"
@@ -81,7 +87,7 @@ export default function FloatingCart({
                     mass: 0.8
                 }}
                 onClick={handleGoToCart}
-                className="fixed bottom-[74px] sm:bottom-6 left-3.5 right-3.5 sm:left-auto sm:right-6 sm:w-[390px] z-[60] p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#0c0e16]/95 text-slate-900 dark:text-white shadow-2xl shadow-slate-900/15 dark:shadow-black/60 border border-slate-200/90 dark:border-white/10 flex items-center justify-between gap-3 backdrop-blur-2xl cursor-pointer hover:border-blue-500/50 transition-colors duration-500 group"
+                className="fixed bottom-[calc(68px+env(safe-area-inset-bottom,0px))] sm:bottom-6 left-3.5 right-3.5 sm:left-auto sm:right-6 sm:w-[390px] z-[60] p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-[#0c0e16]/95 text-slate-900 dark:text-white shadow-2xl shadow-slate-900/15 dark:shadow-black/60 border border-slate-200/90 dark:border-white/10 flex items-center justify-between gap-3 backdrop-blur-2xl cursor-pointer hover:border-blue-500/50 transition-colors duration-500 group"
             >
                 {/* Left: Bag Icon & Item Info */}
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -129,4 +135,6 @@ export default function FloatingCart({
             </motion.div>
         </AnimatePresence>
     );
+
+    return createPortal(cartContent, document.body);
 }

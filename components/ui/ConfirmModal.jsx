@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { AlertTriangle, X } from 'lucide-react';
@@ -15,11 +17,18 @@ export default function ConfirmModal({
 }) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const [mounted, setMounted] = useState(false);
 
-    return (
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+    const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -80,4 +89,6 @@ export default function ConfirmModal({
             )}
         </AnimatePresence>
     );
+
+    return createPortal(modalContent, document.body);
 }

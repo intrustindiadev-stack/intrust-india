@@ -64,8 +64,18 @@ for line in err.split("\n"):
 
 out_lines = [l.strip() for l in out.split("\n") if l.strip()]
 for line in out_lines:
-    if "|" in line:
-        errors.append("FUNCTION_ERROR: " + line)
+    # psql emits a header and separator row for an empty result set.
+    # Only rows produced by plpgsql_check_function are actionable diagnostics.
+    if "|" not in line:
+        continue
+    fields = [f.strip() for f in line.split("|")]
+    if not fields or fields[0] in {
+        "function_name", "proname", "function", "plpgsql_check_function"
+    }:
+        continue
+    if all(set(f) <= {"-", " ", ""} for f in fields):
+        continue
+    errors.append("FUNCTION_ERROR: " + line)
 
 if errors:
     print("[FAIL] SCHEMA VALIDATION FAILED:")

@@ -1,4 +1,4 @@
-import { createStaticSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { createStaticSupabaseClient, createAdminClient, createServerSupabaseClient } from '@/lib/supabaseServer';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import StorefrontV2Client from './StorefrontV2Client';
@@ -221,6 +221,62 @@ export default async function MerchantStorefrontPage({ params, searchParams }) {
                 </div>
             </div>
         );
+    }
+
+    // Fellow Merchant Protection: Merchants cannot view competitor storefronts
+    try {
+        const sessionClient = await createServerSupabaseClient();
+        const { data: { user } } = await sessionClient.auth.getUser();
+        if (user) {
+            const { data: viewerMerchant } = await createAdminClient()
+                .from('merchants')
+                .select('id, business_name')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (viewerMerchant && viewerMerchant.id !== fetchedMerchant.id) {
+                return (
+                    <div className="w-full min-h-[60vh] flex items-center justify-center py-16 px-4">
+                        <div className="text-center bg-white dark:bg-slate-900 p-8 md:p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full mx-auto space-y-4">
+                            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/40 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                                <span className="text-3xl">🛡️</span>
+                            </div>
+                            <div className="space-y-1.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                    InTrust Marketplace Policy
+                                </span>
+                                <h2 className="text-xl font-black text-slate-950 dark:text-white">
+                                    Fellow Merchant Notice
+                                </h2>
+                                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                                    To protect partner confidentiality and proprietary pricing, merchants cannot browse fellow merchant storefronts.
+                                </p>
+                            </div>
+                            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 text-left text-xs space-y-1.5">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500 font-bold">Your Store:</span>
+                                    <span className="text-slate-900 dark:text-white font-black">{viewerMerchant.business_name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500 font-bold">Requested Store:</span>
+                                    <span className="text-slate-900 dark:text-white font-black">{fetchedMerchant.business_name}</span>
+                                </div>
+                            </div>
+                            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                                <Link href="/merchant" className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-black text-xs hover:bg-slate-800 transition-all text-center">
+                                    My Dashboard
+                                </Link>
+                                <Link href="/marketing/daily-challenge" className="flex-1 py-3 bg-slate-100 text-slate-800 rounded-xl font-bold text-xs hover:bg-slate-200 transition-all text-center">
+                                    Daily Challenge
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+        }
+    } catch (e) {
+        // Continue if session verification is unavailable
     }
 
     merchant = fetchedMerchant;

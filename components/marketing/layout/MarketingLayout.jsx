@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import MarketingAccessGate from '@/components/marketing/layout/MarketingAccessGate';
+import { MarketingWalletProvider } from '@/components/marketing/layout/MarketingWalletContext';
 import { supabase } from '@/lib/supabaseClient';
 
 const NotificationBell = dynamic(() => import('@/components/notifications/NotificationBell'), { ssr: false });
@@ -158,11 +159,18 @@ export default function MarketingLayout({
         setSearchQuery('');
     };
 
-    const activeWalletBalance = (isMerchant || isAdmin)
-        ? (merchant?.wallet_balance_paise || 0) / 100 
-        : (customerWalletBalancePaise || 0) / 100;
+    // Authoritative wallet balance in paise (merchant/admin see merchant wallet,
+    // customers see the server-fetched customer wallet). Seeded into
+    // MarketingWalletProvider so the breadcrumb pill renders live on every page.
+    const activeWalletPaise = (isMerchant || isAdmin)
+        ? (merchant?.wallet_balance_paise || 0)
+        : (customerWalletBalancePaise || 0);
 
     return (
+        <MarketingWalletProvider
+            initialBalancePaise={activeWalletPaise}
+            walletHref={(isMerchant || isAdmin) ? '/merchant/wallet' : '/wallet'}
+        >
         <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 flex flex-col antialiased">
             {/* Mobile Backdrop Overlay */}
             <div
@@ -198,7 +206,7 @@ export default function MarketingLayout({
                                 <span className="font-black text-xl tracking-tight text-slate-900 dark:text-white">InTrust</span>
                             </div>
                             <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                                Marketing Workspace
+                                Marketing Hub
                             </p>
                         </div>
                     </div>
@@ -342,25 +350,9 @@ export default function MarketingLayout({
                         </div>
                     </div>
 
-                    {/* Right Action Icons, Live Wallet & Notifications */}
+                    {/* Right Action Icons & Notifications
+                        (Live wallet pill now lives in MarketingBreadcrumbs so it shows on every marketing page) */}
                     <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-                        {/* Live Wallet Balance Pill */}
-                        <Link
-                            href={isMerchant ? "/merchant/wallet" : "/wallet"}
-                            className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200/60 dark:border-slate-700/60 transition-all group shrink-0"
-                            title="Open InTrust Wallet"
-                        >
-                            <div className="flex flex-col text-left leading-none">
-                                <span className="hidden sm:block text-[8px] sm:text-[9px] font-extrabold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Wallet</span>
-                                <span className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white tabular-nums sm:mt-0.5">
-                                    ₹{activeWalletBalance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                            <span className="hidden sm:flex p-0.5 sm:p-1 rounded-md sm:rounded-lg bg-blue-600 text-white group-hover:scale-105 transition-transform">
-                                <Plus size={10} className="sm:w-3 sm:h-3" />
-                            </span>
-                        </Link>
-
                         {/* Real-time Notification Bell */}
                         <div className="shrink-0">
                             <NotificationBell apiPath="/api/notifications" variant="navbar" />
@@ -627,5 +619,6 @@ export default function MarketingLayout({
             {/* Global Marketing Onboarding Guide Modal */}
             <MarketingOnboardingModal />
         </div>
+        </MarketingWalletProvider>
     );
 }
