@@ -1,6 +1,6 @@
 'use client';
-
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Store, TrendingUp, ShieldCheck, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,11 @@ const SESSION_KEY = 'merchant_apply_popup_dismissed';
 export default function MerchantApplyPopup({ isOpen, onClose }) {
     const router = useRouter();
     const sheetRef = useRef(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleDismiss = () => {
         try {
@@ -37,7 +42,9 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
         router.push('/merchant-apply');
     };
 
-    return (
+    if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+    const popupContent = (
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -49,7 +56,7 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                         onClick={handleBackdropClick}
-                        className="fixed inset-0 z-[900] bg-black/60 backdrop-blur-sm"
+                        className="fixed inset-0 z-[9998] bg-black/65 backdrop-blur-sm"
                     />
 
                     {/* Full-Screen on Mobile, Sleek Centered Modal on Desktop */}
@@ -60,7 +67,7 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-                        className="fixed inset-0 z-[910] h-[100dvh] w-full bg-white dark:bg-[#0c101c] flex flex-col justify-between overflow-hidden
+                        className="fixed inset-0 z-[9999] h-[100dvh] w-full bg-white dark:bg-[#0c101c] flex flex-col justify-between overflow-hidden
                                    md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 
                                    md:h-auto md:max-h-[90vh] md:max-w-[460px] md:rounded-3xl md:shadow-2xl md:border md:border-slate-200/90 dark:md:border-white/10"
                     >
@@ -192,4 +199,6 @@ export default function MerchantApplyPopup({ isOpen, onClose }) {
             )}
         </AnimatePresence>
     );
+
+    return createPortal(popupContent, document.body);
 }

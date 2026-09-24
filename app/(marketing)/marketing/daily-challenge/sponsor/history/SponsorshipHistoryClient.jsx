@@ -34,6 +34,7 @@ export default function SponsorshipHistoryClient({
     user,
     profile,
     merchant,
+    isMerchant = false,
     bookings = [],
     todayIST
 }) {
@@ -106,52 +107,92 @@ export default function SponsorshipHistoryClient({
                 </div>
             </div>
 
-            {/* Merchant Identity Card with Brand Avatar */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-                <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
-                        {profile?.avatar_url ? (
+            {/* Non-Merchant Notice Banner if visiting as a customer */}
+            {!isMerchant && !merchant?.id && (
+                <div className="rounded-2xl p-4 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 flex flex-col sm:flex-row items-center justify-between gap-3.5">
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-10 h-10 shrink-0">
                             <Image
-                                src={profile.avatar_url}
-                                alt={merchant?.store_name || merchant?.business_name || "Merchant"}
-                                fill
-                                sizes="48px"
-                                className="object-cover"
+                                src="/robot-mascot-nobg.png"
+                                alt="InTrust AI Robot"
+                                width={40}
+                                height={40}
+                                className="object-contain"
                             />
-                        ) : (
-                            <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">
-                                {(merchant?.store_name || merchant?.business_name || 'MB').slice(0, 2).toUpperCase()}
-                            </div>
-                        )}
-                    </div>
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                            <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
-                                {merchant?.store_name || merchant?.business_name}
-                            </h2>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800">
-                                <svg className="w-2.5 h-2.5 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                <span>Verified Partner</span>
-                            </span>
                         </div>
-                        <p className="text-xs text-slate-500 font-medium flex items-center gap-2 mt-0.5">
-                            {merchant?.city && <span>📍 {merchant.city}</span>}
-                            {merchant?.business_phone && <span>📞 {merchant.business_phone}</span>}
-                            {merchant?.gstin && <span className="font-mono text-[11px] text-slate-400">GST: {merchant.gstin}</span>}
-                        </p>
+                        <div>
+                            <h4 className="text-xs sm:text-sm font-black text-sky-950 dark:text-sky-100">
+                                Viewing as Shopper / Community Member
+                            </h4>
+                            <p className="text-[11px] sm:text-xs text-sky-800 dark:text-sky-300 font-medium mt-0.5">
+                                Sponsorship Billboard history and commercial GST invoices are exclusive to InTrust Verified Merchant Partners.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Link
+                            href="/marketing/daily-challenge"
+                            className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black transition-all"
+                        >
+                            Play Daily Challenge
+                        </Link>
                     </div>
                 </div>
+            )}
 
-                <div className="flex items-center gap-2 shrink-0">
-                    <Link
-                        href="/marketing/daily-challenge"
-                        className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1"
-                    >
-                        <ExternalLink size={12} />
-                        <span>Live Billboard</span>
-                    </Link>
+            {/* Merchant Identity Card with Brand Avatar & Wallet Balance */}
+            {(isMerchant || merchant?.id) && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
+                            {profile?.avatar_url ? (
+                                <Image
+                                    src={profile.avatar_url}
+                                    alt={merchant?.store_name || merchant?.business_name || "Merchant"}
+                                    fill
+                                    sizes="48px"
+                                    className="object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">
+                                    {(merchant?.store_name || merchant?.business_name || 'MB').slice(0, 2).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
+                                    {merchant?.store_name || merchant?.business_name}
+                                </h2>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800">
+                                    <svg className="w-2.5 h-2.5 text-blue-600 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                    <span>Verified Partner</span>
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium flex items-center gap-2 mt-0.5 flex-wrap">
+                                {merchant?.city && <span>📍 {merchant.city}</span>}
+                                {merchant?.business_phone && <span>📞 {merchant.business_phone}</span>}
+                                {merchant?.gstin && <span className="font-mono text-[11px] text-slate-400">GST: {merchant.gstin}</span>}
+                                {merchant?.wallet_balance_paise !== undefined && (
+                                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded">
+                                        Wallet: ₹{((merchant.wallet_balance_paise || 0) / 100).toFixed(2)}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Link
+                            href="/marketing/daily-challenge"
+                            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1"
+                        >
+                            <ExternalLink size={12} />
+                            <span>Live Billboard</span>
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* SUMMARY STATS BAR */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -233,22 +274,47 @@ export default function SponsorshipHistoryClient({
 
             {/* BOOKINGS LIST */}
             {filteredBookings.length === 0 ? (
-                <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-3 shadow-2xs">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 mx-auto flex items-center justify-center">
-                        <Store size={26} />
+                <div className="p-6 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center space-y-4 shadow-2xs">
+                    <div className="relative w-20 h-20 mx-auto">
+                        <Image
+                            src="/robot-mascot-nobg.png"
+                            alt="InTrust Mascot"
+                            fill
+                            sizes="80px"
+                            className="object-contain drop-shadow-md"
+                        />
                     </div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                        No Sponsorships in This Category
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-                        Promote your store catalog to daily trivia players across India. Secure your exclusive 24-hour prime billboard placement with verified GST tax invoice.
-                    </p>
+                    <div>
+                        <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                            {bookings.length === 0 ? "No Daily Challenge Sponsorships Yet" : "No Sponsorships in This Filter"}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
+                            Promote your store catalog to daily trivia players across India. Secure your exclusive 24-hour prime billboard placement with verified GST tax invoice.
+                        </p>
+                    </div>
+
+                    {/* Benefit highlights */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-xl mx-auto pt-2 text-left">
+                        <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
+                            <span className="text-[10px] font-black uppercase text-blue-700 dark:text-blue-300 block mb-0.5">🌟 Prime Billboard</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium block">24 hours of headline exposure seen by 10,000+ players.</span>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40">
+                            <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-300 block mb-0.5">🛍️ 4 Store Products</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium block">Showcase your best items directly to high-intent shoppers.</span>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
+                            <span className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300 block mb-0.5">📜 GST Invoices</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-300 font-medium block">Instant compliant B2B tax invoice under SAC 998365.</span>
+                        </div>
+                    </div>
+
                     <div className="pt-2">
                         <Link
                             href="/marketing/daily-challenge/sponsor"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md shadow-blue-500/25 transition-all"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md shadow-blue-500/25 transition-all"
                         >
-                            <span>Book Sponsorship Now</span>
+                            <span>Book 24-Hour Sponsorship Slot</span>
                             <ChevronRight size={14} />
                         </Link>
                     </div>
@@ -324,8 +390,8 @@ export default function SponsorshipHistoryClient({
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex items-center gap-2 self-start sm:self-auto">
-                                                                                <button
+                                    <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                                        <button
                                             type="button"
                                             onClick={() => setSelectedInvoice(booking.invoice)}
                                             className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -340,9 +406,21 @@ export default function SponsorshipHistoryClient({
                                             <BarChart3 size={13} />
                                             <span>View Analytics</span>
                                         </Link>
-                                        <span className="text-xs font-black text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800">
-                                            ₹{booking.totalRupees.toFixed(2)}
-                                        </span>
+                                        {isLive && (
+                                            <Link
+                                                href="/marketing/daily-challenge"
+                                                className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1 transition-colors"
+                                            >
+                                                <ExternalLink size={12} />
+                                                <span>Live Billboard</span>
+                                            </Link>
+                                        )}
+                                        <div className="text-right">
+                                            <span className="text-xs font-black text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+                                                ₹{booking.totalRupees.toFixed(2)}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 block mt-0.5">incl. 18% GST</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -358,36 +436,52 @@ export default function SponsorshipHistoryClient({
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                                            {booking.products.map((prod, pIdx) => (
-                                                <div
-                                                    key={prod.id || pIdx}
-                                                    className="p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 flex items-center gap-2.5"
-                                                >
-                                                    <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-white shrink-0 border border-slate-200">
-                                                        <Image
-                                                            src={prod.image || '/icons/intrustLogo.png'}
-                                                            alt={prod.title}
-                                                            fill
-                                                            sizes="44px"
-                                                            loading="lazy"
-                                                            className="object-cover"
-                                                        />
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] font-black text-amber-700 bg-amber-100 px-1 py-0.2 rounded">
-                                                                #{pIdx + 1}
-                                                            </span>
-                                                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
-                                                                {prod.title}
+                                            {booking.products.map((prod, pIdx) => {
+                                                const productCard = (
+                                                    <div
+                                                        key={prod.id || pIdx}
+                                                        className="p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors group"
+                                                    >
+                                                        <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-white shrink-0 border border-slate-200">
+                                                            <Image
+                                                                src={prod.image || '/icons/intrustLogo.png'}
+                                                                alt={prod.title}
+                                                                fill
+                                                                sizes="44px"
+                                                                loading="lazy"
+                                                                className="object-cover group-hover:scale-105 transition-transform"
+                                                            />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[9px] font-black text-amber-700 bg-amber-100 px-1 py-0.2 rounded">
+                                                                    #{pIdx + 1}
+                                                                </span>
+                                                                <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
+                                                                    {prod.title}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-[11px] font-black text-emerald-600 block mt-0.5">
+                                                                ₹{prod.price}
                                                             </span>
                                                         </div>
-                                                        <span className="text-[11px] font-black text-emerald-600 block mt-0.5">
-                                                            ₹{prod.price}
-                                                        </span>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+
+                                                return prod.slug ? (
+                                                    <Link
+                                                        key={prod.id || pIdx}
+                                                        href={`/shopping/product/${prod.slug}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="block"
+                                                    >
+                                                        {productCard}
+                                                    </Link>
+                                                ) : (
+                                                    productCard
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

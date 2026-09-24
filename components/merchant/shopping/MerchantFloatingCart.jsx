@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,7 +36,13 @@ export default function MerchantFloatingCart({
     isDrawerOpen,
     onDrawerOpenChange,
 }) {
+    const [mounted, setMounted] = useState(false);
     const [internalDrawerOpen, setInternalDrawerOpen] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const drawerOpen = isDrawerOpen ?? internalDrawerOpen;
     const setDrawerOpen = onDrawerOpenChange ?? setInternalDrawerOpen;
     const commission = showCommission ? subtotalInRupees * commissionRate : 0;
@@ -308,41 +315,44 @@ export default function MerchantFloatingCart({
                 </button>
                 </div>
 
-                {/* Mobile Drawer */}
-                <AnimatePresence>
-                    {drawerOpen && (
-                        <div className="fixed inset-0 z-[700] flex flex-col justify-end bg-black/60 backdrop-blur-xs">
-                            <motion.div
-                                className="w-full max-h-[85vh] bg-slate-900 rounded-t-2xl flex flex-col overflow-hidden border-t border-slate-800 pb-safe shadow-2xl"
-                                initial={{ y: '100%' }}
-                                animate={{ y: 0, transition: { type: 'spring', stiffness: 320, damping: 32 } }}
-                                exit={{ y: '100%', transition: { duration: 0.2 } }}
-                            >
-                                {/* Drawer Header */}
-                                <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
-                                    <div>
-                                        <h2 className="text-base font-bold text-white">Order Slip</h2>
-                                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                                            {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                                        </p>
+                {/* Mobile Drawer Portaled to Document Body */}
+                {mounted && typeof document !== 'undefined' ? createPortal(
+                    <AnimatePresence>
+                        {drawerOpen && (
+                            <div className="fixed inset-0 z-[9999] flex flex-col justify-end bg-black/70 backdrop-blur-xs">
+                                <motion.div
+                                    className="w-full max-h-[85vh] bg-slate-900 rounded-t-2xl flex flex-col overflow-hidden border-t border-slate-800 pb-safe shadow-2xl"
+                                    initial={{ y: '100%' }}
+                                    animate={{ y: 0, transition: { type: 'spring', stiffness: 320, damping: 32 } }}
+                                    exit={{ y: '100%', transition: { duration: 0.2 } }}
+                                >
+                                    {/* Drawer Header */}
+                                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+                                        <div>
+                                            <h2 className="text-base font-bold text-white">Order Slip</h2>
+                                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                                                {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setDrawerOpen(false)}
+                                            aria-label="Close cart"
+                                            className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors cursor-pointer"
+                                        >
+                                            <X size={17} />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => setDrawerOpen(false)}
-                                        aria-label="Close cart"
-                                        className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-                                    >
-                                        <X size={17} />
-                                    </button>
-                                </div>
 
-                                {/* Drawer Content */}
-                                <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                                    {renderCartContent()}
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
+                                    {/* Drawer Content */}
+                                    <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                                        {renderCartContent()}
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                ) : null}
             </div>
 
         </>

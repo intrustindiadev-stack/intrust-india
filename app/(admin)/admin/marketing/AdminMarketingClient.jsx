@@ -2999,14 +2999,12 @@ export default function AdminMarketingClient({
                                         onChange={(e) => setTargetForm(prev => ({ ...prev, metric_type: e.target.value }))}
                                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                                     >
-                                        <option value="share_links">Share Links</option>
-                                        <option value="quiz_streak">Quiz Streak</option>
-                                        <option value="store_sales">Store Sales</option>
-                                        <option value="link_clicks">Link Clicks</option>
-                                        <option value="user_registration">Welcome / Registration Milestone</option>
-                                        <option value="daily_login">Daily Login Milestone</option>
+                                        <option value="share_links">Share Links (Products Shared)</option>
+                                        <option value="link_clicks">Link Clicks (Store Visits)</option>
+                                        <option value="store_sales">Store Sales (Orders via Links)</option>
                                         <option value="first_order">First Order Milestone</option>
-                                        <option value="custom">Custom</option>
+                                        <option value="user_registration">User Registration Milestone</option>
+                                        <option value="custom">Custom Milestone</option>
                                     </select>
                                 </div>
                             </div>
@@ -4074,14 +4072,12 @@ export default function AdminMarketingClient({
                                         onChange={(e) => setEditingTarget(prev => ({ ...prev, metric_type: e.target.value }))}
                                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                                     >
-                                        <option value="share_links">Share Links</option>
-                                        <option value="quiz_streak">Quiz Streak</option>
-                                        <option value="store_sales">Store Sales</option>
-                                        <option value="link_clicks">Link Clicks</option>
-                                        <option value="user_registration">Welcome / Registration Milestone</option>
-                                        <option value="daily_login">Daily Login Milestone</option>
+                                        <option value="share_links">Share Links (Products Shared)</option>
+                                        <option value="link_clicks">Link Clicks (Store Visits)</option>
+                                        <option value="store_sales">Store Sales (Orders via Links)</option>
                                         <option value="first_order">First Order Milestone</option>
-                                        <option value="custom">Custom</option>
+                                        <option value="user_registration">User Registration Milestone</option>
+                                        <option value="custom">Custom Milestone</option>
                                     </select>
                                 </div>
                             </div>

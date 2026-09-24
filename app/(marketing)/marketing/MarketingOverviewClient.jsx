@@ -94,7 +94,7 @@ export default function MarketingOverviewClient({
                         <div className="flex-1 min-w-0">
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-blue-600/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] sm:text-xs font-black uppercase tracking-wider mb-2 border border-blue-600/20">
                                 <Sparkles size={12} />
-                                <span>InTrust Marketing Workspace</span>
+                                <span>InTrust Marketing Hub</span>
                             </div>
                             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-950 dark:text-white tracking-tight leading-tight">
                                 {greeting}, {firstName}!
@@ -176,14 +176,17 @@ export default function MarketingOverviewClient({
                 </div>
             </div>
 
-            {/* 2. TOP 5 KPI SUMMARY CARDS */}
+            {/* 2. TOP 5 KPI SUMMARY CARDS - FULLY CLICKABLE */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3.5 stagger">
                 {/* Total Shares */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-blue-500/40 hover:shadow-xs transition-all group">
+                <Link
+                    href="/marketing/products"
+                    className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-blue-500/50 hover:shadow-md transition-all group cursor-pointer"
+                >
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">Total Shares</span>
-                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                 <Share2 size={13} />
                             </div>
                         </div>
@@ -194,21 +197,21 @@ export default function MarketingOverviewClient({
                             <span>Attributed links</span>
                         </div>
                     </div>
-                    <Link
-                        href="/marketing/products"
-                        className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform"
-                    >
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform">
                         <span>Share Catalog</span>
                         <ChevronRight size={12} />
-                    </Link>
-                </div>
+                    </div>
+                </Link>
 
                 {/* Link Clicks */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-amber-500/40 hover:shadow-xs transition-all group">
+                <Link
+                    href="/marketing/analytics"
+                    className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-amber-500/50 hover:shadow-md transition-all group cursor-pointer"
+                >
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">Link Clicks</span>
-                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                 <MousePointerClick size={13} />
                             </div>
                         </div>
@@ -219,21 +222,27 @@ export default function MarketingOverviewClient({
                             <span>Unique visitors</span>
                         </div>
                     </div>
-                    <Link
-                        href="/marketing/analytics"
-                        className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform"
-                    >
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform">
                         <span>View Trends</span>
                         <ChevronRight size={12} />
-                    </Link>
-                </div>
+                    </div>
+                </Link>
 
                 {/* New Customers */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-emerald-500/40 hover:shadow-xs transition-all group">
+                <button
+                    type="button"
+                    onClick={() => setSelectedShareProduct({
+                        id: 'primary-campaign',
+                        title: isMerchant ? (merchant?.business_name || 'My InTrust Store') : 'InTrust Shopping Pass & Campaign',
+                        price: 0,
+                        share_cashback_paise: rewardsConfig.campaign_share_bonus_paise || 5000
+                    })}
+                    className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-emerald-500/50 hover:shadow-md transition-all group text-left cursor-pointer"
+                >
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">New Customers</span>
-                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                 <Users size={13} />
                             </div>
                         </div>
@@ -244,26 +253,21 @@ export default function MarketingOverviewClient({
                             <span>Sign-up conversions</span>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setSelectedShareProduct({
-                            id: 'primary-campaign',
-                            title: isMerchant ? (merchant?.business_name || 'My InTrust Store') : 'InTrust Shopping Pass & Campaign',
-                            price: 0,
-                            share_cashback_paise: rewardsConfig.campaign_share_bonus_paise || 5000
-                        })}
-                        className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between w-full text-left text-[10px] sm:text-[11px] font-black text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform"
-                    >
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between w-full text-[10px] sm:text-[11px] font-black text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
                         <span>Share Campaign</span>
                         <ChevronRight size={12} />
-                    </button>
-                </div>
+                    </div>
+                </button>
 
                 {/* Orders */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-purple-500/40 hover:shadow-xs transition-all group">
+                <Link
+                    href="/marketing/targets"
+                    className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-purple-500/50 hover:shadow-md transition-all group cursor-pointer"
+                >
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">Orders</span>
-                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                 <ShoppingBag size={13} />
                             </div>
                         </div>
@@ -274,21 +278,21 @@ export default function MarketingOverviewClient({
                             <span>Verified purchases</span>
                         </div>
                     </div>
-                    <Link
-                        href="/marketing/targets"
-                        className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-purple-600 dark:text-purple-400 group-hover:translate-x-0.5 transition-transform"
-                    >
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-purple-600 dark:text-purple-400 group-hover:translate-x-0.5 transition-transform">
                         <span>Check Targets</span>
                         <ChevronRight size={12} />
-                    </Link>
-                </div>
+                    </div>
+                </Link>
 
                 {/* Cashback Earned */}
-                <div className="col-span-2 lg:col-span-1 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-teal-500/40 hover:shadow-xs transition-all group">
+                <Link
+                    href="/marketing/transactions"
+                    className="col-span-2 lg:col-span-1 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between hover:border-teal-500/50 hover:shadow-md transition-all group cursor-pointer"
+                >
                     <div>
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">Cashback Earned</span>
-                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center shrink-0">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                 <Wallet size={13} />
                             </div>
                         </div>
@@ -299,14 +303,11 @@ export default function MarketingOverviewClient({
                             <span>Credited to wallet</span>
                         </div>
                     </div>
-                    <Link
-                        href="/marketing/transactions"
-                        className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-teal-600 dark:text-teal-400 group-hover:translate-x-0.5 transition-transform"
-                    >
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] font-black text-teal-600 dark:text-teal-400 group-hover:translate-x-0.5 transition-transform">
                         <span>Wallet Ledger</span>
                         <ChevronRight size={12} />
-                    </Link>
-                </div>
+                    </div>
+                </Link>
             </div>
 
             {/* 3. QUICK ACTION CARDS */}

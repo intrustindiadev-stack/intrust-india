@@ -1,14 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = `C:\\Users\\yoges\\.gemini\\antigravity-ide\\brain\\42458cc6-9536-4f3d-aef4-ba56da307472`;
-const destDir = path.join(__dirname, '..', 'public', 'images');
+const srcDir = `C:\\Users\\yoges\\.gemini\\antigravity-ide\\brain\\3bac1337-11d9-4fd1-9972-73c0fbdda786`;
+const destDir = path.join(__dirname, '..', 'public', 'images', 'onboarding');
+
+if (!fs.existsSync(destDir)) {
+  fs.mkdirSync(destDir, { recursive: true });
+}
 
 const map = {
-  'welcome_team_art_1784543607744.png': 'welcome-team-art.png',
-  'employee_workspace_banner_1784543620832.png': 'employee-workspace-banner.png',
-  'crm_sales_banner_1784543633790.png': 'crm-sales-banner.png',
-  'admin_hiring_banner_1784543646832.png': 'admin-hiring-banner.png'
+  'mystery_targets_prizes_1790196440010.jpg': 'mystery_targets_prizes.jpg',
+  'product_marketing_earn_1790196458861.jpg': 'product_marketing_earn.jpg',
+  'daily_trivia_streak_1790196478117.jpg': 'daily_trivia_streak.jpg',
+  'merchant_sponsorship_billboard_1790196508402.jpg': 'merchant_sponsorship_billboard.jpg'
 };
 
 for (const [src, dest] of Object.entries(map)) {
@@ -16,7 +20,7 @@ for (const [src, dest] of Object.entries(map)) {
   const destPath = path.join(destDir, dest);
   if (fs.existsSync(srcPath)) {
     fs.copyFileSync(srcPath, destPath);
-    console.log(`Copied ${src} -> ${dest}`);
+    console.log(`Copied ${src} -> ${destPath}`);
   } else {
     console.error(`Missing ${src}`);
   }

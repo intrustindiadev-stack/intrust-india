@@ -1,6 +1,6 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ShoppingCart,
@@ -131,10 +131,15 @@ const OCCUPATION_OPTIONS = [
 ];
 
 export default function OnboardingModal({ userId, initialPhone = '', onComplete }) {
+    const [mounted, setMounted] = useState(false);
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Mobile Number State
     const [phone, setPhone] = useState(() => {
@@ -257,8 +262,10 @@ export default function OnboardingModal({ userId, initialPhone = '', onComplete 
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl p-0 sm:p-4 overflow-hidden">
+        if (!mounted || typeof document === 'undefined') return null;
+
+        const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-xl p-0 sm:p-4 overflow-hidden">
             <motion.div
                 initial={{ scale: 0.95, opacity: 0, y: 12 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -798,4 +805,6 @@ export default function OnboardingModal({ userId, initialPhone = '', onComplete 
             </motion.div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

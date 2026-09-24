@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight, Home, LayoutDashboard, ShoppingBag, Trophy, Target, ArrowLeftRight, BarChart3, Bell } from 'lucide-react';
+import { MarketingWalletPill } from '@/components/marketing/layout/MarketingWalletContext';
 
 const ROUTE_LABELS = {
     '/marketing': { label: 'Overview', icon: LayoutDashboard },
@@ -25,7 +26,8 @@ export default function MarketingBreadcrumbs({ customTitle, customSubtitle, clas
     const Icon = currentRoute.icon;
 
     return (
-        <div className={`flex flex-col gap-1.5 ${className}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 ${className}`}>
+            <div className="flex flex-col gap-1.5 min-w-0 flex-1">
             <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500">
                 <Link 
                     href="/marketing" 
@@ -60,6 +62,11 @@ export default function MarketingBreadcrumbs({ customTitle, customSubtitle, clas
                     )}
                 </div>
             )}
+            </div>
+
+            {/* Live wallet balance — shown on every marketing page, kept in sync
+                by MarketingWalletProvider via the `walletBalanceUpdated` event. */}
+            <MarketingWalletPill compact className="self-start shrink-0" />
         </div>
     );
 }

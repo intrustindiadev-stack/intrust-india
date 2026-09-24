@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, Copy, Check, MessageCircle, Send, Facebook, Linkedin,
@@ -136,6 +137,20 @@ export default function ShareModal({
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [imgFile, setImgFile]             = useState(null);
     const [imgPreviewOk, setImgPreviewOk]   = useState(true);
+
+    const [mounted, setMounted]             = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const prodTitle = product?.title || product?.product_name || product?.name || 'Exclusive Deal';
+    const prodPrice = product?.price || product?.retail_price || product?.selling_price || 0;
+    const prodImage = product?.image || product?.image_url || '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.in';
+    const shareUrl = shortCode ? `${origin}/r/${shortCode}` : `${origin}/products/${product?.product_id || product?.id || ''}`;
+    const shareTitleShort = `Check out ${prodTitle} on InTrust!`;
+    const shareText = `🔥 Special Deal: ${prodTitle} at just ₹${prodPrice}!\nOrder now and get exclusive cashback on InTrust: ${shareUrl}`;
 
     const registrationBonus = Math.round(
         (rewardsConfig?.campaign_share_bonus_paise
@@ -320,7 +335,9 @@ export default function ShareModal({
         { id: 'more',      label: sharing ? '…' : 'More',  icon: <Share2 size={20} />,       color: 'bg-violet-600 hover:bg-violet-700',   fn: shareNative },
     ];
 
-    return (
+    if (!isOpen || !mounted) return null;
+
+    const modalContent = (
         <>
             {/* Backdrop */}
             <div
@@ -371,7 +388,7 @@ export default function ShareModal({
                             </h3>
                             <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-lg font-black text-slate-900 dark:text-white">₹{prodPrice}</span>
-                                {product.discount_percent > 0 && (
+                                {product?.discount_percent > 0 && (
                                     <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                                         {product.discount_percent}% OFF
                                     </span>
@@ -461,4 +478,6 @@ export default function ShareModal({
             />
         </>
     );
+
+    return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }

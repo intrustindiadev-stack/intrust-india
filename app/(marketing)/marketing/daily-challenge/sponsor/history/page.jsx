@@ -30,15 +30,13 @@ export default async function SponsorshipHistoryPage() {
 
     const isMerchant = profile?.role === 'merchant' || profile?.role === 'admin' || profile?.role === 'super_admin';
 
-    if (!isMerchant) {
-        redirect('/marketing/daily-challenge');
-    }
-
-    let { data: merchant } = await adminSupabase
+    let merchant = null;
+    const { data: directMerchant } = await adminSupabase
         .from('merchants')
         .select('id, business_name, store_name, business_phone, business_email, wallet_balance_paise, gstin, city, state')
         .eq('user_id', user.id)
         .maybeSingle();
+    merchant = directMerchant;
 
     if (!merchant && (profile?.role === 'admin' || profile?.role === 'super_admin')) {
         const { data: runnrMerchant } = await adminSupabase
@@ -49,18 +47,26 @@ export default async function SponsorshipHistoryPage() {
         merchant = runnrMerchant;
     }
 
-    if (!merchant?.id) {
-        redirect('/marketing/daily-challenge/sponsor');
+    // Fallback placeholder merchant object if user doesn't have an approved merchant account yet
+    if (!merchant) {
+        merchant = {
+            id: null,
+            business_name: profile?.full_name || 'My Business',
+            store_name: profile?.full_name || 'My Store',
+            wallet_balance_paise: 0
+        };
     }
 
-    // 1. Fetch all sponsorships for this merchant
-    const { data: rawBookings } = await adminSupabase
-        .from('daily_challenge_sponsorships')
-        .select('id, sponsor_date, product_ids, campaign_message, fee_paise, status, created_at')
-        .eq('merchant_id', merchant.id)
-        .order('sponsor_date', { ascending: false });
-
-    const bookingsList = rawBookings || [];
+    // 1. Fetch all sponsorships for this merchant (if id exists)
+    let bookingsList = [];
+    if (merchant.id) {
+        const { data: rawBookings } = await adminSupabase
+            .from('daily_challenge_sponsorships')
+            .select('id, sponsor_date, product_ids, campaign_message, fee_paise, status, created_at')
+            .eq('merchant_id', merchant.id)
+            .order('sponsor_date', { ascending: false });
+        bookingsList = rawBookings || [];
+    }
 
     // Helper to safely extract image
     const extractImage = (prodImages, customImages) => {
@@ -203,6 +209,7 @@ export default async function SponsorshipHistoryPage() {
             user={user}
             profile={profile}
             merchant={merchant}
+            isMerchant={isMerchant}
             bookings={formattedBookings}
             todayIST={todayIST}
         />

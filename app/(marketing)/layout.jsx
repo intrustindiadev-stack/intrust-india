@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import MarketingLayout from '@/components/marketing/layout/MarketingLayout';
 
 export const metadata = {
-    title: 'Marketing Workspace | InTrust India',
+    title: 'Marketing Hub | InTrust India',
     description: 'Empowering local businesses and creators across India. Share, inspire, and grow together.',
 };
 
