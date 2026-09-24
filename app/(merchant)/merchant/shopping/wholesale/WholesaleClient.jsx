@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Package, Plus, Sparkles, Search, Sliders, BadgeCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
@@ -22,6 +22,7 @@ import { validatePayerContact } from '@/lib/merchant/validatePayerContact';
 import { normalizePayerMobile } from '@/lib/merchant/payerContactRules';
 import Pagination from '@/components/search/Pagination';
 import { getSubCategories } from '@/lib/constants/categories';
+import { WholesaleCartProvider, useWholesaleCart, formatINR } from '@/components/merchant/shopping/WholesaleCartContext';
 
 const PARTNERS = [
     { name: 'AJIO', color: 'from-slate-900 to-slate-800', text: 'text-white', logo: '/logos/ajio.svg', desc: 'Fashion Hub', tag: 'Top Tier' },
@@ -167,7 +168,7 @@ function resolveCartAnchor() {
     return { destX: window.innerWidth / 2, destY: window.innerHeight - 100 };
 }
 
-export default function WholesaleClient({
+function WholesaleShopInner({
     products = [],
     merchant,
     categories = [],
@@ -176,11 +177,23 @@ export default function WholesaleClient({
     pageSize,
     totalPages,
     initialSearchTerm,
-    initialCategory
+    initialCategory,
+    flyingItems = [],
 }) {
     const router = useRouter();
     const payerContact = usePayerContact({ requireMerchant: true });
-    const [cart, setCart] = useState({}); // { productId: quantity }
+
+    // Single source of truth cart context
+    const {
+        cartMap,
+        cartItems,
+        grandTotalPaise,
+        totalUnits,
+        merchantBalancePaise,
+        clearCart,
+        updateQuantity,
+    } = useWholesaleCart();
+
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [isProcessingGateway, setIsProcessingGateway] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'All');
@@ -189,10 +202,8 @@ export default function WholesaleClient({
     const [showSuccess, setShowSuccess] = useState(false);
     const [successStats, setSuccessStats] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [flyingItems, setFlyingItems] = useState([]);
     const [lastBatchId, setLastBatchId] = useState(null);
     const [lastCartSnapshot, setLastCartSnapshot] = useState([]);
-    const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const isAutoModeActive = merchant?.auto_mode_active || false;
 
@@ -263,114 +274,49 @@ export default function WholesaleClient({
         router.push(`${window.location.pathname}?${params.toString()}`);
     };
 
-    const updateQuantity = (e, product, delta) => {
-        const productId = product.id;
-        const maxStock = product.admin_stock;
-
-        // Resolve bounding rect synchronously to avoid React event pooling/nullification issues
-        const rect = e?.currentTarget?.getBoundingClientRect();
-        const currentQty = cart[productId] || 0;
-
-        // Fly animation on Add
-        if (delta > 0 && currentQty < maxStock && rect) {
-            const animId = Date.now() + Math.random();
-
-            // Anchor the flying orb on whichever cart surface is visible right now
-            const { destX, destY } = resolveCartAnchor();
-
-            setFlyingItems(items => [...items, {
-                id: animId,
-                x: rect.left + rect.width / 2 - 24, // start from center of product image/button
-                y: rect.top + rect.height / 2 - 24,
-                destX,
-                destY,
-                image: product.product_images?.[0]
-            }]);
-
-            setTimeout(() => {
-                setFlyingItems(items => items.filter(item => item.id !== animId));
-            }, 1200);
-        }
-
-        setCart(prev => {
-            const currentQtyInner = prev[productId] || 0;
-            const newQty = Math.max(0, Math.min(maxStock, currentQtyInner + delta));
-
-            if (newQty === 0) {
-                const { [productId]: _, ...rest } = prev;
-                return rest;
-            }
-
-            return { ...prev, [productId]: newQty };
-        });
-    };
-
-    const removeFromCart = (productId) => {
-        setCart(prev => {
-            const { [productId]: _, ...rest } = prev;
-            return rest;
-        });
-    };
-
-    // Build cartItems with normalized shape for MerchantFloatingCart
-    const cartItems = Object.entries(cart).map(([id, qty]) => {
-        const product = products.find(p => p.id === id);
-        return {
-            id: product.id,
-            title: product.title,
-            unit_price: product.wholesale_price_paise / 100,
-            wholesale_price: product.wholesale_price_paise / 100,
-            retail_price: Math.max(
-                product.suggested_retail_price_paise || 0,
-                product.mrp_paise || 0,
-                product.platform_price_paise || 0
-            ) / 100,
-            quantity: qty,
-            gst_percentage: product.gst_percentage || 0,
-        };
-    });
-
-    const subtotal = cartItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
-    const gstAmount = cartItems.reduce((sum, item) => {
-        return sum + (item.unit_price * (item.quantity || 1) * (item.gst_percentage || 0) / 100);
-    }, 0);
-    const totalWithGst = subtotal + gstAmount;
-    const merchantBalance = merchant.wallet_balance_paise / 100;
-
+    /**
+     * Decoupled server-owned wholesale wallet checkout.
+     * POSTs ONLY { items: [{ product_id, quantity }] } to /api/merchant/shopping/wholesale/checkout.
+     * No client-side wallet math, no client-side direct RPC call.
+     */
     const handlePurchaseWallet = async () => {
         if (cartItems.length === 0) return;
-        if (totalWithGst > merchantBalance) {
+        if (grandTotalPaise > merchantBalancePaise) {
             toast.error('Insufficient balance in your wallet');
             return;
         }
 
         setIsPurchasing(true);
         try {
-            const payload = cartItems.map(item => ({
-                product_id: item.id,
-                quantity: item.quantity,
-            }));
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Session expired. Please login again.');
+                return;
+            }
 
-            const { data, error } = await supabase.rpc('purchase_platform_products_bulk', {
-                p_items: payload,
-                p_merchant_id: merchant.id,
+            const payload = {
+                items: cartItems.map(item => ({
+                    product_id: item.id,
+                    quantity: item.quantity,
+                })),
+            };
+
+            const res = await fetch('/api/merchant/shopping/wholesale/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify(payload),
             });
 
-            if (error) {
-                if (error.code === '23514') {
-                    if (error.message?.includes('admin_stock_non_negative')) {
-                        throw new Error('Insufficient stock to complete this purchase');
-                    }
-                    throw new Error('Data constraint violation. Check constraints.');
-                }
-                if (error.code === '23502') throw new Error('Missing required system field.');
-                if (error.code === '23503') throw new Error('Foreign key violation. A linked record is missing.');
-                throw error;
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || data.message || 'Wholesale purchase failed');
             }
-            if (data && !data.success) throw new Error(data.message);
 
             const batchId = data?.batch_id;
-            const totalPaise = data?.total_paise || Math.round(totalWithGst * 100);
+            const totalPaise = data?.total_paise || grandTotalPaise;
 
             // Snapshot cart before clearing
             const cartSnapshot = cartItems.map(item => ({
@@ -380,8 +326,8 @@ export default function WholesaleClient({
                     hsn_code: products.find(p => p.id === item.id)?.hsn_code || '-',
                     gst_percentage: item.gst_percentage || 0,
                 },
-                unit_price_paise: Math.round(item.unit_price * 100),
-                total_price_paise: Math.round(item.unit_price * item.quantity * (1 + (item.gst_percentage || 0) / 100) * 100),
+                unit_price_paise: item.unit_price_paise,
+                total_price_paise: Math.round(item.unit_price_paise * item.quantity * (1 + (item.gst_percentage || 0) / 100)),
             }));
 
             setLastBatchId(batchId);
@@ -389,10 +335,10 @@ export default function WholesaleClient({
 
             // Show success animation
             setSuccessStats([
-                { label: 'Items Purchased', value: cartItems.reduce((s, i) => s + i.quantity, 0) },
-                { label: 'Total Paid', value: `₹${totalWithGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` },
+                { label: 'Items Purchased', value: totalUnits },
+                { label: 'Total Paid', value: `₹${formatINR(totalPaise / 100)}` },
             ]);
-            setCart({});
+            clearCart();
             setShowSuccess(true);
             router.refresh();
 
@@ -456,7 +402,7 @@ export default function WholesaleClient({
                 return;
             }
 
-            const rawCartItems = Object.entries(cart).map(([id, qty]) => ({ product_id: id, quantity: qty }));
+            const rawCartItems = cartItems.map((item) => ({ product_id: item.id, quantity: item.quantity }));
 
             const draftRes = await fetch('/api/merchant/shopping/wholesale/draft', {
                 method: 'POST',
@@ -529,15 +475,8 @@ export default function WholesaleClient({
 
     const filteredProducts = products;
 
-    // ── Derived B2B metrics & filter state ───────────────────────────────────
+    // Derived B2B filter state
     const subCategoryOptions = getSubCategories(selectedCategory);
-    const totalUnits = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    const totalMsrp = cartItems.reduce(
-        (sum, item) => sum + ((item.retail_price || 0) * (item.quantity || 0)),
-        0
-    );
-    const estMarginValue = Math.max(0, totalMsrp - subtotal);
-    const estMarginPercent = subtotal > 0 ? Math.round((estMarginValue / subtotal) * 100) : 0;
     const activeFilterCount =
         (selectedCategory !== 'All' ? 1 : 0) + (selectedSubCategory ? 1 : 0) + (searchTerm ? 1 : 0);
     const hasActiveFilters = activeFilterCount > 0;
@@ -585,7 +524,6 @@ export default function WholesaleClient({
                     {item.image ? (
                         <div className="w-full h-full relative rounded-full overflow-hidden">
                             <Image src={item.image} className="object-cover" alt="Flying item" fill sizes="48px" />
-                            {/* Premium Overlay inside the image flying orb */}
                             <div className="absolute inset-0 bg-emerald-500/20 mix-blend-overlay"></div>
                         </div>
                     ) : (
@@ -648,7 +586,7 @@ export default function WholesaleClient({
                     {/* Partner Carousel Area */}
                     <PartnerCarousel />
 
-                    {/* Compact Sticky Search Bar + mobile filter trigger */}
+                    {/* Compact Sticky Search Bar + mobile filter trigger (z-30) */}
                     <div className="sticky top-[72px] z-30 py-2 bg-[#f8f9fb]/95 dark:bg-[#0b0e14]/95 backdrop-blur-md transition-all">
                         <div className="flex items-center gap-2">
                             <div className="relative flex-1 min-w-0">
@@ -675,7 +613,7 @@ export default function WholesaleClient({
                                 )}
                             </div>
 
-                            {/* Mobile-only filter trigger — the sidebar itself lives in the drawer below md */}
+                            {/* Mobile-only filter trigger */}
                             <button
                                 type="button"
                                 onClick={() => setMobileFiltersOpen(true)}
@@ -712,8 +650,7 @@ export default function WholesaleClient({
                         </Link>
                     </div>
 
-                    {/* Filters sidebar (md+) + product grid.
-                        Below md the sidebar is rendered inside <MobileFilterDrawer/> instead. */}
+                    {/* Filters sidebar (md+) + product grid */}
                     <div className="md:grid md:grid-cols-[minmax(0,236px)_minmax(0,1fr)] md:gap-6 md:items-start">
                         <aside className="hidden md:block sticky top-24 self-start">
                             <WholesaleFilterSidebar
@@ -729,7 +666,7 @@ export default function WholesaleClient({
                         </aside>
 
                         <div className="min-w-0 space-y-4 mt-4 md:mt-0">
-                            {/* Quick category pills — desktop only, mobile uses the drawer */}
+                            {/* Quick category pills — desktop only */}
                             {categories.length > 0 && (
                                 <div className="hidden md:flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                                     <button
@@ -761,7 +698,7 @@ export default function WholesaleClient({
                                 </div>
                             )}
 
-                            {/* Active filter chips — one-tap removal */}
+                            {/* Active filter chips */}
                             {hasActiveFilters && (
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -807,10 +744,8 @@ export default function WholesaleClient({
                                 </div>
                             )}
 
-                            {/* Products Grid — a single column on phones, then container-aware
-                                columns (min 190px each) so the 280px app rail + filter sidebar
-                                can never squash cards the way fixed column counts would. */}
-                            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4 p-4">
+                            {/* Products Grid — pb-24 md:pb-4 ensures touch controls on last row clear the sticky cart bar */}
+                            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-4 p-4 pb-24 md:pb-4">
                                 {filteredProducts.length === 0 ? (
                                     <div className="col-span-full py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
                                         <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
@@ -841,17 +776,17 @@ export default function WholesaleClient({
                                         <WholesaleProductCard
                                             key={product.id}
                                             product={product}
-                                            qty={cart[product.id] || 0}
-                                            onAdd={(e) => updateQuantity(e, product, 1)}
-                                            onDecrement={(e) => updateQuantity(e, product, -1)}
+                                            qty={cartMap[product.id] || 0}
+                                            onAdd={(e) => updateQuantity(product, 1, e)}
+                                            onDecrement={(e) => updateQuantity(product, -1, e)}
                                             onSelect={setSelectedProduct}
                                         />
                                     ))
                                 )}
                             </div>
 
-                            {/* Extra bottom clearance only while the sticky bar is on screen */}
-                            <div className={totalUnits > 0 ? 'mb-44 md:mb-0' : 'mb-28 md:mb-0'}>
+                            {/* Stack math: bottom-nav pill (~5rem + safe-area) + sticky bar (~76px) ≈ 190px clearance = pb-24 + MerchantBottomNav 7rem spacer. */}
+                            <div className="mt-8 mb-6">
                                 <Pagination
                                     page={page}
                                     totalPages={totalPages}
@@ -864,31 +799,22 @@ export default function WholesaleClient({
                     </div>
                 </div>
 
-                {/* Cart — overlay only on this page: the sticky bottom bar below md, the floating
-                    pill from md up, both opening the shared Order Slip drawer. Keeping the cart out
-                    of the layout flow is what gives the product grid room for 4 wide columns. */}
+                {/* Cart — overlay only on this page: sticky bottom bar below md, floating pill md+,
+                    both opening the shared Order Slip drawer. Reads from useWholesaleCart. */}
                 <aside>
                     <MerchantFloatingCart
-                        cartItems={cartItems}
-                        merchantBalance={merchantBalance}
-                        subtotalInRupees={subtotal}
-                        onRemoveItem={removeFromCart}
                         onPurchaseWallet={handlePurchaseWallet}
                         onPurchaseGateway={handleGatewayPurchase}
                         isPurchasing={isPurchasing}
                         isProcessingGateway={isProcessingGateway}
                         walletLabel="Pay via Wallet"
                         gatewayLabel="Pay via UPI / Cards"
-                        isDrawerOpen={cartDrawerOpen}
-                        onDrawerOpenChange={setCartDrawerOpen}
                         hideFabBelowMd
-                        alwaysShowFab
-                        hideDesktopPanel
                     />
                 </aside>
             </div>
 
-            {/* Mobile filter drawer — the same sidebar, never stacked at the top of the mobile view */}
+            {/* Mobile filter drawer */}
             <MobileFilterDrawer
                 isOpen={mobileFiltersOpen}
                 onClose={() => setMobileFiltersOpen(false)}
@@ -909,15 +835,46 @@ export default function WholesaleClient({
                 />
             </MobileFilterDrawer>
 
-            {/* Sticky bulk-order bar — mobile only, opens the Order Slip */}
-            <WholesaleStickyCartBar
-                itemCount={totalUnits}
-                lineCount={cartItems.length}
-                total={subtotal}
-                estMargin={estMarginValue}
-                marginPercent={estMarginPercent}
-                onViewOrder={() => setCartDrawerOpen(true)}
-            />
+            {/* Sticky bulk-order bar — mobile only (z-40), opens Order Slip. Reads from useWholesaleCart. */}
+            <WholesaleStickyCartBar />
         </>
+    );
+}
+
+export default function WholesaleClient(props) {
+    const [flyingItems, setFlyingItems] = useState([]);
+
+    const handleFlyAnimation = useCallback((e, product) => {
+        const rect = e?.currentTarget?.getBoundingClientRect();
+        if (!rect) return;
+
+        const animId = Date.now() + Math.random();
+        const { destX, destY } = resolveCartAnchor();
+
+        setFlyingItems((items) => [
+            ...items,
+            {
+                id: animId,
+                x: rect.left + rect.width / 2 - 24,
+                y: rect.top + rect.height / 2 - 24,
+                destX,
+                destY,
+                image: product.product_images?.[0],
+            },
+        ]);
+
+        setTimeout(() => {
+            setFlyingItems((items) => items.filter((item) => item.id !== animId));
+        }, 1200);
+    }, []);
+
+    return (
+        <WholesaleCartProvider
+            products={props.products}
+            merchant={props.merchant}
+            onFlyAnimation={handleFlyAnimation}
+        >
+            <WholesaleShopInner {...props} flyingItems={flyingItems} />
+        </WholesaleCartProvider>
     );
 }

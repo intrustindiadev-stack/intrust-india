@@ -183,7 +183,17 @@ describe('Dynamic Merchant Pricing Engine', () => {
             const mockEq = jest.fn().mockReturnValue({ single: mockSingle });
             const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
             const mockInsert = jest.fn().mockResolvedValue({ error: null });
-            
+
+            // Pending-payment guard chain on the transactions table:
+            // .select().eq().eq().eq().gt().order().limit().maybeSingle() → no pending txn
+            const guardMaybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
+            const guardLimit = jest.fn().mockReturnValue({ maybeSingle: guardMaybeSingle });
+            const guardOrder = jest.fn().mockReturnValue({ limit: guardLimit });
+            const guardGt = jest.fn().mockReturnValue({ order: guardOrder });
+            const guardChain = { gt: guardGt };
+            guardChain.eq = jest.fn().mockReturnValue(guardChain);
+            const guardSelect = jest.fn().mockReturnValue(guardChain);
+
             const mockAdminClient = {
                 from: jest.fn((table) => {
                     if (table === 'merchants') {
@@ -192,7 +202,7 @@ describe('Dynamic Merchant Pricing Engine', () => {
                         return { select: mockSelect };
                     }
                     if (table === 'transactions') {
-                        return { insert: mockInsert };
+                        return { select: guardSelect, insert: mockInsert };
                     }
                     return { select: mockSelect, insert: mockInsert };
                 })
@@ -236,6 +246,71 @@ describe('Dynamic Merchant Pricing Engine', () => {
 
             // Expect getPricingSettings was called
             expect(getPricingSettings).toHaveBeenCalled();
+        });
+
+        it('blocks re-initiation with 409 PAYMENT_PENDING when an initiated txn is under 30 minutes old', async () => {
+            getPricingSettings.mockResolvedValue({ sub1m: 777, sub6m: 500, sub12m: 900 });
+
+            const mockContextClient = {
+                auth: {
+                    getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user_123' } }, error: null })
+                }
+            };
+
+            const mockSingle = jest.fn().mockResolvedValue({ data: { user_id: 'user_123' }, error: null });
+            const mockInsert = jest.fn().mockResolvedValue({ error: null });
+
+            // Pending-payment guard chain resolves an existing "initiated" txn
+            const guardMaybeSingle = jest.fn().mockResolvedValue({
+                data: { id: 'txn_pending_1', client_txn_id: 'TXN_OLD_123', created_at: new Date().toISOString() },
+                error: null
+            });
+            const guardLimit = jest.fn().mockReturnValue({ maybeSingle: guardMaybeSingle });
+            const guardOrder = jest.fn().mockReturnValue({ limit: guardLimit });
+            const guardGt = jest.fn().mockReturnValue({ order: guardOrder });
+            const guardChain = { gt: guardGt };
+            guardChain.eq = jest.fn().mockReturnValue(guardChain);
+            const guardSelect = jest.fn().mockReturnValue(guardChain);
+
+            const mockAdminClient = {
+                from: jest.fn((table) => {
+                    if (table === 'merchants') {
+                        return { select: jest.fn().mockReturnValue({ eq: jest.fn().mockReturnValue({ single: mockSingle }) }) };
+                    }
+                    if (table === 'transactions') {
+                        return { select: guardSelect, insert: mockInsert };
+                    }
+                    return { select: guardSelect, insert: mockInsert };
+                })
+            };
+
+            createClient.mockImplementation((url, key) => key === 'service' ? mockAdminClient : mockContextClient);
+
+            const req = new Request('http://localhost/api/sabpaisa/initiate', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer test_token',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    udf1: 'MERCHANT_SUBSCRIPTION',
+                    udf2: 'merch_123',
+                    udf3: 'MSUB_1M',
+                    payerEmail: 'test@example.com',
+                    payerMobile: '9999999999',
+                    clientTxnId: 'TXN_TEST_456',
+                    amount: '1.00'
+                })
+            });
+
+            const res = await POST(req);
+            const json = await res.json();
+
+            expect(res.status).toBe(409);
+            expect(json.error).toBe('PAYMENT_PENDING');
+            expect(json.pendingTxnId).toBe('TXN_OLD_123');
+            // No new transaction record must be written while one is pending
+            expect(mockInsert).not.toHaveBeenCalled();
         });
         
         it('rejects unknown plan keys', async () => {

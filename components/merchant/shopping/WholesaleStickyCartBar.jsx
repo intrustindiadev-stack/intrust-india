@@ -2,31 +2,45 @@
 
 import { motion } from 'framer-motion';
 import { ShoppingCart, ReceiptText, TrendingUp } from 'lucide-react';
+import { useWholesaleCart } from '@/components/merchant/shopping/WholesaleCartContext';
 
 /**
  * WholesaleStickyCartBar — mobile-only bulk order summary.
  *
  * Always-on total visibility for the merchant while they scan stock on a phone.
- * Tapping "View Order Slip" opens the existing Wholesale checkout drawer
- * (MerchantFloatingCart) through controlled `isDrawerOpen` state.
+ * Tapping "View Order Slip" opens the Wholesale checkout drawer (MerchantFloatingCart)
+ * through useWholesaleCart or controlled onDrawerOpenChange state.
  *
  * Positioning note: the bar is anchored exactly on top of the merchant's floating
- * bottom navigation (`MerchantBottomNav`: 4.5rem tall at a 1.5rem offset = 6rem)
- * instead of `bottom-0`, otherwise the bar would cover the app nav tabs on phones.
- * Everything else follows the sticky-bar spec: full width, white surface, upward
- * shadow, z-40, `md:hidden`.
+ * bottom navigation (MerchantBottomNav: 4.5rem tall at a 1.5rem offset = 6rem)
+ * instead of bottom-0, preventing the bar from covering app nav tabs on phones.
+ *
+ * Stack math:
+ *   Bottom-nav pill (~5rem + safe-area) + sticky bar (~76px) ≈ 190px clearance = pb-24 + MerchantBottomNav 7rem spacer.
+ *
+ * Anchor contract:
+ *   Keeps id="wholesale-sticky-cart-target" for fly-to-cart animation.
  */
 const formatINR = (value) =>
     Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function WholesaleStickyCartBar({
-    itemCount = 0,
-    lineCount = 0,
-    total = 0,
-    estMargin = 0,
-    marginPercent = 0,
-    onViewOrder,
-}) {
+export default function WholesaleStickyCartBar(props) {
+    const cart = useWholesaleCart?.() || {};
+
+    const itemCount = props.itemCount !== undefined ? props.itemCount : (cart.totalUnits ?? 0);
+    const lineCount = props.lineCount !== undefined ? props.lineCount : (cart.lineCount ?? 0);
+    // grandTotalPaise includes GST, matching the order slip's total payable
+    const total = props.total !== undefined
+        ? props.total
+        : ((cart.grandTotalPaise ?? cart.cartTotalPaise ?? 0) / 100);
+    const estMargin = props.estMargin !== undefined
+        ? props.estMargin
+        : ((cart.estimatedMarginTotal ?? 0) / 100);
+    const marginPercent = props.marginPercent !== undefined
+        ? props.marginPercent
+        : (cart.estimatedMarginPercent ?? 0);
+    const onViewOrder = props.onViewOrder ?? (() => cart.setCartDrawerOpen?.(true));
+
     if (itemCount <= 0) return null;
 
     return (
