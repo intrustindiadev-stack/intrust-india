@@ -306,6 +306,11 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                                     <span className={`px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest ${order.is_platform_order ? "bg-blue-500/10 text-blue-600" : "bg-violet-500/10 text-violet-600"}`}>
                                                         {order.is_platform_order ? "Warehouse" : "Merchant"}
                                                     </span>
+                                                    {order.payment_method && (
+                                                        <span className="px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                                            {order.payment_method === 'wallet' ? 'Wallet' : order.payment_method === 'gateway' ? 'Gateway' : order.payment_method === 'store_credit' ? 'Store Credit' : order.payment_method}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-950 dark:text-white tracking-tight truncate">{order.customer_name || "Guest User"}</h3>
                                                 <div className="flex items-center gap-2 mt-1">
@@ -402,6 +407,12 @@ export default function AdminOrdersClient({ orders: initialOrders, stats: initia
                                                             <div className="flex justify-between items-center text-[10px]">
                                                                 <span className="text-slate-500 dark:text-gray-400 font-black uppercase">Subtotal</span>
                                                                 <span className="font-black text-slate-950 dark:text-white">₹{((order.total_amount_paise || 0) / 100).toLocaleString("en-IN")}</span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center text-[10px]">
+                                                                <span className="text-slate-500 dark:text-gray-400 font-black uppercase">Payment</span>
+                                                                <span className="font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                                                                    {order.payment_method === 'wallet' ? 'Wallet' : order.payment_method === 'gateway' ? 'Gateway' : order.payment_method === 'store_credit' ? 'Store Credit' : (order.payment_method || "N/A")} {order.payment_status ? `(${order.payment_status})` : ""}
+                                                                </span>
                                                             </div>
                                                             <div className="flex justify-between items-center text-[10px]">
                                                                 <span className="text-slate-500 dark:text-gray-400 font-black uppercase tracking-tighter">Platform Commission (5%)</span>

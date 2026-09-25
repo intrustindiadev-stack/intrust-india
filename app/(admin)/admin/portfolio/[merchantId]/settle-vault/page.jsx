@@ -661,20 +661,33 @@ export default function SettleVaultPage({ params }) {
                                     <span className="font-bold text-slate-900">{merchant?.business_name}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-medium">Settlement Amount:</span>
-                                    <span className="font-black text-indigo-600 text-base">
+                                    <span className="text-slate-500 font-medium">AI Grow Vault Available:</span>
+                                    <span className="font-mono font-bold text-slate-800">
+                                        ₹{Number(vaultBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-slate-500 font-medium">Amount to Release:</span>
+                                    <span className="font-black text-indigo-600 text-base font-mono">
                                         ₹{parsedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-medium">Remaining in Vault:</span>
-                                    <span className="font-bold text-slate-800">
-                                        ₹{remainingVaultINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                    <span className="text-slate-500 font-medium">Destination:</span>
+                                    <span className="font-black text-indigo-600 uppercase tracking-wider text-[11px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                                        Merchant Digital Wallet
+                                    </span>
+                                </div>
+                                <div className="h-px bg-slate-200 my-1" />
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-slate-500 font-medium">Wallet Before:</span>
+                                    <span className="font-mono font-bold text-slate-700">
+                                        ₹{(Number(walletBalancePaise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-medium">New Merchant Wallet:</span>
-                                    <span className="font-bold text-emerald-600">
+                                    <span className="text-slate-900 font-black">Wallet After:</span>
+                                    <span className="font-mono font-black text-emerald-600 text-sm">
                                         ₹{projectedWalletINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
@@ -705,7 +718,7 @@ export default function SettleVaultPage({ params }) {
                                         </>
                                     ) : (
                                         <>
-                                            <Check size={16} /> Confirm & Settle
+                                            <Check size={16} /> Release ₹{parsedAmount.toLocaleString('en-IN')} to Wallet
                                         </>
                                     )}
                                 </button>

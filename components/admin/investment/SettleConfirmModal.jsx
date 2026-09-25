@@ -81,9 +81,9 @@ export default function SettleConfirmModal({ item, type, action, onClose, onConf
                                 <Wallet size={20} />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-slate-800 leading-tight mb-1">Release to Wallet</p>
+                                <p className="text-sm font-black text-slate-800 leading-tight mb-1">Release to Digital Wallet</p>
                                 <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
-                                    The total amount of ₹{(total / 100).toLocaleString('en-IN')} will be credited directly to the merchant's Vault balance.
+                                    The total amount of ₹{(total / 100).toLocaleString('en-IN')} will be credited directly to the merchant's digital wallet balance.
                                 </p>
                             </div>
                         </div>
@@ -93,9 +93,9 @@ export default function SettleConfirmModal({ item, type, action, onClose, onConf
                                 <Briefcase size={20} />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-slate-800 leading-tight mb-1">Settle in Cash</p>
+                                <p className="text-sm font-black text-slate-800 leading-tight mb-1">Mark as Paid Offline</p>
                                 <p className="text-[10px] font-bold text-slate-500 leading-relaxed">
-                                    This plan will be marked as completed, but NO funds will be credited to the merchant's digital wallet. Use this if paid out offline.
+                                    This plan will be marked as completed, but NO funds will be credited to the merchant's digital wallet. Use this only if paid out offline.
                                 </p>
                             </div>
                         </div>
@@ -108,11 +108,11 @@ export default function SettleConfirmModal({ item, type, action, onClose, onConf
                         Cancel
                     </button>
                     <button type="button" onClick={onConfirm} disabled={loading}
-                        className={`flex-[2] text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 ${action === 'wallet' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100' : 'bg-slate-900 hover:bg-black shadow-slate-200'}`}>
+                        className={`flex-[2] text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 ${action === 'wallet' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'}`}>
                         {loading ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
-                            <>Confirm {action === 'wallet' ? 'Release' : 'Settlement'} <ArrowRight size={14} /></>
+                            <>{action === 'wallet' ? `Credit ₹${(total / 100).toLocaleString('en-IN')} to Wallet` : `Mark ₹${(total / 100).toLocaleString('en-IN')} as Paid Offline`} <ArrowRight size={14} /></>
                         )}
                     </button>
                 </div>

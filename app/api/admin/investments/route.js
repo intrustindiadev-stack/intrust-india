@@ -15,27 +15,34 @@ export async function GET(request) {
             .from('merchant_investments')
             .select(`
                 *,
-                merchant:merchants(id, business_name, user_id, user_profiles(full_name, email))
+                merchant:merchants(id, business_name, user_id, wallet_balance_paise, user_profiles(full_name, email))
             `)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Enrich with order counts + total profit paid
+        // Enrich with order counts + total profit paid + full simulated orders
         const investmentIds = (data || []).map(i => i.id);
         let orders = [];
         if (investmentIds.length > 0) {
             const { data: orderData } = await supabase
                 .from('merchant_investment_orders')
-                .select('investment_id, profit_paise')
-                .in('investment_id', investmentIds);
+                .select('*')
+                .in('investment_id', investmentIds)
+                .order('order_date', { ascending: false });
             orders = orderData || [];
         }
 
         const enriched = (data || []).map(inv => {
             const invOrders = orders.filter(o => o.investment_id === inv.id);
             const totalPaid = invOrders.reduce((s, o) => s + (o.profit_paise || 0), 0);
-            return { ...inv, total_profit_paid_paise: totalPaid, order_count: invOrders.length };
+            return {
+                ...inv,
+                total_profit_paid_paise: totalPaid,
+                order_count: invOrders.length,
+                orders: invOrders,
+                latest_order: invOrders[0] || null
+            };
         });
 
         const { data: walletsData } = await supabase

@@ -1,91 +1,57 @@
 import { getAuthUser } from '@/lib/apiAuth';
 import { NextResponse } from 'next/server';
-// NOTE: the debit helper lives in ../release/route (sibling route module)
-import { debitAiGrowVaultForInvestmentExit } from '../release/route';
 
+/**
+ * POST /api/admin/investments/[id]/settle-cash
+ *
+ * Mark AI Grow investment as paid offline in cash.
+ * Merchant digital wallet remains untouched (0 wallet credit).
+ * Uses atomic public.settle_ai_grow_investment RPC.
+ */
 export async function POST(request, { params }) {
     try {
         const { id } = await params;
         const { user, profile, admin: supabase } = await getAuthUser(request);
         
         if (!user || profile?.role !== 'super_admin') {
-            return NextResponse.json({ error: 'Access denied. Super admin role required.' }, { status: 403 });
+            return NextResponse.json(
+                { error: 'Access denied. Super admin role required to mark growth plan as paid offline.' },
+                { status: 403 }
+            );
         }
 
-        // Fetch investment details
-        const { data: investment, error: invError } = await supabase
-            .from('merchant_investments')
-            .select('amount_paise, merchant_id, status')
-            .eq('id', id)
-            .single();
+        const body = await request.json().catch(() => ({}));
 
-        if (invError || !investment) {
-            return NextResponse.json({ error: 'Investment not found' }, { status: 404 });
-        }
-
-        if (investment.status === 'completed' || investment.status === 'released') {
-            return NextResponse.json({ error: 'Already completed' }, { status: 400 });
-        }
-
-        // Fetch merchant for notification
-        const { data: merchant, error: merError } = await supabase
-            .from('merchants')
-            .select('user_id, wallet_balance_paise')
-            .eq('id', investment.merchant_id)
-            .single();
-
-        if (merError || !merchant) {
-            return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
-        }
-
-        // Fetch associated orders to calculate profit
-        const { data: orders } = await supabase
-            .from('merchant_investment_orders')
-            .select('profit_paise')
-            .eq('investment_id', id);
-        
-        const totalProfitPaise = orders?.reduce((sum, order) => sum + (order.profit_paise || 0), 0) || 0;
-        const totalSettledPaise = investment.amount_paise + totalProfitPaise;
-
-        // 1. Update investment status
-        const { error: updateInvError } = await supabase
-            .from('merchant_investments')
-            .update({ status: 'completed' })
-            .eq('id', id);
-
-        if (updateInvError) throw updateInvError;
-
-        // 2. Decrement AI Grow Wallet Ledger via the authoritative RPC.
-        // The principal is leaving the AI Grow system, so the master ledger
-        // must be debited (the real column is `balance`; mutated only via RPC).
-        await debitAiGrowVaultForInvestmentExit({
-            supabase,
-            merchantId: investment.merchant_id,
-            amountPaise: investment.amount_paise,
-            investmentId: id,
-            adminUserId: user.id,
+        const { data, error } = await supabase.rpc('settle_ai_grow_investment', {
+            p_investment_id: id,
+            p_admin_id: user.id,
+            p_settlement_destination: 'offline_cash',
+            p_idempotency_key: body.idempotencyKey || null,
+            p_notes: body.notes || 'Settled offline via settle-cash endpoint',
         });
 
-        // 3. Send notification
-        if (merchant?.user_id) {
-            try {
-                await supabase.from('notifications').insert({
-                    user_id: merchant.user_id,
-                    title: 'Growth Plan Settled',
-                    body: `Your AI Grow growth plan of ₹${(totalSettledPaise / 100).toLocaleString('en-IN')} (including profits) has been settled in cash.`,
-                    type: 'success',
-                    reference_id: id,
-                    reference_type: 'investment'
-                });
-            } catch (notifErr) {
-                console.error('Notification error:', notifErr);
-            }
+        if (error) {
+            console.error('[settle-cash RPC error]:', error);
+            return NextResponse.json(
+                { error: error.message || 'Offline settlement failed.' },
+                { status: 400 }
+            );
         }
 
-        return NextResponse.json({ success: true });
+        if (data && data.success === false) {
+            return NextResponse.json(
+                { error: data.error || 'Settlement rejected.', data },
+                { status: 400 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            data
+        });
 
     } catch (err) {
         console.error('Settle cash error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: err.message || 'Internal server error.' }, { status: 500 });
     }
 }

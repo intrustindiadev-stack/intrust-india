@@ -4,11 +4,12 @@ import { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
     Briefcase, ShieldCheck, TrendingUp, Clock, Calendar, Wallet, CheckCircle, XCircle, ArrowLeft,
-    Activity, ArrowUpRight, Eye, RefreshCw
+    Activity, ArrowUpRight, Eye, RefreshCw, Banknote, Edit3
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import FeedOrderModal from '@/components/admin/investment/FeedOrderModal';
+import InvestmentSettlementFlow from '@/components/admin/investment/InvestmentSettlementFlow';
 import SettleConfirmModal from '@/components/admin/investment/SettleConfirmModal';
 import { 
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
@@ -22,12 +23,29 @@ export default function MerchantPortfolioPage({ params }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    const [settlingInvestment, setSettlingInvestment] = useState(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     
     // For Modals
     const [showFeedModal, setShowFeedModal] = useState(false);
     const [selectedInvestment, setSelectedInvestment] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [feedModalMode, setFeedModalMode] = useState('create');
     const [confirmModalData, setConfirmModalData] = useState(null);
+
+    const openCreateOrder = (inv) => {
+        setSelectedInvestment({ ...inv, merchant: data?.merchant });
+        setSelectedOrder(null);
+        setFeedModalMode('create');
+        setShowFeedModal(true);
+    };
+
+    const openEditOrder = (inv, order) => {
+        setSelectedInvestment({ ...inv, merchant: data?.merchant });
+        setSelectedOrder(order || inv.latest_order || null);
+        setFeedModalMode('edit');
+        setShowFeedModal(true);
+    };
 
     const RealtimeAssetTicker = ({ items, type = 'lockin', color = 'text-white' }) => {
         const [now, setNow] = useState(Date.now());
@@ -362,49 +380,90 @@ export default function MerchantPortfolioPage({ params }) {
                             <div className="space-y-4">
                                 {investments.map(inv => (
                                     <div key={inv.id} className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm">
-                                        <div className="flex justify-between items-start mb-6">
+                                        <div className="flex justify-between items-start mb-4">
                                             <div>
                                                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">₹{(inv.amount_paise / 100).toLocaleString('en-IN')}</h3>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                                                     Deployed {new Date(inv.created_at).toLocaleDateString('en-IN')}
                                                 </p>
                                             </div>
-                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                                inv.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                inv.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                'bg-slate-50 text-slate-500 border-slate-200'
-                                            }`}>
-                                                {inv.status}
-                                            </span>
+                                            <div className="text-right">
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                                    inv.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                    inv.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                    'bg-slate-50 text-slate-500 border-slate-200'
+                                                }`}>
+                                                    {inv.status}
+                                                </span>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1.5">Profit Paid</p>
+                                                <p className="text-sm font-black text-emerald-600">₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}</p>
+                                            </div>
                                         </div>
-                                        
-                                        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
 
+                                        {/* Simulated Orders List (if any) */}
+                                        {inv.orders && inv.orders.length > 0 && (
+                                            <div className="mt-4 pt-3 border-t border-slate-100">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Simulated Orders ({inv.orders.length})</p>
+                                                <div className="space-y-2">
+                                                    {inv.orders.map(order => (
+                                                        <div key={order.id} className="p-3 bg-slate-50 hover:bg-slate-100/70 rounded-xl flex items-center justify-between text-xs transition-colors">
+                                                            <div className="min-w-0 pr-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-slate-800">{order.category || 'General'}</span>
+                                                                    <span className="text-[10px] text-slate-400">{new Date(order.order_date).toLocaleDateString('en-IN')}</span>
+                                                                    {order.location && <span className="text-[10px] text-slate-400">📍 {order.location}</span>}
+                                                                </div>
+                                                                <p className="text-[11px] text-slate-500 font-medium truncate max-w-xs mt-0.5">{order.order_details}</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 shrink-0">
+                                                                <div className="text-right">
+                                                                    <p className="font-black text-emerald-600">+₹{(order.profit_paise / 100).toLocaleString('en-IN')}</p>
+                                                                    <p className="text-[9px] text-slate-400 font-bold uppercase">Profit</p>
+                                                                </div>
+                                                                {inv.status === 'active' && (
+                                                                    <button 
+                                                                        type="button"
+                                                                        onClick={() => openEditOrder(inv, order)}
+                                                                        className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-colors border border-amber-200/50"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-50 mt-4">
                                             {inv.status === 'active' && (
                                                 <>
-                                                    <button 
-                                                        onClick={() => { setSelectedInvestment({ ...inv, merchant }); setShowFeedModal(true); }}
-                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-all"
-                                                    >
-                                                        <Activity size={14} /> Feed Orders
-                                                    </button>
+                                                    {inv.orders && inv.orders.length > 0 ? (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => openEditOrder(inv, inv.latest_order)}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-amber-200/50"
+                                                        >
+                                                            <Edit3 size={14} /> Edit Order
+                                                        </button>
+                                                    ) : (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => openCreateOrder(inv)}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                        >
+                                                            <Activity size={14} /> Feed Order
+                                                        </button>
+                                                    )}
                                                     {isSuperAdmin && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => setConfirmModalData({ item: inv, action: 'wallet', type: 'aigrow' })}
-                                                                disabled={processingId === inv.id}
-                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                                            >
-                                                                {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />} Release
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => setConfirmModalData({ item: inv, action: 'cash', type: 'aigrow' })}
-                                                                disabled={processingId === inv.id}
-                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                                                            >
-                                                                {processingId === inv.id ? <RefreshCw size={14} className="animate-spin" /> : <Briefcase size={14} />} Settled in Cash
-                                                            </button>
-                                                        </>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setSettlingInvestment({ ...inv, merchant: data?.merchant })}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white hover:bg-indigo-600 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                                                        >
+                                                            <Banknote size={15} /> Settle Growth Plan
+                                                        </button>
                                                     )}
                                                 </>
                                             )}
@@ -560,12 +619,27 @@ export default function MerchantPortfolioPage({ params }) {
             </div>
 
             {/* Modals */}
+            {settlingInvestment && (
+                <InvestmentSettlementFlow
+                    investment={settlingInvestment}
+                    merchant={settlingInvestment.merchant || merchant}
+                    onClose={() => setSettlingInvestment(null)}
+                    onSuccess={() => {
+                        setSettlingInvestment(null);
+                        fetchPortfolio();
+                    }}
+                />
+            )}
+
             {showFeedModal && selectedInvestment && (
                 <FeedOrderModal 
                     investment={selectedInvestment} 
+                    order={selectedOrder}
+                    mode={feedModalMode}
                     onClose={(refresh) => {
                         setShowFeedModal(false);
                         setSelectedInvestment(null);
+                        setSelectedOrder(null);
                         if (refresh) fetchPortfolio();
                     }} 
                 />

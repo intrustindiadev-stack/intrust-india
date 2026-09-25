@@ -439,6 +439,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
   };
 
   const handleCheckout = async () => {
+    if (checkingOut || paymentLoading) return;
     try {
       setCheckingOut(true);
       setError(null);
@@ -467,26 +468,20 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           setError(data.error || "Checkout failed");
         }
       } else if (paymentMode === 'gateway') {
-        const { data, error: rpcError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });
-        if (rpcError) throw rpcError;
-        if (data.success) {
-          await initiatePayment({
-            amount: (data.total_paise / 100).toFixed(2),
-            payerName: profile.full_name || 'User',
-            payerEmail: profile.email,
-            payerMobile: profile.phone,
-            udf1: "CART_CHECKOUT",
-            udf2: data.group_id,
-            onSuccess: () => {
-              setOrderSuccess(true);
-              setTimeout(() => router.push("/orders?success=true"), 3000);
-            },
-            onFailure: (msg) => setError(msg || "Payment failed")
-          });
-          return;
-        } else {
-          setError(data.message || "Checkout initialization failed");
-        }
+        // /api/sabpaisa/initiate creates and validates the draft order server-side for atomicity.
+        await initiatePayment({
+          amount: (finalPayable / 100).toFixed(2),
+          payerName: profile.full_name || 'User',
+          payerEmail: profile.email,
+          payerMobile: profile.phone,
+          udf1: "CART_CHECKOUT",
+          onSuccess: () => {
+            setOrderSuccess(true);
+            setTimeout(() => router.push("/orders?success=true"), 3000);
+          },
+          onFailure: (msg) => setError(msg || "Payment failed")
+        });
+        return;
       } else if (paymentMode === 'store_credit') {
         const { data: draftData, error: draftError } = await supabase.rpc("draft_cart_orders", { p_customer_id: userId });
         if (draftError) throw draftError;
@@ -1443,7 +1438,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
           </div>
 
           <button
-            disabled={checkingOut || paymentLoading}
+            disabled={checkingOut || paymentLoading || (hasValidAddress && !canCheckout)}
             onClick={() => {
               // If no address — open the delivery info modal directly
               if (!hasValidAddress) {

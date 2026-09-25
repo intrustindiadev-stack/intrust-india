@@ -38,6 +38,30 @@ export async function GET(request, { params }) {
 
         if (aError) throw aError;
 
+        // 3b. Fetch simulated orders for these investments
+        const investmentIds = (aiGrow || []).map(i => i.id);
+        let orders = [];
+        if (investmentIds.length > 0) {
+            const { data: orderData } = await supabase
+                .from('merchant_investment_orders')
+                .select('*')
+                .in('investment_id', investmentIds)
+                .order('order_date', { ascending: false });
+            orders = orderData || [];
+        }
+
+        const enrichedAiGrow = (aiGrow || []).map(inv => {
+            const invOrders = orders.filter(o => o.investment_id === inv.id);
+            const totalPaid = invOrders.reduce((s, o) => s + (o.profit_paise || 0), 0);
+            return {
+                ...inv,
+                total_profit_paid_paise: totalPaid,
+                order_count: invOrders.length,
+                orders: invOrders,
+                latest_order: invOrders[0] || null
+            };
+        });
+
         // 4. Fetch Lockin Balances
         const { data: lockin, error: lError } = await supabase
             .from('merchant_lockin_balances')
@@ -84,7 +108,7 @@ export async function GET(request, { params }) {
                     active_investment_principal_paise: activeAiGrowAmount,
                     ai_grow_wallet_row_exists: walletRowExists,
                 },
-                investments: aiGrow || [],
+                investments: enrichedAiGrow || [],
                 lockins: lockin || [],
                 is_super_admin: profile?.role === 'super_admin'
             }
