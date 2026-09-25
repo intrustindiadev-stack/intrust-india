@@ -42,7 +42,7 @@ import {
     Coins,
 } from 'lucide-react';
 import CustomerBreadcrumbs from '@/components/common/CustomerBreadcrumbs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -65,6 +65,7 @@ const ConfirmModal = lazy(() => import('@/components/ui/ConfirmModal'));
 
 export default function ProductDetailClient({ product, inventory, customer, variants = [], recommendedProducts = [], initialPlatformStatus }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { theme } = useTheme();
     const { user: authUser, profile: authProfile } = useAuth();
     const activeCustomer = authProfile || customer;
@@ -74,6 +75,18 @@ export default function ProductDetailClient({ product, inventory, customer, vari
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Capture and persist marketing referral code for conversion attribution
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const refParam = searchParams?.get('ref');
+        if (refParam && typeof refParam === 'string' && refParam.length <= 32) {
+            try {
+                localStorage.setItem('intrust_affiliate_code', refParam.toUpperCase());
+                document.cookie = `intrust_affiliate_code=${encodeURIComponent(refParam.toUpperCase())}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
+            } catch { /* ignore storage quotas/restrictions */ }
+        }
+    }, [searchParams]);
 
     // Open-at-top fix: ensure PDP always opens at top on mount and on product switch
     useEffect(() => {

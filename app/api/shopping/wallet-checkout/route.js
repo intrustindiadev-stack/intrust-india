@@ -25,6 +25,11 @@ export async function POST(request) {
     const correlationId = crypto.randomUUID();
     let userId;
 
+    let body = null;
+    try {
+        body = await request.json();
+    } catch (_) {}
+
     try {
         const supabaseAdmin = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -142,22 +147,27 @@ export async function POST(request) {
 
         // Marketing affiliate ORDER cashback
         try {
-            const affiliateCookie = request.cookies.get('intrust_affiliate_code')?.value;
-            if (affiliateCookie) {
+            const affiliateCode = body?.affiliateCode || request.cookies.get('intrust_affiliate_code')?.value;
+            if (affiliateCode) {
                 // Get primary product_id from order items
                 const { data: orderItems } = await supabaseAdmin
                     .from('shopping_order_items')
                     .select('product_id')
-                    .eq('order_group_id', groupId)
+                    .eq('group_id', groupId)
                     .limit(1)
                     .maybeSingle();
 
-                await supabaseAdmin.rpc('process_marketing_referral_reward', {
+                const { data: refResult, error: refError } = await supabaseAdmin.rpc('process_marketing_referral_reward', {
                     p_event_type: 'ORDER',
-                    p_ref_code: affiliateCookie,
+                    p_ref_code: affiliateCode,
                     p_converted_user_id: userId,
-                    p_product_id: orderItems?.product_id || null
+                    p_product_id: orderItems?.product_id || null,
+                    p_reference_id: groupId
                 });
+
+                if (refError || (refResult && !refResult.success)) {
+                    console.warn('[WalletCheckout] marketing affiliate reward skipped/failed:', refError?.message || refResult?.message);
+                }
             }
         } catch (affiliateErr) {
             console.error('[WalletCheckout] marketing affiliate ORDER cashback failed:', affiliateErr?.message);

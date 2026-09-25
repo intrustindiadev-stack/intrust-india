@@ -202,7 +202,7 @@ export default function QuizArena({
                     </div>
 
                     {/* Option Capsules (A, B, C, D) */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                         {currentQ?.options?.map((opt, idx) => {
                             const isSelected = selectedOption === idx;
                             const isCorrect = currentQ?.correct === idx;
@@ -216,7 +216,7 @@ export default function QuizArena({
                                     btnClasses = "bg-rose-50 text-rose-950 border-2 border-rose-500 font-black animate-shake";
                                 }
                             } else if (isSelected) {
-                                btnClasses = "bg-sky-50 text-sky-950 border-2 border-sky-500 ring-2 ring-sky-300 font-extrabold shadow-md scale-[1.01]";
+                                btnClasses = "bg-sky-50 text-sky-950 border-2 border-sky-500 ring-2 ring-sky-300 font-black shadow-md scale-[1.01]";
                             }
 
                             return (
@@ -228,10 +228,10 @@ export default function QuizArena({
                                     transition={{ duration: 0.15, delay: idx * 0.03 }}
                                     disabled={isAnswerSubmitted}
                                     onClick={() => handleSelectOption?.(idx)}
-                                    className={`w-full p-3 sm:p-3.5 rounded-2xl text-left text-xs sm:text-sm transition-all flex items-center justify-between gap-3 cursor-pointer shadow-sm ${btnClasses}`}
+                                    className={`w-full min-h-[54px] p-3.5 sm:p-4 rounded-2xl text-left text-sm sm:text-base transition-all flex items-center justify-between gap-3 cursor-pointer shadow-sm ${btnClasses}`}
                                 >
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
+                                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs sm:text-sm font-black shrink-0 ${
                                             isAnswerSubmitted && isCorrect 
                                                 ? 'bg-emerald-500 text-white' 
                                                 : isAnswerSubmitted && isSelected && !isCorrect 
@@ -242,7 +242,7 @@ export default function QuizArena({
                                         }`}>
                                             {optionLetters[idx]}
                                         </span>
-                                        <span className="break-words whitespace-normal text-left font-semibold">
+                                        <span className="break-words whitespace-normal text-left font-bold leading-snug">
                                             {opt}
                                         </span>
                                     </div>
@@ -252,19 +252,19 @@ export default function QuizArena({
                                             <button
                                                 type="button"
                                                 onClick={(e) => speakText(opt, e)}
-                                                className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
+                                                className="p-1.5 rounded-xl hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
                                                 title="Listen"
                                                 aria-label="Listen Option"
                                             >
-                                                <Volume2 size={14} />
+                                                <Volume2 size={16} />
                                             </button>
                                         )}
 
                                         {isAnswerSubmitted && isCorrect && (
-                                            <CheckCircle2 size={18} className="text-emerald-600" />
+                                            <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
                                         )}
                                         {isAnswerSubmitted && isSelected && !isCorrect && (
-                                            <XCircle size={18} className="text-rose-600" />
+                                            <XCircle size={20} className="text-rose-600 shrink-0" />
                                         )}
                                     </div>
                                 </motion.button>
@@ -277,7 +277,7 @@ export default function QuizArena({
                         type="button"
                         disabled={isAnswerSubmitted}
                         onClick={() => handleConfirmSubmit?.(selectedOption)}
-                        className={`w-full py-3.5 sm:py-4 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl cursor-pointer ${
+                        className={`w-full min-h-[50px] py-3.5 sm:py-4 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl cursor-pointer ${
                             isAnswerSubmitted
                                 ? 'bg-slate-800 text-slate-300 opacity-90 cursor-not-allowed'
                                 : selectedOption !== null
@@ -286,14 +286,14 @@ export default function QuizArena({
                         }`}
                     >
                         <span>{isAnswerSubmitted ? 'Checking Answer...' : 'Submit Answer'}</span>
-                        <ArrowRight size={14} />
+                        <ArrowRight size={16} />
                     </button>
                 </div>
             </div>
 
             {/* Minimal Footer */}
-            <div className="w-full py-2.5 text-center text-[10px] text-white/80 font-bold bg-black/10 backdrop-blur-xs relative z-20">
-                InTrust Daily Challenge Arena • Sponsor unlocks instant wallet cashback upon completion
+            <div className="w-full py-2.5 text-center text-xs text-white/90 font-bold bg-black/10 backdrop-blur-xs relative z-20">
+                InTrust Daily Challenge Arena • Complete quiz to unlock instant wallet cashback
             </div>
 
             {/* Exit Confirmation Modal */}

@@ -449,6 +449,19 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
         return;
       }
 
+      // Retrieve any active affiliate referral code from cookies or localStorage
+      const getAffiliateCode = () => {
+        if (typeof window === 'undefined') return '';
+        try {
+          const match = document.cookie.match(/(?:^|;\s*)intrust_affiliate_code=([^;]+)/);
+          if (match && match[1]) return decodeURIComponent(match[1]);
+          const localCode = localStorage.getItem('intrust_affiliate_code');
+          if (localCode) return localCode;
+        } catch (_) {}
+        return '';
+      };
+      const affiliateCode = getAffiliateCode();
+
       if (paymentMode === 'wallet') {
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch('/api/shopping/wallet-checkout', {
@@ -457,6 +470,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session?.access_token}`
           },
+          body: JSON.stringify({ affiliateCode })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Checkout failed');
@@ -477,6 +491,7 @@ const CartClient = ({ userId, initialPlatformStatus, deliveryFeePaise = 9900, mi
             payerMobile: profile.phone,
             udf1: "CART_CHECKOUT",
             udf2: data.group_id,
+            udf3: affiliateCode || '',
             onSuccess: () => {
               setOrderSuccess(true);
               setTimeout(() => router.push("/orders?success=true"), 3000);

@@ -244,12 +244,17 @@ export async function POST(req) {
                 const cookieStore = await cookies();
                 const affiliateCode = cookieStore.get('intrust_affiliate_code')?.value;
                 if (affiliateCode) {
-                    await supabaseAdmin.rpc('process_marketing_referral_reward', {
+                    const { data: refResult, error: refError } = await supabaseAdmin.rpc('process_marketing_referral_reward', {
                         p_event_type: 'REGISTER',
                         p_ref_code: affiliateCode,
                         p_converted_user_id: userId,
-                        p_product_id: null
+                        p_product_id: null,
+                        p_reference_id: userId
                     });
+
+                    if (refError || (refResult && !refResult.success)) {
+                        console.warn('[Onboarding] marketing affiliate REGISTER reward skipped/failed:', refError?.message || refResult?.message);
+                    }
                 }
             } catch (affiliateErr) {
                 console.error('[Onboarding] marketing affiliate REGISTER cashback failed:', affiliateErr?.message);

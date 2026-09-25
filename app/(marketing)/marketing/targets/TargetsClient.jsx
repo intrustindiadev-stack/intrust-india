@@ -344,13 +344,13 @@ export default function TargetsClient({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-auto">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
-                        <Calendar size={13} className="text-blue-600" />
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
+                        <Calendar size={14} className="text-blue-600" />
                         <span>{currentMonthStr}</span>
                     </div>
                     {eligibleUnclaimedCount > 0 && (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-[11px] sm:text-xs font-black shadow-2xs animate-pulse">
-                            <Sparkles size={13} />
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-black shadow-2xs animate-pulse">
+                            <Sparkles size={14} />
                             <span>{eligibleUnclaimedCount} Ready to Claim!</span>
                         </div>
                     )}
@@ -359,13 +359,13 @@ export default function TargetsClient({
 
             {/* Error Notification Banner */}
             {claimError && (
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs font-bold text-rose-600 flex items-center justify-between">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs sm:text-sm font-bold text-rose-600 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <X size={15} className="shrink-0" />
+                        <X size={16} className="shrink-0" />
                         <span>{claimError}</span>
                     </div>
                     <button onClick={() => setClaimError(null)} className="p-1 hover:bg-rose-100 rounded-lg cursor-pointer">
-                        <X size={14} />
+                        <X size={15} />
                     </button>
                 </div>
             )}
@@ -388,15 +388,15 @@ export default function TargetsClient({
                         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap mb-2.5">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-2xs">
-                                        <Target size={12} className="text-blue-600" />
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-black uppercase tracking-wider shadow-2xs">
+                                        <Target size={13} className="text-blue-600" />
                                         <span>Featured Milestone Target</span>
                                     </span>
-                                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-extrabold">
+                                    <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-extrabold">
                                         Ends {currentMonthStr} ({daysRemaining}d left)
                                     </span>
                                     {p.isCompleted && !p.isClaimed && (
-                                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black animate-pulse">
+                                        <span className="px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-black animate-pulse">
                                             Milestone Completed!
                                         </span>
                                     )}
@@ -412,16 +412,16 @@ export default function TargetsClient({
 
                                 {/* Live Progress Bar Section */}
                                 <div className="mt-5 space-y-2">
-                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
                                         <span className="font-bold text-slate-700 dark:text-slate-300">
                                             Progress: <strong className="text-blue-600 dark:text-blue-400 font-black">{p.cur} / {p.goal} {getMetricUnit(activePrimaryTarget)}</strong>
                                         </span>
-                                        <span className="text-[11px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                                        <span className="text-xs font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
                                             {p.pct}% Completed
                                         </span>
                                     </div>
 
-                                    <div className="w-full h-3 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden relative shadow-inner">
+                                    <div className="w-full h-3.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden relative shadow-inner">
                                         <motion.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: `${p.pct}%` }}
@@ -437,15 +437,15 @@ export default function TargetsClient({
 
                                 {/* Reward & Action Row */}
                                 <div className="mt-5 pt-4 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2 text-xs">
+                                    <div className="flex items-center gap-2 text-xs sm:text-sm">
                                         <span className="text-slate-500 font-semibold">Award:</span>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-black text-xs">
-                                            <Gift size={14} className="text-emerald-600" />
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-black text-xs sm:text-sm">
+                                            <Gift size={15} className="text-emerald-600" />
                                             <span>{giftTitle}</span>
                                         </span>
                                         {isPhysical && (
-                                            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-slate-500 font-semibold">
-                                                <Truck size={12} className="text-slate-400" />
+                                            <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-500 font-semibold">
+                                                <Truck size={14} className="text-slate-400" />
                                                 <span>Free Doorstep Delivery</span>
                                             </span>
                                         )}
@@ -453,27 +453,27 @@ export default function TargetsClient({
 
                                     <div className="flex items-center gap-2">
                                         {p.isClaimed ? (
-                                            <span className="px-4 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-black flex items-center gap-1.5 shadow-2xs">
-                                                <CheckCircle2 size={14} />
+                                            <span className="px-4 py-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm font-black flex items-center gap-1.5 shadow-2xs">
+                                                <CheckCircle2 size={16} />
                                                 <span>Milestone Earned & Claimed</span>
                                             </span>
                                         ) : p.isCompleted ? (
                                             <button
                                                 onClick={() => handleClaimClick(activePrimaryTarget)}
                                                 disabled={claimingTargetId === activePrimaryTarget.id}
-                                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                                                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                                             >
                                                 {claimingTargetId === activePrimaryTarget.id ? (
-                                                    <Loader2 size={14} className="animate-spin" />
+                                                    <Loader2 size={15} className="animate-spin" />
                                                 ) : (
-                                                    <Sparkles size={14} />
+                                                    <Sparkles size={15} />
                                                 )}
                                                 <span>Claim Gift Now</span>
                                             </button>
                                         ) : (
                                             <Link
                                                 href={getTargetActionUrl(activePrimaryTarget)}
-                                                className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-black transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                                                className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-black transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
                                             >
                                                 <span>{getTargetActionLabel(activePrimaryTarget)}</span>
                                             </Link>
@@ -494,7 +494,7 @@ export default function TargetsClient({
                                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                         <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 via-black/30 to-transparent text-white text-center">
-                                            <span className="text-[10px] font-black uppercase tracking-wider block truncate">
+                                            <span className="text-xs font-bold uppercase tracking-wider block truncate">
                                                 {activePrimaryTarget.gift_name || 'Gift Prize'}
                                             </span>
                                         </div>
@@ -504,10 +504,10 @@ export default function TargetsClient({
                                         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-2">
                                             <Gift size={32} />
                                         </div>
-                                        <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[140px]">
+                                        <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate max-w-[140px]">
                                             {giftTitle}
                                         </span>
-                                        <span className="text-[10px] font-bold text-emerald-600 mt-0.5">
+                                        <span className="text-xs font-bold text-emerald-600 mt-0.5">
                                             Guaranteed Reward
                                         </span>
                                     </div>
@@ -526,7 +526,7 @@ export default function TargetsClient({
                             <Award size={16} className="text-blue-600" />
                             <span>All Campaign Milestones & Rewards</span>
                         </h3>
-                        <span className="text-[11px] font-bold text-slate-400">
+                        <span className="text-xs font-semibold text-slate-400">
                             {secondaryTargets.length} Additional Targets
                         </span>
                     </div>
@@ -571,29 +571,29 @@ export default function TargetsClient({
 
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                                        <span className="text-xs font-black uppercase tracking-wider text-slate-400">
                                                             Target Milestone
                                                         </span>
                                                         {target.target_audience === 'merchant' && (
-                                                            <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                            <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                                                                 Merchant
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                                                    <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
                                                         {target.title}
                                                     </h4>
-                                                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-extrabold truncate mt-0.5">
+                                                    <p className="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-extrabold truncate mt-0.5">
                                                         {isPhysical ? `🎁 ${giftTitle}` : `₹${(Number(target.reward_value_paise || 0) / 100).toFixed(0)} Wallet Cashback`}
                                                     </p>
                                                 </div>
                                             </div>
 
                                             <div className="text-right shrink-0">
-                                                <span className="text-xs sm:text-sm font-black text-blue-600 dark:text-blue-400">
+                                                <span className="text-sm sm:text-base font-black text-blue-600 dark:text-blue-400">
                                                     {p.cur} / {p.goal}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-slate-400 block">
+                                                <span className="text-xs font-semibold text-slate-400 block">
                                                     {getMetricUnit(target)}
                                                 </span>
                                             </div>
@@ -615,32 +615,32 @@ export default function TargetsClient({
                                     </div>
 
                                     {/* Action footer */}
-                                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                                        <span className="text-[11px] font-bold text-slate-500">
+                                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs sm:text-sm">
+                                        <span className="text-xs font-bold text-slate-500">
                                             {p.isClaimed ? '✅ Earned & Claimed' : `${p.pct}% Completed`}
                                         </span>
 
                                         {p.isClaimed ? (
-                                            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1 text-[11px]">
-                                                <CheckCircle2 size={13} />
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1 text-xs sm:text-sm">
+                                                <CheckCircle2 size={14} />
                                                 <span>Claimed</span>
                                             </span>
                                         ) : p.isCompleted ? (
                                             <button
                                                 onClick={() => handleClaimClick(target)}
                                                 disabled={claimingTargetId === target.id}
-                                                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                                                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
                                             >
-                                                {claimingTargetId === target.id ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                {claimingTargetId === target.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                                                 <span>Claim Gift</span>
                                             </button>
                                         ) : (
                                             <Link
                                                 href={getTargetActionUrl(target)}
-                                                className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 text-[11px]"
+                                                className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 text-xs sm:text-sm"
                                             >
                                                 <span>{p.left} more needed</span>
-                                                <ArrowRight size={11} />
+                                                <ArrowRight size={13} />
                                             </Link>
                                         )}
                                     </div>
@@ -660,7 +660,7 @@ export default function TargetsClient({
                             Physical Gift Dispatch & Courier Hub
                         </h3>
                     </div>
-                    <span className="text-[11px] font-bold text-slate-400">
+                    <span className="text-xs font-semibold text-slate-400">
                         InTrust Logistics Central
                     </span>
                 </div>
@@ -691,7 +691,7 @@ export default function TargetsClient({
                                                 )}
                                             </div>
                                             <div className="min-w-0">
-                                                <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                                                <span className={`text-xs font-black uppercase px-2.5 py-0.5 rounded-full ${
                                                     isDelivered 
                                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                                         : isShipped 
@@ -700,10 +700,10 @@ export default function TargetsClient({
                                                 }`}>
                                                     {claim.status?.toUpperCase() || 'EARNED'}
                                                 </span>
-                                                <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white mt-1 truncate">
+                                                <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-1 truncate">
                                                     {claim.gift_title || claim.marketing_targets?.gift_name || 'Milestone Gift'}
                                                 </h4>
-                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
                                                     {claim.courier_name 
                                                         ? `Dispatched via ${claim.courier_name} • AWB: ${claim.tracking_number}` 
                                                         : 'Fulfillment verified at InTrust Central Dispatch'}
@@ -715,17 +715,17 @@ export default function TargetsClient({
                                             <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                                                 <button
                                                     onClick={() => handleCopyAwb(claim.tracking_number)}
-                                                    className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+                                                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
                                                     title="Copy AWB Tracking Number"
                                                 >
                                                     {copiedAwb === claim.tracking_number ? (
                                                         <>
-                                                            <Check size={12} className="text-emerald-600" />
+                                                            <Check size={13} className="text-emerald-600" />
                                                             <span>Copied</span>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Copy size={12} />
+                                                            <Copy size={13} />
                                                             <span>Copy AWB</span>
                                                         </>
                                                     )}
@@ -734,31 +734,31 @@ export default function TargetsClient({
                                                     href={claim.tracking_url || `https://www.google.com/search?q=${encodeURIComponent(claim.courier_name + ' tracking ' + claim.tracking_number)}`}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 flex items-center gap-1.5 shadow-2xs"
+                                                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 flex items-center gap-1.5 shadow-2xs"
                                                 >
                                                     <span>Track Courier</span>
-                                                    <ExternalLink size={11} />
+                                                    <ExternalLink size={12} />
                                                 </a>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* 4-Step Visual Logistics Stepper */}
-                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-[9px] sm:text-[10px] font-extrabold pt-1">
+                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs font-extrabold pt-1">
                                         <div className="text-emerald-600">
-                                            <div className="w-full h-1.5 rounded-full bg-emerald-500 mb-1.5" />
+                                            <div className="w-full h-2 rounded-full bg-emerald-500 mb-1.5" />
                                             Milestone Earned
                                         </div>
                                         <div className={isProcessing ? "text-emerald-600" : "text-slate-400"}>
-                                            <div className={`w-full h-1.5 rounded-full mb-1.5 ${isProcessing ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                                            <div className={`w-full h-2 rounded-full mb-1.5 ${isProcessing ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
                                             Packed & Verified
                                         </div>
                                         <div className={isShipped ? "text-blue-600" : "text-slate-400"}>
-                                            <div className={`w-full h-1.5 rounded-full mb-1.5 ${isShipped ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                                            <div className={`w-full h-2 rounded-full mb-1.5 ${isShipped ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`} />
                                             Dispatched
                                         </div>
                                         <div className={isDelivered ? "text-emerald-600" : "text-slate-400"}>
-                                            <div className={`w-full h-1.5 rounded-full mb-1.5 ${isDelivered ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                                            <div className={`w-full h-2 rounded-full mb-1.5 ${isDelivered ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`} />
                                             Delivered
                                         </div>
                                     </div>
@@ -771,10 +771,10 @@ export default function TargetsClient({
                         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
                             <Gift size={28} />
                         </div>
-                        <h4 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">
+                        <h4 className="text-sm font-black text-slate-800 dark:text-slate-200">
                             No active physical gift shipments yet.
                         </h4>
-                        <p className="text-[11px] text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+                        <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
                             Complete target milestones above to earn verified physical gifts and gadgets. Once earned, prizes are dispatched directly to your doorstep with 100% free courier tracking!
                         </p>
                     </div>
@@ -817,70 +817,70 @@ export default function TargetsClient({
                                 </button>
                             </div>
 
-                            <div className="space-y-3.5">
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
                                         Recipient Full Name
                                     </label>
                                     <div className="relative">
-                                        <UserIcon size={14} className="absolute left-3 top-3 text-slate-400" />
+                                        <UserIcon size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
                                         <input
                                             type="text"
                                             value={shippingForm.recipientName}
                                             onChange={(e) => setShippingForm(prev => ({ ...prev, recipientName: e.target.value }))}
                                             placeholder="Full Name"
-                                            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                                            className="w-full pl-10 pr-3.5 py-2.5 text-sm font-semibold rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
-                                        Contact Phone (for Courier SMS & OTP)
+                                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                                        Contact Phone (for Courier SMS &amp; OTP)
                                     </label>
                                     <div className="relative">
-                                        <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
+                                        <Phone size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
                                         <input
                                             type="tel"
                                             value={shippingForm.recipientPhone}
                                             onChange={(e) => setShippingForm(prev => ({ ...prev, recipientPhone: e.target.value }))}
                                             placeholder="+91 98765 43210"
-                                            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                                            className="w-full pl-10 pr-3.5 py-2.5 text-sm font-semibold rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
                                         Delivery Address (with 6-Digit PIN Code)
                                     </label>
                                     <div className="relative">
-                                        <MapPin size={14} className="absolute left-3 top-3 text-slate-400" />
+                                        <MapPin size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
                                         <textarea
                                             rows={3}
                                             value={shippingForm.shippingAddress}
                                             onChange={(e) => setShippingForm(prev => ({ ...prev, shippingAddress: e.target.value }))}
                                             placeholder="House / Flat No, Street, Landmark, City, State, PIN Code"
-                                            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                                            className="w-full pl-10 pr-3.5 py-2.5 text-sm font-semibold rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-end gap-2 pt-2">
+                            <div className="flex items-center justify-end gap-2.5 pt-2">
                                 <button
                                     onClick={() => setShippingModalTarget(null)}
-                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                    className="min-h-[44px] px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={() => executeClaim(shippingModalTarget, shippingForm)}
                                     disabled={claimingTargetId === shippingModalTarget.id || !shippingForm.shippingAddress.trim()}
-                                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                                    className="min-h-[44px] px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
                                 >
-                                    {claimingTargetId === shippingModalTarget.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                                    <span>Confirm & Dispatch</span>
+                                    {claimingTargetId === shippingModalTarget.id ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                                    <span>Confirm &amp; Dispatch Gift</span>
                                 </button>
                             </div>
                         </motion.div>

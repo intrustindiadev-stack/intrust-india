@@ -254,20 +254,24 @@ export default async function AdminDashboard() {
         Promise.all([
             supabase.from('marketing_share_links').select('*', { count: 'exact', head: true }),
             supabase.from('marketing_tracking_events').select('*', { count: 'exact', head: true }).eq('event_type', 'CLICK'),
-            supabase.from('marketing_daily_challenge_attempts').select('*', { count: 'exact', head: true }),
-            supabase.from('marketing_challenge_sponsors').select('amount_paise').eq('status', 'confirmed'),
-            supabase.from('marketing_target_claims').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-            supabase.from('marketing_referral_rewards').select('amount_paise').eq('status', 'CREDITED')
-        ]).then(([sharesRes, clicksRes, playsRes, sponsorsRes, pendingClaimsRes, rewardsRes]) => {
-            const sponsorshipRev = (sponsorsRes.data || []).reduce((sum, s) => sum + (Number(s.amount_paise) || 0), 0);
-            const cashbacksPaid = (rewardsRes.data || []).reduce((sum, r) => sum + (Number(r.amount_paise) || 0), 0);
+            supabase.from('daily_challenge_plays').select('*', { count: 'exact', head: true }),
+            supabase.from('daily_challenge_sponsorships').select('fee_paise').neq('status', 'cancelled'),
+            supabase.from('marketing_target_claims').select('*', { count: 'exact', head: true }).in('status', ['earned', 'processing']),
+            supabase.from('customer_wallet_transactions').select('amount_paise').eq('reference_type', 'MARKETING_REFERRAL'),
+            supabase.from('merchant_transactions').select('amount_paise').eq('transaction_type', 'marketing_cashback'),
+            supabase.from('daily_challenge_plays').select('cashback_awarded_paise').gt('cashback_awarded_paise', 0)
+        ]).then(([sharesRes, clicksRes, playsRes, sponsorsRes, pendingClaimsRes, custRefRes, merchRefRes, challengePlaysRes]) => {
+            const sponsorshipRev = (sponsorsRes.data || []).reduce((sum, s) => sum + (Number(s.fee_paise) || 0), 0);
+            const custCashback = (custRefRes.data || []).reduce((sum, r) => sum + (Number(r.amount_paise) || 0), 0);
+            const merchCashback = (merchRefRes.data || []).reduce((sum, r) => sum + (Number(r.amount_paise) || 0), 0);
+            const quizCashback = (challengePlaysRes.data || []).reduce((sum, p) => sum + (Number(p.cashback_awarded_paise) || 0), 0);
             return {
                 totalShares: sharesRes.count || 0,
                 totalClicks: clicksRes.count || 0,
                 dailyPlays: playsRes.count || 0,
                 sponsorshipRevenuePaise: sponsorshipRev,
                 pendingGiftClaims: pendingClaimsRes.count || 0,
-                cashbacksPaidPaise: cashbacksPaid
+                cashbacksPaidPaise: custCashback + merchCashback + quizCashback
             };
         }).catch(err => {
             console.error('Error fetching marketing admin KPIs:', err);

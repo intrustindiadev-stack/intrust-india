@@ -226,26 +226,52 @@ export default async function DailyChallengePage() {
         products: sponsorProducts
     };
 
-    // Fetch user's play for today in IST
-    const { data: todayPlay } = await supabase
+    // Fetch user's most recent completed quiz play (to calculate 6-hour reverse unlock countdown)
+    const { data: lastPlay } = await supabase
         .from('daily_challenge_plays')
-        .select('id, score, cashback_awarded_paise, completed_at')
+        .select('id, score, cashback_awarded_paise, completed_at, challenge_date')
         .eq('user_id', user.id)
-        .eq('challenge_date', todayDateStr)
+        .order('completed_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    let initialCooldownSeconds = 0;
+    let isCooldownActive = false;
+
+    if (lastPlay?.completed_at) {
+        const completedTime = new Date(lastPlay.completed_at).getTime();
+        const unlockTime = completedTime + SIX_HOURS_MS;
+        const remainingSeconds = Math.max(0, Math.floor((unlockTime - Date.now()) / 1000));
+        if (remainingSeconds > 0) {
+            initialCooldownSeconds = remainingSeconds;
+            isCooldownActive = true;
+        }
+    }
+
     // Fetch user's live quiz streak
-    let userStreak = { current_streak: 0, highest_streak: 0, played_today: !!todayPlay, freezes_left: 1 };
+    let userStreak = { 
+        current_streak: 0, 
+        highest_streak: 0, 
+        played_today: lastPlay?.challenge_date === todayDateStr, 
+        freezes_left: 1,
+        cooldown_active: isCooldownActive,
+        cooldown_seconds_remaining: initialCooldownSeconds
+    };
     try {
         const { data: sData } = await supabase.rpc('get_user_quiz_streak');
         if (sData) {
             userStreak = {
                 ...sData,
-                played_today: !!todayPlay || !!sData.played_today,
-                current_streak: (!!todayPlay || !!sData.played_today)
-                    ? Math.max(1, Number(sData.current_streak || 1))
-                    : Number(sData.current_streak || 0)
+                played_today: !!sData.played_today || (lastPlay?.challenge_date === todayDateStr),
+                current_streak: Number(sData.current_streak || 0),
+                cooldown_active: sData.cooldown_active !== undefined ? sData.cooldown_active : isCooldownActive,
+                cooldown_seconds_remaining: sData.cooldown_seconds_remaining !== undefined ? sData.cooldown_seconds_remaining : initialCooldownSeconds,
             };
+            if (userStreak.cooldown_active && userStreak.cooldown_seconds_remaining > 0) {
+                isCooldownActive = true;
+                initialCooldownSeconds = userStreak.cooldown_seconds_remaining;
+            }
         }
     } catch (e) {
         console.error('Error fetching quiz streak:', e);
@@ -288,9 +314,11 @@ export default async function DailyChallengePage() {
             initialStreak={userStreak}
             streakConfig={streakConfig || {}}
             todaySponsor={todaySponsor}
-            todayPlay={todayPlay}
+            todayPlay={lastPlay}
             todayDateStr={todayDateStr}
             secondsUntilMidnightIST={secondsUntilMidnightIST}
+            initialCooldownSeconds={userStreak.cooldown_seconds_remaining || initialCooldownSeconds}
+            isCooldownActive={userStreak.cooldown_active || isCooldownActive}
             existingSponsorships={allSponsorships || []}
             merchantInventory={merchantInventory}
             rewardsConfig={rewardsConfig || {}}

@@ -244,6 +244,11 @@ export default function SabpaisaPaymentModal({
         clientTxnId = `AIG_${Date.now()}_${uniqueRandomStr}`;
         udf1 = "MERCHANT_AIGROW";
         udf2 = metadata.description || 'AI Grow request';
+      } else if (metadata?.type === 'daily_challenge_sponsorship') {
+        clientTxnId = `SPON_${Date.now()}_${uniqueRandomStr}`;
+        udf1 = "DAILY_CHALLENGE_SPONSORSHIP";
+        udf2 = metadata.sponsorDate || '';
+        udf3 = metadata.merchantId || user?.id || '';
       } else {
         // Hard error: never silently misfile an unknown type as GIFT_CARD
         throw new Error(

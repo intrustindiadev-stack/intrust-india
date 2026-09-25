@@ -224,43 +224,43 @@ export default function AnalyticsClient({
 
             {/* Top 4 KPI Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <span className="text-[11px] sm:text-xs font-bold text-slate-500">Total Shares</span>
-                    <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white my-0.5 sm:my-1">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500">Total Shares</span>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white my-1">
                         {totalShares.toLocaleString('en-IN')}
                     </div>
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">
+                    <span className="text-xs font-semibold text-slate-400">
                         {userLinks.length} active links
                     </span>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <span className="text-[11px] sm:text-xs font-bold text-slate-500">Link Clicks</span>
-                    <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white my-0.5 sm:my-1">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500">Link Clicks</span>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white my-1">
                         {totalClicks.toLocaleString('en-IN')}
                     </div>
-                    <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-0.5">
-                        <TrendingUp size={11} />
+                    <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                        <TrendingUp size={13} />
                         <span>Live clicks tracked</span>
                     </span>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <span className="text-[11px] sm:text-xs font-bold text-slate-500">New Customers</span>
-                    <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white my-0.5 sm:my-1">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500">New Customers</span>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white my-1">
                         {totalCustomers.toLocaleString('en-IN')}
                     </div>
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">
+                    <span className="text-xs font-semibold text-slate-400">
                         Attributed signups
                     </span>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                    <span className="text-[11px] sm:text-xs font-bold text-slate-500">Store Orders</span>
-                    <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white my-0.5 sm:my-1">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500">Store Orders</span>
+                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white my-1">
                         {totalOrders.toLocaleString('en-IN')}
                     </div>
-                    <span className="text-[10px] sm:text-[11px] font-bold text-blue-600">
+                    <span className="text-xs font-bold text-blue-600">
                         {overallCR}% conv. rate
                     </span>
                 </div>
@@ -346,7 +346,7 @@ export default function AnalyticsClient({
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-[10px] sm:text-[11px] text-slate-400 mt-4">
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 mt-4">
                         WhatsApp accounts for over 60% of converted sales in India. Keep sharing!
                     </div>
                 </div>
@@ -367,15 +367,15 @@ export default function AnalyticsClient({
                             className="text-xs font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0"
                         >
                             <span>View All</span>
-                            <ArrowUpRight size={12} />
+                            <ArrowUpRight size={14} />
                         </Link>
                     </div>
 
                     {productsPerformance.length > 0 ? (
                         <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-                            <table className="w-full text-left text-xs min-w-[340px]">
+                            <table className="w-full text-left text-xs sm:text-sm min-w-[340px]">
                                 <thead>
-                                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-extrabold uppercase text-[10px] sm:text-[11px]">
+                                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-black uppercase text-xs">
                                         <th className="pb-2.5">Product</th>
                                         <th className="pb-2.5 text-right">Shares</th>
                                         <th className="pb-2.5 text-right">Clicks</th>
@@ -401,17 +401,17 @@ export default function AnalyticsClient({
                     ) : (
                         <div className="p-6 sm:p-8 text-center rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 mt-2">
                             <ShoppingBag size={28} className="text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
                                 No products shared yet
                             </h4>
-                            <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-0.5 mb-3">
+                            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-0.5 mb-3">
                                 Browse your catalog or merchant store and tap &ldquo;Share &amp; Earn&rdquo; to generate your first tracked product share link.
                             </p>
                             <Link
                                 href="/marketing/products"
-                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-2xs transition-all"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-2xs transition-all"
                             >
-                                <Share2 size={12} />
+                                <Share2 size={13} />
                                 <span>Browse Products to Share</span>
                             </Link>
                         </div>

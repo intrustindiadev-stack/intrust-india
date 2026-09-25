@@ -92,10 +92,16 @@ export default function ProductMarketingClient({
 
     const handleMetricUpdated = (prodId, newMetrics) => {
         if (!prodId) return;
-        setLiveMetricsOverrides(prev => ({
-            ...prev,
-            [prodId]: { ...(prev[prodId] || {}), ...newMetrics }
-        }));
+        setLiveMetricsOverrides(prev => {
+            const next = { ...prev, [prodId]: { ...(prev[prodId] || {}), ...newMetrics } };
+            if (selectedProduct?.id && selectedProduct.id !== prodId) {
+                next[selectedProduct.id] = { ...(prev[selectedProduct.id] || {}), ...newMetrics };
+            }
+            if (selectedProduct?.product_id && selectedProduct.product_id !== prodId) {
+                next[selectedProduct.product_id] = { ...(prev[selectedProduct.product_id] || {}), ...newMetrics };
+            }
+            return next;
+        });
     };
 
     // Normalize platform products
@@ -167,7 +173,7 @@ export default function ProductMarketingClient({
                     {isMerchant && (
                         <button
                             onClick={() => setActiveTab('my_products')}
-                            className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black shrink-0 transition-all ${
+                            className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shrink-0 transition-all ${
                                 activeTab === 'my_products'
                                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                                     : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50'
@@ -179,7 +185,7 @@ export default function ProductMarketingClient({
 
                     <button
                         onClick={() => setActiveTab('intrust_products')}
-                        className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black shrink-0 transition-all ${
+                        className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shrink-0 transition-all ${
                             activeTab === 'intrust_products'
                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                                 : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50'
@@ -191,34 +197,34 @@ export default function ProductMarketingClient({
 
                 {/* Search Bar */}
                 <div className="relative w-full sm:w-64 md:w-72">
-                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search products..."
-                        className="w-full pl-9 pr-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
+                        className="w-full pl-9 pr-3.5 py-2 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
                     />
                 </div>
             </div>
 
             {/* InTrust Product Rewards Highlight Strip */}
             {activeTab === 'intrust_products' && (
-                <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                            <Gift size={16} />
+                <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <Gift size={18} />
                         </div>
                         <div>
-                            <h4 className="text-xs font-black text-emerald-950 dark:text-emerald-300">
+                            <h4 className="text-sm font-black text-emerald-950 dark:text-emerald-300">
                                 InTrust Promotional Rewards Active
                             </h4>
-                            <p className="text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-400">
+                            <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                                 Share any official InTrust product: Earn on customer link visits + up to ₹1,000 order sales cashback!
                             </p>
                         </div>
                     </div>
-                    <span className="self-start sm:self-auto text-[9px] sm:text-[10px] font-extrabold px-2.5 py-0.5 sm:py-1 rounded-full bg-emerald-600 text-white shadow-xs shrink-0">
+                    <span className="self-start sm:self-auto text-xs font-black px-3 py-1 rounded-full bg-emerald-600 text-white shadow-xs shrink-0">
                         Guaranteed Payout
                     </span>
                 </div>
@@ -226,14 +232,14 @@ export default function ProductMarketingClient({
 
             {/* Product Grid or Empty State */}
             {filteredProducts.length === 0 ? (
-                <div className="text-center py-10 sm:py-12 px-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 space-y-3 max-w-md mx-auto">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mx-auto">
-                        <ShoppingBag size={24} />
+                <div className="text-center py-12 sm:py-16 px-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 space-y-3 max-w-md mx-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mx-auto">
+                        <ShoppingBag size={28} />
                     </div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
                         {activeTab === 'my_products' ? 'No Inventory Products Found' : 'No Platform Products Match'}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
                         {activeTab === 'my_products'
                             ? 'Add products to your store inventory to generate shareable merchant deals.'
                             : 'Try adjusting your search query or clear filters to view available deals.'}
@@ -241,96 +247,111 @@ export default function ProductMarketingClient({
                     {activeTab === 'my_products' && (
                         <a
                             href="/merchant/shopping/inventory"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-xs transition-all"
+                            className="inline-flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all"
                         >
                             <span>Manage Store Inventory →</span>
                         </a>
                     )}
                 </div>
             ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                     {filteredProducts.map((product) => {
                         const cashbackAmount = (product.promo_cashback_paise || 10000) / 100;
                         return (
                         <div
                             key={product.id}
-                            className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl lg:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between group"
+                            className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xs hover:shadow-lg transition-all overflow-hidden flex flex-col justify-between group"
                         >
-                            <div className="p-2.5 sm:p-4">
+                            <div className="p-4 sm:p-5">
                                 {/* Product Image & Discount Tag */}
                                 <div 
                                     onClick={() => setInspectingProduct(product)}
-                                    className="relative w-full h-28 sm:h-36 lg:h-44 rounded-lg sm:rounded-xl lg:rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden mb-2 sm:mb-3 flex items-center justify-center cursor-pointer"
+                                    className="relative w-full h-44 sm:h-48 rounded-2xl bg-slate-50 dark:bg-slate-800/80 overflow-hidden mb-3 flex items-center justify-center cursor-pointer border border-slate-100 dark:border-slate-800"
                                 >
                                     <img
                                         src={product.image}
                                         alt={product.title}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                                     />
                                     {product.discount_percent && (
-                                        <span className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md bg-rose-600 text-white shadow-xs">
+                                        <span className="absolute top-2.5 left-2.5 text-xs font-black px-2.5 py-1 rounded-xl bg-rose-600 text-white shadow-sm">
                                             {product.discount_percent}% OFF
                                         </span>
                                     )}
+                                    <span className="absolute top-2.5 right-2.5 text-xs font-black px-2.5 py-1 rounded-xl bg-emerald-600 text-white shadow-sm flex items-center gap-1">
+                                        <Sparkles size={12} />
+                                        <span>Earn ₹{cashbackAmount}</span>
+                                    </span>
                                 </div>
 
-                                {/* Product Title & Price */}
+                                {/* Product Title */}
                                 <h3 
                                     onClick={() => setInspectingProduct(product)}
-                                    className="text-[11px] sm:text-xs lg:text-sm font-black text-slate-900 dark:text-white truncate cursor-pointer hover:text-blue-600 transition-colors"
+                                    className="text-sm sm:text-base font-black text-slate-900 dark:text-white line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors leading-snug"
                                     title={product.title}
                                 >
                                     {product.title}
                                 </h3>
-                                <div className="flex items-baseline gap-1.5 mt-0.5 sm:mt-1">
-                                    <span className="text-xs sm:text-sm lg:text-base font-black text-slate-900 dark:text-white">
-                                        ₹{product.price}
-                                    </span>
-                                    <span className="text-[9px] sm:text-[10px] text-slate-400 line-through">
-                                        ₹{Math.round(product.price * 1.25)}
+
+                                {/* Price & Wholesale info */}
+                                <div className="flex items-baseline justify-between gap-2 mt-2">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tabular-nums">
+                                            ₹{product.price}
+                                        </span>
+                                        <span className="text-xs sm:text-sm text-slate-400 line-through tabular-nums">
+                                            ₹{Math.round(product.price * 1.25)}
+                                        </span>
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-500 uppercase">
+                                        Wholesale Deal
                                     </span>
                                 </div>
 
-                                {/* Performance Metrics: Shares, Clicks/Visits & Orders */}
-                                <div className="grid grid-cols-3 gap-1 text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-1.5 sm:mt-2.5 pt-1.5 sm:pt-2.5 border-t border-slate-100 dark:border-slate-800 text-center">
-                                    <div className="flex items-center justify-center gap-0.5" title="Times shared">
-                                        <Share2 size={11} className="text-blue-500 shrink-0" />
-                                        <span>{product.shares}</span>
+                                {/* Prominent Cashback Banner Badge */}
+                                <div className="mt-3 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-xs sm:text-sm font-black text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-2 shadow-2xs">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <Gift size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                        <span className="truncate">Earn ₹{cashbackAmount} Cashback</span>
                                     </div>
-                                    <div className="flex items-center justify-center gap-0.5" title="Unique visits & clicks">
-                                        <MousePointerClick size={11} className="text-amber-500 shrink-0" />
-                                        <span>{product.clicks}</span>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-0.5" title="Converted orders">
-                                        <ShoppingBag size={11} className="text-emerald-500 shrink-0" />
-                                        <span>{product.orders}</span>
-                                    </div>
+                                    <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-emerald-600 text-white shrink-0">
+                                        Per Order
+                                    </span>
                                 </div>
 
-                                {/* Potential Cashback Pill */}
-                                {!product.is_merchant_inventory && (
-                                    <div className="mt-1.5 sm:mt-2 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-md sm:rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-[8px] sm:text-[9px] sm:text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                                        <Gift size={10} className="shrink-0" />
-                                        <span className="truncate">Earn ₹{cashbackAmount}</span>
+                                {/* Performance Funnel: Shares, Visits, Orders */}
+                                <div className="grid grid-cols-3 gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
+                                    <div className="flex flex-col items-center justify-center py-1 rounded-lg bg-slate-50 dark:bg-slate-800/50" title="Times shared">
+                                        <span className="text-slate-900 dark:text-white font-black text-xs sm:text-sm">{product.shares}</span>
+                                        <span className="text-xs font-semibold text-slate-400">Shares</span>
                                     </div>
-                                )}
+                                    <div className="flex flex-col items-center justify-center py-1 rounded-lg bg-slate-50 dark:bg-slate-800/50" title="Store visits">
+                                        <span className="text-amber-600 font-black text-xs sm:text-sm">{product.clicks}</span>
+                                        <span className="text-xs font-semibold text-slate-400">Visits</span>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center py-1 rounded-lg bg-slate-50 dark:bg-slate-800/50" title="Converted orders">
+                                        <span className="text-emerald-600 font-black text-xs sm:text-sm">{product.orders}</span>
+                                        <span className="text-xs font-semibold text-slate-400">Orders</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Card Footer: Share Button */}
-                            <div className="p-2.5 sm:p-4 pt-0 flex items-center gap-1.5 sm:gap-2">
+                            {/* Card Footer: View Details & Full-Width 44px+ Share Button */}
+                            <div className="p-4 sm:p-5 pt-0 flex items-center gap-2">
                                 <button
                                     onClick={() => setInspectingProduct(product)}
-                                    className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors shrink-0"
-                                    title="View Details"
+                                    className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                                    title="View Product Insights"
+                                    aria-label="View Product Insights"
                                 >
-                                    <Info size={13} />
+                                    <Info size={18} />
                                 </button>
                                 <button
                                     onClick={() => setSelectedProduct(product)}
-                                    className="flex-1 py-1.5 sm:py-2 px-2 sm:px-3 rounded-lg sm:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] sm:text-xs flex items-center justify-center gap-1 shadow-xs active:scale-95 transition-all"
+                                    className="flex-1 min-h-[44px] py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
                                 >
-                                    <Send size={12} />
-                                    <span>Share</span>
+                                    <Send size={15} />
+                                    <span>Share & Earn ₹{cashbackAmount}</span>
                                 </button>
                             </div>
                         </div>
@@ -384,39 +405,39 @@ export default function ProductMarketingClient({
                                         </span>
                                     )}
                                 </div>
-                                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">
+                                <span className="text-xs font-semibold text-slate-400">
                                     {inspectingProduct.is_merchant_inventory ? 'Direct Merchant Stock' : 'Official InTrust Catalog'}
                                 </span>
                             </div>
                         </div>
 
                         {/* Performance KPIs: 4-tier funnel */}
-                        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                        <div className="grid grid-cols-4 gap-2">
                             <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Shares</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Shares</span>
                                 <div className="text-sm sm:text-base font-black text-blue-600">{inspectingProduct.shares}</div>
                             </div>
                             <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Visits</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Visits</span>
                                 <div className="text-sm sm:text-base font-black text-amber-600">{inspectingProduct.clicks}</div>
                             </div>
                             <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Orders</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Orders</span>
                                 <div className="text-sm sm:text-base font-black text-emerald-600">{inspectingProduct.orders}</div>
                             </div>
                             <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-center">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Cashback</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Cashback</span>
                                 <div className="text-sm sm:text-base font-black text-violet-600">₹{(inspectingProduct.promo_cashback_paise || 10000) / 100}</div>
                             </div>
                         </div>
 
                         {/* Promotional Pitch suggestion */}
-                        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60 space-y-1 text-xs">
-                            <span className="font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
-                                <Sparkles size={13} className="text-blue-600" />
+                        <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60 space-y-1">
+                            <span className="text-xs sm:text-sm font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                                <Sparkles size={14} className="text-blue-600" />
                                 Recommended Promotion Strategy
                             </span>
-                            <p className="text-blue-700 dark:text-blue-400 text-[10px] sm:text-[11px] leading-relaxed">
+                            <p className="text-blue-700 dark:text-blue-400 text-xs leading-relaxed">
                                 Share this product directly to WhatsApp groups and stories. Any order placed through your link automatically credits guaranteed wallet cashback!
                             </p>
                         </div>
@@ -425,7 +446,7 @@ export default function ProductMarketingClient({
                         <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                             <button
                                 onClick={() => setInspectingProduct(null)}
-                                className="w-full sm:flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 transition-colors"
+                                className="w-full sm:flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm hover:bg-slate-200 transition-colors"
                             >
                                 Back to Catalog
                             </button>
@@ -435,9 +456,9 @@ export default function ProductMarketingClient({
                                     setInspectingProduct(null);
                                     setSelectedProduct(target);
                                 }}
-                                className="w-full sm:flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5 transition-all"
+                                className="w-full sm:flex-1 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5 transition-all"
                             >
-                                <Send size={13} />
+                                <Send size={14} />
                                 <span>Generate Share Link</span>
                             </button>
                         </div>

@@ -16,11 +16,14 @@ export default function StreakShareCard({
     streak = 3,
     score = 10,
     totalQuestions = 10,
-    shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/marketing/daily-challenge` : 'https://intrustindia.com/marketing/daily-challenge',
+    shareUrl: customShareUrl,
+    referralCode,
     userName = 'I'
 }) {
     const [copied, setCopied] = useState(false);
 
+    const baseUrl = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin) : 'https://intrustindia.com';
+    const shareUrl = customShareUrl || (referralCode ? `${baseUrl}/marketing/daily-challenge?ref=${encodeURIComponent(referralCode)}` : `${baseUrl}/marketing/daily-challenge`);
     const shareText = `🔥 ${userName === 'I' ? "I'm" : `${userName} is`} on a ${streak}-Day Streak on InTrust India Daily Quiz! Scored ${score}/${totalQuestions} today.\n\nCan you beat this score? Play today's challenge and earn real wallet cashback:\n${shareUrl}`;
 
     const handleWhatsAppShare = () => {

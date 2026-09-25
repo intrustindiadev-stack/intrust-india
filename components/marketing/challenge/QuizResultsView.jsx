@@ -34,7 +34,9 @@ export default function QuizResultsView({
     formattedTodayDate = '',
     shareCopied = false,
     handleShareResults,
-    questions = []
+    questions = [],
+    onCooldown = false,
+    formattedReverseTimer = ''
 }) {
     const isAlreadyCompleted = quizStage === 'already_completed';
     const accuracyPercent = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 100;
@@ -129,7 +131,9 @@ export default function QuizResultsView({
                         </h3>
                         <p className="text-xs sm:text-sm font-semibold text-sky-100 max-w-md mx-auto">
                             {isAlreadyCompleted
-                                ? "Today's challenge is completed. Come back tomorrow after midnight IST for fresh trivia!"
+                                ? (onCooldown && formattedReverseTimer 
+                                    ? `Challenge completed! Next quiz unlocks in ${formattedReverseTimer}. Play every 6 hours to earn more cashback!`
+                                    : "Challenge completed! You can play every 6 hours for fresh trivia and instant cashback.")
                                 : `You scored ${score}/${totalQuestions} correct (+${pointsEarned} PTS). Your streak is actively defended!`}
                         </p>
                     </div>

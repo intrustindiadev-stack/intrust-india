@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 
@@ -57,7 +57,6 @@ import GuideInfoButton from '@/components/common/GuideInfoButton';
 
 const CashbackAnimationModal = dynamic(() => import('@/components/marketing/animations/CashbackAnimationModal'), { ssr: false });
 const GiftBoxAnimationModal = dynamic(() => import('@/components/marketing/animations/GiftBoxAnimationModal'), { ssr: false });
-const SabpaisaPaymentModal = dynamic(() => import('@/components/payment/SabpaisaPaymentModal'), { ssr: false });
 const SponsorshipCelebrationModal = dynamic(() => import('@/components/marketing/animations/SponsorshipCelebrationModal'), { ssr: false });
 const SponsorshipAnalyticsChart = lazy(() => import('@/components/marketing/sponsor/SponsorshipAnalyticsChart'));
 import StreakRibbon from '@/components/marketing/challenge/StreakRibbon';
@@ -66,10 +65,10 @@ import QuizArena from '@/components/marketing/challenge/QuizArena';
 import QuizResultsView from '@/components/marketing/challenge/QuizResultsView';
 import QuizSponsorShowcase from '@/components/marketing/challenge/QuizSponsorShowcase';
 import StreakShareCard from '@/components/marketing/challenge/StreakShareCard';
+import PostQuizFlow from '@/components/marketing/challenge/PostQuizFlow';
 import TrophyChampionVector from '@/components/marketing/graphics/TrophyChampionVector';
 import { supabase } from '@/lib/supabaseClient';
 import { trackSponsorImpressionOnce, trackSponsorEvent } from '@/lib/sponsorshipTracking';
-import { lazy, Suspense } from 'react';
 
 // Zero-dependency Web Audio Sound Synthesizer for rich arcade tactile feedback
 function playSound(type, soundEnabled = true) {
@@ -157,6 +156,8 @@ export default function DailyChallengeClient({
     todayPlay,
     todayDateStr,
     secondsUntilMidnightIST = 0,
+    initialCooldownSeconds = 0,
+    isCooldownActive = false,
     existingSponsorships = [],
     merchantInventory = [],
     rewardsConfig = {},
@@ -180,9 +181,13 @@ export default function DailyChallengeClient({
     // Mode: 'play' or 'sponsor' (only merchants can switch to 'sponsor')
     const [activeTab, setActiveTab] = useState('play');
 
-    // Quiz Flow States
-    const hasPlayedTodayInitial = !!todayPlay || !!initialStreak?.played_today;
-    const [quizStage, setQuizStage] = useState(hasPlayedTodayInitial ? 'already_completed' : 'select_category'); // 'select_category', 'sponsor_showcase', 'questions', 'completed', 'already_completed'
+    // 6-Hour Challenge Refresh & Reverse Timer States
+    const initialCooldownVal = initialStreak?.cooldown_seconds_remaining || initialCooldownSeconds || 0;
+    const initialOnCooldown = isCooldownActive || (initialCooldownVal > 0) || (initialStreak?.cooldown_active && initialCooldownVal > 0);
+
+    const [cooldownSeconds, setCooldownSeconds] = useState(initialCooldownVal);
+    const [onCooldown, setOnCooldown] = useState(initialOnCooldown);
+    const [quizStage, setQuizStage] = useState(initialOnCooldown ? 'already_completed' : 'select_category'); // 'select_category', 'sponsor_showcase', 'questions', 'completed', 'already_completed'
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState(null);
@@ -200,29 +205,82 @@ export default function DailyChallengeClient({
 
     // Dynamic Streak States initialized from live DB RPC
     const [streakData, setStreakData] = useState({
-        streak: Number(initialStreak?.current_streak || (hasPlayedTodayInitial ? 1 : 0)),
-        highestStreak: Number(initialStreak?.highest_streak || (hasPlayedTodayInitial ? 1 : 0)),
-        playedToday: hasPlayedTodayInitial,
+        streak: Number(initialStreak?.current_streak || 0),
+        highestStreak: Number(initialStreak?.highest_streak || 0),
+        playedToday: !!initialStreak?.played_today,
         freezesLeft: initialStreak?.freezes_left ?? 1
     });
     const [showStreakModal, setShowStreakModal] = useState(false);
     const [completionResult, setCompletionResult] = useState(null);
 
-    // Client-side local storage backup check on mount
+    // Client-side 6-hour reverse timer local storage check on mount
     useEffect(() => {
         if (typeof window !== 'undefined' && user?.id) {
             const todayIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
-            const localPlayed = localStorage.getItem(`intrust_daily_challenge_played_${user.id}_${todayIST}`);
-            if (localPlayed === 'true') {
-                setStreakData(prev => ({
-                    ...prev,
-                    playedToday: true,
-                    streak: Math.max(1, prev.streak)
-                }));
-                setQuizStage('already_completed');
+            // Clear legacy 24-hour blocker key so users aren't locked out of 6-hour plays
+            try {
+                localStorage.removeItem(`intrust_daily_challenge_played_${user.id}_${todayIST}`);
+            } catch (e) {}
+
+            try {
+                const unlockAtStr = localStorage.getItem(`intrust_quiz_unlock_${user.id}`);
+                if (unlockAtStr) {
+                    const unlockAt = parseInt(unlockAtStr, 10);
+                    const remaining = Math.max(0, Math.floor((unlockAt - Date.now()) / 1000));
+                    if (remaining > 0) {
+                        setCooldownSeconds(remaining);
+                        setOnCooldown(true);
+                        setQuizStage('already_completed');
+                    } else {
+                        localStorage.removeItem(`intrust_quiz_unlock_${user.id}`);
+                    }
+                }
+            } catch (err) {
+                console.error('LocalStorage read error:', err);
             }
         }
     }, [user?.id]);
+
+    // Live Reverse Countdown Timer: ticks down every second to unlock the quiz!
+    useEffect(() => {
+        if (!onCooldown || cooldownSeconds <= 0) return;
+
+        const timer = setInterval(() => {
+            setCooldownSeconds((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setOnCooldown(false);
+                    // 6 hours elapsed! Automatically unlock quiz
+                    if (typeof window !== 'undefined' && user?.id) {
+                        try {
+                            localStorage.removeItem(`intrust_quiz_unlock_${user.id}`);
+                        } catch (e) {}
+                    }
+                    setQuizStage('select_category');
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [onCooldown, cooldownSeconds, user?.id]);
+
+    // Format Reverse Countdown as HH:MM:SS
+    const formattedReverseTimer = useMemo(() => {
+        const totalSec = Math.max(0, cooldownSeconds);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }, [cooldownSeconds]);
+
+    // Percentage of 6-hour window elapsed for progress bar
+    const cooldownPercentElapsed = useMemo(() => {
+        const totalDuration = 6 * 3600; // 21,600 seconds
+        const remaining = Math.min(totalDuration, Math.max(0, cooldownSeconds));
+        return Math.min(100, Math.max(0, Math.round(((totalDuration - remaining) / totalDuration) * 100)));
+    }, [cooldownSeconds]);
 
     // Answer feedback overlay state for front-of-screen right/wrong popups
     const [answerFeedback, setAnswerFeedback] = useState(null);
@@ -255,7 +313,7 @@ export default function DailyChallengeClient({
         const timer = setInterval(() => {
             setSecondsToMidnight(prev => {
                 if (prev <= 1) {
-                    // 12:00 AM IST turnover! Re-fetch streak and unlock challenge automatically
+                    // 12:00 AM IST turnover! Re-fetch streak
                     supabase.rpc('get_user_quiz_streak').then(({ data }) => {
                         if (data) {
                             setStreakData({
@@ -264,9 +322,6 @@ export default function DailyChallengeClient({
                                 playedToday: data.played_today,
                                 freezesLeft: data.freezes_left
                             });
-                            if (!data.played_today) {
-                                setQuizStage('select_category');
-                            }
                         }
                     }).catch(console.error);
                     return 86400;
@@ -317,19 +372,21 @@ export default function DailyChallengeClient({
             ? (completionResult.reward_paise / 100).toFixed(2) 
             : (todayPlay?.cashback_awarded_paise ? (todayPlay.cashback_awarded_paise / 100).toFixed(2) : dynamicReward.toFixed(2));
         
-        const shareMessage = `ðŸŽ¯ I'm in the top 0.1% of InTrust Daily Quiz Learners!\n\n` +
-            `ðŸ“Š Score: ${score}/${totalQ} (${accuracy}% Accuracy)\n` +
-            `ðŸ”¥ Current Streak: ${streakData.streak} Days\n` +
-            `âš¡ Instant Cashback Won: â‚¹${rewardText}\n\n` +
-            `Test your knowledge, play daily trivia, and earn real wallet cash on InTrust:\n` +
-            `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}/marketing/daily-challenge`;
+        const shareMessageBody = `🎯 I'm in the top 0.1% of InTrust Daily Quiz Learners!\n\n` +
+            `📊 Score: ${score}/${totalQ} (${accuracy}% Accuracy)\n` +
+            `🔥 Current Streak: ${streakData.streak} Days\n` +
+            `⚡ Instant Cashback Won: ₹${rewardText}\n\n` +
+            `Test your knowledge, play daily trivia, and earn real wallet cash on InTrust:`;
+        
+        const challengeUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}/marketing/daily-challenge`;
+        const fullShareMessage = `${shareMessageBody}\n${challengeUrl}`;
 
         if (typeof navigator !== 'undefined' && navigator.share) {
             try {
                 await navigator.share({
                     title: "InTrust Daily Challenge Results",
-                    text: shareMessage,
-                    url: `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}/marketing/daily-challenge`
+                    text: shareMessageBody,
+                    url: challengeUrl
                 });
                 return;
             } catch (e) {
@@ -339,7 +396,7 @@ export default function DailyChallengeClient({
 
         if (typeof navigator !== 'undefined' && navigator.clipboard) {
             try {
-                await navigator.clipboard.writeText(shareMessage);
+                await navigator.clipboard.writeText(fullShareMessage);
                 setShareCopied(true);
                 setTimeout(() => setShareCopied(false), 2500);
                 return;
@@ -348,7 +405,7 @@ export default function DailyChallengeClient({
             }
         }
 
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullShareMessage)}`;
         window.open(whatsappUrl, '_blank');
     };
 
@@ -356,27 +413,31 @@ export default function DailyChallengeClient({
     const handleShareProductDeal = async (product, e) => {
         if (e) e.stopPropagation();
         const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.com'}${product.slug ? `/shop/product/${product.slug}` : '/shop'}`;
-        const dealText = `ðŸ”¥ Special Deal from ${todaySponsor?.merchants?.business_name || 'InTrust'}!\n\nðŸ›ï¸ ${product.product_name} at only â‚¹${product.price}!\nGet authentic quality and instant cashback.\n\nShop here: ${shareUrl}`;
-
-        if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            try {
-                await navigator.clipboard.writeText(dealText);
-                setCopiedProductId(product.id || product.product_id);
-                setTimeout(() => setCopiedProductId(null), 2500);
-            } catch (e) {
-                // fallback
-            }
-        }
+        const dealTextBody = `🔥 Special Deal from ${todaySponsor?.merchants?.business_name || 'InTrust'}!\n\n🛍️ ${product.product_name} at only ₹${product.price}!\nGet authentic quality and instant cashback.`;
+        const fullDealMessage = `${dealTextBody}\n\nShop here: ${shareUrl}`;
 
         if (typeof navigator !== 'undefined' && navigator.share) {
             try {
                 await navigator.share({
                     title: product.product_name,
-                    text: dealText,
+                    text: dealTextBody,
                     url: shareUrl
                 });
+                return;
             } catch (e) {}
         }
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            try {
+                await navigator.clipboard.writeText(fullDealMessage);
+                setCopiedProductId(product.id || product.product_id);
+                setTimeout(() => setCopiedProductId(null), 2500);
+                return;
+            } catch (e) {}
+        }
+
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullDealMessage)}`;
+        window.open(waUrl, '_blank');
     };
 
     // Auto-advance post-quiz showcase every 4 seconds (pauses when hovered)
@@ -632,10 +693,10 @@ export default function DailyChallengeClient({
                 explanation: 'Aditya-L1 was placed in halo orbit at L1, ~1.5 million km from Earth.'
             },
             {
-                question: 'Which decentralized digital ledger technology forms the basis of cryptocurrencies?',
+                question: 'Which decentralized database technology forms the basis of cryptocurrencies?',
                 options: ['Quantum Key', 'Blockchain', 'Cloud Computing', 'Mesh Network'],
                 correct: 1,
-                explanation: 'Blockchain is a cryptographically secured, decentralized, distributed ledger.'
+                explanation: 'Blockchain is a cryptographically secured, decentralized, distributed record system.'
             },
             {
                 question: 'Which platform allows Indian citizens to store authentic digital licenses and mark sheets?',
@@ -956,20 +1017,29 @@ export default function DailyChallengeClient({
         ]
     }), []);
 
-    // Fetch user's persistent streak status
+    // Fetch user's persistent streak status & live 6-hour cooldown status
     useEffect(() => {
         supabase.rpc('get_user_quiz_streak').then(({ data, error }) => {
             if (data && data.success) {
-                const isPlayed = !!data.played_today || !!todayPlay;
+                const isCool = !!data.cooldown_active && (Number(data.cooldown_seconds_remaining || 0) > 0);
+                const remSeconds = Number(data.cooldown_seconds_remaining || 0);
+
+                if (isCool) {
+                    setCooldownSeconds(remSeconds);
+                    setOnCooldown(true);
+                    setQuizStage('already_completed');
+                } else if (!isCool && onCooldown) {
+                    setCooldownSeconds(0);
+                    setOnCooldown(false);
+                    setQuizStage('select_category');
+                }
+
                 setStreakData(prev => ({
-                    streak: Number(data.current_streak || prev.streak || (isPlayed ? 1 : 0)),
-                    highestStreak: Number(data.highest_streak || prev.highestStreak || (isPlayed ? 1 : 0)),
-                    playedToday: isPlayed || prev.playedToday,
+                    streak: Number(data.current_streak || prev.streak || 0),
+                    highestStreak: Number(data.highest_streak || prev.highestStreak || 0),
+                    playedToday: !!data.played_today,
                     freezesLeft: data.freezes_left ?? prev.freezesLeft
                 }));
-                if (isPlayed) {
-                    setQuizStage('already_completed');
-                }
             }
         }).catch((err) => console.error('Failed to load streak:', err));
     }, [todayPlay]);
@@ -1108,10 +1178,12 @@ export default function DailyChallengeClient({
             ? selectedCategory.id
             : (categories?.[0]?.id || null);
 
-        // Immediate Client-side persistence safeguard
+        // Immediate Client-side persistence safeguard: 6-hour cooldown
+        const sixHoursSec = 6 * 3600;
+        const unlockTimestamp = Date.now() + (sixHoursSec * 1000);
         if (typeof window !== 'undefined' && user?.id) {
             try {
-                localStorage.setItem(`intrust_daily_challenge_played_${user.id}_${todayIST}`, 'true');
+                localStorage.setItem(`intrust_quiz_unlock_${user.id}`, unlockTimestamp.toString());
             } catch (err) {
                 console.error('LocalStorage write error:', err);
             }
@@ -1127,6 +1199,15 @@ export default function DailyChallengeClient({
             const payload = await response.json().catch(() => null);
 
             if (!response.ok || !payload?.success) {
+                const data = payload?.data;
+                if (data?.cooldown_active || data?.cooldown_seconds_remaining) {
+                    const remSec = Number(data.cooldown_seconds_remaining || sixHoursSec);
+                    setCooldownSeconds(remSec);
+                    setOnCooldown(true);
+                    setQuizStage('already_completed');
+                    return;
+                }
+
                 const reason = payload?.error || 'Could not record your challenge. Please try again.';
                 console.error('[DailyChallenge][complete] request failed', {
                     status: response.status,
@@ -1140,6 +1221,8 @@ export default function DailyChallengeClient({
 
             const data = payload.data || payload;
             setCompletionResult(data);
+            setCooldownSeconds(sixHoursSec);
+            setOnCooldown(true);
             const updatedStreak = Number(data.current_streak || 1);
             const updatedHighest = Number(data.highest_streak || updatedStreak);
             const remainingFreezes = data.freeze_used
@@ -1212,100 +1295,6 @@ export default function DailyChallengeClient({
         }
         return days;
     }, [existingSponsorships, merchant?.id]);
-
-    // Handle Sponsorship Booking via secure backend API route
-    const handleBookSponsorship = async () => {
-        if (!selectedDate) {
-            setBookingError('Please select an available date on the calendar.');
-            return;
-        }
-        if (selectedProducts.length === 0) {
-            setBookingError('Please select at least 1 product to showcase.');
-            return;
-        }
-
-        if (paymentMethod === 'sabpaisa') {
-            setShowSabpaisaModal(true);
-            return;
-        }
-
-        // Wallet payment flow with 18% GST calculation (9% CGST + 9% SGST)
-        const totalWithGstPaise = Math.round(dynamicSponsorFee * 100 * 1.18);
-        if (liveWalletPaise < totalWithGstPaise) {
-            setBookingError(`Insufficient InTrust wallet balance (â‚¹${(liveWalletPaise / 100).toFixed(2)}). Total payable with 18% GST is â‚¹${(totalWithGstPaise / 100).toFixed(2)}. Please switch to SabPaisa Gateway or top up your wallet.`);
-            return;
-        }
-
-        setBookingLoading(true);
-        setBookingError(null);
-        try {
-            const res = await fetch('/api/marketing/sponsor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sponsorDate: selectedDate.dateStr,
-                    productIds: selectedProducts.map(p => p.id),
-                    campaignMessage,
-                    paymentMethod: 'wallet'
-                })
-            });
-
-            const data = await res.json();
-            if (!res.ok || !data.success) {
-                throw new Error(data?.error || 'Failed to book sponsorship');
-            }
-
-            setBookingSuccess(true);
-            setSponsorshipResult({
-                sponsorDate: selectedDate.dateStr,
-                products: selectedProducts,
-                feePaidRupees: dynamicSponsorFee,
-                merchantName: merchant?.business_name || 'Partner Store',
-                campaignMessage
-            });
-        } catch (err) {
-            setBookingError(err.message);
-        } finally {
-            setBookingLoading(false);
-        }
-    };
-
-    const handleSabpaisaSuccess = async (txnResult) => {
-        setShowSabpaisaModal(false);
-        setBookingLoading(true);
-        setBookingError(null);
-        try {
-            const res = await fetch('/api/marketing/sponsor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sponsorDate: selectedDate.dateStr,
-                    productIds: selectedProducts.map(p => p.id),
-                    campaignMessage,
-                    paymentMethod: 'sabpaisa',
-                    clientTxnId: txnResult?.clientTxnId || txnResult?.txnId || 'SABPAISA_' + Date.now()
-                })
-            });
-
-            const data = await res.json();
-            if (!res.ok || !data.success) {
-                throw new Error(data?.error || 'Failed to finalize sponsorship booking');
-            }
-
-            setBookingSuccess(true);
-            setSponsorshipResult({
-                sponsorDate: selectedDate.dateStr,
-                products: selectedProducts,
-                feePaidRupees: dynamicSponsorFee,
-                merchantName: merchant?.business_name || 'Partner Store',
-                campaignMessage
-            });
-        } catch (err) {
-            setBookingError(err.message);
-        } finally {
-            setBookingLoading(false);
-        }
-    };
 
     return (
         <div className="space-y-4 sm:space-y-6 lg:space-y-7 animate-fadeIn">
@@ -1500,27 +1489,51 @@ export default function DailyChallengeClient({
 
                     {/* State A: Category Selection */}
                     {quizStage === 'select_category' && (
-                        streakData.playedToday ? (
-                            <div className="rounded-3xl p-6 sm:p-8 bg-white border border-slate-200/90 shadow-sm text-center max-w-xl mx-auto space-y-4">
-                                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center shadow-xs">
-                                    <Flame size={32} className="fill-amber-500 animate-pulse" />
+                        onCooldown ? (
+                            <div className="rounded-3xl p-6 sm:p-8 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-md text-center max-w-xl mx-auto space-y-4">
+                                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 mx-auto flex items-center justify-center shadow-xs">
+                                    <Clock size={32} className="text-amber-500 animate-pulse" />
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        âœ“ Today&apos;s Daily Challenge Completed
+                                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                        ⚡ 6-Hour Challenge Refresh
                                     </span>
-                                    <h3 className="text-xl sm:text-2xl font-black text-slate-950 mt-2">
-                                        Streak Secured for Today!
+                                    <h3 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-2">
+                                        Next Challenge Unlocks Soon!
                                     </h3>
-                                    <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1 max-w-md mx-auto">
-                                        You&apos;ve completed today&apos;s challenge and locked in your {streakData.streak}-day streak. Next daily challenge unlocks at 12:00 AM IST midnight!
+                                    <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                                        You can play every 6 hours! Your {streakData.streak}-day streak is secured. Next challenge unlocks in:
                                     </p>
                                 </div>
 
-                                {/* Live Midnight Countdown Pill */}
-                                <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 text-white font-mono text-xs font-bold shadow-sm">
-                                    <Clock size={14} className="text-amber-400" />
-                                    <span>Next Challenge In: {formattedTimeUntilMidnight} (12:00 AM IST)</span>
+                                {/* 6-Hour Reverse Countdown Timer Card */}
+                                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 text-white shadow-xl border border-white/10 relative overflow-hidden space-y-3">
+                                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                                        <span className="flex items-center gap-1.5 text-amber-400">
+                                            <Clock size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
+                                            <span>Reverse Unlock Countdown</span>
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-mono font-bold text-sky-300">
+                                            {cooldownPercentElapsed}% Elapsed
+                                        </span>
+                                    </div>
+
+                                    {/* Big Monospace Reverse Countdown Digits */}
+                                    <div className="font-mono text-3xl sm:text-4xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 py-1">
+                                        {formattedReverseTimer}
+                                    </div>
+
+                                    {/* Progress Bar */}
+                                    <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                                        <div 
+                                            className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-1000"
+                                            style={{ width: `${cooldownPercentElapsed}%` }}
+                                        />
+                                    </div>
+
+                                    <div className="text-[10px] text-slate-400 font-medium">
+                                        Timer automatically unlocks the quiz when it reaches 00:00:00.
+                                    </div>
                                 </div>
 
                                 <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
@@ -1529,17 +1542,17 @@ export default function DailyChallengeClient({
                                         onClick={() => setQuizStage('already_completed')}
                                         className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
                                     >
-                                        Review Today&apos;s Answers
+                                        Review Last Quiz Answers
                                     </button>
                                     <Link
                                         href="/marketing/targets"
-                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all active:scale-95"
+                                        className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95"
                                     >
-                                        Explore Target Prizes â†’
+                                        Explore Target Prizes →
                                     </Link>
                                     <Link
                                         href="/marketing"
-                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all active:scale-95"
+                                        className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95"
                                     >
                                         Marketing Hub
                                     </Link>
@@ -1636,30 +1649,55 @@ export default function DailyChallengeClient({
                         </div>
                     )}
 
-                    {/* State: Dedicated Sponsor Product Showcase immediately after Question 10 */}
+                    {/* ── Post-Quiz Sequential Flow: Sponsor → Reward → Streak → Results ── */}
                     {quizStage === 'sponsor_showcase' && (
-                        <div className="max-w-xl mx-auto space-y-5 px-3 sm:px-0">
-                            <QuizSponsorShowcase
+                        <div className="max-w-xl mx-auto px-3 sm:px-0">
+                            <PostQuizFlow
                                 todaySponsor={todaySponsor}
-                                copiedProductId={copiedProductId}
-                                handleShareProductDeal={handleShareProductDeal}
-                                onClaimCashback={() => {
-                                    setShowCashbackModal(true);
-                                    setQuizStage('completed');
-                                }}
-                                rewardAmountRupees={dynamicReward}
-                                claimRewardPaise={completionResult?.reward_paise || (dynamicReward * 100)}
-                                pointsEarned={score * 10}
                                 score={score}
                                 totalQuestions={activeQuestions?.length || 10}
+                                streakData={streakData}
+                                completionResult={completionResult}
+                                todayPlay={todayPlay}
+                                dynamicReward={dynamicReward}
+                                formattedTodayDate={formattedTodayDate}
+                                shareCopied={shareCopied}
+                                handleShareResults={handleShareResults}
+                                questions={activeQuestions}
+                                copiedProductId={copiedProductId}
+                                handleShareProductDeal={handleShareProductDeal}
                                 isMerchant={isMerchant}
+                                profile={profile}
+                                onGoBack={() => setQuizStage('select_category')}
                             />
                         </div>
                     )}
 
-                    {/* State C: Already Completed / Completion Screen - Gamified Results Card & Sponsor Promotion */}
+                    {/* ── Already Completed (revisit after same-day play) ── */}
                     {(quizStage === 'completed' || quizStage === 'already_completed') && (
                         <div className="max-w-xl mx-auto space-y-5 px-3 sm:px-0">
+                            {/* Live 6-Hour Reverse Countdown Timer banner */}
+                            {onCooldown && (
+                                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-950 to-blue-950 text-white shadow-xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                                            <Clock size={20} className="animate-pulse" />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-[10px] uppercase font-black text-amber-400 tracking-wider">
+                                                Next Quiz Unlocks In
+                                            </div>
+                                            <div className="text-xs font-medium text-slate-300">
+                                                Play every 6 hours for rewards & streaks
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="font-mono text-xl sm:text-2xl font-black text-amber-300 bg-black/40 px-4 py-2 rounded-xl border border-white/10 shrink-0 tracking-wider shadow-inner">
+                                        {formattedReverseTimer}
+                                    </div>
+                                </div>
+                            )}
+
                             <QuizResultsView
                                 quizStage={quizStage}
                                 score={score}
@@ -1672,6 +1710,8 @@ export default function DailyChallengeClient({
                                 shareCopied={shareCopied}
                                 handleShareResults={handleShareResults}
                                 questions={activeQuestions}
+                                onCooldown={onCooldown}
+                                formattedReverseTimer={formattedReverseTimer}
                             />
 
                             {/* Shareable streak card — surfaces the live streak
@@ -1681,6 +1721,7 @@ export default function DailyChallengeClient({
                                 score={score}
                                 totalQuestions={activeQuestions?.length || 10}
                                 userName={profile?.full_name || user?.user_metadata?.full_name || 'I'}
+                                referralCode={profile?.referral_code || user?.user_metadata?.referral_code}
                             />
 
                             <QuizSponsorShowcase
@@ -1726,293 +1767,30 @@ export default function DailyChallengeClient({
             {/* 2. SPONSOR A CHALLENGE VIEW (Strictly for Merchants)                      */}
             {/* ========================================================================= */}
             {activeTab === 'sponsor' && isMerchant && (
-                <div className="space-y-8">
-                    {bookingSuccess ? (
-                        <div className="max-w-md mx-auto bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-4">
-                            <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
-                                <Check size={32} />
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                                Date Booked Successfully!
-                            </h2>
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                Your brand and up to 4 selected products will be exclusively showcased to thousands of daily quiz players across India on {selectedDate?.dayNum} {selectedDate?.monthName}.
-                            </p>
-                            <button
-                                onClick={() => {
-                                    setBookingSuccess(false);
-                                    setSelectedDate(null);
-                                    setSelectedProducts([]);
-                                }}
-                                className="w-full py-3 rounded-2xl bg-slate-900 text-white font-black text-xs"
-                            >
-                                Book Another Date
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                            {/* Left Column: Calendar & Booking Form */}
-                            <div className="lg:col-span-2 space-y-4 sm:space-y-5">
-                                {/* Step 1: Select Date */}
-                                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-6 h-6 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                                            1
-                                        </div>
-                                        <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                            Select an Available Date
-                                        </h3>
-                                    </div>
-
-                                    {/* Date Status Legend */}
-                                    <div className="flex items-center gap-3 sm:gap-4 text-[11px] font-bold text-slate-500 mb-3 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex-wrap">
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                            Available
-                                        </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
-                                            Booked
-                                        </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="w-2 h-2 rounded-full bg-blue-600" />
-                                            Your Booking
-                                        </span>
-                                    </div>
-
-                                    {/* Calendar Strip */}
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 sm:gap-2">
-                                        {calendarDays.map((day) => {
-                                            const isSelected = selectedDate?.dateStr === day.dateStr;
-                                            const isAvailable = day.status === 'available';
-                                            return (
-                                                <button
-                                                    key={day.dateStr}
-                                                    disabled={!isAvailable}
-                                                    onClick={() => setSelectedDate(day)}
-                                                    className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl text-center border transition-all ${
-                                                        isSelected
-                                                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/25 font-black'
-                                                            : isAvailable
-                                                            ? 'bg-white dark:bg-slate-800 border-emerald-200 dark:border-emerald-800 hover:border-emerald-500 text-slate-800 dark:text-slate-200'
-                                                            : 'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed'
-                                                    }`}
-                                                >
-                                                    <div className="text-[9px] font-extrabold uppercase opacity-75">
-                                                        {day.dayName}
-                                                    </div>
-                                                    <div className="text-base font-black my-0.5">
-                                                        {day.dayNum}
-                                                    </div>
-                                                    <div className="text-[9px] font-bold">
-                                                        {day.monthName}
-                                                    </div>
-                                                    <div className="mt-0.5 text-[8px] sm:text-[9px] font-extrabold">
-                                                        {day.status === 'available' ? 'AVAILABLE' : day.status === 'my_booking' ? 'YOURS' : 'BOOKED'}
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Step 2: Select Up to 4 Store Products */}
-                                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                                                2
-                                            </div>
-                                            <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                                Select Up to 4 Store Products ({selectedProducts.length} / 4)
-                                            </h3>
-                                        </div>
-                                    </div>
-
-                                    {/* Inventory list picker */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
-                                        {merchantInventory.length > 0 ? (
-                                            merchantInventory.map((item) => {
-                                                const isPicked = selectedProducts.some(p => p.id === item.id);
-                                                return (
-                                                    <div
-                                                        key={item.id}
-                                                        onClick={() => {
-                                                            if (isPicked) {
-                                                                setSelectedProducts(prev => prev.filter(p => p.id !== item.id));
-                                                            } else if (selectedProducts.length < 4) {
-                                                                setSelectedProducts(prev => [...prev, item]);
-                                                            }
-                                                        }}
-                                                        className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                                                            isPicked
-                                                                ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-500'
-                                                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                                                            {item.image_url && (
-                                                                <img src={item.image_url} alt="" className="w-7 h-7 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0" />
-                                                            )}
-                                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                                                                {item.product_name || item.title || 'Product'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <span className="text-xs font-black text-slate-900 dark:text-white">â‚¹{item.price}</span>
-                                                            <div className={`w-4 h-4 rounded-md flex items-center justify-center text-xs ${
-                                                                isPicked ? 'bg-blue-600 text-white' : 'border border-slate-300'
-                                                            }`}>
-                                                                {isPicked && <Check size={10} />}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })
-                                        ) : (
-                                            <div className="col-span-2 text-center py-4 text-xs text-slate-400 font-semibold">
-                                                No inventory found in store. Using default featured store items.
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Step 3: Campaign Message */}
-                                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                                    <div className="flex items-center gap-2 mb-2.5">
-                                        <div className="w-6 h-6 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                                            3
-                                        </div>
-                                        <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                            Campaign Message (Optional)
-                                        </h3>
-                                    </div>
-                                    <textarea
-                                        value={campaignMessage}
-                                        onChange={(e) => setCampaignMessage(e.target.value)}
-                                        placeholder="e.g. Discover our fresh organic harvest & exclusive festival discounts!"
-                                        rows={2}
-                                        className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600/30"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Right Column: Pricing & Instant Checkout */}
-                            <div className="space-y-4 sm:space-y-6">
-                                <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs sticky top-20 sm:top-24">
-                                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-600 border border-amber-200">
-                                        Sponsorship Checkout
-                                    </span>
-                                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1.5 mb-3">
-                                        Daily Challenge Sponsorship
-                                    </h3>
-
-                                    <div className="space-y-2.5 pb-3 border-b border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                                        <div className="flex justify-between">
-                                            <span>Selected Date</span>
-                                            <span className="font-bold text-slate-900 dark:text-white">
-                                                {selectedDate ? `${selectedDate.dayNum} ${selectedDate.monthName}` : 'Not selected'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Featured Products</span>
-                                            <span className="font-bold text-slate-900 dark:text-white">
-                                                {selectedProducts.length} Items
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Reach Guarantee</span>
-                                            <span className="font-bold text-emerald-600">
-                                                10,000+ Players
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Approval Type</span>
-                                            <span className="font-bold text-blue-600">
-                                                Instant Lock (Live)
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Payment Method Choice */}
-                                    <div className="pt-3 pb-2 space-y-2">
-                                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-                                            Payment Method
-                                        </span>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('wallet')}
-                                                className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                                                    paymentMethod === 'wallet'
-                                                        ? 'bg-blue-50/70 dark:bg-blue-950/50 border-blue-500 ring-1 ring-blue-500/30'
-                                                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between w-full mb-1">
-                                                    <Wallet size={15} className={paymentMethod === 'wallet' ? 'text-blue-600' : 'text-slate-400'} />
-                                                    {paymentMethod === 'wallet' && <Check size={12} className="text-blue-600" />}
-                                                </div>
-                                                <span className="text-xs font-black text-slate-900 dark:text-white">InTrust Wallet</span>
-                                                <span className="text-[10px] text-slate-500 font-bold mt-0.5 truncate">
-                                                    â‚¹{((merchant?.wallet_balance_paise || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('sabpaisa')}
-                                                className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                                                    paymentMethod === 'sabpaisa'
-                                                        ? 'bg-blue-50/70 dark:bg-blue-950/50 border-blue-500 ring-1 ring-blue-500/30'
-                                                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between w-full mb-1">
-                                                    <CreditCard size={15} className={paymentMethod === 'sabpaisa' ? 'text-blue-600' : 'text-slate-400'} />
-                                                    {paymentMethod === 'sabpaisa' && <Check size={12} className="text-blue-600" />}
-                                                </div>
-                                                <span className="text-xs font-black text-slate-900 dark:text-white">SabPaisa Gateway</span>
-                                                <span className="text-[10px] text-slate-500 font-bold mt-0.5 truncate">UPI, Cards, NetBank</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="py-3 flex items-baseline justify-between border-t border-slate-100 dark:border-slate-800">
-                                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase">
-                                            Sponsorship Fee
-                                        </span>
-                                        <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                                            â‚¹{dynamicSponsorFee}
-                                        </span>
-                                    </div>
-
-                                    {bookingError && (
-                                        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-600 text-xs font-semibold mb-4 flex items-center gap-2">
-                                            <AlertCircle size={15} />
-                                            <span>{bookingError}</span>
-                                        </div>
-                                    )}
-
-                                    <button
-                                        disabled={bookingLoading}
-                                        onClick={handleBookSponsorship}
-                                        className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md shadow-blue-500/25 active:scale-95 transition-all disabled:opacity-50"
-                                    >
-                                        {bookingLoading ? 'Processing...' : paymentMethod === 'wallet' ? 'Pay via Wallet & Lock Date â†’' : 'Pay via SabPaisa Gateway â†’'}
-                                    </button>
-
-                                    <p className="text-[10px] text-slate-400 text-center mt-3">
-                                        {paymentMethod === 'wallet' 
-                                            ? 'Fee is deducted directly from your InTrust merchant wallet.' 
-                                            : 'Secured with 256-bit bank encryption via SabPaisa payment gateway.'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-md text-center max-w-xl mx-auto space-y-5">
+                    <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+                        <Store size={36} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                            Merchant Sponsorship Portal
+                        </h2>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                            Book exclusive 24-hour billboard placements, showcase catalog products, and get official GST tax invoices in the dedicated Sponsor Portal.
+                        </p>
+                    </div>
+                    <div className="pt-2">
+                        <Link
+                            href="/marketing/daily-challenge/sponsor"
+                            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-lg shadow-blue-500/25 transition-all"
+                        >
+                            <span>Open Daily Challenge Sponsor Portal</span>
+                            <ChevronRight size={16} />
+                        </Link>
+                    </div>
                 </div>
             )}
+
 
             {/* Cashback Animation Celebration Modal */}
             <CashbackAnimationModal
@@ -2036,24 +1814,7 @@ export default function DailyChallengeClient({
                 rewardValue={dynamicReward}
             />
 
-            {/* SabPaisa Payment Gateway Modal */}
-            <SabpaisaPaymentModal
-                isOpen={showSabpaisaModal}
-                onClose={() => setShowSabpaisaModal(false)}
-                amount={dynamicSponsorFee}
-                user={user}
-                productInfo={{
-                    name: `Daily Challenge Sponsorship for ${selectedDate?.dayNum} ${selectedDate?.monthName}`,
-                    price: dynamicSponsorFee,
-                    id: 'sponsorship-' + selectedDate?.dateStr
-                }}
-                metadata={{
-                    sponsor_date: selectedDate?.dateStr,
-                    merchant_id: merchant?.id,
-                    purpose: 'DAILY_CHALLENGE_SPONSORSHIP'
-                }}
-                onPaymentSuccess={handleSabpaisaSuccess}
-            />
+
 
             {/* Daily Streak Celebration & Milestone Modal */}
             <StreakMilestoneModal

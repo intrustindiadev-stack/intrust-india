@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -59,6 +60,17 @@ export default function DailyChallengeSponsorClient({
     const [bookingSuccess, setBookingSuccess] = useState(false);
     const [activeInvoice, setActiveInvoice] = useState(null);
     const [showCelebration, setShowCelebration] = useState(false);
+
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // Re-sync sponsorships if user returned from gateway redirect
+    useEffect(() => {
+        if (searchParams.get('booked') === 'true') {
+            setBookingSuccess(true);
+            router.refresh();
+        }
+    }, [searchParams, router]);
 
     // Product search & category filters for merchant inventory
     const [productSearch, setProductSearch] = useState('');
@@ -245,6 +257,7 @@ export default function DailyChallengeSponsorClient({
             } else {
                 setBookingSuccess(true);
                 setShowCelebration(true);
+                router.refresh();
                 if (data.invoice) {
                     setActiveInvoice(data.invoice);
                 } else {
@@ -1045,7 +1058,9 @@ export default function DailyChallengeSponsorClient({
                     amount={totalPayable}
                     purpose="DAILY_CHALLENGE_SPONSORSHIP"
                     metadata={{
+                        type: 'daily_challenge_sponsorship',
                         sponsorDate: selectedDate?.dateStr,
+                        merchantId: merchant?.id,
                         productIds: selectedProducts.map(p => p.id),
                         campaignMessage,
                         baseFee,
@@ -1076,6 +1091,7 @@ export default function DailyChallengeSponsorClient({
                             } else {
                                 setBookingSuccess(true);
                                 setShowCelebration(true);
+                                router.refresh();
                                 if (data.invoice) {
                                     setActiveInvoice(data.invoice);
                                 } else {

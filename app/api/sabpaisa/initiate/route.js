@@ -181,14 +181,24 @@ export async function POST(request) {
         // ── Canonical Amount Derivation (Security Guard) ──
         let canonicalAmountPaise = 0;
         const udf1 = orderData.udf1 || '';
-        let udf2 = orderData.udf2 || ''; // groupId for CART, productId for GIFT
-        const udf3 = orderData.udf3 || ''; // planKey for SUB
+        let udf3 = orderData.udf3 || ''; // planKey for SUB, affiliateCode for CART_CHECKOUT
+        if (udf1 === 'CART_CHECKOUT' && !udf3) {
+            const cookieCode = request.cookies.get('intrust_affiliate_code')?.value;
+            if (cookieCode) {
+                udf3 = cookieCode;
+            }
+        }
 
         if (typeof udf2 === 'string') {
             // Remove special characters that gateways reject, keeping basic punctuation.
             // Truncate to 50 characters to stay within typical UDF limits.
             udf2 = udf2.replace(/[^a-zA-Z0-9\s\-_.,@]/g, '').trim().substring(0, 50);
             orderData.udf2 = udf2;
+        }
+
+        if (typeof udf3 === 'string') {
+            udf3 = udf3.replace(/[^a-zA-Z0-9\s\-_.,@]/g, '').trim().substring(0, 50);
+            orderData.udf3 = udf3;
         }
 
         if (udf1 === 'CART_CHECKOUT') {
@@ -205,6 +215,34 @@ export async function POST(request) {
             udf2 = draftData.group_id;
             orderData.udf2 = udf2; // Override incoming udf2 with the newly generated group ID
             canonicalAmountPaise = draftData.total_paise;
+        } else if (udf1 === 'DAILY_CHALLENGE_SPONSORSHIP') {
+            // udf2 = sponsorDate (YYYY-MM-DD), udf3 = merchantId
+            const merchantId = udf3;
+            if (!merchantId) {
+                return failResponse(400, 'Missing merchant reference for sponsorship.', correlationId);
+            }
+            const { data: merchantOwner, error: mErr } = await supabaseAdmin
+                .from('merchants')
+                .select('user_id')
+                .eq('id', merchantId)
+                .single();
+
+            if (mErr || !merchantOwner) {
+                return failResponse(400, 'Invalid merchant reference.', correlationId, mErr);
+            }
+            if (merchantOwner.user_id !== user.id) {
+                return failResponse(403, 'Unauthorized: You do not own this merchant account.', correlationId);
+            }
+
+            // Fetch dynamic sponsorship fee
+            const { data: settingRow } = await supabaseAdmin
+                .from('marketing_settings')
+                .select('value')
+                .eq('key', 'rewards_config')
+                .maybeSingle();
+
+            const baseFeePaise = Number(settingRow?.value?.sponsorship_fee_paise || 99900);
+            canonicalAmountPaise = baseFeePaise + Math.round(baseFeePaise * 0.18);
         } else if (udf1 === 'MERCHANT_SUBSCRIPTION') {
             // ── Ownership verification: caller must own the merchant record they are paying for ──
             const { data: merchantOwner, error: merchantOwnerErr } = await supabaseAdmin

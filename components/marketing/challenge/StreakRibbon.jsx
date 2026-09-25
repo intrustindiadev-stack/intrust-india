@@ -130,17 +130,17 @@ export default function StreakRibbon({
                                         {effectiveStreak} Day Streak
                                     </motion.h3>
                                     {livePlayedToday ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs shrink-0 animate-fadeIn">
-                                            <CheckCircle2 size={12} className="text-emerald-700 stroke-[2.5]" />
+                                        <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs shrink-0 animate-fadeIn">
+                                            <CheckCircle2 size={13} className="text-emerald-700 stroke-[2.5]" />
                                             <span>Saved Today</span>
                                         </span>
                                     ) : (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 animate-pulse shrink-0">
+                                        <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 animate-pulse shrink-0">
                                             Play Daily Challenge
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-1 truncate">
+                                <p className="text-xs sm:text-sm text-slate-600 font-semibold mt-1 truncate">
                                     {daysToNext > 0 ? (
                                         <span>{daysToNext} {daysToNext === 1 ? 'day' : 'days'} to <strong className="text-orange-600 font-black">{nextMilestone.badge}</strong> (+₹{(nextMilestone.bonus_paise / 100).toFixed(0)} Extra)</span>
                                     ) : (
@@ -153,9 +153,9 @@ export default function StreakRibbon({
                         {/* Embedded Milestone Progress Bar */}
                         {nextMilestone && daysToNext > 0 && (
                             <div className="mt-2.5 max-w-sm sm:max-w-md">
-                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1">
+                                <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
                                     <span className="flex items-center gap-1">
-                                        <Sparkles size={10} className="text-amber-500" />
+                                        <Sparkles size={12} className="text-amber-500" />
                                         Next: {nextMilestone.badge}
                                     </span>
                                     <span className="text-orange-600 font-black">{progressPct}%</span>
@@ -173,15 +173,15 @@ export default function StreakRibbon({
                     </div>
 
                     {/* Middle: 7-Day Cycle Indicators (Responsive full-width on mobile, auto on desktop) */}
-                    <div className="w-full lg:w-auto flex items-center justify-between sm:justify-center gap-1 sm:gap-2 bg-white/95 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-orange-200/70 shadow-2xs">
+                    <div className="w-full lg:w-auto flex items-center justify-between sm:justify-center gap-1.5 sm:gap-2.5 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-orange-200/70 shadow-2xs">
                         {daysOfWeek.map((day, idx) => {
                             const isPast = idx < todayIndex;
                             const isCurrent = idx === todayIndex;
                             const isCompleted = isCurrent ? livePlayedToday : (isPast && (todayIndex - idx) <= pastDaysCompleted);
 
                             return (
-                                <div key={idx} className="flex-1 sm:flex-initial flex flex-col items-center gap-0.5 sm:gap-1">
-                                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
+                                <div key={idx} className="flex-1 sm:flex-initial flex flex-col items-center gap-1">
+                                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
                                         isCompleted 
                                             ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-xs' 
                                             : isCurrent 
@@ -189,14 +189,14 @@ export default function StreakRibbon({
                                             : 'bg-slate-100 text-slate-400'
                                     }`}>
                                         {isCompleted ? (
-                                            <CheckCircle2 size={13} className="stroke-[3]" />
+                                            <CheckCircle2 size={15} className="stroke-[3]" />
                                         ) : isCurrent ? (
-                                            <Flame size={13} className="fill-amber-500 text-amber-500" />
+                                            <Flame size={15} className="fill-amber-500 text-amber-500" />
                                         ) : (
-                                            <span className="text-[10px]">{day}</span>
+                                            <span className="text-xs font-bold">{day}</span>
                                         )}
                                     </div>
-                                    <span className={`text-[9px] font-bold ${isCurrent ? 'text-orange-600 font-black' : 'text-slate-400'}`}>
+                                    <span className={`text-xs font-bold ${isCurrent ? 'text-orange-600 font-black' : 'text-slate-400'}`}>
                                         {day}
                                     </span>
                                 </div>
@@ -209,19 +209,19 @@ export default function StreakRibbon({
                         <button
                             type="button"
                             onClick={() => setShowFreezeModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50/90 hover:bg-blue-100 border border-blue-200 text-blue-800 text-[11px] sm:text-xs font-bold transition-colors active:scale-95 shadow-2xs cursor-pointer"
+                            className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50/90 hover:bg-blue-100 border border-blue-200 text-blue-800 text-xs sm:text-sm font-bold transition-colors active:scale-95 shadow-2xs cursor-pointer"
                             title="Click to learn how Freeze Shield protects your streak"
                         >
-                            <Snowflake size={13} className="text-blue-600 animate-spin-slow" />
+                            <Snowflake size={14} className="text-blue-600 animate-spin-slow" />
                             <span>{liveFreezes} Freeze Shield</span>
-                            <HelpCircle size={11} className="text-blue-400" />
+                            <HelpCircle size={13} className="text-blue-400" />
                         </button>
 
                         {liveHighest > 0 && (
                             <div className="text-right shrink-0">
-                                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 block tracking-wider leading-none">Record</span>
-                                <span className="text-[11px] sm:text-xs font-black text-slate-900 flex items-center gap-0.5 justify-end mt-0.5">
-                                    <Trophy size={11} className="text-amber-500" /> {liveHighest} Days
+                                <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider leading-none">Record</span>
+                                <span className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-0.5 justify-end mt-0.5">
+                                    <Trophy size={13} className="text-amber-500" /> {liveHighest} Days
                                 </span>
                             </div>
                         )}

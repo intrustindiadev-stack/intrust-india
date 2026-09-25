@@ -382,6 +382,17 @@ export async function middleware(request) {
         }
     }
 
+    // ─── 3. Marketing Referral Attribution Persistence ─────────────────────────
+    const refParam = request.nextUrl.searchParams.get('ref');
+    if (refParam && typeof refParam === 'string' && refParam.length <= 32) {
+        response.cookies.set('intrust_affiliate_code', refParam.toUpperCase(), {
+            path: '/',
+            maxAge: 30 * 24 * 60 * 60, // 30-day persistent attribution
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+        });
+    }
+
     return response
 }
 

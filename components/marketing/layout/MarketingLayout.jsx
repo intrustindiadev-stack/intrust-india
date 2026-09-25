@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import MarketingAccessGate from '@/components/marketing/layout/MarketingAccessGate';
-import { MarketingWalletProvider } from '@/components/marketing/layout/MarketingWalletContext';
+import { MarketingWalletProvider, MarketingWalletPill } from '@/components/marketing/layout/MarketingWalletContext';
 import { supabase } from '@/lib/supabaseClient';
 
 const NotificationBell = dynamic(() => import('@/components/notifications/NotificationBell'), { ssr: false });
@@ -171,7 +171,7 @@ export default function MarketingLayout({
             initialBalancePaise={activeWalletPaise}
             walletHref={(isMerchant || isAdmin) ? '/merchant/wallet' : '/wallet'}
         >
-        <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 flex flex-col antialiased">
+        <div className={`min-h-screen ${accessGate ? 'h-screen h-dvh max-h-screen max-h-dvh overflow-hidden' : ''} bg-slate-50/60 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 flex flex-col antialiased`}>
             {/* Mobile Backdrop Overlay */}
             <div
                 className={`fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-xs transition-opacity duration-300 ${
@@ -205,7 +205,7 @@ export default function MarketingLayout({
                             <div className="flex items-center gap-1.5">
                                 <span className="font-black text-xl tracking-tight text-slate-900 dark:text-white">InTrust</span>
                             </div>
-                            <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
                                 Marketing Hub
                             </p>
                         </div>
@@ -224,10 +224,10 @@ export default function MarketingLayout({
                 <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin">
                     {/* Marketing Navigation Group */}
                     <div>
-                        <div className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2">
+                        <div className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2.5">
                             Marketing
                         </div>
-                        <nav className="space-y-1">
+                        <nav className="space-y-1.5">
                             {marketingNavItems.map((item) => {
                                 const Icon = item.icon;
                                 const isActive = pathname === item.href || (item.href !== '/marketing' && pathname.startsWith(item.href));
@@ -236,23 +236,23 @@ export default function MarketingLayout({
                                         key={item.href}
                                         href={item.href}
                                         onClick={() => setMobileDrawerOpen(false)}
-                                        className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                                        className={`flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm font-bold transition-all ${
                                             isActive
                                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-black'
                                                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <Icon size={18} className={isActive ? 'text-white' : 'text-slate-400'} />
+                                            <Icon size={19} className={isActive ? 'text-white' : 'text-slate-400'} />
                                             <span>{item.label}</span>
                                         </div>
                                         {accessGate && item.href !== '/marketing' ? (
-                                            <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                                                <Lock size={10} />
+                                            <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                                                <Lock size={11} />
                                                 <span>Locked</span>
                                             </span>
                                         ) : item.badge ? (
-                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                                            <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
                                                 isActive 
                                                     ? 'bg-white/20 text-white' 
                                                     : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60'
@@ -293,13 +293,13 @@ export default function MarketingLayout({
                                 )}
                             </div>
                             <div className="overflow-hidden flex-1 leading-tight">
-                                <p className="text-[11px] font-black truncate text-slate-800 dark:text-white uppercase tracking-tight">
+                                <p className="text-xs font-black truncate text-slate-800 dark:text-white uppercase tracking-tight">
                                     {displayName}
                                 </p>
                                 <Link 
                                     href={isMerchant ? "/merchant/profile" : "/profile"} 
                                     onClick={() => setMobileDrawerOpen(false)}
-                                    className="text-[9px] text-slate-500 dark:text-slate-400 truncate block hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-colors uppercase tracking-widest mt-0.5"
+                                    className="text-xs text-slate-500 dark:text-slate-400 truncate block hover:text-blue-600 dark:hover:text-blue-400 font-bold transition-colors mt-0.5"
                                 >
                                     {isMerchant ? "Merchant Profile" : "User Profile"}
                                 </Link>
@@ -319,9 +319,9 @@ export default function MarketingLayout({
             </aside>
 
             {/* Main Content Area */}
-            <div className="lg:pl-[280px] flex-1 flex flex-col min-w-0">
+            <div className={`lg:pl-[280px] flex-1 flex flex-col min-w-0 ${accessGate ? 'h-screen h-dvh max-h-screen max-h-dvh overflow-hidden' : ''}`}>
                 {/* Glassmorphic Top Header */}
-                <header className="sticky top-0 z-30 h-14 sm:h-16 lg:h-18 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4 transition-all">
+                <header className="shrink-0 sticky top-0 z-30 h-14 sm:h-16 lg:h-18 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4 transition-all">
                     {/* Mobile Hamburger + Search Input */}
                     <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-xl">
                         <button
@@ -342,7 +342,7 @@ export default function MarketingLayout({
                                     <span className="truncate">Search workspace, challenges, products...</span>
                                 </div>
                                 <div className="hidden xs:flex items-center gap-1 shrink-0 ml-2">
-                                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-[10px] font-mono font-bold text-slate-500 shadow-2xs">
+                                    <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-mono font-bold text-slate-500 shadow-2xs">
                                         Ctrl+K
                                     </kbd>
                                 </div>
@@ -350,9 +350,11 @@ export default function MarketingLayout({
                         </div>
                     </div>
 
-                    {/* Right Action Icons & Notifications
-                        (Live wallet pill now lives in MarketingBreadcrumbs so it shows on every marketing page) */}
+                    {/* Right Action Icons & Notifications */}
                     <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                        {/* Live Header Wallet Pill */}
+                        <MarketingWalletPill className="inline-flex" />
+
                         {/* Real-time Notification Bell */}
                         <div className="shrink-0">
                             <NotificationBell apiPath="/api/notifications" variant="navbar" />
@@ -383,18 +385,18 @@ export default function MarketingLayout({
                                         src={profile?.avatar_url || user?.user_metadata?.avatar_url} 
                                         alt={displayName} 
                                         fill 
-                                        sizes="32px"
+                                        sizes="32px" 
                                         className="object-cover" 
                                     />
                                 ) : (
-                                    <span className="text-[11px] sm:text-xs">{initials}</span>
+                                    <span className="text-xs font-black">{initials}</span>
                                 )}
                             </div>
                             <div className="hidden sm:flex flex-col text-left leading-none">
                                 <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[100px] lg:max-w-[120px]">
                                     {displayName}
                                 </span>
-                                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
+                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
                                     {isMerchant ? 'Merchant' : 'Customer'}
                                 </span>
                             </div>
@@ -403,7 +405,14 @@ export default function MarketingLayout({
                 </header>
 
                 {/* Page Content Body */}
-                <main key={pathname} className="panel-page-enter flex-1 max-w-7xl w-full mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-7 min-w-0 pb-24 lg:pb-8">
+                <main 
+                    key={pathname} 
+                    className={`panel-page-enter flex-1 max-w-7xl w-full mx-auto min-w-0 ${
+                        accessGate 
+                            ? 'flex items-center justify-center p-2 sm:p-4 mb-16 lg:mb-0 overflow-hidden min-h-0' 
+                            : 'px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-7 pb-24 lg:pb-8'
+                    }`}
+                >
                     {accessGate ? (
                         <MarketingAccessGate 
                             type={accessGate.type} 
@@ -418,7 +427,7 @@ export default function MarketingLayout({
                 </main>
 
                 {/* Spacer to prevent content from being hidden behind bottom nav on mobile */}
-                <div className="h-20 lg:hidden" />
+                {!accessGate && <div className="h-20 lg:hidden" />}
 
                 {/* Responsive Mobile Bottom Navigation — EXACTLY 5 BUTTONS */}
                 <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-800 shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
@@ -426,7 +435,7 @@ export default function MarketingLayout({
                         {/* 1. Overview */}
                         <Link
                             href="/marketing"
-                            className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl text-[10px] font-extrabold transition-all active:scale-95 ${
+                            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                                 pathname === '/marketing' 
                                     ? 'text-blue-600 dark:text-blue-400 font-black' 
                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -439,7 +448,7 @@ export default function MarketingLayout({
                         {/* 2. Products */}
                         <Link
                             href="/marketing/products"
-                            className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl text-[10px] font-extrabold transition-all active:scale-95 ${
+                            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                                 pathname.startsWith('/marketing/products') 
                                     ? 'text-blue-600 dark:text-blue-400 font-black' 
                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -452,7 +461,7 @@ export default function MarketingLayout({
                         {/* 3. Daily Challenge (Floating Raised Center Action) */}
                         <Link
                             href="/marketing/daily-challenge"
-                            className="flex-1 flex flex-col items-center justify-center py-1 px-0.5 text-[10px] font-extrabold relative transition-all active:scale-95 group -mt-5"
+                            className="flex-1 flex flex-col items-center justify-center py-1 px-0.5 text-xs font-bold relative transition-all active:scale-95 group -mt-5"
                         >
                             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-xl transition-transform group-hover:scale-105 ${
                                 pathname.startsWith('/marketing/daily-challenge')
@@ -461,7 +470,7 @@ export default function MarketingLayout({
                             }`}>
                                 <Trophy size={20} strokeWidth={2.5} />
                             </div>
-                            <span className={`text-[10px] font-bold mt-1 tracking-tight ${
+                            <span className={`text-xs font-bold mt-1 tracking-tight ${
                                 pathname.startsWith('/marketing/daily-challenge') 
                                     ? 'text-blue-600 dark:text-blue-400 font-black' 
                                     : 'text-slate-600 dark:text-slate-400'
@@ -473,7 +482,7 @@ export default function MarketingLayout({
                         {/* 4. Targets */}
                         <Link
                             href="/marketing/targets"
-                            className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl text-[10px] font-extrabold transition-all active:scale-95 ${
+                            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                                 pathname.startsWith('/marketing/targets') 
                                     ? 'text-blue-600 dark:text-blue-400 font-black' 
                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
@@ -486,7 +495,7 @@ export default function MarketingLayout({
                         {/* 5. Analytics */}
                         <Link
                             href="/marketing/analytics"
-                            className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl text-[10px] font-extrabold transition-all active:scale-95 ${
+                            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                                 pathname.startsWith('/marketing/analytics') 
                                     ? 'text-blue-600 dark:text-blue-400 font-black' 
                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'

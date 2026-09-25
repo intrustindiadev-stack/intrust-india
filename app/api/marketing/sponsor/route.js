@@ -59,13 +59,14 @@ export async function POST(req) {
         const sgstPaise = Math.round(baseFeePaise * 0.09);
         const totalWithGstPaise = baseFeePaise + cgstPaise + sgstPaise;
 
-        // 3. Resolve Merchant Profile
+        // 3. Resolve Merchant Profile (Strict Ownership Check)
         let merchantRow = null;
         if (body.merchantId) {
             const { data: mById } = await adminClient
                 .from('merchants')
-                .select('id, business_name, store_name, wallet_balance_paise')
+                .select('id, user_id, business_name, store_name, wallet_balance_paise, status, subscription_status, subscription_expires_at')
                 .eq('id', body.merchantId)
+                .eq('user_id', user.id)
                 .maybeSingle();
             merchantRow = mById;
         }
@@ -73,24 +74,14 @@ export async function POST(req) {
         if (!merchantRow) {
             const { data: mByUser } = await adminClient
                 .from('merchants')
-                .select('id, business_name, store_name, wallet_balance_paise')
+                .select('id, user_id, business_name, store_name, wallet_balance_paise, status, subscription_status, subscription_expires_at')
                 .eq('user_id', user.id)
                 .maybeSingle();
             merchantRow = mByUser;
         }
 
         if (!merchantRow) {
-            // Fallback for admin or merchant profile
-            const { data: fallbackM } = await adminClient
-                .from('merchants')
-                .select('id, business_name, store_name, wallet_balance_paise')
-                .limit(1)
-                .maybeSingle();
-            merchantRow = fallbackM;
-        }
-
-        if (!merchantRow) {
-            return NextResponse.json({ success: false, error: 'Merchant profile not found or unauthorized' }, { status: 400 });
+            return NextResponse.json({ success: false, error: 'Unauthorized: You do not own a verified merchant account' }, { status: 403 });
         }
 
         // 4. Resolve Products Information — product_ids are merchant_inventory.id values
@@ -100,12 +91,13 @@ export async function POST(req) {
             const { data: invProds } = await adminClient
                 .from('merchant_inventory')
                 .select('id')
+                .eq('merchant_id', merchantRow.id)
                 .in('id', productIds);
 
             if (invProds && invProds.length > 0) {
                 validProductIds = invProds.map(p => p.id);
             } else {
-                // Fallback: try shopping_products if IDs don't match merchant_inventory
+                // Fallback: try shopping_products
                 const { data: shopProds } = await adminClient
                     .from('shopping_products')
                     .select('id')
@@ -114,119 +106,112 @@ export async function POST(req) {
             }
         }
 
-        let newBalancePaise = 0;
+        let bookingId = null;
+        let newBalancePaise = Number(merchantRow.wallet_balance_paise || 0);
 
-        // 5. Handle InTrust Wallet Deduction
+        // 5. Handle InTrust Wallet Booking via Hardened RPC
         if (paymentMethod === 'wallet') {
-            const merchantPaise = Number(merchantRow?.wallet_balance_paise || 0);
+            const { data: rpcRes, error: rpcErr } = await adminClient.rpc('book_daily_challenge_sponsorship', {
+                p_sponsor_date: sponsorDate,
+                p_product_ids: validProductIds,
+                p_campaign_message: campaignMessage?.trim() || '',
+                p_payment_method: 'wallet',
+                p_client_txn_id: null,
+                p_merchant_id: merchantRow.id,
+                p_user_id: user.id
+            });
 
-            // Also check customer_wallets
-            const { data: custWallet } = await adminClient
-                .from('customer_wallets')
-                .select('id, balance_paise')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            const customerPaise = Number(custWallet?.balance_paise || 0);
-            const totalAvailablePaise = Math.max(merchantPaise, customerPaise);
-
-            if (totalAvailablePaise < totalWithGstPaise) {
+            if (rpcErr || !rpcRes?.success) {
                 return NextResponse.json({ 
                     success: false, 
-                    error: `Insufficient InTrust wallet balance (Available: ₹${(totalAvailablePaise / 100).toFixed(2)}). Please choose SabPaisa Gateway or top up your wallet.` 
+                    error: rpcErr?.message || rpcRes?.message || 'Failed to book sponsorship via wallet' 
                 }, { status: 400 });
             }
 
-            // Deduct from merchant wallet if funded, otherwise deduct from customer wallet
-            if (merchantPaise >= totalWithGstPaise) {
-                newBalancePaise = merchantPaise - totalWithGstPaise;
-                await adminClient
-                    .from('merchants')
-                    .update({ wallet_balance_paise: newBalancePaise })
-                    .eq('id', merchantRow.id);
-
-                try {
-                    await adminClient.from('merchant_transactions').insert({
-                        merchant_id: merchantRow.id,
-                        transaction_type: 'sponsorship_fee',
-                        amount_paise: -totalWithGstPaise,
-                        balance_after_paise: newBalancePaise,
-                        description: `Daily Challenge Sponsorship for ${sponsorDate}`,
-                        metadata: { sponsor_date: sponsorDate, payment_method: 'wallet' }
-                    });
-                } catch (e) {}
-            } else if (custWallet && customerPaise >= totalWithGstPaise) {
-                newBalancePaise = customerPaise - totalWithGstPaise;
-                await adminClient
-                    .from('customer_wallets')
-                    .update({ 
-                        balance_paise: newBalancePaise, 
-                        updated_at: new Date().toISOString() 
-                    })
-                    .eq('id', custWallet.id);
-
-                try {
-                    await adminClient.from('customer_wallet_transactions').insert({
-                        wallet_id: custWallet.id,
-                        user_id: user.id,
-                        type: 'DEBIT',
-                        amount_paise: totalWithGstPaise,
-                        balance_before_paise: customerPaise,
-                        balance_after_paise: newBalancePaise,
-                        description: `Daily Challenge Sponsorship for ${sponsorDate}`,
-                        reference_type: 'sponsorship'
-                    });
-                } catch (e) {}
+            bookingId = rpcRes.booking_id;
+            newBalancePaise = rpcRes.new_balance_paise;
+        } else if (paymentMethod === 'sabpaisa') {
+            // 6. Handle SabPaisa Payment: Verify Transaction Gateway Success
+            const clientTxnId = body.clientTxnId;
+            if (!clientTxnId || typeof clientTxnId !== 'string') {
+                return NextResponse.json({ 
+                    success: false, 
+                    error: 'A valid transaction reference (clientTxnId) is required for gateway booking' 
+                }, { status: 400 });
             }
-        }
 
-        // 6. Insert Sponsorship Record using correct column names matching DB schema
-        const { data: bookingRecord, error: bookErr } = await adminClient
-            .from('daily_challenge_sponsorships')
-            .insert({
-                merchant_id: merchantRow.id,
-                sponsor_date: sponsorDate,
-                product_ids: validProductIds,
-                campaign_message: campaignMessage || '',
-                fee_paise: baseFeePaise,
-                status: 'booked'
-            })
-            .select('id')
-            .single();
+            const { data: txn, error: txnErr } = await adminClient
+                .from('transactions')
+                .select('id, client_txn_id, status, user_id, amount, expected_amount_paise, udf1, udf2')
+                .eq('client_txn_id', clientTxnId)
+                .eq('user_id', user.id)
+                .eq('udf1', 'DAILY_CHALLENGE_SPONSORSHIP')
+                .maybeSingle();
 
-        if (bookErr) {
-            console.error('Error inserting sponsorship booking:', bookErr);
-            return NextResponse.json({ success: false, error: bookErr.message || 'Failed to persist sponsorship booking' }, { status: 500 });
-        }
+            if (txnErr || !txn) {
+                return NextResponse.json({ 
+                    success: false, 
+                    error: 'Payment transaction record not found or does not belong to your account' 
+                }, { status: 404 });
+            }
 
-        const bookingId = bookingRecord.id;
-        const invoiceNumber = `INV-MKT-${sponsorDate.replace(/-/g, '')}-${bookingId.slice(0, 6).toUpperCase()}`;
+            if (txn.status !== 'gateway_success') {
+                return NextResponse.json({ 
+                    success: false, 
+                    error: `Payment is not confirmed (gateway status: ${txn.status}). Cannot register sponsorship.` 
+                }, { status: 400 });
+            }
 
-        // 7. Write audit log into user's wallet_transactions if paid via wallet
-        if (paymentMethod === 'wallet') {
+            // Insert confirmed booking record
+            const { data: bookingRecord, error: bookErr } = await adminClient
+                .from('daily_challenge_sponsorships')
+                .insert({
+                    merchant_id: merchantRow.id,
+                    sponsor_date: sponsorDate,
+                    product_ids: validProductIds,
+                    campaign_message: campaignMessage?.trim() || '',
+                    fee_paise: totalWithGstPaise,
+                    status: 'booked'
+                })
+                .select('id')
+                .single();
+
+            if (bookErr) {
+                if (bookErr.code === '23505') {
+                    return NextResponse.json({ 
+                        success: false, 
+                        error: 'This date has already been booked by another merchant. Please contact support.' 
+                    }, { status: 409 });
+                }
+                console.error('Error inserting sponsorship booking:', bookErr);
+                return NextResponse.json({ success: false, error: bookErr.message || 'Failed to persist sponsorship booking' }, { status: 500 });
+            }
+
+            bookingId = bookingRecord.id;
+
+            // Record transaction ledger entry
             try {
-                await adminClient.from('wallet_transactions').insert({
-                    user_id: user.id,
-                    amount: totalWithGstPaise / 100,
-                    transaction_type: 'DEBIT',
-                    reference_type: 'sponsorship',
-                    reference_id: bookingId,
-                    description: `Daily Challenge Prime Sponsorship - ${sponsorDate}`,
+                await adminClient.from('merchant_transactions').insert({
+                    merchant_id: merchantRow.id,
+                    transaction_type: 'sponsorship',
+                    amount_paise: totalWithGstPaise,
+                    balance_after_paise: newBalancePaise,
+                    description: `Daily Challenge Sponsorship for ${sponsorDate} via SabPaisa`,
                     metadata: {
                         booking_id: bookingId,
                         sponsor_date: sponsorDate,
-                        invoice_number: invoiceNumber,
-                        payment_method: 'wallet',
-                        total_paise: totalWithGstPaise,
-                        base_fee_paise: baseFeePaise,
-                        cgst_paise: cgstPaise,
-                        sgst_paise: sgstPaise
+                        client_txn_id: clientTxnId,
+                        payment_method: 'sabpaisa'
                     }
                 });
-            } catch (wErr) {
-                console.warn('Could not write wallet_transactions log for sponsorship:', wErr);
+            } catch (mTxErr) {
+                console.warn('Could not write merchant_transactions for gateway sponsorship:', mTxErr);
             }
+        } else {
+            return NextResponse.json({ success: false, error: 'Invalid payment method' }, { status: 400 });
         }
+
+        const invoiceNumber = `INV-MKT-${sponsorDate.replace(/-/g, '')}-${bookingId.slice(0, 6).toUpperCase()}`;
 
         const invoice = {
             invoiceNumber,

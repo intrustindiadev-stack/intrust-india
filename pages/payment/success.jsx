@@ -21,6 +21,18 @@ const getConfig = (txnId, transaction, userRole) => {
     const isMerchantLockin = txnId?.startsWith('LKN_') || type === 'MERCHANT_LOCKIN';
     const isMerchantAiGrow = txnId?.startsWith('AIG_') || type === 'MERCHANT_AIGROW';
     const isAiOrder = txnId?.startsWith('AIO_') || type === 'AI_ORDER';
+    const isSponsorship = txnId?.startsWith('SPON_') || type === 'DAILY_CHALLENGE_SPONSORSHIP';
+
+    if (isSponsorship) return {
+        icon: <Star size={48} className="text-white" strokeWidth={2.5} />,
+        color: '#f59e0b',
+        title: 'Challenge Sponsored! 🎯',
+        subtitle: 'Your Daily Challenge sponsorship is confirmed! Quiz players will see your brand and featured products.',
+        redirectTo: '/marketing/daily-challenge/sponsor?booked=true',
+        redirectDelay: 3500,
+        redirectLabel: 'View Sponsorships',
+        showConfetti: true,
+    };
 
     if (isAiOrder) return {
         icon: <CheckCircle size={48} className="text-white" strokeWidth={2.5} />,
@@ -182,6 +194,7 @@ const SuccessPage = () => {
                     else if (txnId.startsWith('UDR_')) inferredUdf1 = 'UDHARI_PAYMENT';
                     else if (txnId.startsWith('LKN_')) inferredUdf1 = 'MERCHANT_LOCKIN';
                     else if (txnId.startsWith('AIG_')) inferredUdf1 = 'MERCHANT_AIGROW';
+                    else if (txnId.startsWith('SPON_')) inferredUdf1 = 'DAILY_CHALLENGE_SPONSORSHIP';
 
                     setTransaction({ udf1: inferredUdf1 });
                     setState('verified');

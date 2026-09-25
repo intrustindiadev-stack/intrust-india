@@ -52,38 +52,7 @@ export async function GET(request, { params }) {
             return NextResponse.redirect(new URL('/shop', baseUrl));
         }
 
-        // 2. Increment clicks count asynchronously without blocking redirection if it fails
-        try {
-            const nextClicks = (Number(link.clicks_count) || 0) + 1;
-            await supabase
-                .from('marketing_share_links')
-                .update({ clicks_count: nextClicks })
-                .eq('id', link.id);
-        } catch (e) {
-            console.warn('[Referral Route] Failed to update clicks count:', e?.message || e);
-        }
-
-        // 3. Log CLICK event safely
-        try {
-            const forwarded = request.headers?.get ? request.headers.get('x-forwarded-for') : null;
-            const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers?.get ? request.headers.get('x-real-ip') : null) || 'unknown';
-            const userAgent = request.headers?.get ? request.headers.get('user-agent') || 'unknown' : 'unknown';
-            const referer = request.headers?.get ? request.headers.get('referer') || 'direct' : 'direct';
-
-            await supabase
-                .from('marketing_tracking_events')
-                .insert({
-                    link_id: link.id,
-                    event_type: 'CLICK',
-                    visitor_ip: ip,
-                    user_agent: userAgent,
-                    metadata: { referer, code: link.code }
-                });
-        } catch (e) {
-            console.warn('[Referral Route] Failed to log tracking event:', e?.message || e);
-        }
-
-        // 4. Determine destination URL & fetch product metadata for rich social previews
+        // 2. Determine destination URL & fetch product metadata for rich social previews
         let destinationPath = '/shop';
         let prod = null;
 
@@ -110,7 +79,7 @@ export async function GET(request, { params }) {
 
         const userAgent = request.headers?.get ? request.headers.get('user-agent') || '' : '';
 
-        // 5. Bot Crawler Detection (WhatsApp, Telegram, Twitter, Facebook, LinkedIn, etc.)
+        // 3. Bot Crawler Detection (WhatsApp, Telegram, Twitter, Facebook, LinkedIn, etc.)
         const isBot = /bot|crawler|spider|facebookexternalhit|whatsapp|telegram|twitter|slack|linkedin|discord|embedly/i.test(userAgent);
 
         if (isBot) {
@@ -151,6 +120,32 @@ export async function GET(request, { params }) {
                 status: 200,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
             });
+        }
+
+        // 4. Real User Click: Increment clicks count atomically without blocking redirection
+        try {
+            await supabase.rpc('increment_marketing_link_clicks', { p_link_id: link.id });
+        } catch (e) {
+            console.warn('[Referral Route] Failed to atomically increment clicks count:', e?.message || e);
+        }
+
+        // 5. Log human CLICK event safely
+        try {
+            const forwarded = request.headers?.get ? request.headers.get('x-forwarded-for') : null;
+            const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers?.get ? request.headers.get('x-real-ip') : null) || 'unknown';
+            const referer = request.headers?.get ? request.headers.get('referer') || 'direct' : 'direct';
+
+            await supabase
+                .from('marketing_tracking_events')
+                .insert({
+                    link_id: link.id,
+                    event_type: 'CLICK',
+                    visitor_ip: ip,
+                    user_agent: userAgent,
+                    metadata: { referer, code: link.code }
+                });
+        } catch (e) {
+            console.warn('[Referral Route] Failed to log tracking event:', e?.message || e);
         }
 
         // 6. Build Redirect response to destination URL with referral code parameter & attribution cookies

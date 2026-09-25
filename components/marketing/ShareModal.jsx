@@ -12,8 +12,13 @@ import { supabase } from '@/lib/supabaseClient';
 
 // ─── Platform share helpers (each opens a new tab with the right URL) ────────
 
-function buildWhatsAppUrl(text) {
-    return `https://wa.me/?text=${encodeURIComponent(text)}`;
+// Each builder receives the share URL separately so it appears exactly once.
+// shareText must NOT contain the URL — it is appended by the builder or passed
+// as a separate param to the platform (prevents double-link on WhatsApp).
+
+function buildWhatsAppUrl(text, url) {
+    // WhatsApp: text + URL on a new line = one clean clickable preview
+    return `https://wa.me/?text=${encodeURIComponent(`${text}\n\n${url}`)}`;
 }
 
 function buildTelegramUrl(url, text) {
@@ -102,18 +107,21 @@ async function fetchImageFile(imageUrl, productId) {
     }
 }
 
+// nativeShare is ONLY used by the "More" button — platform-specific buttons
+// go direct to their URLs to avoid the double-link problem.
 async function nativeShare(imgFile, title, text, url) {
     if (typeof navigator === 'undefined' || !navigator.share) return false;
     try {
+        // text must NOT already contain the URL — pass url separately so the
+        // OS share sheet appends it once in the standard position.
         const payload = { title, text, url };
-        // Only attach file if browser confirms support
         if (imgFile && navigator.canShare?.({ files: [imgFile] })) {
             payload.files = [imgFile];
         }
         await navigator.share(payload);
         return true;
     } catch (err) {
-        if (err.name === 'AbortError') return true; // User cancelled / dismissed — treat as handled
+        if (err.name === 'AbortError') return true;
         return false;
     }
 }
@@ -137,6 +145,8 @@ export default function ShareModal({
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [imgFile, setImgFile]             = useState(null);
     const [imgPreviewOk, setImgPreviewOk]   = useState(true);
+    const [linkError, setLinkError]         = useState(null);
+    const [retryCount, setRetryCount]       = useState(0);
 
     const [mounted, setMounted]             = useState(false);
 
@@ -147,10 +157,13 @@ export default function ShareModal({
     const prodTitle = product?.title || product?.product_name || product?.name || 'Exclusive Deal';
     const prodPrice = product?.price || product?.retail_price || product?.selling_price || 0;
     const prodImage = product?.image || product?.image_url || '';
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://intrustindia.in';
-    const shareUrl = shortCode ? `${origin}/r/${shortCode}` : `${origin}/products/${product?.product_id || product?.id || ''}`;
+    const origin = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin) : 'https://intrustindia.com';
+    // Always use /r/{code} so clicks are tracked. Falls back to direct product URL.
+    const shareUrl = shortCode ? `${origin}/r/${shortCode}` : `${origin}/shop/product/${product?.product_id || product?.id || ''}`;
     const shareTitleShort = `Check out ${prodTitle} on InTrust!`;
-    const shareText = `🔥 Special Deal: ${prodTitle} at just ₹${prodPrice}!\nOrder now and get exclusive cashback on InTrust: ${shareUrl}`;
+    // ⚠️ shareText must NOT contain the URL — each platform builder appends it
+    // once in the correct position. This prevents the double-link bug.
+    const shareText = `🔥 Special Deal: ${prodTitle} at just ₹${prodPrice}!\nOrder now and get exclusive cashback on InTrust.`;
 
     const registrationBonus = Math.round(
         (rewardsConfig?.campaign_share_bonus_paise
@@ -172,6 +185,7 @@ export default function ShareModal({
 
         const initLink = async () => {
             setLoading(true);
+            setLinkError(null);
             try {
                 const isValidUUID = (s) =>
                     typeof s === 'string' &&
@@ -201,34 +215,64 @@ export default function ShareModal({
                         orders: Number(existing.orders_count || 0)
                     });
                 } else {
-                    const generatedCode = Math.random().toString(36).substring(2, 9).toUpperCase();
-                    const { data: created, error } = await supabase
-                        .from('marketing_share_links')
-                        .insert({
-                            user_id: user.id,
-                            user_type: merchant?.id ? 'merchant' : 'customer',
-                            merchant_id: merchant?.id || null,
-                            product_id: safeProductId,
-                            product_type: product.is_merchant_inventory ? 'merchant' : 'platform',
-                            code: generatedCode,
-                            source: 'direct',
-                            shares_count: 1
-                        })
-                        .select('id, code, clicks_count, shares_count, registrations_count, orders_count')
-                        .single();
+                    const generateCryptoCode = () => {
+                        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                        let code = '';
+                        if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+                            const bytes = new Uint8Array(8);
+                            window.crypto.getRandomValues(bytes);
+                            for (let i = 0; i < 8; i++) code += chars[bytes[i] % chars.length];
+                        } else {
+                            for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+                        }
+                        return code;
+                    };
+
+                    let created = null;
+                    let lastErr = null;
+                    for (let attempt = 0; attempt < 3; attempt++) {
+                        const candidateCode = generateCryptoCode();
+                        const { data, error } = await supabase
+                            .from('marketing_share_links')
+                            .insert({
+                                user_id: user.id,
+                                user_type: merchant?.id ? 'merchant' : 'customer',
+                                merchant_id: merchant?.id || null,
+                                product_id: safeProductId,
+                                product_type: product.is_merchant_inventory ? 'merchant' : 'platform',
+                                code: candidateCode,
+                                source: 'direct',
+                                shares_count: 1
+                            })
+                            .select('id, code, clicks_count, shares_count, registrations_count, orders_count')
+                            .single();
+
+                        if (!error && data) {
+                            created = data;
+                            break;
+                        }
+                        lastErr = error;
+                        if (error?.code !== '23505') break; // Non-uniqueness error, don't spin
+                    }
+
                     if (!cancelled) {
-                        const finalCode = !error && created ? created.code : generatedCode;
-                        setShortCode(finalCode);
-                        setLinkMetrics({
-                            shares: Number(created?.shares_count || 1),
-                            clicks: Number(created?.clicks_count || 0),
-                            registrations: Number(created?.registrations_count || 0),
-                            orders: Number(created?.orders_count || 0)
-                        });
+                        if (created?.code) {
+                            setShortCode(created.code);
+                            setLinkMetrics({
+                                shares: Number(created?.shares_count || 1),
+                                clicks: Number(created?.clicks_count || 0),
+                                registrations: Number(created?.registrations_count || 0),
+                                orders: Number(created?.orders_count || 0)
+                            });
+                        } else {
+                            console.error('[ShareModal] Could not create share link:', lastErr);
+                            setLinkError('Failed to generate tracking link. Please tap Retry.');
+                        }
                     }
                 }
-            } catch {
-                if (!cancelled) setShortCode('REF' + Math.floor(1000 + Math.random() * 9000));
+            } catch (err) {
+                console.error('[ShareModal] initLink failed:', err);
+                if (!cancelled) setLinkError('Network error initializing link.');
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -236,7 +280,7 @@ export default function ShareModal({
 
         initLink();
         return () => { cancelled = true; };
-    }, [isOpen, product?.id, product?.product_id, user?.id, merchant?.id]);
+    }, [isOpen, product?.id, product?.product_id, user?.id, merchant?.id, retryCount]);
 
     // ── Pre-fetch & convert image file for native share (No WebP) ────────────
     useEffect(() => {
@@ -261,7 +305,7 @@ export default function ShareModal({
             const rawId = product.product_id || product.id;
             const safeProductId = typeof rawId === 'string' && rawId.length === 36 ? rawId : null;
 
-            await supabase.rpc('process_marketing_conversion_reward', {
+            await supabase.rpc('process_marketing_referral_reward', {
                 p_event_type: 'SHARE',
                 p_ref_code: shortCode,
                 p_converted_user_id: user?.id,
@@ -302,15 +346,29 @@ export default function ShareModal({
     };
 
     // ── Per-channel share handlers ────────────────────────────────────────────
-    const shareChannel = async (channelFn) => {
+    // Platform-specific buttons go DIRECTLY to the platform URL — no nativeShare().
+    // nativeShare is reserved for the "More" button only. This prevents the
+    // double-link bug where the URL appeared in both shareText and as the native
+    // share `url` field.
+    const shareDirect = async (urlFn) => {
         if (sharing) return;
         setSharing(true);
         try {
-            // Try native share with image first (best UX on mobile)
+            window.open(urlFn(), '_blank', 'noopener,noreferrer');
+            trackShare();
+        } finally {
+            setSharing(false);
+        }
+    };
+
+    // "More" button — uses native OS share sheet (image + text + url separately)
+    const shareNativeMore = async () => {
+        if (sharing) return;
+        setSharing(true);
+        try {
             const shared = await nativeShare(imgFile, shareTitleShort, shareText, shareUrl);
             if (!shared) {
-                // Fall back to platform-specific URL
-                window.open(channelFn(), '_blank', 'noopener,noreferrer');
+                window.open(buildWhatsAppUrl(shareText, shareUrl), '_blank', 'noopener,noreferrer');
             }
             trackShare();
         } finally {
@@ -318,12 +376,12 @@ export default function ShareModal({
         }
     };
 
-    const shareWhatsApp  = () => shareChannel(() => buildWhatsAppUrl(shareText));
-    const shareTelegram  = () => shareChannel(() => buildTelegramUrl(shareUrl, shareText));
-    const shareTwitter   = () => shareChannel(() => buildTwitterUrl(shareUrl, shareTitleShort + ' #InTrust #Deals'));
-    const shareFacebook  = () => shareChannel(() => buildFacebookUrl(shareUrl));
-    const shareLinkedIn  = () => shareChannel(() => buildLinkedInUrl(shareUrl));
-    const shareNative    = () => shareChannel(() => buildWhatsAppUrl(shareText)); // fallback
+    const shareWhatsApp = () => shareDirect(() => buildWhatsAppUrl(shareText, shareUrl));
+    const shareTelegram = () => shareDirect(() => buildTelegramUrl(shareUrl, shareText));
+    const shareTwitter  = () => shareDirect(() => buildTwitterUrl(shareUrl, shareTitleShort + ' #InTrust #Deals'));
+    const shareFacebook = () => shareDirect(() => buildFacebookUrl(shareUrl));
+    const shareLinkedIn = () => shareDirect(() => buildLinkedInUrl(shareUrl));
+    const shareNative   = shareNativeMore; // alias for channel config below
 
     // ── Social channel buttons config ─────────────────────────────────────────
     const channels = [
@@ -389,7 +447,7 @@ export default function ShareModal({
                             <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-lg font-black text-slate-900 dark:text-white">₹{prodPrice}</span>
                                 {product?.discount_percent > 0 && (
-                                    <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                                    <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                                         {product.discount_percent}% OFF
                                     </span>
                                 )}
@@ -398,46 +456,59 @@ export default function ShareModal({
 
                         {/* Cashback reward badges */}
                         <div className="flex gap-2">
-                            <div className="flex-1 flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60">
-                                <Gift size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div className="flex-1 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60">
+                                <Gift size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                                 <div className="min-w-0">
-                                    <p className="text-[9px] font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider leading-none">New User Joins</p>
-                                    <p className="text-xs font-black text-emerald-900 dark:text-emerald-200">Assured Cashback</p>
+                                    <p className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider leading-none">New User Joins</p>
+                                    <p className="text-xs sm:text-sm font-black text-emerald-900 dark:text-emerald-200 mt-0.5">Assured Cashback</p>
                                 </div>
                             </div>
-                            <div className="flex-1 flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60">
-                                <Gift size={13} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                            <div className="flex-1 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60">
+                                <Gift size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
                                 <div className="min-w-0">
-                                    <p className="text-[9px] font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wider leading-none">They Order</p>
-                                    <p className="text-xs font-black text-blue-900 dark:text-blue-200">Instant Cashback</p>
+                                    <p className="text-xs font-extrabold text-blue-700 dark:text-blue-400 uppercase tracking-wider leading-none">They Order</p>
+                                    <p className="text-xs sm:text-sm font-black text-blue-900 dark:text-blue-200 mt-0.5">Instant Cashback</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Share link — clickable anchor */}
-                        <div className="flex items-center gap-2">
-                            <a
-                                href={loading ? undefined : shareUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 truncate hover:underline"
-                            >
-                                <ExternalLink size={11} className="shrink-0 text-slate-400" />
-                                {loading ? 'Generating link…' : shareUrl}
-                            </a>
-                            <button
-                                onClick={handleCopy}
-                                className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
-                            >
-                                {copied ? <Check size={13} strokeWidth={3} /> : <Copy size={13} />}
-                                <span>{copied ? 'Copied!' : 'Copy'}</span>
-                            </button>
-                        </div>
+                        {/* Share link — clickable anchor or error retry */}
+                        {linkError ? (
+                            <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs">
+                                <span className="font-semibold text-rose-600 dark:text-rose-400">{linkError}</span>
+                                <button
+                                    onClick={() => setRetryCount(c => c + 1)}
+                                    className="px-3 py-1 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 transition-colors shrink-0"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={loading ? undefined : shareUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="min-h-[44px] flex-1 flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 truncate hover:underline"
+                                >
+                                    <ExternalLink size={13} className="shrink-0 text-slate-400" />
+                                    <span className="truncate">{loading ? 'Generating link…' : shareUrl}</span>
+                                </a>
+                                <button
+                                    onClick={handleCopy}
+                                    disabled={loading || !shortCode}
+                                    className="min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                                >
+                                    {copied ? <Check size={14} strokeWidth={3} /> : <Copy size={14} />}
+                                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                                </button>
+                            </div>
+                        )}
 
                         {/* Divider */}
                         <div className="flex items-center gap-2">
                             <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Share via</span>
+                            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Share via</span>
                             <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                         </div>
 
@@ -448,16 +519,16 @@ export default function ShareModal({
                                     key={ch.id}
                                     onClick={ch.fn}
                                     disabled={sharing || loading}
-                                    className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl ${ch.color} text-white text-[10px] font-bold transition-all active:scale-95 shadow-xs disabled:opacity-60 cursor-pointer`}
+                                    className={`min-h-[48px] flex flex-col items-center justify-center gap-1 py-2.5 px-2 rounded-2xl ${ch.color} text-white text-xs font-bold transition-all active:scale-95 shadow-xs disabled:opacity-60 cursor-pointer`}
                                 >
                                     <span className="flex items-center justify-center w-5 h-5">{ch.icon}</span>
-                                    <span className="leading-none">{ch.label}</span>
+                                    <span className="leading-none mt-0.5">{ch.label}</span>
                                 </button>
                             ))}
                         </div>
 
                         {/* Footer note */}
-                        <p className="text-center text-[10px] text-slate-400 dark:text-slate-600 font-medium">
+                        <p className="text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
                             Product image + deal link included with every share
                         </p>
                     </div>
