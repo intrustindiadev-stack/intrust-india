@@ -140,6 +140,12 @@ export default function AdminInvestmentsPage() {
         if (inv.status === 'pending') {
             acc[mId].pendingCount++;
         }
+        if (inv.status === 'completed') {
+            acc[mId].completedCount = (acc[mId].completedCount || 0) + 1;
+        }
+        if (inv.status === 'rejected') {
+            acc[mId].rejectedCount = (acc[mId].rejectedCount || 0) + 1;
+        }
         acc[mId].totalPaid += (inv.total_profit_paid_paise || 0);
         return acc;
     }, {});
@@ -151,7 +157,9 @@ export default function AdminInvestmentsPage() {
                               g.merchant?.user_profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesTab = activeTab === 'all' || 
                            (activeTab === 'active' && g.activeCount > 0) ||
-                           (activeTab === 'pending' && g.pendingCount > 0);
+                           (activeTab === 'pending' && g.pendingCount > 0) ||
+                           (activeTab === 'completed' && (g.completedCount || 0) > 0) ||
+                           (activeTab === 'rejected' && (g.rejectedCount || 0) > 0);
         return matchesSearch && matchesTab;
     });
 
@@ -279,7 +287,7 @@ export default function AdminInvestmentsPage() {
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
                             {/* Status Filter Chips */}
                             <div className="flex p-1 bg-slate-100/90 rounded-xl overflow-x-auto no-scrollbar">
-                                {['all', 'active', 'pending', 'rejected'].map(tab => (
+                                {['all', 'active', 'pending', 'completed', 'rejected'].map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
@@ -362,89 +370,111 @@ export default function AdminInvestmentsPage() {
                                                 </span>
                                             </div>
 
-                                            {/* Simulated Order Performance Subtitle */}
-                                            {inv.latest_order ? (
-                                                <div className="mt-3 py-1.5 px-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl flex items-center justify-between text-[11px] text-slate-600 font-medium">
-                                                    <span className="font-bold text-slate-900">{inv.latest_order.category || 'General'}</span>
-                                                    <span>{new Date(inv.latest_order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                                    {inv.latest_order.location && (
-                                                        <span className="text-slate-500 truncate max-w-[120px]">📍 {inv.latest_order.location}</span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="mt-2 text-[10px] text-slate-400 font-medium">
-                                                    Deployed {new Date(inv.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                </div>
-                                            )}
-
-                                            {/* Capital & Simulated Profit Metrics */}
+                                            {/* Capital & Total Simulated Profit Metrics */}
                                             <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100">
                                                 <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Capital</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Capital Deployment</p>
                                                     <p className="text-base font-black text-slate-900">₹{(inv.amount_paise / 100).toLocaleString('en-IN')}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Simulated Profit</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Simulated Profit</p>
                                                     <p className="text-base font-black text-emerald-600">₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}</p>
                                                 </div>
                                             </div>
 
+                                            {/* Simulated Orders List */}
+                                            {inv.orders && inv.orders.length > 0 ? (
+                                                <div className="mt-3.5 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                            Simulated Orders ({inv.orders.length})
+                                                        </p>
+                                                    </div>
+                                                    {inv.orders.map((ord, idx) => (
+                                                        <div key={ord.id} className="p-3 bg-slate-50/90 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
+                                                            <div className="min-w-0 pr-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-slate-900">Order #{idx + 1}</span>
+                                                                    <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold">
+                                                                        {ord.category || 'General'}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-slate-400">
+                                                                        {new Date(ord.order_date).toLocaleDateString('en-IN')}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
+                                                                    <span>Capital: <strong className="text-slate-800">₹{(ord.amount_paise / 100).toLocaleString('en-IN')}</strong></span>
+                                                                    <span>Profit: <strong className="text-emerald-600">+₹{(ord.profit_paise / 100).toLocaleString('en-IN')}</strong></span>
+                                                                </div>
+                                                                {ord.location && (
+                                                                    <p className="text-[10px] text-slate-400 truncate mt-0.5">📍 {ord.location}</p>
+                                                                )}
+                                                            </div>
+                                                            {inv.status === 'active' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openEditOrder(inv, ord)}
+                                                                    className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/50 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 flex items-center gap-1"
+                                                                >
+                                                                    <Edit3 size={11} /> Edit
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="mt-3.5 py-2 px-3 bg-slate-50/60 border border-slate-100 rounded-xl flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                                                    <span className="font-bold uppercase text-[9px] tracking-wider text-slate-400">Simulated Orders</span>
+                                                    <span className="italic">No orders recorded yet</span>
+                                                </div>
+                                            )}
+
                                             {/* Mobile Action Controls */}
-                                            <div className="flex flex-wrap items-center gap-2 mt-3.5 pt-3 border-t border-slate-100">
+                                            <div className="mt-3.5 pt-3 border-t border-slate-100 space-y-2">
                                                 {inv.status === 'active' && (
-                                                    <>
-                                                        {inv.orders && inv.orders.length > 0 ? (
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => openEditOrder(inv, inv.latest_order)}
-                                                                className="flex-1 min-w-[110px] py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 border border-amber-200/50"
-                                                            >
-                                                                <Edit3 size={14} /> Edit Order
-                                                            </button>
-                                                        ) : (
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => openCreateOrder(inv)}
-                                                                className="flex-1 min-w-[110px] py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                                                            >
-                                                                <Plus size={14} /> Feed Order
-                                                            </button>
-                                                        )}
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => openCreateOrder(inv)}
+                                                            className="py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                                                        >
+                                                            <Plus size={14} /> Feed Order
+                                                        </button>
                                                         {isSuperAdmin && (
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => setSettlingInvestment(inv)}
-                                                                className="flex-1 min-w-[85px] py-2.5 px-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs"
+                                                                className="py-2.5 px-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs"
                                                             >
                                                                 <Banknote size={14} /> Settle
                                                             </button>
                                                         )}
-                                                    </>
+                                                    </div>
                                                 )}
                                                 {isSuperAdmin && inv.status === 'pending' && (
-                                                    <>
+                                                    <div className="grid grid-cols-2 gap-2">
                                                         <button 
                                                             type="button"
                                                             onClick={() => handleUpdateStatus(inv.id, 'active')}
-                                                            className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                                                            className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
                                                         >
                                                             Approve
                                                         </button>
                                                         <button 
                                                             type="button"
                                                             onClick={() => handleUpdateStatus(inv.id, 'rejected')}
-                                                            className="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                                                            className="py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
                                                         >
                                                             Reject
                                                         </button>
-                                                    </>
+                                                    </div>
                                                 )}
                                                 <button 
                                                     type="button"
                                                     onClick={() => router.push(`/admin/portfolio/${inv.merchant_id}`)}
-                                                    className="py-2.5 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shrink-0"
+                                                    className="w-full py-2 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                                                 >
-                                                    <Eye size={14} /> View
+                                                    <Eye size={14} /> View Merchant Portfolio
                                                 </button>
                                             </div>
                                         </div>
@@ -531,23 +561,31 @@ export default function AdminInvestmentsPage() {
                                                                 )}
                                                                 {inv.status === 'active' && (
                                                                     <>
-                                                                        {inv.orders && inv.orders.length > 0 ? (
+                                                                        {inv.orders && inv.orders.length === 1 && (
                                                                             <button 
-                                                                                onClick={(e) => { e.stopPropagation(); openEditOrder(inv, inv.latest_order); }} 
+                                                                                onClick={(e) => { e.stopPropagation(); openEditOrder(inv, inv.orders[0]); }} 
                                                                                 title="Edit Simulated Order" 
                                                                                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 border border-amber-200/50"
                                                                             >
                                                                                 <Edit3 size={13} /> Edit Order
                                                                             </button>
-                                                                        ) : (
+                                                                        )}
+                                                                        {inv.orders && inv.orders.length > 1 && (
                                                                             <button 
-                                                                                onClick={(e) => { e.stopPropagation(); openCreateOrder(inv); }} 
-                                                                                title="Feed New Order" 
-                                                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                                                                                onClick={(e) => { e.stopPropagation(); router.push(`/admin/portfolio/${inv.merchant_id}`); }} 
+                                                                                title="Manage Orders in Portfolio" 
+                                                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs active:scale-95 border border-amber-200/50"
                                                                             >
-                                                                                <Plus size={13} /> Feed Order
+                                                                                <Edit3 size={13} /> Orders ({inv.orders.length})
                                                                             </button>
                                                                         )}
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); openCreateOrder(inv); }} 
+                                                                            title="Feed New Order" 
+                                                                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-xs active:scale-95"
+                                                                        >
+                                                                            <Plus size={13} /> Feed Order
+                                                                        </button>
                                                                         {isSuperAdmin && (
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); setSettlingInvestment(inv); }}
@@ -592,9 +630,10 @@ export default function AdminInvestmentsPage() {
                                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{group.merchant?.user_profiles?.full_name}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
                                                     {group.activeCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">{group.activeCount} Active</span>}
                                                     {group.pendingCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">{group.pendingCount} Pending</span>}
+                                                    {group.completedCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100">{group.completedCount} Completed</span>}
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
@@ -662,6 +701,7 @@ export default function AdminInvestmentsPage() {
                                                             <div className="flex items-center gap-2">
                                                                 {group.activeCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">Active</span>}
                                                                 {group.pendingCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">Pending</span>}
+                                                                {group.completedCount > 0 && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100">Completed</span>}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 md:px-8 py-5 text-right">

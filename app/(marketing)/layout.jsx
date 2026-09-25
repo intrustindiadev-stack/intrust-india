@@ -2,32 +2,34 @@ import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import MarketingLayout from '@/components/marketing/layout/MarketingLayout';
+import CustomerAppShell from '@/components/layout/customer/CustomerAppShell';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export const metadata = {
-    title: 'Marketing Hub | InTrust India',
-    description: 'Empowering local businesses and creators across India. Share, inspire, and grow together.',
+    title: 'Marketing Hub — Coming Soon | InTrust India',
+    description: 'Empowering local businesses and creators across India. Daily cash challenges, deal sharing, and rewards launching soon.',
 };
 
 export default async function MarketingRootLayout({ children }) {
     const supabase = await createServerSupabaseClient();
+    const headerList = await headers();
+    const pathname = headerList.get('x-current-path') || '/marketing';
 
     // 1. Authenticate user
     const {
         data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-        const headerList = await headers();
-        const pathname = headerList.get('x-current-path') || '/marketing';
-        redirect(`/login?returnUrl=${encodeURIComponent(pathname)}`);
-    }
-
     // 2. Fetch User Profile
-    const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id, role, full_name, email, phone, avatar_url, kyc_status')
-        .eq('id', user.id)
-        .maybeSingle();
+    let profile = null;
+    if (user) {
+        const { data: p } = await supabase
+            .from('user_profiles')
+            .select('id, role, full_name, email, phone, avatar_url, kyc_status')
+            .eq('id', user.id)
+            .maybeSingle();
+        profile = p;
+    }
 
     const role = profile?.role || 'customer';
     const isMerchant = role === 'merchant';
@@ -37,6 +39,24 @@ export default async function MarketingRootLayout({ children }) {
     // they have complete access and overview in the Admin Control Center.
     if (isAdmin) {
         redirect('/admin/marketing');
+    }
+
+    // ── Coming Soon Handler ──────────────────────────────────────────
+    if (IS_MARKETING_COMING_SOON) {
+        // Any subroute under /marketing/* (like /marketing/daily-challenge) is redirected to /marketing
+        if (pathname !== '/marketing') {
+            redirect('/marketing');
+        }
+
+        return (
+            <CustomerAppShell fullWidth={true}>
+                {children}
+            </CustomerAppShell>
+        );
+    }
+
+    if (!user) {
+        redirect(`/login?returnUrl=${encodeURIComponent(pathname)}`);
     }
 
     // 3. Fetch Merchant Context if user is merchant or admin

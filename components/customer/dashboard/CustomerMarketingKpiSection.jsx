@@ -12,8 +12,10 @@ import {
     ChevronRight, 
     CheckCircle2,
     Coins,
-    Wallet
+    Wallet,
+    Clock
 } from 'lucide-react';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export default function CustomerMarketingKpiSection({
     quizStats = {
@@ -55,21 +57,28 @@ export default function CustomerMarketingKpiSection({
                                 <Sparkles size={11} className="text-amber-300" />
                                 InTrust Marketing Hub
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-emerald-400 text-emerald-950 shadow-2xs">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-950 animate-pulse" />
-                                Instant Wallet Cash
-                            </span>
+                            {IS_MARKETING_COMING_SOON ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-amber-400 text-amber-950 shadow-2xs">
+                                    <Clock size={10} />
+                                    Coming Soon
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide bg-emerald-400 text-emerald-950 shadow-2xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-950 animate-pulse" />
+                                    Instant Wallet Cash
+                                </span>
+                            )}
                         </div>
 
                         {/* Title & Robo Voice Explanation */}
                         <div>
                             <h3 className="text-base sm:text-lg font-black tracking-tight leading-snug">
-                                Check out our Marketing Hub!
+                                {IS_MARKETING_COMING_SOON ? 'Marketing Hub is Coming Soon!' : 'Check out our Marketing Hub!'}
                             </h3>
                             {/* Speech Bubble from Robo */}
                             <div className="mt-1.5 p-2.5 sm:p-3 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-xs sm:text-[13px] leading-relaxed font-medium text-blue-50 text-left relative">
                                 <p>
-                                    👋 <strong>Hey!</strong> Play our daily challenge, protect your streak, promote products to earn instant cashback, and win real mystery electronics & hampers!
+                                    👋 <strong>Hey!</strong> We're preparing exciting daily challenge quizzes, streak rewards, and product sharing with instant cashbacks. Launching soon!
                                 </p>
                             </div>
                         </div>
@@ -87,7 +96,7 @@ export default function CustomerMarketingKpiSection({
                                 href="/marketing"
                                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 text-xs font-black shadow-md shadow-black/10 transition-all active:scale-95 group shrink-0"
                             >
-                                <span>Visit Marketing Hub</span>
+                                <span>{IS_MARKETING_COMING_SOON ? 'Marketing Hub (Soon)' : 'Visit Marketing Hub'}</span>
                                 <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                             </Link>
                         </div>

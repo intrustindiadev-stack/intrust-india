@@ -125,7 +125,7 @@ export default function Navbar() {
     const navItems = [
         { label: 'Home', href: '/' },
         { label: 'Shop', href: '/shop' },
-        { label: '✦ Marketing', href: '/marketing', isSpecial: true },
+        { label: '✦ Marketing', href: '/marketing', isSpecial: true, badge: 'Soon' },
         { label: 'Services', href: '/services' },
         { label: 'About', href: '/about' },
         { label: 'Contact', href: '/contact' },
@@ -179,7 +179,14 @@ export default function Navbar() {
                                             : 'text-slate-600 dark:text-on-surface-variant hover:text-slate-900 dark:hover:text-on-surface hover:bg-slate-100/70 dark:hover:bg-surface-container-high'
                                     }`}
                                 >
-                                    {item.label}
+                                    <span className="flex items-center gap-1.5">
+                                        <span>{item.label}</span>
+                                        {item.badge && (
+                                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </span>
                                 </Link>
                             );
                         })}
@@ -295,7 +302,7 @@ export default function Navbar() {
                                                     <Sparkles size={15} className="text-blue-600 dark:text-blue-400" />
                                                     <span>Marketing Hub</span>
                                                 </div>
-                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-600 text-white">NEW</span>
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950">SOON</span>
                                             </Link>
                                             <Link
                                                 href="/orders"

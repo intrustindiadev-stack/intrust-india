@@ -7,8 +7,10 @@ import {
     Gift, 
     Banknote, 
     ArrowRight, 
-    Sparkles 
+    Sparkles,
+    Clock
 } from 'lucide-react';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export default function MarketingKpiStrip({ stats = {} }) {
     const {
@@ -74,9 +76,17 @@ export default function MarketingKpiStrip({ stats = {} }) {
                         <Sparkles size={17} />
                     </div>
                     <div>
-                        <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                            Marketing & Growth Operations
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                                Marketing & Growth Operations
+                            </h3>
+                            {IS_MARKETING_COMING_SOON && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
+                                    <Clock size={10} />
+                                    Pre-Launch (Coming Soon)
+                                </span>
+                            )}
+                        </div>
                         <p className="text-xs text-slate-500 font-medium">
                             Real-time overview of referral links, trivia participation, sponsorships, and reward payouts.
                         </p>
@@ -87,7 +97,7 @@ export default function MarketingKpiStrip({ stats = {} }) {
                     href="/admin/marketing"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs shrink-0 self-start sm:self-auto group"
                 >
-                    <span>Open Marketing Suite</span>
+                    <span>{IS_MARKETING_COMING_SOON ? 'Open Suite (Pre-Launch)' : 'Open Marketing Suite'}</span>
                     <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
                 </Link>
             </div>

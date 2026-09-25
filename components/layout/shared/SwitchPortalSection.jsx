@@ -13,6 +13,8 @@ import {
     Sparkles
 } from 'lucide-react';
 
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
+
 /**
  * Reusable Switch Portal Section for Sidebars & Mobile Drawers
  * High-performance, compact, ultra-clean UI for both desktop and mobile
@@ -87,10 +89,10 @@ export default function SwitchPortalSection({
             id: 'marketing',
             name: 'Marketing Hub',
             shortName: 'Marketing',
-            subtitle: 'Sponsor & Boost',
+            subtitle: IS_MARKETING_COMING_SOON ? 'Coming Soon' : 'Sponsor & Boost',
             href: '/marketing',
             icon: Megaphone,
-            badge: 'GROW',
+            badge: IS_MARKETING_COMING_SOON ? 'SOON' : 'GROW',
             borderClass: 'border-blue-500/20 hover:border-blue-500/40 bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-transparent',
             iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white',
             textColor: 'text-blue-600 dark:text-blue-400'
@@ -103,10 +105,10 @@ export default function SwitchPortalSection({
             id: 'marketing',
             name: 'Marketing Hub',
             shortName: 'Marketing',
-            subtitle: isMerchant ? 'Sponsor & Boost' : 'Quiz & Earn ₹',
+            subtitle: IS_MARKETING_COMING_SOON ? 'Coming Soon' : (isMerchant ? 'Sponsor & Boost' : 'Quiz & Earn ₹'),
             href: '/marketing',
             icon: Megaphone,
-            badge: isMerchant ? 'GROW' : 'WIN ₹',
+            badge: IS_MARKETING_COMING_SOON ? 'SOON' : (isMerchant ? 'GROW' : 'WIN ₹'),
             borderClass: 'border-blue-500/20 hover:border-blue-500/40 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/5',
             iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white',
             textColor: 'text-blue-600 dark:text-blue-400'

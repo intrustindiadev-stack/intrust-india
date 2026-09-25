@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
     Briefcase, ShieldCheck, TrendingUp, Clock, Calendar, Wallet, CheckCircle, XCircle, ArrowLeft,
-    Activity, ArrowUpRight, Eye, RefreshCw, Banknote, Edit3
+    Activity, ArrowUpRight, Eye, RefreshCw, Banknote, Edit3, Plus
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -400,62 +400,75 @@ export default function MerchantPortfolioPage({ params }) {
                                             </div>
                                         </div>
 
-                                        {/* Simulated Orders List (if any) */}
-                                        {inv.orders && inv.orders.length > 0 && (
-                                            <div className="mt-4 pt-3 border-t border-slate-100">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Simulated Orders ({inv.orders.length})</p>
+                                        {/* Simulated Orders List */}
+                                        <div className="mt-4 pt-3 border-t border-slate-100">
+                                            <div className="flex items-center justify-between mb-2.5">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    Simulated Orders ({inv.orders?.length || 0})
+                                                </p>
+                                                {inv.orders && inv.orders.length > 0 && (
+                                                    <span className="text-[11px] font-bold text-emerald-600">
+                                                        Total Profit: +₹{((inv.total_profit_paid_paise || 0) / 100).toLocaleString('en-IN')}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {inv.orders && inv.orders.length > 0 ? (
                                                 <div className="space-y-2">
-                                                    {inv.orders.map(order => (
-                                                        <div key={order.id} className="p-3 bg-slate-50 hover:bg-slate-100/70 rounded-xl flex items-center justify-between text-xs transition-colors">
-                                                            <div className="min-w-0 pr-2">
+                                                    {inv.orders.map((ord, idx) => (
+                                                        <div key={ord.id} className="p-3.5 bg-slate-50 hover:bg-slate-100/70 rounded-xl flex items-center justify-between text-xs transition-colors">
+                                                            <div className="min-w-0 pr-3">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-slate-800">{order.category || 'General'}</span>
-                                                                    <span className="text-[10px] text-slate-400">{new Date(order.order_date).toLocaleDateString('en-IN')}</span>
-                                                                    {order.location && <span className="text-[10px] text-slate-400">📍 {order.location}</span>}
+                                                                    <span className="font-bold text-slate-900">Order #{idx + 1}</span>
+                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700">
+                                                                        {ord.category || 'General'}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-slate-400 font-medium">
+                                                                        {new Date(ord.order_date).toLocaleDateString('en-IN')}
+                                                                    </span>
+                                                                    {ord.location && (
+                                                                        <span className="text-[10px] text-slate-400">📍 {ord.location}</span>
+                                                                    )}
                                                                 </div>
-                                                                <p className="text-[11px] text-slate-500 font-medium truncate max-w-xs mt-0.5">{order.order_details}</p>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 shrink-0">
-                                                                <div className="text-right">
-                                                                    <p className="font-black text-emerald-600">+₹{(order.profit_paise / 100).toLocaleString('en-IN')}</p>
-                                                                    <p className="text-[9px] text-slate-400 font-bold uppercase">Profit</p>
+                                                                <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
+                                                                    <span>Capital: <strong className="text-slate-800">₹{(ord.amount_paise / 100).toLocaleString('en-IN')}</strong></span>
+                                                                    <span>Profit: <strong className="text-emerald-600">+₹{(ord.profit_paise / 100).toLocaleString('en-IN')}</strong></span>
                                                                 </div>
-                                                                {inv.status === 'active' && (
-                                                                    <button 
-                                                                        type="button"
-                                                                        onClick={() => openEditOrder(inv, order)}
-                                                                        className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-colors border border-amber-200/50"
-                                                                    >
-                                                                        Edit
-                                                                    </button>
+                                                                {ord.order_details && (
+                                                                    <p className="text-[11px] text-slate-600 font-medium truncate max-w-sm mt-0.5">
+                                                                        {ord.order_details}
+                                                                    </p>
                                                                 )}
                                                             </div>
+                                                            {inv.status === 'active' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openEditOrder(inv, ord)}
+                                                                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/50 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 flex items-center gap-1"
+                                                                >
+                                                                    <Edit3 size={11} /> Edit
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <div className="py-2.5 px-3 bg-slate-50/50 rounded-xl text-xs text-slate-400 flex items-center justify-between">
+                                                    <span className="italic text-[11px]">No simulated orders recorded yet</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         
                                         <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-50 mt-4">
                                             {inv.status === 'active' && (
                                                 <>
-                                                    {inv.orders && inv.orders.length > 0 ? (
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => openEditOrder(inv, inv.latest_order)}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 text-amber-700 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all border border-amber-200/50"
-                                                        >
-                                                            <Edit3 size={14} /> Edit Order
-                                                        </button>
-                                                    ) : (
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => openCreateOrder(inv)}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-all"
-                                                        >
-                                                            <Activity size={14} /> Feed Order
-                                                        </button>
-                                                    )}
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => openCreateOrder(inv)}
+                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl text-xs font-bold transition-all"
+                                                    >
+                                                        <Plus size={14} /> Feed Order
+                                                    </button>
                                                     {isSuperAdmin && (
                                                         <button 
                                                             type="button"

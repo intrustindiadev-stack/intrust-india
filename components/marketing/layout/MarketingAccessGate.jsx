@@ -18,20 +18,25 @@ import {
     Share2,
     BarChart3
 } from 'lucide-react';
+import MarketingComingSoon from '@/components/marketing/coming-soon/MarketingComingSoon';
 
 /**
  * MarketingAccessGate
- * Renders a gate when regular users are not KYC-verified
- * or merchants do not have an active subscription.
+ * Renders a gate when regular users are not KYC-verified,
+ * merchants do not have an active subscription, or feature is coming soon.
  *
  * @param {Object} props
- * @param {'kyc' | 'subscription'} props.type
+ * @param {'kyc' | 'subscription' | 'coming_soon'} props.type
  * @param {string} props.status - e.g. 'not_started', 'pending', 'rejected', 'inactive', 'expired'
  * @param {Object} props.user
  * @param {Object} props.profile
  * @param {Object} props.merchant
  */
 export default function MarketingAccessGate({ type = 'kyc', status = 'not_started', user, profile, merchant }) {
+    if (type === 'coming_soon') {
+        return <MarketingComingSoon user={user} profile={profile} isMerchant={profile?.role === 'merchant'} />;
+    }
+
     const isKyc = type === 'kyc';
 
     // Status visual mapping for KYC

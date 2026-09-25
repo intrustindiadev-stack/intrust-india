@@ -116,7 +116,7 @@ const navigationGroups = [
     {
         title: 'Growth & Setup',
         items: [
-            { name: 'Marketing & Sponsorships', href: '/admin/marketing', icon: Megaphone },
+            { name: 'Marketing & Sponsorships', href: '/admin/marketing', icon: Megaphone, badge: 'SOON' },
             { name: 'Rewards', href: '/admin/rewards', icon: Trophy },
             { name: 'Flash Sale', href: '/admin/flash-sale', icon: Zap },
             { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
@@ -322,6 +322,11 @@ export default function AdminSidebar({ isOpen, setIsOpen, adminProfile }) {
                                                         {item.name === 'Vault Withdrawals' && pendingWithdrawalsCount > 0 && (
                                                             <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">
                                                                 {pendingWithdrawalsCount}
+                                                            </span>
+                                                        )}
+                                                        {item.badge && (
+                                                            <span className="bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-xs">
+                                                                {item.badge}
                                                             </span>
                                                         )}
                                                     </div>

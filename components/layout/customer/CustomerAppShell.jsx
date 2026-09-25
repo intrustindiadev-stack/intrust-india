@@ -57,7 +57,7 @@ const SwitchPortalSection = dynamic(() => import('@/components/layout/shared/Swi
     loading: () => <div className="hidden lg:flex w-28 h-9 rounded-xl bg-slate-100 dark:bg-white/5 animate-pulse" aria-hidden="true" />
 });
 
-const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search', '/career'];
+const PUBLIC_HREFS = ['/', '/shop', '/shop/cart', '/about', '/contact', '/services', '/solar', '/nfc-service', '/gift-cards', '/merchant-apply', '/legal', '/search', '/career', '/marketing', '/coming-soon'];
 
 const NAV_GROUPS = [
     {
@@ -91,7 +91,7 @@ const NAV_GROUPS = [
         title: 'Rewards & Growth',
         items: [
             { label: 'Rewards & Coins', href: '/rewards', icon: Trophy },
-            { label: 'Daily Quiz & Earn', href: '/marketing/daily-challenge', icon: Sparkles, badge: 'Win ₹' },
+            { label: 'Daily Quiz & Earn', href: '/marketing', icon: Sparkles, badge: 'Soon' },
             { label: 'Refer & Earn', href: '/refer', icon: Users, badge: '₹50' },
             { label: 'Champions Rank', href: '/rewards/leaderboard', icon: Crown },
         ]

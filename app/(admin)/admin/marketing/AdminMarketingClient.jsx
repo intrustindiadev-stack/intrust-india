@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 import { 
     LayoutDashboard,
     Settings, 
@@ -1063,6 +1065,35 @@ export default function AdminMarketingClient({
                     </button>
                 </div>
             </div>
+
+            {/* ─── PRE-LAUNCH / COMING SOON STATUS ALERT ─── */}
+            {IS_MARKETING_COMING_SOON && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-xs">
+                            <Clock size={18} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-black uppercase tracking-wider">Public Status: Pre-Launch / Coming Soon</span>
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[9px] font-black uppercase">Coming Soon</span>
+                            </div>
+                            <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mt-0.5">
+                                The public customer and merchant Marketing Hub is currently set to Coming Soon. Regular users and merchants see the pre-launch preview showcase at <code className="px-1 py-0.5 rounded bg-amber-200/50 dark:bg-amber-900/50 text-[11px] font-mono">/marketing</code>.
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/marketing"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-xs transition-all shrink-0 self-start sm:self-auto cursor-pointer"
+                    >
+                        <span>Preview Coming Soon Page</span>
+                        <ExternalLink size={13} />
+                    </Link>
+                </div>
+            )}
 
             {/* ─── NAVIGATION TABS ─── */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200/80 dark:border-slate-800 scrollbar-none text-xs font-black">

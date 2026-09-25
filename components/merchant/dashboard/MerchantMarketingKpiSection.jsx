@@ -10,8 +10,10 @@ import {
     Sparkles, 
     Calendar,
     Target,
-    Zap
+    Zap,
+    Clock
 } from 'lucide-react';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export default function MerchantMarketingKpiSection({
     marketingStats = {
@@ -45,10 +47,17 @@ export default function MerchantMarketingKpiSection({
                             <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
                                 Marketing & Growth Engine
                             </h3>
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                Live Attribution
-                            </span>
+                            {IS_MARKETING_COMING_SOON ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                    <Clock size={11} className="text-amber-500" />
+                                    Coming Soon
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Live Attribution
+                                </span>
+                            )}
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                             Real-time tracking for deal promotions, quiz sponsorships, verified sales & physical gift milestones.
@@ -60,7 +69,7 @@ export default function MerchantMarketingKpiSection({
                     href="/marketing"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/15 text-slate-900 dark:text-white text-xs font-black border border-slate-200 dark:border-white/10 shadow-2xs hover:shadow-xs transition-all group self-start sm:self-auto active:scale-95"
                 >
-                    <span>Marketing Command</span>
+                    <span>{IS_MARKETING_COMING_SOON ? 'Marketing Hub (Soon)' : 'Marketing Command'}</span>
                     <ArrowUpRight size={14} className="text-blue-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </Link>
             </div>

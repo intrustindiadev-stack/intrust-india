@@ -114,20 +114,6 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Growth plan must be active to feed orders' }, { status: 400 });
         }
 
-        // 1:1 enforcement: only one simulated order per investment
-        const { data: existingOrders } = await supabase
-            .from('merchant_investment_orders')
-            .select('id')
-            .eq('investment_id', investmentId)
-            .limit(1);
-
-        if (existingOrders && existingOrders.length > 0) {
-            return NextResponse.json(
-                { error: 'A simulated order already exists for this growth plan. Use Edit to update it.' },
-                { status: 409 }
-            );
-        }
-
         const parsedAmountPaise = Math.round(Number(amountRupees) * 100);
         const parsedProfitPaise = Math.round(Number(profitRupees) * 100);
 

@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,14 @@ export async function POST(request) {
             ...extra,
         }));
     };
+
+    if (IS_MARKETING_COMING_SOON) {
+        log('coming_soon', 'feature disabled in pre-launch mode');
+        return NextResponse.json(
+            { success: false, error: 'Marketing features are currently under construction and launching soon' },
+            { status: 503 }
+        );
+    }
 
     try {
         const supabase = await createServerSupabaseClient();

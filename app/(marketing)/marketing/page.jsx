@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import MarketingOverviewClient from './MarketingOverviewClient';
+import MarketingComingSoon from '@/components/marketing/coming-soon/MarketingComingSoon';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -11,14 +13,29 @@ export default async function MarketingOverviewPage() {
         data: { user },
     } = await supabase.auth.getUser();
 
-    // Fetch user profile
-    const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id, role, full_name, email, phone')
-        .eq('id', user.id)
-        .maybeSingle();
+    // Fetch user profile if user exists
+    let profile = null;
+    if (user) {
+        const { data: p } = await supabase
+            .from('user_profiles')
+            .select('id, role, full_name, email, phone')
+            .eq('id', user.id)
+            .maybeSingle();
+        profile = p;
+    }
 
     const isMerchant = profile?.role === 'merchant' || profile?.role === 'admin' || profile?.role === 'super_admin';
+
+    // Fast-path: When marketing is set to Coming Soon, render MarketingComingSoon directly
+    if (IS_MARKETING_COMING_SOON) {
+        return (
+            <MarketingComingSoon 
+                user={user} 
+                profile={profile} 
+                isMerchant={isMerchant} 
+            />
+        );
+    }
 
     let merchant = null;
     if (isMerchant) {

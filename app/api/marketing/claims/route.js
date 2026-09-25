@@ -1,11 +1,19 @@
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
 import { NextResponse } from 'next/server';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request) {
+    if (IS_MARKETING_COMING_SOON) {
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Marketing Hub gift claims are currently under construction and launching soon' 
+        }, { status: 503 });
+    }
+
     try {
         const supabase = await createServerSupabaseClient();
         const {

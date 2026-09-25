@@ -29,16 +29,17 @@ export async function GET(request) {
                 .from('merchant_investment_orders')
                 .select('*')
                 .in('investment_id', investmentIds)
-                .order('order_date', { ascending: false });
+                .order('order_date', { ascending: false })
+                .order('created_at', { ascending: false });
             orders = orderData || [];
         }
 
         const enriched = (data || []).map(inv => {
             const invOrders = orders.filter(o => o.investment_id === inv.id);
-            const totalPaid = invOrders.reduce((s, o) => s + (o.profit_paise || 0), 0);
+            const totalProfit = invOrders.reduce((sum, o) => sum + (o.profit_paise || 0), 0);
             return {
                 ...inv,
-                total_profit_paid_paise: totalPaid,
+                total_profit_paid_paise: totalProfit,
                 order_count: invOrders.length,
                 orders: invOrders,
                 latest_order: invOrders[0] || null

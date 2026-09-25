@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabaseServer';
+import { IS_MARKETING_COMING_SOON } from '@/lib/marketingConfig';
 
 export async function POST(req) {
+    if (IS_MARKETING_COMING_SOON) {
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Marketing Hub sponsorship features are currently under construction and launching soon' 
+        }, { status: 503 });
+    }
+
     try {
         const userClient = await createServerSupabaseClient();
         const {
