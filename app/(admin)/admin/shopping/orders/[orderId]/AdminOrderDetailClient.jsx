@@ -49,7 +49,7 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
     const handleDownloadInvoice = () => {
         setDownloadingPdf(true);
         try {
-            generateOrderInvoice({ order, items: order.items || [], seller: sellerDetails || PLATFORM_CONFIG.business, type: "shopping" });
+            generateOrderInvoice({ order, items: order.items || [], seller: sellerDetails || PLATFORM_CONFIG.business, type: "shopping", allowIneligible: true });
             toast.success("Invoice downloaded");
         } catch (err) {
             toast.error("Failed to generate invoice");

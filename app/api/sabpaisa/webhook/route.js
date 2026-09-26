@@ -186,7 +186,50 @@ export async function POST(request) {
                 console.error(`[Webhook] Failed to update transaction ${clientTxnId}:`, updateErr.message);
             }
 
-            // 8b. INVOICE_PAY terminal failure notification (non-blocking, idempotent)
+            // 8a. CART_CHECKOUT non-success cleanup
+            if (existingTxn && existingTxn.udf1 === 'CART_CHECKOUT') {
+                try {
+                    const groupId = existingTxn.udf2;
+                    if (groupId) {
+                        await supabaseAdmin
+                            .from('shopping_order_groups')
+                            .update({
+                                status: 'cancelled',
+                                payment_status: 'failed',
+                                delivery_status: 'cancelled',
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', groupId)
+                            .neq('payment_status', 'paid');
+                        console.log(`[Webhook] Cart checkout ${groupId} marked as cancelled/failed for txn ${clientTxnId}`);
+                    }
+                } catch (groupErr) {
+                    console.error('[Webhook] Failed to cancel shopping order group:', groupErr.message);
+                }
+            }
+
+            // 8b. WHOLESALE_PURCHASE non-success cleanup
+            if (existingTxn && existingTxn.udf1 === 'WHOLESALE_PURCHASE') {
+                try {
+                    const draftId = existingTxn.udf2;
+                    if (draftId) {
+                        await supabaseAdmin
+                            .from('wholesale_order_drafts')
+                            .update({
+                                status: 'failed',
+                                failure_reason: result.transMsg || 'Payment failed',
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', draftId)
+                            .neq('status', 'completed');
+                        console.log(`[Webhook] Wholesale draft ${draftId} marked as failed for txn ${clientTxnId}`);
+                    }
+                } catch (whlsErr) {
+                    console.error('[Webhook] Failed to mark wholesale draft as failed:', whlsErr.message);
+                }
+            }
+
+            // 8c. INVOICE_PAY terminal failure notification (non-blocking, idempotent)
             if (existingTxn && existingTxn.udf1 === 'INVOICE_PAY' && (internalStatus === 'failed' || internalStatus === 'aborted')) {
                 try {
                     await sendInvoiceNotification({

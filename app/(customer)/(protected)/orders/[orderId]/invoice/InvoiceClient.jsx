@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { getOrderInvoiceNumber } from "@/lib/orders/invoiceEligibility";
 import { Download, FileText } from "lucide-react";
 
 const InvoiceClient = ({ order, items, sellerDetails }) => {
@@ -10,7 +11,7 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
     const [ready, setReady] = useState(false);
 
     const safeCreatedAt = order?.created_at ? new Date(order.created_at) : new Date();
-    const invoiceNumber = `INV-${safeCreatedAt.getFullYear()}-${(order?.id || "unknown").slice(0, 8).toUpperCase()}`;
+    const invoiceNumber = getOrderInvoiceNumber(order);
     const invoiceDate = format(safeCreatedAt, "dd MMM, yyyy");
 
     useEffect(() => {
@@ -25,6 +26,7 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                 items,
                 seller: sellerDetails,
                 type: "shopping",
+                allowIneligible: true,
             });
         } catch (err) {
             console.error("Invoice generation failed:", err);
@@ -77,6 +79,25 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
     const deliveryFee = order.delivery_fee_paise ?? 0;
     grandTotal += deliveryFee;
 
+    const paymentMethodMap = {
+        wallet: "InTrust Wallet",
+        gateway: "Online (SabPaisa)",
+        store_credit: "Store Credit (Udhari)",
+        cod: "Cash on Delivery (COD)"
+    };
+    const paymentMethodLabel = paymentMethodMap[order?.payment_method?.toLowerCase()] || (order?.payment_method ? order.payment_method.toUpperCase() : "Online Payment");
+    const paymentStatusLabel = (order?.payment_status || "PAID").toUpperCase();
+    const deliveryStatusLabel = (order?.delivery_status || "Packed").toUpperCase();
+    const orderDateFormatted = order?.created_at ? format(new Date(order.created_at), "dd MMM yyyy, hh:mm a") : invoiceDate;
+
+    const fulfillmentDetailText = order?.delivered_at
+        ? `Delivered on ${format(new Date(order.delivered_at), "dd MMM, yyyy")}`
+        : (order?.shipped_at
+            ? `Dispatched on ${format(new Date(order.shipped_at), "dd MMM, yyyy")}`
+            : (order?.packed_at
+                ? `Packed on ${format(new Date(order.packed_at), "dd MMM, yyyy")}`
+                : "Standard Delivery"));
+
     return (
         <div className="min-h-screen bg-slate-100 py-8 text-slate-900 font-sans">
             {/* Download bar */}
@@ -108,16 +129,61 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
                         <p className="text-2xl font-black text-white tracking-tight leading-none">INTRUST</p>
                         <p className="text-xs text-blue-200 mt-0.5">Financial Services (India) Pvt. Ltd.</p>
                     </div>
-                    <p className="text-lg font-black text-white tracking-widest">TAX INVOICE</p>
+                    <div className="text-right">
+                        <p className="text-lg font-black text-white tracking-widest">TAX INVOICE</p>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            {paymentStatusLabel === 'PAID' ? 'PAID IN FULL' : paymentStatusLabel}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Meta strip — Light blue */}
-                <div className="bg-[#eff6ff] px-10 py-2.5 flex justify-between items-center border-b border-blue-100">
-                    <p className="text-sm font-bold text-[#1e3a8a]">Invoice No: {invoiceNumber}</p>
-                    <p className="text-sm font-bold text-[#1e3a8a]">Date: {invoiceDate}</p>
+                <div className="bg-[#eff6ff] px-6 sm:px-10 py-3 flex flex-wrap gap-3 justify-between items-center border-b border-blue-100">
+                    <div className="flex items-center gap-4">
+                        <p className="text-sm font-bold text-[#1e3a8a]">Invoice No: <span className="font-mono text-slate-800">{invoiceNumber}</span></p>
+                        <span className="text-slate-300">|</span>
+                        <p className="text-sm font-medium text-slate-600">Date: {invoiceDate}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            ✓ {paymentStatusLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase tracking-wide">
+                            📦 {deliveryStatusLabel}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="px-10 py-6">
+                <div className="px-6 sm:px-10 py-6">
+                    {/* Order & Payment Summary Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl mb-6">
+                        <div className="border-r border-slate-200/80 pr-2 last:border-r-0">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Order ID & Date</p>
+                            <p className="text-xs font-black text-slate-800 mt-0.5 font-mono">#{order.id.slice(0, 8).toUpperCase()}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">{orderDateFormatted}</p>
+                        </div>
+                        <div className="border-r border-slate-200/80 pr-2 last:border-r-0">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mode of Payment</p>
+                            <p className="text-xs font-bold text-slate-800 mt-0.5">{paymentMethodLabel}</p>
+                            <p className="text-[11px] font-bold text-emerald-600 mt-0.5">Status: {paymentStatusLabel}</p>
+                        </div>
+                        <div className="border-r border-slate-200/80 pr-2 last:border-r-0">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fulfillment Status</p>
+                            <p className="text-xs font-bold text-slate-800 mt-0.5">{deliveryStatusLabel}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">{fulfillmentDetailText}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                {order.tracking_number ? "Tracking Number" : "Transaction Ref"}
+                            </p>
+                            <p className="text-xs font-bold text-slate-800 mt-0.5 font-mono truncate" title={order.tracking_number || order.client_txn_id || `TXN-${order.id.slice(0, 8).toUpperCase()}`}>
+                                {order.tracking_number || order.client_txn_id || `TXN-${order.id.slice(0, 8).toUpperCase()}`}
+                            </p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">Tax Invoice Copy</p>
+                        </div>
+                    </div>
+
                     {/* From / Bill To */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         {/* FROM */}

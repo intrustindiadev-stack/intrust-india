@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { isOrderInvoiceEligible } from "@/lib/orders/invoiceEligibility";
 import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
@@ -235,6 +236,10 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
 
 
     const handleDownloadInvoice = () => {
+        if (!isOrderInvoiceEligible(order)) {
+            toast.error("Invoice will be available once the order is packed.");
+            return;
+        }
         generateOrderInvoice({
             order: { ...order, delivery_fee_paise: order.delivery_fee_paise || 0 },
             items: order.items || [],
@@ -472,12 +477,23 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
                         <span>Ready for next stage</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                            onClick={handleDownloadInvoice}
-                            className="w-full sm:w-auto sm:flex-none px-5 py-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center justify-center gap-2 active:scale-95"
-                        >
-                            <Download size={14} /> PDF INVOICE
-                        </button>
+                        {isOrderInvoiceEligible(order) ? (
+                            <button
+                                onClick={handleDownloadInvoice}
+                                className="w-full sm:w-auto sm:flex-none px-5 py-3 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-gray-300 text-xs font-black transition-all flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                <Download size={14} /> PDF INVOICE
+                            </button>
+                        ) : currentStatus !== 'cancelled' ? (
+                            <div className="w-full sm:w-auto sm:flex-none px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center justify-center gap-2">
+                                <Package size={14} />
+                                <span>
+                                    {order.payment_status !== 'paid'
+                                        ? 'Invoice available after payment'
+                                        : 'Invoice available after packing'}
+                                </span>
+                            </div>
+                        ) : null}
                         {currentStatus === 'pending'
                             && order.settlement_status === 'pending'
                             && order.settlement_status !== 'settled_zero'

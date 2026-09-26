@@ -29,6 +29,7 @@ import { useTheme } from "@/lib/contexts/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/lib/supabaseClient";
+import { isOrderInvoiceEligible } from "@/lib/orders/invoiceEligibility";
 // LAZY: jsPDF + autotable + qrcode + jsbarcode (~500 KB) only load on click
 const generateOrderInvoice = (...args) => import("@/lib/invoiceGenerator").then(m => m.generateOrderInvoice(...args));
 
@@ -840,39 +841,73 @@ const OrderDetailsClient = ({ order, orderType, userId, customerProfile }) => {
                         </div>
                     </div>
 
-                    <div className="mt-8 flex gap-3">
-                        <button
-                            onClick={() => {
-                                const items = order.shopping_order_items || [];
-                                const merchant = items[0]?.merchants;
-                                generateOrderInvoice({
-                                    order: order,
-                                    items: items,
-                                    seller: (order.is_platform_order || isNfc)
-                                        ? {
-                                            name: 'Intrust Financial Services (India) Pvt. Ltd.',
-                                            address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026',
-                                            phone: '18002030052',
-                                            gstin: '23AAFC14866A1ZV',
-                                        }
-                                        : {
-                                            name: merchant?.business_name || 'Merchant',
-                                            address: merchant?.business_address || '',
-                                            phone: merchant?.business_phone || '',
-                                            gstin: merchant?.gst_number || 'Unregistered',
-                                        },
-                                    customer: {
-                                        name: customerProfile?.full_name || order.customer_name || 'Customer',
-                                        phone: customerProfile?.phone || order.customer_phone || '',
-                                        address: order.delivery_address || '',
-                                    },
-                                    type: 'shopping',
-                                });
-                            }}
-                            className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-slate-50 hover:bg-slate-100'}`}
-                        >
-                            <Download size={14} /> Download Invoice
-                        </button>
+                    <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                        {(() => {
+                            const isEligible = isNfc 
+                                ? (order.payment_status === 'paid' && ['processing', 'shipped', 'delivered'].includes(order.status))
+                                : isOrderInvoiceEligible(order);
+
+                            if (isEligible) {
+                                return (
+                                    <div className="flex-1 flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const items = order.shopping_order_items || [];
+                                                const merchant = items[0]?.merchants;
+                                                generateOrderInvoice({
+                                                    order: order,
+                                                    items: items,
+                                                    seller: (order.is_platform_order || isNfc)
+                                                        ? {
+                                                            name: 'Intrust Financial Services (India) Pvt. Ltd.',
+                                                            address: 'TF-312/MM09, Ashima Mall, Narmadapuram Rd, Danish Naga, Bhopal, MP 462026',
+                                                            phone: '18002030052',
+                                                            gstin: '23AAFC14866A1ZV',
+                                                        }
+                                                        : {
+                                                            name: merchant?.business_name || 'Merchant',
+                                                            address: merchant?.business_address || '',
+                                                            phone: merchant?.business_phone || '',
+                                                            gstin: merchant?.gst_number || 'Unregistered',
+                                                        },
+                                                    customer: {
+                                                        name: customerProfile?.full_name || order.customer_name || 'Customer',
+                                                        phone: customerProfile?.phone || order.customer_phone || '',
+                                                        address: order.delivery_address || '',
+                                                    },
+                                                    type: 'shopping',
+                                                });
+                                            }}
+                                            className={`flex-1 py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${isDark ? 'bg-white/[0.04] hover:bg-white/[0.08] text-white' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'}`}
+                                        >
+                                            <Download size={14} /> Download Invoice
+                                        </button>
+                                        <Link
+                                            href={`/orders/${order.id}/invoice`}
+                                            className={`px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-center transition-all ${isDark ? 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                                            title="View Tax Invoice"
+                                        >
+                                            View
+                                        </Link>
+                                    </div>
+                                );
+                            }
+
+                            if (!isCancelled) {
+                                return (
+                                    <div className={`flex-1 py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 border ${isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                                        <Package size={14} className="shrink-0" />
+                                        <span className="font-semibold text-center">
+                                            {order.payment_status !== 'paid' 
+                                                ? 'Invoice available after payment' 
+                                                : 'Invoice available after order is packed'}
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            return null;
+                        })()}
                         {status === 'pending' ? (
                             <Link
                                 href="/contact"

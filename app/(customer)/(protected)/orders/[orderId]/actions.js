@@ -43,6 +43,9 @@ export async function cancelOrderAction(orderId) {
             .from("shopping_order_groups")
             .update({
                 delivery_status: 'cancelled',
+                status: 'cancelled',
+                ...(order.payment_status === 'pending' ? { payment_status: 'failed' } : {}),
+                updated_at: new Date().toISOString()
             })
             .eq("id", orderId)
             .eq("customer_id", user.id); // double-check ownership in WHERE clause
