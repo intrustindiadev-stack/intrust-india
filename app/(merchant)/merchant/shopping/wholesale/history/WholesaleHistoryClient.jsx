@@ -49,7 +49,7 @@ async function downloadBatchInvoice({ batch, merchant }) {
         },
         quantity: order.quantity,
         unit_price_paise: order.unit_price_paise || order.shopping_products?.wholesale_price_paise || 0,
-        total_price_paise: order.total_price_paise || 0,
+        total_price_paise: (order.unit_price_paise || order.shopping_products?.wholesale_price_paise || 0) * (order.quantity || 1),
     }));
 
     await generateOrderInvoice({
@@ -57,6 +57,10 @@ async function downloadBatchInvoice({ batch, merchant }) {
             id: batch.batchId || batch.syntheticKey.replace('__legacy__', ''),
             created_at: batch.createdAt,
             delivery_fee_paise: 0,
+            payment_status: 'paid',
+            payment_method: 'wallet',
+            delivery_status: 'delivered',
+            order_type: 'wholesale',
         },
         items: invoiceItems,
         seller: PLATFORM_CONFIG.business,
@@ -66,7 +70,8 @@ async function downloadBatchInvoice({ batch, merchant }) {
             phone: merchant.business_phone,
             gstin: merchant.gst_number,
         },
-        type: 'shopping',
+        type: 'wholesale',
+        allowIneligible: true,
     });
 }
 

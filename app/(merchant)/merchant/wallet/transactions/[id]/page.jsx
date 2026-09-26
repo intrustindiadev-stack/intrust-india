@@ -195,7 +195,7 @@ export default function TransactionDetailPage() {
         setTimeout(() => setCopiedId(false), 2000);
     };
 
-    const handleDownloadInvoice = () => {
+    const handleDownloadInvoice = async () => {
         if (!transaction) return;
 
         try {
@@ -251,11 +251,12 @@ export default function TransactionDetailPage() {
                 brand: transaction.coupons?.brand || 'InTrust Gift Card'
             };
 
-            generateOrderInvoice({
+            await generateOrderInvoice({
                 order: mockOrder,
                 items: formattedItems,
                 seller: PLATFORM_CONFIG.business,
-                type: (isCart || isStoreCredit) ? 'shopping' : 'giftcard'
+                type: (isCart || isStoreCredit) ? 'shopping' : 'giftcard',
+                allowIneligible: true,
             });
             toast.success("Invoice generated successfully");
         } catch (err) {

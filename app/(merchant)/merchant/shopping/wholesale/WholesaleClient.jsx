@@ -330,7 +330,7 @@ function WholesaleShopInner({
                     gst_percentage: item.gst_percentage || 0,
                 },
                 unit_price_paise: item.unit_price_paise,
-                total_price_paise: Math.round(item.unit_price_paise * item.quantity * (1 + (item.gst_percentage || 0) / 100)),
+                total_price_paise: item.unit_price_paise * item.quantity,
             }));
 
             setLastBatchId(batchId);
@@ -353,6 +353,10 @@ function WholesaleShopInner({
                             id: batchId,
                             created_at: new Date().toISOString(),
                             delivery_fee_paise: 0,
+                            payment_status: 'paid',
+                            payment_method: 'wallet',
+                            delivery_status: 'delivered',
+                            order_type: 'wholesale',
                         },
                         items: cartSnapshot,
                         seller: PLATFORM_CONFIG.business,
@@ -362,7 +366,8 @@ function WholesaleShopInner({
                             phone: merchant.business_phone,
                             gstin: merchant.gst_number,
                         },
-                        type: 'shopping',
+                        type: 'wholesale',
+                        allowIneligible: true,
                     });
                 } catch (invoiceErr) {
                     console.error('[Invoice generation failed]', invoiceErr);
@@ -550,7 +555,15 @@ function WholesaleShopInner({
                     onClick: async () => {
                         try {
                             await generateOrderInvoice({
-                                order: { id: lastBatchId, created_at: new Date().toISOString(), delivery_fee_paise: 0 },
+                                order: {
+                                    id: lastBatchId,
+                                    created_at: new Date().toISOString(),
+                                    delivery_fee_paise: 0,
+                                    payment_status: 'paid',
+                                    payment_method: 'wallet',
+                                    delivery_status: 'delivered',
+                                    order_type: 'wholesale',
+                                },
                                 items: lastCartSnapshot,
                                 seller: PLATFORM_CONFIG.business,
                                 customer: {
@@ -559,9 +572,14 @@ function WholesaleShopInner({
                                     phone: merchant.business_phone,
                                     gstin: merchant.gst_number,
                                 },
-                                type: 'shopping',
+                                type: 'wholesale',
+                                allowIneligible: true,
                             });
-                        } catch { toast.error('Invoice generation failed.'); }
+                            toast.success('Invoice downloaded successfully');
+                        } catch (err) {
+                            console.error('[Invoice re-download error]', err);
+                            toast.error(err?.message || 'Invoice generation failed.');
+                        }
                     },
                 } : null}
             />
