@@ -235,27 +235,33 @@ export default function MerchantOrderDetailClient({ order, merchantInfo }) {
     };
 
 
-    const handleDownloadInvoice = () => {
+    const handleDownloadInvoice = async () => {
         if (!isOrderInvoiceEligible(order)) {
             toast.error("Invoice will be available once the order is packed.");
             return;
         }
-        generateOrderInvoice({
-            order: { ...order, delivery_fee_paise: order.delivery_fee_paise || 0 },
-            items: order.items || [],
-            seller: {
-                name: merchantInfo?.business_name || "Merchant Store",
-                address: merchantInfo?.business_address || "",
-                phone: merchantInfo?.business_phone || "",
-                gstin: merchantInfo?.gst_number || "Unregistered",
-            },
-            customer: {
-                name: order.customer_name || "Customer",
-                phone: order.customer_phone || "",
-                address: order.delivery_address || "",
-            },
-            type: "shopping",
-        });
+        try {
+            await generateOrderInvoice({
+                order: { ...order, delivery_fee_paise: order.delivery_fee_paise || 0 },
+                items: order.items || [],
+                seller: {
+                    name: merchantInfo?.business_name || "Merchant Store",
+                    address: merchantInfo?.business_address || "",
+                    phone: merchantInfo?.business_phone || "",
+                    gstin: merchantInfo?.gst_number || "Unregistered",
+                },
+                customer: {
+                    name: order.customer_name || "Customer",
+                    phone: order.customer_phone || "",
+                    address: order.delivery_address || "",
+                },
+                type: "shopping",
+            });
+            toast.success("Invoice downloaded successfully");
+        } catch (err) {
+            console.error("Failed to generate invoice:", err);
+            toast.error(err.message || "Failed to generate invoice");
+        }
     };
 
     return (

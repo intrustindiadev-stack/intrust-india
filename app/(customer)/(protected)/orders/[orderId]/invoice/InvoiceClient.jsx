@@ -21,7 +21,7 @@ const InvoiceClient = ({ order, items, sellerDetails }) => {
     const handleDownload = async () => {
         setDownloading(true);
         try {
-            generateOrderInvoice({
+            await generateOrderInvoice({
                 order,
                 items,
                 seller: sellerDetails,

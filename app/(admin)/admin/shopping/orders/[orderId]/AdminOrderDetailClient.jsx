@@ -11,6 +11,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 import { generateOrderInvoice } from "@/lib/invoiceGenerator";
+import { isOrderInvoiceEligible, getInvoiceIneligibilityReason } from "@/lib/orders/invoiceEligibility";
 import { calculatePlatformFeePercentage } from "@/lib/utils/ledger";
 import { PLATFORM_CONFIG } from "@/lib/config/platform";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,13 +47,27 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
     );
     const [statusNotes, setStatusNotes] = useState(order.status_notes || "");
 
-    const handleDownloadInvoice = () => {
+    const isCancelled = order.delivery_status === "cancelled" || order.status === "cancelled";
+    const isInvoiceEligible = isOrderInvoiceEligible(order);
+    const invoiceIneligibilityReason = getInvoiceIneligibilityReason(order);
+
+    const handleDownloadInvoice = async () => {
+        if (!isInvoiceEligible) {
+            toast.error(invoiceIneligibilityReason || "Invoice is not available for this order.");
+            return;
+        }
         setDownloadingPdf(true);
         try {
-            generateOrderInvoice({ order, items: order.items || [], seller: sellerDetails || PLATFORM_CONFIG.business, type: "shopping", allowIneligible: true });
-            toast.success("Invoice downloaded");
+            await generateOrderInvoice({
+                order,
+                items: order.items || [],
+                seller: sellerDetails || PLATFORM_CONFIG.business,
+                type: "shopping"
+            });
+            toast.success("Invoice downloaded successfully");
         } catch (err) {
-            toast.error("Failed to generate invoice");
+            console.error("Failed to generate invoice:", err);
+            toast.error(err.message || "Failed to generate invoice");
         } finally {
             setDownloadingPdf(false);
         }
@@ -62,7 +77,6 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
     const StatusIcon = cfg.icon;
     const currentStepIdx = STATUS_FLOW.indexOf(order.delivery_status);
     const nextStatus = currentStepIdx < STATUS_FLOW.length - 1 ? STATUS_FLOW[currentStepIdx + 1] : null;
-    const isCancelled = order.delivery_status === "cancelled";
 
     // Financials
     const itemsTotal = (order.items || []).reduce((s, i) => s + (i.total_price_paise || i.unit_price_paise * i.quantity), 0);
@@ -404,10 +418,30 @@ export default function AdminOrderDetailClient({ order: initialOrder, sellerDeta
                         </div>
                     )}
 
-                    <button onClick={handleDownloadInvoice} disabled={downloadingPdf}
-                        className="mt-5 w-full py-3.5 rounded-xl bg-slate-900 hover:bg-blue-600 disabled:bg-slate-400 text-white text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98]">
-                        <Download size={14} /> {downloadingPdf ? "Generating..." : "Download Invoice"}
-                    </button>
+                    {isCancelled ? (
+                        <div className="mt-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200/80 text-center">
+                            <p className="text-xs font-bold text-rose-600 flex items-center justify-center gap-1.5">
+                                <XCircle size={14} /> No Invoice (Order Cancelled)
+                            </p>
+                            <p className="text-[11px] text-rose-500 mt-0.5 font-medium">
+                                Tax invoices cannot be generated for cancelled orders.
+                            </p>
+                        </div>
+                    ) : isInvoiceEligible ? (
+                        <button onClick={handleDownloadInvoice} disabled={downloadingPdf}
+                            className="mt-5 w-full py-3.5 rounded-xl bg-slate-900 hover:bg-blue-600 disabled:bg-slate-400 text-white text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98]">
+                            <Download size={14} /> {downloadingPdf ? "Generating..." : "Download Invoice"}
+                        </button>
+                    ) : (
+                        <div className="mt-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-center">
+                            <p className="text-xs font-bold text-amber-700 flex items-center justify-center gap-1.5">
+                                <Package size={14} /> Invoice Not Ready
+                            </p>
+                            <p className="text-[11px] text-amber-600 mt-0.5 font-medium">
+                                {invoiceIneligibilityReason || "Available once order is packed and payment is confirmed."}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
             </div>
