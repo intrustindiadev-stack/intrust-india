@@ -294,11 +294,13 @@ function WholesaleShopInner({
                 return;
             }
 
+            const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined;
             const payload = {
                 items: cartItems.map(item => ({
                     product_id: item.id,
                     quantity: item.quantity,
                 })),
+                ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {})
             };
 
             const res = await fetch('/api/merchant/shopping/wholesale/checkout', {
@@ -306,6 +308,7 @@ function WholesaleShopInner({
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`,
+                    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
                 },
                 body: JSON.stringify(payload),
             });

@@ -48,6 +48,12 @@ export async function POST(request) {
             }
         }
 
+        // Extract idempotency key if provided
+        const idempotencyKey = request.headers.get('Idempotency-Key') 
+            || request.headers.get('idempotency-key') 
+            || body.idempotency_key 
+            || null;
+
         // 2. User context client: passes the authenticated Bearer token so auth.uid() matches user.id
         const supabaseContextClient = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -56,10 +62,15 @@ export async function POST(request) {
         );
 
         // 3. Execute atomic purchase in Postgres
-        const { data, error } = await supabaseContextClient.rpc('purchase_platform_products_bulk', {
+        const rpcPayload = {
             p_items: items,
             p_merchant_id: merchant.id,
-        });
+        };
+        if (idempotencyKey) {
+            rpcPayload.p_idempotency_key = idempotencyKey;
+        }
+
+        const { data, error } = await supabaseContextClient.rpc('purchase_platform_products_bulk', rpcPayload);
 
         if (error) {
             console.error('[Wholesale Wallet Checkout RPC Error]', error);
